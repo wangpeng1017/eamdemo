@@ -1,36 +1,127 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# LIMS Next.js
 
-## Getting Started
+实验室信息管理系统 - Next.js 全栈版本
 
-First, run the development server:
+## 技术栈
+
+- **框架**: Next.js 15 (App Router)
+- **语言**: TypeScript
+- **UI**: Ant Design 5 + Tailwind CSS
+- **ORM**: Prisma 5
+- **数据库**: MySQL 8
+- **认证**: NextAuth.js v5
+- **部署**: Docker
+
+## 快速开始
+
+### 1. 安装依赖
+
+```bash
+npm install
+```
+
+### 2. 配置数据库
+
+编辑 `.env` 文件，设置数据库连接：
+
+```env
+DATABASE_URL="mysql://root:root123@localhost:3306/lims_next"
+NEXTAUTH_SECRET="your-secret-key"
+NEXTAUTH_URL="http://localhost:3000"
+```
+
+### 3. 初始化数据库
+
+```bash
+# 创建数据库表
+npm run db:push
+
+# 初始化管理员账号
+npm run db:seed
+```
+
+### 4. 启动开发服务器
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+访问 http://localhost:3000
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+**默认管理员账号**:
+- 用户名: `admin`
+- 密码: `admin123`
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Docker 部署
 
-## Learn More
+### 本地 Docker 部署
 
-To learn more about Next.js, take a look at the following resources:
+```bash
+docker-compose up -d
+```
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+### Windows Server 2019 部署
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+1. 安装 Docker Desktop for Windows
+2. 复制项目到服务器
+3. 运行 `docker-compose up -d`
 
-## Deploy on Vercel
+## 项目结构
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+```
+lims-next/
+├── prisma/
+│   ├── schema.prisma      # 数据库模型
+│   └── seed.ts            # 初始化数据
+├── src/
+│   ├── app/               # Next.js 页面
+│   │   ├── (dashboard)/   # 主应用（需登录）
+│   │   ├── api/           # API 路由
+│   │   └── login/         # 登录页
+│   ├── components/        # 组件
+│   │   ├── layout/        # 布局组件
+│   │   └── Providers.tsx  # 全局 Provider
+│   └── lib/               # 工具库
+│       ├── auth.ts        # NextAuth 配置
+│       └── prisma.ts      # Prisma 客户端
+├── docker-compose.yml     # Docker 编排
+├── Dockerfile             # Docker 镜像
+└── package.json
+```
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## 功能模块
+
+| 模块 | 状态 | 说明 |
+|------|------|------|
+| 登录认证 | ✅ | 用户名密码登录 |
+| 工作台 | ✅ | 仪表盘首页 |
+| 委托管理 | 🔲 | 咨询/报价/合同/委托 |
+| 样品管理 | 🔲 | 样品登记/流转 |
+| 检测管理 | 🔲 | 任务/数据/报告 |
+| 设备管理 | 🔲 | 设备台账/校准 |
+| 外包管理 | 🔲 | 供应商/外包单 |
+| 财务管理 | 🔲 | 应收/发票 |
+| 系统设置 | 🔲 | 用户/角色/部门 |
+
+## 常用命令
+
+```bash
+# 开发
+npm run dev          # 启动开发服务器
+npm run build        # 构建生产版本
+npm run start        # 启动生产服务器
+
+# 数据库
+npm run db:push      # 同步数据库结构
+npm run db:seed      # 初始化数据
+npm run db:studio    # 打开 Prisma Studio
+```
+
+## 与 Java 版对比
+
+| 对比项 | Java 版 | Next.js 版 |
+|--------|---------|-----------|
+| 代码量 | ~50000 行 | ~2000 行 |
+| 构建时间 | 2-3 分钟 | 30 秒 |
+| 部署复杂度 | 高 | 低 |
+| AI 修改效率 | 低 | 高 |
