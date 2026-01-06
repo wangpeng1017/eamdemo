@@ -33,8 +33,13 @@ export default function ClientPage() {
     setLoading(true)
     const res = await fetch(`/api/client?page=${p}&pageSize=10`)
     const json = await res.json()
-    setData(json.list)
-    setTotal(json.total)
+    if (json.success && json.data) {
+      setData(json.data.list || [])
+      setTotal(json.data.total || 0)
+    } else {
+      setData(json.list || [])
+      setTotal(json.total || 0)
+    }
     setLoading(false)
   }
 

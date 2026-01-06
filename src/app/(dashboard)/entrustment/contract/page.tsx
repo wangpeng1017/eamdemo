@@ -63,8 +63,18 @@ export default function ContractPage() {
     })
     const res = await fetch(`/api/contract?${params}`)
     const json = await res.json()
-    setData(json.list)
-    setTotal(json.total)
+    if (json.success && json.data) {
+      setData(json.data.list || [])
+      setTotal(json.data.total || 0)
+    } else {
+      if (json.success && json.data) {
+      setData(json.data.list || [])
+      setTotal(json.data.total || 0)
+    } else {
+      setData(json.list || [])
+      setTotal(json.total || 0)
+    }
+    }
     setLoading(false)
   }
 

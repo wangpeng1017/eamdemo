@@ -297,7 +297,15 @@ export default function EntrustmentListPage() {
       title: '检测参数',
       dataIndex: 'testItems',
       width: 200,
-      render: (items: string[] | null) => items?.join(', ') || '-'
+      render: (items: string | string[] | null) => {
+        if (!items) return '-'
+        try {
+          const arr = typeof items === 'string' ? JSON.parse(items) : items
+          return Array.isArray(arr) ? arr.join(', ') : '-'
+        } catch {
+          return typeof items === 'string' ? items : '-'
+        }
+      }
     },
     { title: '检测方法', dataIndex: 'method', width: 150 },
     { title: '判定标准', dataIndex: 'standard', width: 150 },

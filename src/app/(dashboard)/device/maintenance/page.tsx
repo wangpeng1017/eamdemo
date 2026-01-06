@@ -53,8 +53,13 @@ export default function DeviceMaintenancePage() {
     try {
       const res = await fetch('/api/device/maintenance?' + params)
       const json = await res.json()
+      if (json.success && json.data) {
+      setData(json.data.list || [])
+      setTotal(json.data.total || 0)
+    } else {
       setData(json.list || [])
       setTotal(json.total || 0)
+    }
     } catch (error) {
       message.error('获取数据失败')
     } finally {

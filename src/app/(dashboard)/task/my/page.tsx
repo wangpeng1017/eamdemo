@@ -39,8 +39,18 @@ export default function MyTasksPage() {
     })
     const res = await fetch(`/api/task/my?${params}`)
     const json = await res.json()
-    setData(json.list)
-    setTotal(json.total)
+    if (json.success && json.data) {
+      setData(json.data.list || [])
+      setTotal(json.data.total || 0)
+    } else {
+      if (json.success && json.data) {
+      setData(json.data.list || [])
+      setTotal(json.data.total || 0)
+    } else {
+      setData(json.list || [])
+      setTotal(json.total || 0)
+    }
+    }
     setStats(json.stats || {})
     setLoading(false)
   }
