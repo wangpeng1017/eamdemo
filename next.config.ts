@@ -1,5 +1,6 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  output: 'standalone',
   reactStrictMode: true,
   typescript: {
     // 临时放宽以通过构建，后续会逐步消除类型错误
