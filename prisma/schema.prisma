@@ -166,7 +166,6 @@ model Consultation {
   estimatedQuantity  Int? // 预估样品数量
   testItems          String?   @db.Text // JSON 数组 检测项目列表
   testPurpose        String?   @db.VarChar(50) // quality_inspection/product_certification/rd_testing/other
-  urgencyLevel       String?   @db.VarChar(20) // normal/urgent/very_urgent
   expectedDeadline   DateTime? // 期望完成时间
   clientRequirements String?   @db.Text // 特殊要求
   budgetRange        String?   @db.VarChar(50) // 预算范围

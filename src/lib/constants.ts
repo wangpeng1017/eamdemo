@@ -250,19 +250,6 @@ export const TEST_PURPOSE_OPTIONS = [
   { value: 'other', label: '其他' },
 ]
 
-// ==================== 紧急程度 ====================
-export const URGENCY_LEVEL_OPTIONS = [
-  { value: 'normal', label: '普通' },
-  { value: 'urgent', label: '紧急' },
-  { value: 'very_urgent', label: '非常紧急' },
-]
-
-export const URGENCY_LEVEL_COLOR: Record<string, string> = {
-  normal: 'default',
-  urgent: 'warning',
-  very_urgent: 'error',
-}
-
 // ==================== 可行性评估 ====================
 export const FEASIBILITY_OPTIONS = [
   { value: 'feasible', label: '可行' },

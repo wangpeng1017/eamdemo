@@ -21,7 +21,6 @@ interface Consultation {
   estimatedQuantity?: string | null
   testItems?: string[]
   testPurpose?: string | null
-  urgencyLevel?: string | null
   expectedDeadline?: string | null
   clientRequirements?: string | null
   budgetRange?: string | null
@@ -44,12 +43,6 @@ interface ConsultationFollowUp {
   nextAction?: string
   operator: string
 }
-
-const URGENCY_OPTIONS = [
-  { value: 'normal', label: '普通' },
-  { value: 'urgent', label: '紧急' },
-  { value: 'very_urgent', label: '非常紧急' },
-]
 
 const FEASIBILITY_OPTIONS = [
   { value: 'feasible', label: '可行' },
@@ -223,12 +216,6 @@ export default function ConsultationPage() {
     { title: '联系人', dataIndex: 'contactPerson', width: 100 },
     { title: '联系电话', dataIndex: 'contactPhone', width: 130 },
     {
-      title: '紧急程度',
-      dataIndex: 'urgencyLevel',
-      width: 100,
-      render: (level: string) => <StatusTag type="urgency" status={level} />
-    },
-    {
       title: '跟进人',
       dataIndex: 'follower',
       width: 100,
@@ -279,13 +266,6 @@ export default function ConsultationPage() {
               <Select.Option value="quoted">已报价</Select.Option>
               <Select.Option value="rejected">已拒绝</Select.Option>
               <Select.Option value="closed">已关闭</Select.Option>
-            </Select>
-          </Form.Item>
-          <Form.Item name="urgencyLevel" label="紧急程度">
-            <Select placeholder="全部" allowClear style={{ width: 120 }}>
-              <Select.Option value="normal">普通</Select.Option>
-              <Select.Option value="urgent">紧急</Select.Option>
-              <Select.Option value="very_urgent">非常紧急</Select.Option>
             </Select>
           </Form.Item>
           <Form.Item>
@@ -385,11 +365,6 @@ export default function ConsultationPage() {
           <Divider orientationMargin="0">其他信息</Divider>
 
           <Row gutter={16}>
-            <Col span={8}>
-              <Form.Item name="urgencyLevel" label="紧急程度">
-                <Select options={URGENCY_OPTIONS} placeholder="请选择" />
-              </Form.Item>
-            </Col>
             <Col span={8}>
               <Form.Item name="expectedDeadline" label="期望交付日期">
                 <DatePicker style={{ width: '100%' }} />
@@ -579,7 +554,6 @@ function Descriptions({ title, data }: { title: string; data: Consultation }) {
     { label: '预估数量', value: data.estimatedQuantity },
     { label: '检测项目', value: data.testItems?.join(', ') },
     { label: '检测目的', value: data.testPurpose },
-    { label: '紧急程度', value: <StatusTag type="urgency" status={data.urgencyLevel} /> },
     { label: '期望交付日期', value: data.expectedDeadline ? dayjs(data.expectedDeadline).format('YYYY-MM-DD') : '-' },
     { label: '预算范围', value: data.budgetRange },
     { label: '预估报价', value: data.estimatedPrice ? `¥${data.estimatedPrice}` : '-' },

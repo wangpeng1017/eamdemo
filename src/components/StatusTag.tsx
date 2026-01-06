@@ -10,7 +10,7 @@ interface StatusTagProps {
   status?: string | null
   text?: string
   color?: string
-  type?: 'consultation' | 'quotation' | 'quotation_client' | 'contract' | 'entrustment' | 'sample' | 'task' | 'report' | 'device' | 'urgency' | 'feasibility' | 'project' | 'receivable' | 'invoice' | 'boolean' | 'calibration_plan'
+  type?: 'consultation' | 'quotation' | 'quotation_client' | 'contract' | 'entrustment' | 'sample' | 'task' | 'report' | 'device' | 'feasibility' | 'project' | 'receivable' | 'invoice' | 'boolean' | 'calibration_plan'
   className?: string
 }
 
@@ -83,11 +83,6 @@ const STATUS_TEXT_MAP: Record<string, Record<string, string>> = {
     Maintenance: '维护中',
     Idle: '空闲',
     Scrapped: '已报废',
-  },
-  urgency: {
-    normal: '普通',
-    urgent: '紧急',
-    very_urgent: '非常紧急',
   },
   feasibility: {
     feasible: '可行',
@@ -185,11 +180,6 @@ const STATUS_COLOR_MAP: Record<string, Record<string, string>> = {
     Idle: 'default',
     Scrapped: 'error',
   },
-  urgency: {
-    normal: 'default',
-    urgent: 'warning',
-    very_urgent: 'error',
-  },
   feasibility: {
     feasible: 'success',
     difficult: 'warning',
@@ -225,9 +215,6 @@ const STATUS_COLOR_MAP: Record<string, Record<string, string>> = {
  *
  * // 使用类型映射
  * <StatusTag type="quotation" status="approved" />
- *
- * // 紧急程度
- * <StatusTag type="urgency" status="urgent" />
  */
 export const StatusTag = forwardRef<any, StatusTagProps>(
   ({ status, text, color, type = 'consultation', className }, ref) => {
