@@ -1,7 +1,7 @@
 import { prisma } from '@/lib/prisma'
 import { NextRequest } from 'next/server'
 import { withErrorHandler, success, validateRequired, badRequest } from '@/lib/api-handler'
-import { generateNo, NumberPrefixes } from '@/lib/generate-no'
+import { generateNo } from '@/lib/generate-no'
 
 // 获取出入库记录列表
 export const GET = withErrorHandler(async (request: NextRequest) => {
@@ -83,16 +83,20 @@ export const POST = withErrorHandler(async (request: NextRequest) => {
     badRequest('易耗品不存在')
   }
 
+  const currentStock = Number(consumable!.stockQuantity)
+
   // 检查出库数量
-  if (data.type === 'out' && data.quantity > consumable!.currentStock) {
-    badRequest(`库存不足，当前库存: ${consumable!.currentStock}`)
+  if (data.type === 'out' && data.quantity > currentStock) {
+    badRequest(`库存不足，当前库存: ${currentStock}`)
   }
 
   // 生成单据编号
   const prefix = data.type === 'in' ? 'RK' : 'CK'
   const transactionNo = await generateNo(prefix, 4)
 
-  const totalAmount = data.quantity * Number(consumable!.unitPrice)
+  // 使用默认单价（如果没有提供）
+  const unitPrice = data.unitPrice || 0
+  const totalAmount = data.quantity * unitPrice
 
   // 使用事务创建记录并更新库存
   const result = await prisma.$transaction(async (tx) => {
@@ -103,7 +107,7 @@ export const POST = withErrorHandler(async (request: NextRequest) => {
         type: data.type,
         consumableId: data.consumableId,
         quantity: data.quantity,
-        unitPrice: consumable!.unitPrice,
+        unitPrice,
         totalAmount,
         reason: data.reason,
         relatedOrder: data.relatedOrder || null,
@@ -116,23 +120,20 @@ export const POST = withErrorHandler(async (request: NextRequest) => {
 
     // 更新库存
     const newStock = data.type === 'in'
-      ? consumable!.currentStock + data.quantity
-      : consumable!.currentStock - data.quantity
+      ? currentStock + data.quantity
+      : currentStock - data.quantity
 
     // 计算新状态
-    let status = 'normal'
+    let status = 1 // 正常
     if (newStock === 0) {
-      status = 'out'
-    } else if (newStock < consumable!.minStock) {
-      status = 'low'
-    }
-    if (consumable!.expiryDate && consumable!.expiryDate < new Date()) {
-      status = 'expired'
+      status = 0 // 缺货
+    } else if (consumable!.minStock && newStock < Number(consumable!.minStock)) {
+      status = 2 // 低库存
     }
 
     await tx.consumable.update({
       where: { id: data.consumableId },
-      data: { currentStock: newStock, status },
+      data: { stockQuantity: newStock, status },
     })
 
     return transaction
