@@ -1,6 +1,6 @@
 'use client'
 
-import { ConfigProvider } from 'antd'
+import { ConfigProvider, App } from 'antd'
 import zhCN from 'antd/locale/zh_CN'
 import { SessionProvider } from 'next-auth/react'
 
@@ -15,7 +15,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
           },
         }}
       >
-        {children}
+        <App>{children}</App>
       </ConfigProvider>
     </SessionProvider>
   )
