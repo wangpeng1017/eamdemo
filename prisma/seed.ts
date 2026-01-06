@@ -12,7 +12,7 @@ async function main() {
     // 注意：由于外键约束，需要按特定顺序删除
     await prisma.testReportApproval.deleteMany({})
     await prisma.testReport.deleteMany({})
-    await prisma.testDatum.deleteMany({})
+    await prisma.testData.deleteMany({})
     await prisma.testTask.deleteMany({})
     await prisma.sampleRequisition.deleteMany({})
     await prisma.sample.deleteMany({})
