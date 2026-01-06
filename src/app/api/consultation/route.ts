@@ -7,8 +7,31 @@ export async function GET(request: NextRequest) {
   const page = parseInt(searchParams.get('page') || '1')
   const pageSize = parseInt(searchParams.get('pageSize') || '10')
   const status = searchParams.get('status')
+  const follower = searchParams.get('follower')
+  const keyword = searchParams.get('keyword')
+  const startDate = searchParams.get('startDate')
+  const endDate = searchParams.get('endDate')
 
-  const where = status ? { status } : {}
+  const where: any = {}
+
+  if (status) {
+    where.status = status
+  }
+  if (follower) {
+    where.follower = follower
+  }
+  if (keyword) {
+    where.OR = [
+      { clientCompany: { contains: keyword } },
+      { contactPerson: { contains: keyword } },
+      { consultationNo: { contains: keyword } },
+    ]
+  }
+  if (startDate || endDate) {
+    where.createdAt = {}
+    if (startDate) where.createdAt.gte = new Date(startDate)
+    if (endDate) where.createdAt.lte = new Date(endDate)
+  }
 
   const [list, total] = await Promise.all([
     prisma.consultation.findMany({
@@ -16,6 +39,12 @@ export async function GET(request: NextRequest) {
       orderBy: { createdAt: 'desc' },
       skip: (page - 1) * pageSize,
       take: pageSize,
+      include: {
+        followUps: {
+          orderBy: { date: 'desc' },
+          take: 1,
+        },
+      },
     }),
     prisma.consultation.count({ where }),
   ])
@@ -35,7 +64,11 @@ export async function POST(request: NextRequest) {
   const consultationNo = `ZX${today}${String(count + 1).padStart(4, '0')}`
 
   const consultation = await prisma.consultation.create({
-    data: { ...data, consultationNo }
+    data: {
+      ...data,
+      consultationNo,
+      testItems: data.testItems || [],
+    }
   })
 
   return NextResponse.json(consultation)

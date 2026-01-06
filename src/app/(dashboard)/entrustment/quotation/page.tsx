@@ -1,26 +1,171 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Table, Button, Space, Tag, Modal, Form, Input, InputNumber, message } from 'antd'
-import { PlusOutlined, EditOutlined, DeleteOutlined } from '@ant-design/icons'
+import { Table, Button, Space, Modal, Form, Input, InputNumber, Select, DatePicker, message, Drawer, Tag, Row, Col, Divider, Popconfirm, Tabs, Descriptions, Card, Radio } from 'antd'
+import { PlusOutlined, EditOutlined, DeleteOutlined, EyeOutlined, CheckOutlined, CloseOutlined, SendOutlined } from '@ant-design/icons'
+import { StatusTag } from '@/components/StatusTag'
 import type { ColumnsType } from 'antd/es/table'
+import dayjs from 'dayjs'
+
+interface QuotationItem {
+  id?: string
+  serviceItem: string
+  methodStandard: string
+  quantity: number
+  unitPrice: number
+  totalPrice: number
+}
+
+interface QuotationApproval {
+  id: string
+  level: number
+  role: string
+  approver: string
+  action: string
+  comment?: string
+  timestamp: string
+}
 
 interface Quotation {
   id: string
   quotationNo: string
   clientName: string | null
   contactPerson: string | null
-  totalAmount: number | null
-  finalAmount: number | null
+  contactPhone?: string | null
+  clientEmail?: string | null
+  clientAddress?: string | null
+  consultationId?: string | null
+  quotationDate: string
+  validDays: number
+  totalAmount: number
+  taxRate: number
+  taxAmount: number
+  totalWithTax: number
+  discountAmount?: number
+  discountReason?: string | null
+  finalAmount: number
+  paymentTerms?: string | null
+  deliveryTerms?: string | null
+  remark?: string | null
+  clientResponse?: string | null
   status: string
   createdAt: string
+  items?: QuotationItem[]
+  approvals?: QuotationApproval[]
 }
 
-const statusMap: Record<string, { text: string; color: string }> = {
-  draft: { text: '草稿', color: 'default' },
-  sent: { text: '已发送', color: 'processing' },
-  accepted: { text: '已接受', color: 'success' },
-  rejected: { text: '已拒绝', color: 'error' },
+const STATUS_OPTIONS = [
+  { value: 'draft', label: '草稿' },
+  { value: 'pending_sales', label: '待销售审批' },
+  { value: 'pending_finance', label: '待财务审批' },
+  { value: 'pending_lab', label: '待实验室审批' },
+  { value: 'approved', label: '已批准' },
+  { value: 'rejected', label: '已拒绝' },
+  { value: 'archived', label: '已归档' },
+]
+
+const CLIENT_RESPONSE_OPTIONS = [
+  { value: 'pending', label: '待反馈' },
+  { value: 'ok', label: '接受' },
+  { value: 'ng', label: '拒绝' },
+]
+
+const SERVICE_ITEM_OPTIONS = [
+  { value: '机械性能测试', label: '机械性能测试' },
+  { value: '化学成分分析', label: '化学成分分析' },
+  { value: '金相检验', label: '金相检验' },
+  { value: '无损检测', label: '无损检测' },
+  { value: '尺寸测量', label: '尺寸测量' },
+  { value: '盐雾试验', label: '盐雾试验' },
+  { value: '硬度测试', label: '硬度测试' },
+  { value: '拉伸试验', label: '拉伸试验' },
+]
+
+// 明细项表格列定义
+const itemColumns: ColumnsType<QuotationItem> = [
+  {
+    title: '服务项目',
+    dataIndex: 'serviceItem',
+    width: 150,
+    render: (value, record, index) => (
+      <Select
+        showSearch
+        options={SERVICE_ITEM_OPTIONS}
+        value={value}
+        onChange={(val) => updateItem(index, 'serviceItem', val)}
+        style={{ width: '100%' }}
+      />
+    ),
+  },
+  {
+    title: '方法/标准',
+    dataIndex: 'methodStandard',
+    width: 180,
+    render: (value, record, index) => (
+      <Input
+        value={value}
+        onChange={(e) => updateItem(index, 'methodStandard', e.target.value)}
+        placeholder="如：GB/T 228.1-2021"
+      />
+    ),
+  },
+  {
+    title: '数量',
+    dataIndex: 'quantity',
+    width: 80,
+    render: (value, record, index) => (
+      <InputNumber
+        min={1}
+        value={value}
+        onChange={(val) => updateItem(index, 'quantity', val || 1)}
+        style={{ width: '100%' }}
+      />
+    ),
+  },
+  {
+    title: '单价(元)',
+    dataIndex: 'unitPrice',
+    width: 100,
+    render: (value, record, index) => (
+      <InputNumber
+        min={0}
+        precision={2}
+        value={value}
+        onChange={(val) => updateItem(index, 'unitPrice', val || 0)}
+        style={{ width: '100%' }}
+      />
+    ),
+  },
+  {
+    title: '小计(元)',
+    dataIndex: 'totalPrice',
+    width: 100,
+    render: (value) => `¥${value?.toFixed(2) || '0.00'}`,
+  },
+  {
+    title: '操作',
+    width: 60,
+    render: (_, record, index) => (
+      <Button
+        size="small"
+        danger
+        icon={<DeleteOutlined />}
+        onClick={() => removeItem(index)}
+      />
+    ),
+  },
+]
+
+// 全局变量用于更新函数
+let updateItemFunc: (index: number, field: string, value: any) => void = () => {}
+let removeItemFunc: (index: number) => void = () => {}
+
+function updateItem(index: number, field: string, value: any) {
+  updateItemFunc(index, field, value)
+}
+
+function removeItem(index: number) {
+  removeItemFunc(index)
 }
 
 export default function QuotationPage() {
@@ -29,12 +174,39 @@ export default function QuotationPage() {
   const [total, setTotal] = useState(0)
   const [page, setPage] = useState(1)
   const [modalOpen, setModalOpen] = useState(false)
+  const [viewDrawerOpen, setViewDrawerOpen] = useState(false)
+  const [approvalModalOpen, setApprovalModalOpen] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
+  const [currentQuotation, setCurrentQuotation] = useState<Quotation | null>(null)
+  const [items, setItems] = useState<QuotationItem[]>([])
   const [form] = Form.useForm()
+  const [approvalForm] = Form.useForm()
+  const [filters, setFilters] = useState<any>({})
 
-  const fetchData = async (p = page) => {
+  // 设置全局更新函数
+  updateItemFunc = (index: number, field: string, value: any) => {
+    const newItems = [...items]
+    const item = { ...newItems[index] }
+    // @ts-ignore - 动态字段更新
+    item[field] = value
+    // 重新计算小计
+    item.totalPrice = (item.quantity || 1) * (item.unitPrice || 0)
+    newItems[index] = item
+    setItems(newItems)
+  }
+
+  removeItemFunc = (index: number) => {
+    setItems(items.filter((_, i) => i !== index))
+  }
+
+  const fetchData = async (p = page, f = filters) => {
     setLoading(true)
-    const res = await fetch(`/api/quotation?page=${p}&pageSize=10`)
+    const params = new URLSearchParams({
+      page: String(p),
+      pageSize: '10',
+      ...Object.fromEntries(Object.entries(f).filter(([_, v]) => v !== undefined && v !== '')),
+    })
+    const res = await fetch(`/api/quotation?${params}`)
     const json = await res.json()
     setData(json.list)
     setTotal(json.total)
@@ -45,14 +217,30 @@ export default function QuotationPage() {
 
   const handleAdd = () => {
     setEditingId(null)
+    setItems([{ serviceItem: '', methodStandard: '', quantity: 1, unitPrice: 0, totalPrice: 0 }])
     form.resetFields()
+    form.setFieldsValue({
+      quotationDate: dayjs(),
+      validDays: 30,
+      taxRate: 0.06,
+    })
     setModalOpen(true)
   }
 
   const handleEdit = (record: Quotation) => {
     setEditingId(record.id)
-    form.setFieldsValue(record)
+    setItems(record.items || [])
+    const formData = {
+      ...record,
+      quotationDate: dayjs(record.quotationDate),
+    }
+    form.setFieldsValue(formData)
     setModalOpen(true)
+  }
+
+  const handleView = (record: Quotation) => {
+    setCurrentQuotation(record)
+    setViewDrawerOpen(true)
   }
 
   const handleDelete = async (id: string) => {
@@ -63,41 +251,111 @@ export default function QuotationPage() {
 
   const handleSubmit = async () => {
     const values = await form.validateFields()
-    const url = editingId ? `/api/quotation/${editingId}` : '/api/quotation'
-    const method = editingId ? 'PUT' : 'POST'
-    await fetch(url, {
-      method,
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(values)
-    })
-    message.success(editingId ? '更新成功' : '创建成功')
+    const submitData = {
+      ...values,
+      quotationDate: values.quotationDate.toISOString(),
+      items,
+    }
+
+    if (editingId) {
+      await fetch(`/api/quotation/${editingId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(submitData),
+      })
+      message.success('更新成功')
+    } else {
+      await fetch('/api/quotation', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(submitData),
+      })
+      message.success('创建成功')
+    }
     setModalOpen(false)
     fetchData()
   }
 
+  const handleAddItem = () => {
+    setItems([...items, { serviceItem: '', methodStandard: '', quantity: 1, unitPrice: 0, totalPrice: 0 }])
+  }
+
+  const handleApproval = async () => {
+    const values = await approvalForm.validateFields()
+    await fetch(`/api/quotation/${currentQuotation!.id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(values),
+    })
+    message.success('审批提交成功')
+    setApprovalModalOpen(false)
+    fetchData()
+    setViewDrawerOpen(false)
+  }
+
+  const handleClientResponse = async (response: string) => {
+    await fetch(`/api/quotation/${currentQuotation!.id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ clientResponse: response }),
+    })
+    message.success('客户反馈更新成功')
+    fetchData()
+    setViewDrawerOpen(false)
+  }
+
+  // 计算金额
+  const totalAmount = items.reduce((sum, item) => sum + item.totalPrice, 0)
+  const taxAmount = totalAmount * 0.06
+  const totalWithTax = totalAmount + taxAmount
+  const discountAmount = form.getFieldValue('discountAmount') || 0
+  const finalAmount = totalWithTax - discountAmount
+
   const columns: ColumnsType<Quotation> = [
     { title: '报价单号', dataIndex: 'quotationNo', width: 150 },
-    { title: '客户名称', dataIndex: 'clientName' },
+    { title: '客户名称', dataIndex: 'clientName', ellipsis: true },
     { title: '联系人', dataIndex: 'contactPerson', width: 100 },
-    { title: '总金额', dataIndex: 'totalAmount', width: 120, render: (v) => v ? `¥${v}` : '-' },
-    { title: '最终金额', dataIndex: 'finalAmount', width: 120, render: (v) => v ? `¥${v}` : '-' },
     {
-      title: '状态', dataIndex: 'status', width: 100,
-      render: (s: string) => <Tag color={statusMap[s]?.color}>{statusMap[s]?.text}</Tag>
+      title: '报价金额',
+      dataIndex: 'finalAmount',
+      width: 120,
+      render: (v) => v ? `¥${v.toFixed(2)}` : '-',
     },
     {
-      title: '创建时间', dataIndex: 'createdAt', width: 180,
-      render: (t: string) => new Date(t).toLocaleString('zh-CN')
+      title: '客户反馈',
+      dataIndex: 'clientResponse',
+      width: 100,
+      render: (r: string) => <StatusTag type="quotation_client" status={r} />,
     },
     {
-      title: '操作', width: 150,
+      title: '状态',
+      dataIndex: 'status',
+      width: 120,
+      render: (s: string) => <StatusTag type="quotation" status={s} />,
+    },
+    {
+      title: '报价日期',
+      dataIndex: 'quotationDate',
+      width: 120,
+      render: (t: string) => dayjs(t).format('YYYY-MM-DD'),
+    },
+    {
+      title: '操作',
+      width: 200,
+      fixed: 'right',
       render: (_, record) => (
-        <Space>
+        <Space size="small">
+          <Button size="small" icon={<EyeOutlined />} onClick={() => handleView(record)}>查看</Button>
           <Button size="small" icon={<EditOutlined />} onClick={() => handleEdit(record)} />
-          <Button size="small" danger icon={<DeleteOutlined />} onClick={() => handleDelete(record.id)} />
+          <Popconfirm
+            title="确认删除"
+            onConfirm={() => handleDelete(record.id)}
+          >
+            <Button size="small" danger icon={<DeleteOutlined />} />
+          </Popconfirm>
         </Space>
-      )
-    }
+      ),
+    },
   ]
 
   return (
@@ -106,38 +364,317 @@ export default function QuotationPage() {
         <h2 style={{ margin: 0 }}>报价管理</h2>
         <Button type="primary" icon={<PlusOutlined />} onClick={handleAdd}>新增报价</Button>
       </div>
+
+      {/* 筛选条件 */}
+      <div style={{ background: '#f5f5f5', padding: 16, marginBottom: 16, borderRadius: 4 }}>
+        <Form layout="inline" onFinish={(values) => { setFilters(values); setPage(1); fetchData(1, values) }}>
+          <Form.Item name="keyword" label="关键词">
+            <Input placeholder="报价单号/客户/联系人" allowClear />
+          </Form.Item>
+          <Form.Item name="status" label="状态">
+            <Select placeholder="全部" allowClear style={{ width: 140 }}>
+              {STATUS_OPTIONS.map(opt => (
+                <Select.Option key={opt.value} value={opt.value}>{opt.label}</Select.Option>
+              ))}
+            </Select>
+          </Form.Item>
+          <Form.Item name="clientResponse" label="客户反馈">
+            <Select placeholder="全部" allowClear style={{ width: 120 }}>
+              {CLIENT_RESPONSE_OPTIONS.map(opt => (
+                <Select.Option key={opt.value} value={opt.value}>{opt.label}</Select.Option>
+              ))}
+            </Select>
+          </Form.Item>
+          <Form.Item>
+            <Button type="primary" htmlType="submit">查询</Button>
+          </Form.Item>
+        </Form>
+      </div>
+
       <Table
         rowKey="id"
         columns={columns}
         dataSource={data}
         loading={loading}
-        pagination={{ current: page, total, onChange: setPage }}
+        scroll={{ x: 1200 }}
+        pagination={{ current: page, total, pageSize: 10, onChange: setPage, showSizeChanger: false }}
       />
+
+      {/* 新增/编辑模态框 */}
       <Modal
         title={editingId ? '编辑报价' : '新增报价'}
         open={modalOpen}
         onOk={handleSubmit}
         onCancel={() => setModalOpen(false)}
-        width={600}
+        width={1000}
+        footer={[
+          <Button key="cancel" onClick={() => setModalOpen(false)}>取消</Button>,
+          <Button key="submit" type="primary" onClick={handleSubmit}>{editingId ? '更新' : '创建'}</Button>,
+        ]}
       >
         <Form form={form} layout="vertical">
-          <Form.Item name="clientName" label="客户名称" rules={[{ required: true }]}>
-            <Input />
+          <Row gutter={16}>
+            <Col span={12}>
+              <Form.Item name="clientName" label="客户名称" rules={[{ required: true, message: '请输入客户名称' }]}>
+                <Input placeholder="请输入客户名称" />
+              </Form.Item>
+            </Col>
+            <Col span={12}>
+              <Form.Item name="contactPerson" label="联系人" rules={[{ required: true, message: '请输入联系人' }]}>
+                <Input placeholder="请输入联系人" />
+              </Form.Item>
+            </Col>
+          </Row>
+
+          <Row gutter={16}>
+            <Col span={12}>
+              <Form.Item name="contactPhone" label="联系电话" rules={[{ required: true, message: '请输入联系电话' }]}>
+                <Input placeholder="请输入联系电话" />
+              </Form.Item>
+            </Col>
+            <Col span={12}>
+              <Form.Item name="clientEmail" label="客户邮箱">
+                <Input placeholder="请输入客户邮箱" />
+              </Form.Item>
+            </Col>
+          </Row>
+
+          <Form.Item name="clientAddress" label="客户地址">
+            <Input placeholder="请输入客户地址" />
           </Form.Item>
-          <Form.Item name="contactPerson" label="联系人">
-            <Input />
-          </Form.Item>
-          <Form.Item name="contactPhone" label="联系电话">
-            <Input />
-          </Form.Item>
-          <Form.Item name="totalAmount" label="总金额">
-            <InputNumber style={{ width: '100%' }} prefix="¥" />
-          </Form.Item>
-          <Form.Item name="finalAmount" label="最终金额">
-            <InputNumber style={{ width: '100%' }} prefix="¥" />
-          </Form.Item>
+
+          <Divider orientationMargin="0">报价明细</Divider>
+
+          <Table
+            columns={itemColumns}
+            dataSource={items}
+            rowKey={(record, index) => record.id || `item-${index}`}
+            pagination={false}
+            size="small"
+            footer={() => (
+              <Button type="dashed" onClick={handleAddItem} block icon={<PlusOutlined />}>
+                添加明细项
+              </Button>
+            )}
+          />
+
+          <div style={{ marginTop: 16, textAlign: 'right' }}>
+            <Space direction="vertical" style={{ width: 300 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                <span>报价合计：</span>
+                <span>¥{totalAmount.toFixed(2)}</span>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                <span>税额（6%）：</span>
+                <span>¥{taxAmount.toFixed(2)}</span>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                <span>含税合计：</span>
+                <span>¥{totalWithTax.toFixed(2)}</span>
+              </div>
+              <Form.Item name="discountAmount" label="优惠金额" style={{ marginBottom: 8 }}>
+                <InputNumber
+                  min={0}
+                  precision={2}
+                  placeholder="请输入优惠金额"
+                  style={{ width: '100%' }}
+                  prefix="¥"
+                />
+              </Form.Item>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 16, fontWeight: 'bold' }}>
+                <span>最终金额：</span>
+                <span style={{ color: '#f5222d' }}>¥{finalAmount.toFixed(2)}</span>
+              </div>
+            </Space>
+          </div>
+
+          <Divider orientationMargin="0">其他信息</Divider>
+
+          <Row gutter={16}>
+            <Col span={8}>
+              <Form.Item name="quotationDate" label="报价日期" rules={[{ required: true }]}>
+                <DatePicker style={{ width: '100%' }} />
+              </Form.Item>
+            </Col>
+            <Col span={8}>
+              <Form.Item name="validDays" label="有效期（天）">
+                <InputNumber min={1} style={{ width: '100%' }} />
+              </Form.Item>
+            </Col>
+            <Col span={8}>
+              <Form.Item name="paymentTerms" label="付款方式">
+                <Input placeholder="如：预付50%" />
+              </Form.Item>
+            </Col>
+          </Row>
+
+          <Row gutter={16}>
+            <Col span={12}>
+              <Form.Item name="deliveryTerms" label="交付方式">
+                <Input placeholder="如：检测完成后3个工作日内出具报告" />
+              </Form.Item>
+            </Col>
+            <Col span={12}>
+              {editingId && (
+                <Form.Item name="status" label="状态">
+                  <Select options={STATUS_OPTIONS} />
+                </Form.Item>
+              )}
+            </Col>
+          </Row>
+
           <Form.Item name="remark" label="备注">
-            <Input.TextArea rows={3} />
+            <Input.TextArea rows={3} placeholder="请输入备注" />
+          </Form.Item>
+        </Form>
+      </Modal>
+
+      {/* 查看详情抽屉 */}
+      <Drawer
+        title="报价详情"
+        placement="right"
+        width={700}
+        open={viewDrawerOpen}
+        onClose={() => setViewDrawerOpen(false)}
+        footer={
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <Space>
+              {currentQuotation?.status === 'approved' && (
+                <>
+                  <Button onClick={() => handleClientResponse('ok')}>客户接受</Button>
+                  <Button danger onClick={() => handleClientResponse('ng')}>客户拒绝</Button>
+                </>
+              )}
+              {(currentQuotation?.status === 'draft' || currentQuotation?.status === 'pending_sales') && (
+                <Button type="primary" onClick={() => { setViewDrawerOpen(false); setApprovalModalOpen(true) }}>
+                  提交审批
+                </Button>
+              )}
+            </Space>
+            <Button onClick={() => setViewDrawerOpen(false)}>关闭</Button>
+          </div>
+        }
+      >
+        {currentQuotation && (
+          <Tabs
+            items={[
+              {
+                key: 'detail',
+                label: '基本信息',
+                children: (
+                  <div>
+                    <Descriptions column={2} bordered size="small">
+                      <Descriptions.Item label="报价单号">{currentQuotation.quotationNo}</Descriptions.Item>
+                      <Descriptions.Item label="客户名称">{currentQuotation.clientName}</Descriptions.Item>
+                      <Descriptions.Item label="联系人">{currentQuotation.contactPerson}</Descriptions.Item>
+                      <Descriptions.Item label="联系电话">{currentQuotation.contactPhone}</Descriptions.Item>
+                      <Descriptions.Item label="客户邮箱">{currentQuotation.clientEmail || '-'}</Descriptions.Item>
+                      <Descriptions.Item label="客户地址">{currentQuotation.clientAddress || '-'}</Descriptions.Item>
+                      <Descriptions.Item label="报价日期">
+                        {dayjs(currentQuotation.quotationDate).format('YYYY-MM-DD')}
+                      </Descriptions.Item>
+                      <Descriptions.Item label="有效期">{currentQuotation.validDays}天</Descriptions.Item>
+                      <Descriptions.Item label="报价合计">¥{currentQuotation.totalAmount?.toFixed(2)}</Descriptions.Item>
+                      <Descriptions.Item label="税额">¥{currentQuotation.taxAmount?.toFixed(2)}</Descriptions.Item>
+                      <Descriptions.Item label="含税合计">¥{currentQuotation.totalWithTax?.toFixed(2)}</Descriptions.Item>
+                      <Descriptions.Item label="优惠金额">
+                        {currentQuotation.discountAmount ? `¥${currentQuotation.discountAmount}` : '-'}
+                      </Descriptions.Item>
+                      <Descriptions.Item label="最终金额" style={{ fontWeight: 'bold', color: '#f5222d' }}>
+                        ¥{currentQuotation.finalAmount?.toFixed(2)}
+                      </Descriptions.Item>
+                      <Descriptions.Item label="状态">
+                        <StatusTag type="quotation" status={currentQuotation.status} />
+                      </Descriptions.Item>
+                      <Descriptions.Item label="客户反馈">
+                        <StatusTag type="quotation_client" status={currentQuotation.clientResponse} />
+                      </Descriptions.Item>
+                    </Descriptions>
+
+                    <Divider orientationMargin="0">报价明细</Divider>
+                    <Table
+                      columns={[
+                        { title: '服务项目', dataIndex: 'serviceItem' },
+                        { title: '方法/标准', dataIndex: 'methodStandard' },
+                        { title: '数量', dataIndex: 'quantity' },
+                        { title: '单价', dataIndex: 'unitPrice', render: (v) => `¥${v}` },
+                        { title: '小计', dataIndex: 'totalPrice', render: (v) => `¥${v?.toFixed(2)}` },
+                      ]}
+                      dataSource={currentQuotation.items}
+                      rowKey="id"
+                      pagination={false}
+                      size="small"
+                    />
+
+                    {currentQuotation.paymentTerms && (
+                      <>
+                        <Divider orientationMargin="0">付款与交付</Divider>
+                        <p><strong>付款方式：</strong>{currentQuotation.paymentTerms}</p>
+                        {currentQuotation.deliveryTerms && <p><strong>交付方式：</strong>{currentQuotation.deliveryTerms}</p>}
+                      </>
+                    )}
+
+                    {currentQuotation.remark && (
+                      <>
+                        <Divider orientationMargin="0">备注</Divider>
+                        <p>{currentQuotation.remark}</p>
+                      </>
+                    )}
+                  </div>
+                ),
+              },
+              {
+                key: 'approval',
+                label: '审批记录',
+                children: (
+                  <div>
+                    {currentQuotation.approvals && currentQuotation.approvals.length > 0 ? (
+                      currentQuotation.approvals.map((record) => (
+                        <Card key={record.id} size="small" style={{ marginBottom: 12 }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
+                            <Tag color={record.action === 'approve' ? 'success' : 'error'}>
+                              {record.action === 'approve' ? '通过' : '拒绝'}
+                            </Tag>
+                            <span style={{ fontSize: 12, color: '#999' }}>
+                              {dayjs(record.timestamp).format('YYYY-MM-DD HH:mm')}
+                            </span>
+                          </div>
+                          <div><strong>审批人：</strong>{record.approver}</div>
+                          <div><strong>角色：</strong>{record.role}</div>
+                          <div><strong>级别：</strong>第{record.level}级</div>
+                          {record.comment && <div><strong>审批意见：</strong>{record.comment}</div>}
+                        </Card>
+                      ))
+                    ) : (
+                      <div style={{ textAlign: 'center', padding: 20, color: '#999' }}>暂无审批记录</div>
+                    )}
+                  </div>
+                ),
+              },
+            ]}
+          />
+        )}
+      </Drawer>
+
+      {/* 审批模态框 */}
+      <Modal
+        title="提交审批"
+        open={approvalModalOpen}
+        onOk={handleApproval}
+        onCancel={() => setApprovalModalOpen(false)}
+      >
+        <Form form={approvalForm} layout="vertical">
+          <Form.Item name="action" label="审批结果" rules={[{ required: true }]} initialValue="approve">
+            <Radio.Group>
+              <Radio value="approve">通过</Radio>
+              <Radio value="reject">拒绝</Radio>
+            </Radio.Group>
+          </Form.Item>
+          <Form.Item name="comment" label="审批意见">
+            <Input.TextArea rows={4} placeholder="请输入审批意见" />
+          </Form.Item>
+          <Form.Item name="approver" label="审批人" rules={[{ required: true }]} initialValue="当前用户">
+            <Input />
           </Form.Item>
         </Form>
       </Modal>

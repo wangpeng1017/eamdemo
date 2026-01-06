@@ -1,13 +1,20 @@
 import { prisma } from '@/lib/prisma'
 import { NextRequest, NextResponse } from 'next/server'
 
-// 获取单个咨询
+// 获取单个咨询（含跟进记录）
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params
-  const consultation = await prisma.consultation.findUnique({ where: { id } })
+  const consultation = await prisma.consultation.findUnique({
+    where: { id },
+    include: {
+      followUps: {
+        orderBy: { date: 'desc' },
+      },
+    },
+  })
   return NextResponse.json(consultation)
 }
 
@@ -18,9 +25,13 @@ export async function PUT(
 ) {
   const { id } = await params
   const data = await request.json()
+
   const consultation = await prisma.consultation.update({
     where: { id },
-    data
+    data: {
+      ...data,
+      testItems: data.testItems !== undefined ? data.testItems : undefined,
+    },
   })
   return NextResponse.json(consultation)
 }

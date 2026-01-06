@@ -1,5 +1,6 @@
 // Prisma Schema for LIMS Next.js
 // 实验室信息管理系统数据模型
+// 根据 PRD 完整更新 - 2026-01-05
 
 generator client {
   provider = "prisma-client-js"
@@ -13,61 +14,71 @@ datasource db {
 // ==================== 系统管理 ====================
 
 model User {
-  id        String   @id @default(cuid())
-  username  String   @unique
+  id        String     @id @default(cuid())
+  username  String     @unique
   password  String
   name      String
-  phone     String?
-  email     String?
+  phone     String?    @db.VarChar(20)
+  email     String?    @db.VarChar(100)
   avatar    String?
   deptId    String?
-  dept      Dept?    @relation(fields: [deptId], references: [id])
+  dept      Dept?      @relation(fields: [deptId], references: [id])
   roles     UserRole[]
-  status    Int      @default(1) // 1=启用 0=禁用
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  status    Int        @default(1) // 1=启用 0=禁用
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
 
   // 关联
   createdEntrustments Entrustment[] @relation("CreatedBy")
   assignedTasks       TestTask[]    @relation("AssignedTo")
   approvalLogs        ApprovalLog[]
   todos               Todo[]
+  createdSamples      Sample[]      @relation("SampleCreatedBy")
 
   @@map("sys_user")
 }
 
 model Dept {
-  id       String  @id @default(cuid())
-  name     String
-  parentId String?
-  parent   Dept?   @relation("DeptTree", fields: [parentId], references: [id])
-  children Dept[]  @relation("DeptTree")
-  users    User[]
-  sort     Int     @default(0)
-  status   Int     @default(1)
+  id        String   @id @default(cuid())
+  name      String   @db.VarChar(100)
+  code      String?  @unique @db.VarChar(50)
+  parentId  String?
+  parent    Dept?    @relation("DeptTree", fields: [parentId], references: [id])
+  children  Dept[]   @relation("DeptTree")
+  users     User[]
+  sort      Int      @default(0)
+  status    Int      @default(1)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@map("sys_dept")
 }
 
 model Role {
   id          String           @id @default(cuid())
-  name        String           @unique
-  code        String           @unique
-  description String?
+  name        String           @db.VarChar(50)
+  code        String           @unique @db.VarChar(50)
+  description String?          @db.VarChar(200)
+  status      Int              @default(1)
   permissions RolePermission[]
   users       UserRole[]
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
 
   @@map("sys_role")
 }
 
 model Permission {
-  id       String           @id @default(cuid())
-  name     String
-  code     String           @unique
-  parentId String?
-  type     Int // 1=菜单 2=按钮
-  sort     Int              @default(0)
-  roles    RolePermission[]
+  id        String           @id @default(cuid())
+  name      String           @db.VarChar(50)
+  code      String           @unique @db.VarChar(100)
+  parentId  String?
+  type      Int // 1=菜单 2=按钮
+  sort      Int              @default(0)
+  status    Int              @default(1)
+  roles     RolePermission[]
+  createdAt DateTime         @default(now())
+  updatedAt DateTime         @updatedAt
 
   @@map("sys_permission")
 }
@@ -95,115 +106,249 @@ model RolePermission {
 // ==================== 委托管理 ====================
 
 model Client {
-  id         String   @id @default(cuid())
-  name       String // 客户名称
-  shortName  String? // 简称
-  type       String? // 客户类型
-  contact    String? // 联系人
-  phone      String?
-  email      String?
-  address    String?
-  creditCode String? // 统一社会信用代码
-  status     Int      @default(1)
-  createdAt  DateTime @default(now())
+  id             String   @id @default(cuid())
+  name           String   @db.VarChar(200) // 客户名称
+  shortName      String?  @db.VarChar(100) // 简称
+  type           String?  @db.VarChar(50) // 客户类型
+  contact        String?  @db.VarChar(50) // 联系人
+  phone          String?  @db.VarChar(20)
+  email          String?  @db.VarChar(100)
+  address        String?  @db.VarChar(500)
+  creditCode     String?  @unique @db.VarChar(50) // 统一社会信用代码/税号
+  invoiceAddress String?  @db.VarChar(500) // 开票地址
+  invoicePhone   String?  @db.VarChar(20) // 开票电话
+  bankName       String?  @db.VarChar(200) // 开户行
+  bankAccount    String?  @db.VarChar(50) // 银行账号
+  remark         String?  @db.Text
+  status         String   @default("approved") // draft/pending/approved/rejected
+  creator        String?  @db.VarChar(50)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
 
   consultations Consultation[]
   entrustments  Entrustment[]
   quotations    Quotation[]
   contracts     Contract[]
+  receivables   FinanceReceivable[]
+  invoices      FinanceInvoice[]
 
   @@map("biz_client")
 }
 
+// 咨询跟进记录
+model ConsultationFollowUp {
+  id             String       @id @default(cuid())
+  consultationId String
+  consultation   Consultation @relation(fields: [consultationId], references: [id], onDelete: Cascade)
+  date           DateTime     @default(now())
+  type           String       @db.VarChar(20) // phone/email/visit/other
+  content        String       @db.Text
+  nextAction     String?      @db.VarChar(500)
+  operator       String       @db.VarChar(50)
+  createdAt      DateTime     @default(now())
+
+  @@map("biz_consultation_followup")
+}
+
 model Consultation {
-  id              String   @id @default(cuid())
-  consultationNo  String   @unique // 咨询单号
-  clientId        String?
-  client          Client?  @relation(fields: [clientId], references: [id])
-  clientCompany   String? // 客户公司（冗余）
-  contactPerson   String? // 联系人
-  contactPhone    String?
-  sampleInfo      String?  @db.Text // 样品信息
-  testRequirements String? @db.Text // 检测要求
-  feasibility     String? // 可行性评估
-  feasibilityNote String?  @db.Text
-  estimatedPrice  Decimal? @db.Decimal(10, 2)
-  status          String   @default("following") // following/quoted/closed
-  followUpRecords String?  @db.Text // JSON 跟进记录
-  quotationId     String?
-  quotationNo     String?
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  id                 String    @id @default(cuid())
+  consultationNo     String    @unique @db.VarChar(50) // ZX+年月日+序号
+  clientId           String?
+  client             Client?   @relation(fields: [clientId], references: [id])
+  clientCompany      String?   @db.VarChar(200) // 客户公司（冗余）
+  clientContact      String?   @db.VarChar(50) // 联系人
+  clientTel          String?   @db.VarChar(20)
+  clientEmail        String?   @db.VarChar(100)
+  clientAddress      String?   @db.VarChar(500)
+  sampleName         String?   @db.VarChar(200) // 样品名称
+  sampleModel        String?   @db.VarChar(100) // 型号规格
+  sampleMaterial     String?   @db.VarChar(100) // 材质信息
+  estimatedQuantity  Int? // 预估样品数量
+  testItems          String?   @db.Text // JSON 数组 检测项目列表
+  testPurpose        String?   @db.VarChar(50) // quality_inspection/product_certification/rd_testing/other
+  urgencyLevel       String?   @db.VarChar(20) // normal/urgent/very_urgent
+  expectedDeadline   DateTime? // 期望完成时间
+  clientRequirements String?   @db.Text // 特殊要求
+  budgetRange        String?   @db.VarChar(50) // 预算范围
+  status             String    @default("following") // following/quoted/rejected/closed
+  follower           String?   @db.VarChar(50) // 跟进人
+  feasibility        String?   @db.VarChar(20) // feasible/difficult/infeasible
+  feasibilityNote    String?   @db.Text // 可行性说明
+  estimatedPrice     Decimal?  @db.Decimal(10, 2) // 预估价格
+  quotationId        String?
+  quotationNo        String?   @db.VarChar(50)
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+
+  followUps ConsultationFollowUp[]
 
   @@map("biz_consultation")
 }
 
-model Quotation {
-  id            String   @id @default(cuid())
-  quotationNo   String   @unique // 报价单号
-  clientId      String?
-  client        Client?  @relation(fields: [clientId], references: [id])
-  clientName    String?
-  contactPerson String?
-  contactPhone  String?
-  items         String?  @db.Text // JSON 报价项目
-  totalAmount   Decimal? @db.Decimal(12, 2)
-  discount      Decimal? @db.Decimal(5, 2)
-  finalAmount   Decimal? @db.Decimal(12, 2)
-  validDays     Int      @default(30)
-  status        String   @default("draft") // draft/sent/accepted/rejected
-  remark        String?  @db.Text
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+// 报价明细项
+model QuotationItem {
+  id             String    @id @default(cuid())
+  quotationId    String
+  quotation      Quotation @relation(fields: [quotationId], references: [id], onDelete: Cascade)
+  serviceItem    String    @db.VarChar(200) // 检测项目
+  methodStandard String    @db.VarChar(200) // 依据标准
+  quantity       Int       @default(1)
+  unitPrice      Decimal   @db.Decimal(10, 2)
+  totalPrice     Decimal   @db.Decimal(12, 2)
+  sort           Int       @default(0)
 
+  @@map("biz_quotation_item")
+}
+
+// 报价审批记录
+model QuotationApproval {
+  id          String    @id @default(cuid())
+  quotationId String
+  quotation   Quotation @relation(fields: [quotationId], references: [id], onDelete: Cascade)
+  level       Int // 1/2/3
+  role        String    @db.VarChar(50) // sales_manager/finance/lab_director
+  approver    String    @db.VarChar(50)
+  action      String    @db.VarChar(20) // approve/reject
+  comment     String?   @db.Text
+  timestamp   DateTime  @default(now())
+
+  @@map("biz_quotation_approval")
+}
+
+model Quotation {
+  id             String   @id @default(cuid())
+  quotationNo    String   @unique @db.VarChar(50) // BJ+年月日+序号
+  clientId       String?
+  client         Client?  @relation(fields: [clientId], references: [id])
+  clientCompany  String?  @db.VarChar(200) // 委托方公司
+  clientContact  String?  @db.VarChar(50) // 联系人
+  clientTel      String?  @db.VarChar(20)
+  clientEmail    String?  @db.VarChar(100)
+  clientAddress  String?  @db.VarChar(500)
+  serviceCompany String   @default("江苏国轻检测技术有限公司") @db.VarChar(200)
+  serviceContact String?  @db.VarChar(50) // 业务员
+  serviceTel     String?  @db.VarChar(20)
+  sampleName     String?  @db.VarChar(200) // 样品名称
+  clientRemark   String?  @db.Text // 客户特殊要求
+  subtotal       Decimal? @db.Decimal(12, 2) // 报价合计
+  taxTotal       Decimal? @db.Decimal(12, 2) // 含税合计
+  discountTotal  Decimal? @db.Decimal(12, 2) // 优惠后合计
+  status         String   @default("draft") // draft/pending_sales/pending_finance/pending_lab/approved/rejected/archived
+  clientStatus   String   @default("pending") // pending/ok/ng
+  ngReason       String?  @db.Text // 客户拒绝原因
+  consultationNo String?  @db.VarChar(50) // 来源咨询单号
+  contractNo     String?  @db.VarChar(50) // 生成的合同编号
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  items     QuotationItem[]
+  approvals QuotationApproval[]
   contracts Contract[]
 
   @@map("biz_quotation")
 }
 
 model Contract {
-  id          String     @id @default(cuid())
-  contractNo  String     @unique // 合同编号
-  clientId    String?
-  client      Client?    @relation(fields: [clientId], references: [id])
-  quotationId String?
-  quotation   Quotation? @relation(fields: [quotationId], references: [id])
-  clientName  String?
-  amount      Decimal?   @db.Decimal(12, 2)
-  signDate    DateTime?
-  startDate   DateTime?
-  endDate     DateTime?
-  status      String     @default("draft") // draft/active/completed/terminated
-  attachments String?    @db.Text // JSON 附件列表
-  createdAt   DateTime   @default(now())
-  updatedAt   DateTime   @updatedAt
+  id           String     @id @default(cuid())
+  contractNo   String     @unique @db.VarChar(50) // HT+年月日+序号
+  contractName String     @db.VarChar(200)
+  clientId     String?
+  client       Client?    @relation(fields: [clientId], references: [id])
+  quotationId  String?
+  quotation    Quotation? @relation(fields: [quotationId], references: [id])
+
+  // 甲方信息
+  partyACompany     String? @db.VarChar(200)
+  partyAContact     String? @db.VarChar(50)
+  partyATel         String? @db.VarChar(20)
+  partyAAddress     String? @db.VarChar(500)
+  partyATaxId       String? @db.VarChar(50)
+  partyABankName    String? @db.VarChar(200)
+  partyABankAccount String? @db.VarChar(50)
+
+  // 乙方信息
+  partyBCompany String? @default("江苏国轻检测技术有限公司") @db.VarChar(200)
+  partyBContact String? @db.VarChar(50)
+  partyBTel     String? @db.VarChar(20)
+  partyBAddress String? @db.VarChar(500)
+
+  contractAmount Decimal? @db.Decimal(12, 2)
+  sampleName     String?  @db.VarChar(200)
+
+  // 预付款
+  hasAdvancePayment    Boolean  @default(false)
+  advancePaymentAmount Decimal? @db.Decimal(12, 2)
+
+  signDate      DateTime? // 签订日期
+  effectiveDate DateTime? // 生效日期
+  expiryDate    DateTime? // 到期日期
+  status        String    @default("draft") // draft/signed/executing/completed/terminated
+
+  // 合同条款 JSON
+  termsPaymentTerms         String? @db.Text // 付款条款
+  termsDeliveryTerms        String? @db.Text // 交付条款
+  termsQualityTerms         String? @db.Text // 质量条款
+  termsConfidentialityTerms String? @db.Text // 保密条款
+  termsLiabilityTerms       String? @db.Text // 违约责任
+  termsDisputeResolution    String? @db.Text // 争议解决
+
+  attachments String?  @db.Text // JSON 附件列表
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 
   entrustments Entrustment[]
 
   @@map("biz_contract")
 }
 
+// 委托单检测项目
+model EntrustmentProject {
+  id            String      @id @default(cuid())
+  entrustmentId String
+  entrustment   Entrustment @relation(fields: [entrustmentId], references: [id], onDelete: Cascade)
+  name          String      @db.VarChar(200) // 项目名称
+  testItems     String      @db.Text // JSON 数组 检测参数列表
+  method        String?     @db.VarChar(200) // 检测方法标准
+  standard      String?     @db.VarChar(200) // 结果判定标准
+  status        String      @default("pending") // pending/assigned/subcontracted/completed
+  assignTo      String?     @db.VarChar(50) // 内部检测人员
+  subcontractor String?     @db.VarChar(200) // 外包供应商
+  deviceId      String?     @db.VarChar(50) // 检测设备ID
+  assignDate    DateTime? // 分配日期
+  deadline      DateTime? // 完成截止日期
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+
+  @@map("biz_entrustment_project")
+}
+
 model Entrustment {
   id            String    @id @default(cuid())
-  entrustmentNo String    @unique // 委托单号
+  entrustmentNo String    @unique @db.VarChar(50) // WT+年月日+序号
+  contractNo    String?   @db.VarChar(50)
+  contract      Contract? @relation(fields: [contractNo], references: [contractNo])
   clientId      String?
   client        Client?   @relation(fields: [clientId], references: [id])
-  contractId    String?
-  contract      Contract? @relation(fields: [contractId], references: [id])
-  clientName    String?
-  contactPerson String?
-  contactPhone  String?
-  sampleName    String? // 样品名称
-  sampleCount   Int? // 样品数量
-  testItems     String?   @db.Text // JSON 检测项目
-  requirements  String?   @db.Text // 检测要求
-  expectedDate  DateTime? // 期望完成日期
-  status        String    @default("pending") // pending/accepted/testing/completed
-  createdById   String?
-  createdBy     User?     @relation("CreatedBy", fields: [createdById], references: [id])
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
+  clientName    String?   @db.VarChar(200)
+  contactPerson String?   @db.VarChar(50)
+  sampleDate    DateTime? // 送样时间
+  follower      String?   @db.VarChar(50) // 跟进人
 
+  sampleName     String? @db.VarChar(200) // 样品名称
+  sampleModel    String? @db.VarChar(100) // 规格型号
+  sampleMaterial String? @db.VarChar(100) // 材质牌号
+  sampleQuantity Int? // 样品总数
+  isSampleReturn Boolean @default(false) // 是否退样
+
+  sourceType String? @db.VarChar(20) // contract/quotation/direct
+  status     String  @default("pending") // pending/accepted/testing/completed
+
+  createdById String?
+  createdBy   User?    @relation("CreatedBy", fields: [createdById], references: [id])
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  projects    EntrustmentProject[]
   samples     Sample[]
   receivables FinanceReceivable[]
 
@@ -212,24 +357,52 @@ model Entrustment {
 
 // ==================== 样品管理 ====================
 
-model Sample {
-  id              String       @id @default(cuid())
-  sampleNo        String       @unique // 样品编号
-  entrustmentId   String?
-  entrustment     Entrustment? @relation(fields: [entrustmentId], references: [id])
-  name            String // 样品名称
-  type            String? // 样品类型
-  specification   String? // 规格型号
-  quantity        String? // 数量
-  unit            String? // 单位
-  receivedDate    DateTime? // 接收日期
-  storageLocation String? // 存放位置
-  status          String       @default("received") // received/testing/completed/returned
-  remark          String?      @db.Text
-  createdAt       DateTime     @default(now())
-  updatedAt       DateTime     @updatedAt
+// 样品领用记录
+model SampleRequisition {
+  id                 String    @id @default(cuid())
+  sampleId           String
+  sample             Sample    @relation(fields: [sampleId], references: [id], onDelete: Cascade)
+  requisitionNo      String    @unique @db.VarChar(50) // 领用单号
+  requisitionDate    DateTime  @default(now()) // 领用日期
+  requisitionBy      String    @db.VarChar(50) // 领用人
+  quantity           String    @db.VarChar(50) // 领用数量
+  purpose            String?   @db.Text // 用途
+  expectedReturnDate DateTime? // 预计归还日期
+  actualReturnDate   DateTime? // 实际归还日期
+  status             String    @default("requisitioned") // requisitioned/returned/overdue
+  remark             String?   @db.Text
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
 
-  testTasks TestTask[]
+  @@map("biz_sample_requisition")
+}
+
+model Sample {
+  id                String       @id @default(cuid())
+  sampleNo          String       @unique @db.VarChar(50) // S+年月日+序号
+  entrustmentId     String?
+  entrustment       Entrustment? @relation(fields: [entrustmentId], references: [id])
+  receiptId         String?      @db.VarChar(50) // 收样单号
+  name              String       @db.VarChar(200) // 样品名称
+  type              String?      @db.VarChar(50) // 样品类型
+  specification     String?      @db.VarChar(200) // 规格型号
+  quantity          String?      @db.VarChar(50) // 数量
+  totalQuantity     String?      @db.VarChar(50) // 样品总量
+  unit              String?      @db.VarChar(20) // 个/件/批/kg/g/L/mL/m/m²/m³
+  receiptDate       DateTime? // 收样日期
+  receiptPerson     String?      @db.VarChar(50) // 收样人
+  storageLocation   String?      @db.VarChar(200) // 存放位置
+  remainingQuantity String?      @db.VarChar(50) // 剩余量
+  status            String       @default("received") // 待收样/已收样/已分配/检测中/已完成/已归还/已销毁
+  isOutsourced      Boolean      @default(false) // 是否委外
+  remark            String?      @db.Text
+  createdById       String?
+  createdBy         User?        @relation("SampleCreatedBy", fields: [createdById], references: [id])
+  createdAt         DateTime     @default(now())
+  updatedAt         DateTime     @updatedAt
+
+  testTasks    TestTask[]
+  requisitions SampleRequisition[]
 
   @@map("biz_sample")
 }
@@ -237,21 +410,28 @@ model Sample {
 // ==================== 检测管理 ====================
 
 model TestTask {
-  id           String    @id @default(cuid())
-  taskNo       String    @unique // 任务编号
-  sampleId     String?
-  sample       Sample?   @relation(fields: [sampleId], references: [id])
-  testItem     String // 检测项目
-  testMethod   String? // 检测方法
-  deviceId     String?
-  device       Device?   @relation(fields: [deviceId], references: [id])
-  assignedToId String?
-  assignedTo   User?     @relation("AssignedTo", fields: [assignedToId], references: [id])
-  plannedDate  DateTime? // 计划日期
-  actualDate   DateTime? // 实际完成日期
-  status       String    @default("pending") // pending/testing/completed/reviewed
-  createdAt    DateTime  @default(now())
-  updatedAt    DateTime  @updatedAt
+  id            String    @id @default(cuid())
+  taskNo        String    @unique @db.VarChar(50) // T+年月日+序号
+  entrustmentId String?   @db.VarChar(50)
+  projectId     String?   @db.VarChar(50) // 关联委托单检测项目ID
+  sampleId      String?
+  sample        Sample?   @relation(fields: [sampleId], references: [id])
+  sampleName    String?   @db.VarChar(200) // 冗余样品名称
+  parameters    String?   @db.Text // JSON 检测项目列表
+  testMethod    String?   @db.VarChar(200) // 检测方法
+  deviceId      String?   @db.VarChar(50)
+  device        Device?   @relation(fields: [deviceId], references: [id])
+  assignedToId  String?
+  assignedTo    User?     @relation("AssignedTo", fields: [assignedToId], references: [id])
+  plannedDate   DateTime? // 计划日期
+  dueDate       DateTime? // 完成截止日期
+  actualDate    DateTime? // 实际完成日期
+  progress      Int       @default(0) // 进度百分比
+  isOutsourced  Boolean   @default(false) // 是否委外
+  status        String    @default("pending") // 待开始/进行中/已完成/已转交
+  remark        String?   @db.Text
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
 
   testData TestData[]
   reports  TestReport[]
@@ -263,87 +443,218 @@ model TestData {
   id        String   @id @default(cuid())
   taskId    String
   task      TestTask @relation(fields: [taskId], references: [id], onDelete: Cascade)
-  parameter String // 参数名称
-  value     String? // 检测值
-  unit      String? // 单位
-  standard  String? // 标准值
-  result    String? // 判定结果
-  remark    String?
+  parameter String   @db.VarChar(100) // 参数名称
+  value     String?  @db.Text // 检测值
+  unit      String?  @db.VarChar(20)
+  standard  String?  @db.Text // 标准值
+  result    String?  @db.VarChar(20) // 判定结果
+  remark    String?  @db.Text
   createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@map("biz_test_data")
 }
 
+// 报告审批记录
+model TestReportApproval {
+  id         String     @id @default(cuid())
+  reportId   String
+  report     TestReport @relation(fields: [reportId], references: [id], onDelete: Cascade)
+  reviewType String     @db.VarChar(20) // review/approve
+  reviewer   String     @db.VarChar(50)
+  result     String     @db.VarChar(20) // pass/reject
+  comments   String?    @db.Text
+  reviewDate DateTime   @default(now())
+
+  @@map("biz_test_report_approval")
+}
+
 model TestReport {
-  id           String    @id @default(cuid())
-  reportNo     String    @unique // 报告编号
-  taskId       String?
-  task         TestTask? @relation(fields: [taskId], references: [id])
-  title        String? // 报告标题
-  conclusion   String?   @db.Text // 结论
-  content      String?   @db.LongText // 报告内容 JSON
+  id       String    @id @default(cuid())
+  reportNo String    @unique @db.VarChar(50) // RPT-YYYYMMDD-XXX
+  taskId   String?
+  task     TestTask? @relation(fields: [taskId], references: [id])
+
+  // 基本信息
+  entrustmentId String? @db.VarChar(50)
+  projectName   String? @db.VarChar(200) // 检测项目
+  clientName    String? @db.VarChar(200)
+
+  // 样品信息
+  sampleNo       String?   @db.VarChar(50)
+  sampleName     String?   @db.VarChar(200)
+  specification  String?   @db.VarChar(200)
+  sampleQuantity String?   @db.VarChar(50)
+  receivedDate   DateTime?
+
+  // 检测信息
+  testParameters    String? @db.Text // JSON 检测参数列表
+  testResults       String? @db.LongText // JSON 结果数据
+  standardName      String? @db.VarChar(200) // 检测标准
+  overallConclusion String? @db.Text // 总体结论
+
+  // 人员
+  tester   String? @db.VarChar(50) // 检测人
+  reviewer String? @db.VarChar(50) // 审核人
+  approver String? @db.VarChar(50) // 批准人
+
+  // 客户报告关联
+  isClientReport Boolean @default(false)
+  clientReportId String? @db.VarChar(50)
+
   status       String    @default("draft") // draft/reviewing/approved/issued
-  approvalFlow String?   @db.Text // 审批流程 JSON
+  approvalFlow String?   @db.Text // JSON 审批流程
   issuedDate   DateTime?
   createdAt    DateTime  @default(now())
   updatedAt    DateTime  @updatedAt
+
+  approvals TestReportApproval[]
 
   @@map("biz_test_report")
 }
 
 // ==================== 设备管理 ====================
 
-model Device {
-  id              String    @id @default(cuid())
-  deviceNo        String    @unique // 设备编号
-  name            String // 设备名称
-  model           String? // 型号
-  manufacturer    String? // 制造商
-  serialNumber    String? // 出厂编号
-  purchaseDate    DateTime? // 购置日期
-  location        String? // 存放位置
-  status          String    @default("normal") // normal/maintenance/scrapped
-  calibrationDate DateTime? // 上次校准日期
-  nextCalibration DateTime? // 下次校准日期
-  remark          String?   @db.Text
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt
+// 设备保养计划
+model DeviceMaintenance {
+  id                  String    @id @default(cuid())
+  deviceId            String
+  device              Device    @relation(fields: [deviceId], references: [id], onDelete: Cascade)
+  planName            String    @db.VarChar(200)
+  planType            String    @db.VarChar(20) // daily/weekly/monthly/quarterly/annual
+  interval            Int // 间隔天数
+  nextMaintenanceDate DateTime?
+  responsiblePerson   String?   @db.VarChar(50)
+  maintenanceItems    String    @db.Text // JSON 保养项目列表
+  status              String    @default("active") // active/inactive
+  lastMaintenanceDate DateTime?
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
 
-  testTasks TestTask[]
+  @@map("biz_device_maintenance")
+}
+
+// 设备维修记录
+model DeviceRepair {
+  id            String    @id @default(cuid())
+  deviceId      String
+  device        Device    @relation(fields: [deviceId], references: [id], onDelete: Cascade)
+  repairNo      String    @unique @db.VarChar(50)
+  faultDate     DateTime  @default(now())
+  faultDesc     String    @db.Text // 故障描述
+  repairType    String?   @db.VarChar(50) // 维修类型
+  repairCost    Decimal?  @db.Decimal(10, 2)
+  repairBy      String?   @db.VarChar(50) // 维修人
+  status        String    @default("pending") // pending/in_progress/completed
+  completedDate DateTime?
+  remark        String?   @db.Text
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  @@map("biz_device_repair")
+}
+
+// 设备定检计划
+model DeviceCalibration {
+  id        String    @id @default(cuid())
+  deviceId  String
+  device    Device    @relation(fields: [deviceId], references: [id], onDelete: Cascade)
+  lastDate  DateTime? // 上次定检日期
+  nextDate  DateTime? // 下次定检日期
+  interval  Int? // 定检周期（天）
+  status    String    @default("pending") // pending/completed/overdue
+  result    String?   @db.Text // 定检结果
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  @@map("biz_device_calibration")
+}
+
+model Device {
+  id                  String    @id @default(cuid())
+  deviceNo            String    @unique @db.VarChar(50) // 如 ALTCCS-2022001
+  name                String    @db.VarChar(200)
+  model               String?   @db.VarChar(100)
+  manufacturer        String?   @db.VarChar(200)
+  serialNumber        String?   @db.VarChar(100)
+  assetType           String?   @db.VarChar(50) // instrument/device/glassware
+  status              String    @default("Running") @db.VarChar(20) // Running/Maintenance/Idle/Scrapped
+  location            String?   @db.VarChar(200) // 存放区域
+  department          String?   @db.VarChar(100) // 所属部门
+  purchaseDate        DateTime? // 采购日期
+  commissioningDate   DateTime? // 启用日期
+  lastCalibrationDate DateTime? // 上次定检
+  nextCalibrationDate DateTime? // 下次定检
+  responsiblePerson   String?   @db.VarChar(50) // 设备负责人
+  utilization         Int       @default(0) // 利用率百分比
+  operatingHours      Decimal?  @db.Decimal(10, 2) // 运行时长
+  remark              String?   @db.Text
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
+
+  testTasks    TestTask[]
+  maintenances DeviceMaintenance[]
+  repairs      DeviceRepair[]
+  calibrations DeviceCalibration[]
 
   @@map("biz_device")
 }
 
 // ==================== 外包管理 ====================
 
-model Supplier {
+// 供应商评价
+model SupplierEvaluation {
   id            String   @id @default(cuid())
-  name          String // 供应商名称
-  type          String? // 类型
-  contact       String?
-  phone         String?
-  email         String?
-  address       String?
-  qualification String?  @db.Text // 资质信息
-  status        Int      @default(1)
+  supplierId    String
+  supplier      Supplier @relation(fields: [supplierId], references: [id], onDelete: Cascade)
+  evalDate      DateTime @default(now())
+  qualityScore  Int // 质量评分
+  deliveryScore Int // 交付评分
+  serviceScore  Int // 服务评分
+  totalScore    Int // 总分
+  comments      String?  @db.Text
+  evaluator     String   @db.VarChar(50)
   createdAt     DateTime @default(now())
 
+  @@map("biz_supplier_evaluation")
+}
+
+model Supplier {
+  id            String            @id @default(cuid())
+  name          String            @db.VarChar(200)
+  code          String?           @unique @db.VarChar(50)
+  type          String?           @db.VarChar(50)
+  categoryId    String?
+  category      SupplierCategory? @relation(fields: [categoryId], references: [id])
+  contact       String?           @db.VarChar(50)
+  phone         String?           @db.VarChar(20)
+  email         String?           @db.VarChar(100)
+  address       String?           @db.VarChar(500)
+  qualification String?           @db.Text // 资质信息 JSON
+  status        Int               @default(1)
+  remark        String?           @db.Text
+  createdAt     DateTime          @default(now())
+  updatedAt     DateTime          @updatedAt
+
   outsourceOrders OutsourceOrder[]
+  evaluations     SupplierEvaluation[]
+  performances    SupplierPerformance[] @relation("SupplierPerformances")
 
   @@map("biz_supplier")
 }
 
 model OutsourceOrder {
-  id            String    @id @default(cuid())
-  orderNo       String    @unique // 外包单号
+  orderNo       String    @unique @db.VarChar(50)
   supplierId    String?
   supplier      Supplier? @relation(fields: [supplierId], references: [id])
-  supplierName  String?
+  supplierName  String?   @db.VarChar(200)
+  taskId        String?   @db.VarChar(50) // 关联任务
   items         String?   @db.Text // JSON 外包项目
   amount        Decimal?  @db.Decimal(12, 2)
-  status        String    @default("pending") // pending/processing/completed
   expectedDate  DateTime?
   completedDate DateTime?
+  status        String    @default("pending") // pending/processing/completed
+  remark        String?   @db.Text
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
 
@@ -354,14 +665,20 @@ model OutsourceOrder {
 
 model FinanceReceivable {
   id             String       @id @default(cuid())
+  receivableNo   String       @unique @db.VarChar(50) // AR-YYYYMMDD-XXX
   entrustmentId  String?
   entrustment    Entrustment? @relation(fields: [entrustmentId], references: [id])
-  clientName     String?
+  clientId       String?
+  client         Client?      @relation(fields: [clientId], references: [id])
+  clientName     String?      @db.VarChar(200)
   amount         Decimal      @db.Decimal(12, 2)
   receivedAmount Decimal      @default(0) @db.Decimal(12, 2)
   status         String       @default("pending") // pending/partial/completed
   dueDate        DateTime?
+  reportNos      String?      @db.Text // JSON 报告编号列表
+  remark         String?      @db.Text
   createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
 
   payments FinancePayment[]
   invoices FinanceInvoice[]
@@ -375,8 +692,12 @@ model FinancePayment {
   receivable    FinanceReceivable @relation(fields: [receivableId], references: [id], onDelete: Cascade)
   amount        Decimal           @db.Decimal(12, 2)
   paymentDate   DateTime
-  paymentMethod String?
-  remark        String?
+  paymentMethod String            @db.VarChar(20) // 现金/银行转账/支票/其他
+  handlerName   String?           @db.VarChar(50)
+  bankName      String?           @db.VarChar(200)
+  transactionNo String?           @db.VarChar(100) // 交易流水号
+  attachments   String?           @db.Text // JSON 凭证
+  remark        String?           @db.Text
   createdAt     DateTime          @default(now())
 
   @@map("fin_payment")
@@ -384,36 +705,94 @@ model FinancePayment {
 
 model FinanceInvoice {
   id           String             @id @default(cuid())
-  invoiceNo    String             @unique
+  invoiceNo    String             @unique @db.VarChar(50) // INV-YYYYMMDD-XXX
   receivableId String?
   receivable   FinanceReceivable? @relation(fields: [receivableId], references: [id])
-  amount       Decimal            @db.Decimal(12, 2)
-  type         String? // 发票类型
-  status       String             @default("pending") // pending/issued
-  issuedDate   DateTime?
-  createdAt    DateTime           @default(now())
+  clientId     String?
+  client       Client?            @relation(fields: [clientId], references: [id])
+
+  // 购买方信息
+  clientName        String  @db.VarChar(200)
+  clientTaxNo       String? @db.VarChar(50)
+  clientAddress     String? @db.VarChar(500)
+  clientPhone       String? @db.VarChar(20)
+  clientBank        String? @db.VarChar(200)
+  clientBankAccount String? @db.VarChar(50)
+
+  invoiceType   String?   @db.VarChar(50) // 增值税普通发票/增值税专用发票
+  invoiceAmount Decimal   @db.Decimal(12, 2) // 不含税金额
+  taxRate       Decimal   @default(0.06) @db.Decimal(5, 4) // 税率
+  taxAmount     Decimal   @db.Decimal(12, 2) // 税额
+  totalAmount   Decimal   @db.Decimal(12, 2) // 价税合计
+  status        String    @default("pending") // pending/issued
+  issuedDate    DateTime?
+  remark        String?   @db.Text
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
 
   @@map("fin_invoice")
+}
+
+// ==================== 易耗品管理 ====================
+
+model Consumable {
+  id            String              @id @default(cuid())
+  code          String              @unique @db.VarChar(50)
+  name          String              @db.VarChar(200)
+  categoryId    String?
+  category      ConsumableCategory? @relation(fields: [categoryId], references: [id])
+  specification String?             @db.VarChar(200)
+  unit          String?             @db.VarChar(20)
+  stockQuantity Decimal             @default(0) @db.Decimal(10, 2)
+  minStock      Decimal?            @db.Decimal(10, 2) // 最低库存
+  location      String?             @db.VarChar(200) // 存放位置
+  status        Int                 @default(1)
+  remark        String?             @db.Text
+  createdAt     DateTime            @default(now())
+  updatedAt     DateTime            @updatedAt
+
+  transactions ConsumableTransaction[]
+
+  @@map("biz_consumable")
+}
+
+model ConsumableTransaction {
+  id              String     @id @default(cuid())
+  consumableId    String
+  consumable      Consumable @relation(fields: [consumableId], references: [id], onDelete: Cascade)
+  transactionNo   String     @unique @db.VarChar(50)
+  type            String     @db.VarChar(20) // in/out
+  quantity        Decimal    @db.Decimal(10, 2)
+  stockBefore     Decimal    @db.Decimal(10, 2)
+  stockAfter      Decimal    @db.Decimal(10, 2)
+  reason          String?    @db.VarChar(200)
+  operator        String     @db.VarChar(50)
+  transactionDate DateTime   @default(now())
+  remark          String?    @db.Text
+  createdAt       DateTime   @default(now())
+
+  @@map("biz_consumable_transaction")
 }
 
 // ==================== 审批管理 ====================
 
 model ApprovalFlow {
   id        String   @id @default(cuid())
-  name      String // 流程名称
-  type      String // 流程类型
+  name      String   @db.VarChar(100)
+  type      String   @db.VarChar(50) // 流程类型
   nodes     String   @db.Text // JSON 节点配置
   status    Int      @default(1)
   createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@map("sys_approval_flow")
 }
 
 model ApprovalLog {
   id         String   @id @default(cuid())
-  bizType    String // 业务类型
-  bizId      String // 业务ID
-  action     String // 操作
+  bizType    String   @db.VarChar(50) // 业务类型
+  bizId      String   @db.VarChar(100) // 业务ID
+  action     String   @db.VarChar(50) // 操作
   comment    String?  @db.Text
   operatorId String
   operator   User     @relation(fields: [operatorId], references: [id])
@@ -424,15 +803,16 @@ model ApprovalLog {
 
 model Todo {
   id        String    @id @default(cuid())
-  title     String
-  type      String // 待办类型
-  bizType   String? // 关联业务类型
-  bizId     String? // 关联业务ID
+  title     String    @db.VarChar(200)
+  type      String    @db.VarChar(50) // 待办类型
+  bizType   String?   @db.VarChar(50) // 关联业务类型
+  bizId     String?   @db.VarChar(100) // 关联业务ID
   userId    String
   user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
   status    String    @default("pending") // pending/completed
   dueDate   DateTime?
   createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
 
   @@map("sys_todo")
 }
@@ -441,13 +821,166 @@ model Todo {
 
 model SystemDocument {
   id        String   @id @default(cuid())
-  title     String
-  category  String?
+  title     String   @db.VarChar(200)
+  category  String?  @db.VarChar(50)
   content   String?  @db.LongText
-  version   String?
+  version   String?  @db.VarChar(20)
   status    Int      @default(1)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   @@map("sys_document")
+}
+
+// ==================== 报告模板管理 ====================
+
+model ReportTemplate {
+  id         String   @id @default(cuid())
+  name       String   @db.VarChar(200)
+  code       String   @unique @db.VarChar(50)
+  category   String   @db.VarChar(50)
+  fileUrl    String   @db.VarChar(500)
+  uploadDate DateTime @default(now())
+  uploader   String   @db.VarChar(50)
+  status     String   @default("active") // active/inactive
+  remark     String?  @db.Text
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@map("biz_report_template")
+}
+
+// ==================== 客户报告 ====================
+
+model ClientReport {
+  id                String    @id @default(cuid())
+  reportNo          String    @unique @db.VarChar(50)
+  entrustmentId     String?   @db.VarChar(50)
+  projectName       String?   @db.VarChar(200)
+  clientName        String    @db.VarChar(200)
+  clientAddress     String?   @db.VarChar(500)
+  sampleName        String    @db.VarChar(200)
+  sampleNo          String?   @db.VarChar(50)
+  specification     String?   @db.VarChar(200)
+  sampleQuantity    String?   @db.VarChar(50)
+  receivedDate      DateTime?
+  taskReportNos     String?   @db.Text // JSON 关联任务报告
+  testItems         String?   @db.Text // JSON 检测项目
+  testStandards     String?   @db.Text // JSON 检测依据
+  overallConclusion String?   @db.Text
+  preparer          String?   @db.VarChar(50)
+  reviewer          String?   @db.VarChar(50)
+  approver          String?   @db.VarChar(50)
+  status            String    @default("draft") // draft/pending_review/pending_approve/approved/issued
+  approvalFlow      String?   @db.Text // JSON 审批记录
+  issuedDate        DateTime?
+  attachmentUrl     String?   @db.VarChar(500)
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  @@map("biz_client_report")
+}
+
+// ==================== 供应商分类 ====================
+
+model SupplierCategory {
+  id          String             @id @default(cuid())
+  name        String             @db.VarChar(100)
+  code        String             @unique @db.VarChar(50)
+  parentId    String?
+  parent      SupplierCategory?  @relation("CategoryTree", fields: [parentId], references: [id])
+  children    SupplierCategory[] @relation("CategoryTree")
+  description String?            @db.VarChar(500)
+  sort        Int                @default(0)
+  status      Int                @default(1)
+  createdAt   DateTime           @default(now())
+  updatedAt   DateTime           @updatedAt
+
+  suppliers   Supplier[]
+  templates   EvaluationTemplate[]
+
+  @@map("biz_supplier_category")
+}
+
+// ==================== 易耗品分类 ====================
+
+model ConsumableCategory {
+  id          String               @id @default(cuid())
+  name        String               @db.VarChar(100)
+  code        String               @unique @db.VarChar(50)
+  parentId    String?
+  parent      ConsumableCategory?  @relation("CategoryTree", fields: [parentId], references: [id])
+  children    ConsumableCategory[] @relation("CategoryTree")
+  description String?              @db.VarChar(500)
+  sort        Int                  @default(0)
+  status      Int                  @default(1)
+  createdAt   DateTime             @default(now())
+  updatedAt   DateTime             @updatedAt
+
+  consumables Consumable[]
+
+  @@map("biz_consumable_category")
+}
+
+// ==================== 评价模板 ====================
+
+model EvaluationTemplate {
+  id          String                   @id @default(cuid())
+  name        String                   @db.VarChar(100)
+  code        String                   @unique @db.VarChar(50)
+  categoryId  String?
+  category    SupplierCategory?        @relation(fields: [categoryId], references: [id])
+  description String?                  @db.VarChar(500)
+  status      Boolean                  @default(true)
+  createdAt   DateTime                 @default(now())
+  updatedAt   DateTime                 @updatedAt
+
+  items       EvaluationTemplateItem[]
+
+  @@map("biz_evaluation_template")
+}
+
+model EvaluationTemplateItem {
+  id          String             @id @default(cuid())
+  templateId  String
+  template    EvaluationTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
+  name        String             @db.VarChar(100)
+  weight      Int                // 权重百分比
+  maxScore    Int                @default(100)
+  description String?            @db.VarChar(500)
+  sort        Int                @default(0)
+
+  @@map("biz_evaluation_template_item")
+}
+
+// ==================== 供应商绩效评价 ====================
+
+model SupplierPerformance {
+  id           String   @id @default(cuid())
+  supplierId   String
+  supplier     Supplier @relation("SupplierPerformances", fields: [supplierId], references: [id], onDelete: Cascade)
+  templateId   String?
+  period       String   @db.VarChar(20) // 评价周期，如 2025-Q4
+  scores       String   @db.Text // JSON 存储各项评分
+  totalScore   Decimal  @db.Decimal(5, 2)
+  level        String   @db.VarChar(10) // A/B/C/D
+  evaluator    String   @db.VarChar(50)
+  evaluateDate DateTime @default(now())
+  comment      String?  @db.Text
+  status       String   @default("draft") @db.VarChar(20) // draft/submitted/approved
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@map("biz_supplier_performance")
+}
+
+// ==================== 系统计数器 ====================
+
+model NumberCounter {
+  prefix  String   @db.VarChar(10)
+  date    String   @db.VarChar(8)
+  counter Int      @default(1)
+
+  @@id([prefix, date])
+  @@map("sys_number_counter")
 }
