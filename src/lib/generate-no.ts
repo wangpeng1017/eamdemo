@@ -16,6 +16,8 @@ export const NumberPrefixes = {
   INVOICE: 'INV',        // 发票
   REPAIR: 'WX',          // 维修
   PAYMENT: 'PM',         // 收款
+  STOCK_IN: 'RK',        // 入库
+  STOCK_OUT: 'CK',       // 出库
 } as const
 
 export type NumberPrefix = typeof NumberPrefixes[keyof typeof NumberPrefixes]
