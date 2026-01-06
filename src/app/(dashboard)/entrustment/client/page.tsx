@@ -1,20 +1,23 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Table, Button, Space, Tag, Modal, Form, Input, Select, message } from 'antd'
+import { Table, Button, Space, Tag, Modal, Form, Input, Select, message, Popconfirm } from 'antd'
 import { PlusOutlined, EditOutlined, DeleteOutlined } from '@ant-design/icons'
 import type { ColumnsType } from 'antd/es/table'
+import dayjs from 'dayjs'
 
 interface Client {
   id: string
   name: string
-  shortName: string | null
-  type: string | null
   contact: string | null
   phone: string | null
-  email: string | null
   address: string | null
-  status: number
+  creditCode: string | null  // 税号
+  bankName: string | null    // 开户行
+  bankAccount: string | null // 银行账号
+  remark: string | null
+  status: string
+  createdAt: string
 }
 
 export default function ClientPage() {
@@ -40,6 +43,7 @@ export default function ClientPage() {
   const handleAdd = () => {
     setEditingId(null)
     form.resetFields()
+    form.setFieldsValue({ status: 'approved' })
     setModalOpen(true)
   }
 
@@ -70,22 +74,39 @@ export default function ClientPage() {
   }
 
   const columns: ColumnsType<Client> = [
-    { title: '客户名称', dataIndex: 'name' },
-    { title: '简称', dataIndex: 'shortName', width: 100 },
-    { title: '类型', dataIndex: 'type', width: 100 },
+    { title: '单位名称', dataIndex: 'name', width: 200 },
     { title: '联系人', dataIndex: 'contact', width: 100 },
-    { title: '电话', dataIndex: 'phone', width: 130 },
-    { title: '邮箱', dataIndex: 'email' },
+    { title: '联系方式', dataIndex: 'phone', width: 130 },
+    { title: '地址', dataIndex: 'address', width: 150, ellipsis: true },
     {
-      title: '状态', dataIndex: 'status', width: 80,
-      render: (s: number) => <Tag color={s === 1 ? 'success' : 'error'}>{s === 1 ? '启用' : '禁用'}</Tag>
+      title: '开票信息',
+      width: 280,
+      render: (_, record) => (
+        <div style={{ fontSize: 12, lineHeight: 1.6 }}>
+          {record.creditCode && <div><span style={{ color: '#1890ff' }}>税号:</span> {record.creditCode}</div>}
+          {record.bankName && <div><span style={{ color: '#1890ff' }}>银行:</span> {record.bankName}</div>}
+          {record.bankAccount && <div><span style={{ color: '#1890ff' }}>账号:</span> {record.bankAccount}</div>}
+          {!record.creditCode && !record.bankName && !record.bankAccount && <span style={{ color: '#999' }}>-</span>}
+        </div>
+      ),
     },
     {
-      title: '操作', width: 150,
+      title: '状态', dataIndex: 'status', width: 80,
+      render: (s: string) => <Tag color={s === 'approved' ? 'success' : 'default'}>{s === 'approved' ? '已批准' : s}</Tag>
+    },
+    { title: '备注', dataIndex: 'remark', width: 120, ellipsis: true },
+    {
+      title: '创建时间', dataIndex: 'createdAt', width: 160,
+      render: (t: string) => dayjs(t).format('YYYY-MM-DD HH:mm:ss')
+    },
+    {
+      title: '操作', width: 120, fixed: 'right',
       render: (_, record) => (
         <Space>
           <Button size="small" icon={<EditOutlined />} onClick={() => handleEdit(record)} />
-          <Button size="small" danger icon={<DeleteOutlined />} onClick={() => handleDelete(record.id)} />
+          <Popconfirm title="确认删除?" onConfirm={() => handleDelete(record.id)}>
+            <Button size="small" danger icon={<DeleteOutlined />} />
+          </Popconfirm>
         </Space>
       )
     }
@@ -94,57 +115,59 @@ export default function ClientPage() {
   return (
     <div>
       <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'space-between' }}>
-        <h2 style={{ margin: 0 }}>客户管理</h2>
-        <Button type="primary" icon={<PlusOutlined />} onClick={handleAdd}>新增客户</Button>
+        <h2 style={{ margin: 0 }}>委托单位管理</h2>
+        <Button type="primary" icon={<PlusOutlined />} onClick={handleAdd}>新增单位</Button>
       </div>
       <Table
         rowKey="id"
         columns={columns}
         dataSource={data}
         loading={loading}
-        pagination={{ current: page, total, onChange: setPage }}
+        scroll={{ x: 1400 }}
+        pagination={{ current: page, total, pageSize: 10, onChange: setPage, showSizeChanger: false }}
       />
       <Modal
-        title={editingId ? '编辑客户' : '新增客户'}
+        title={editingId ? '编辑单位' : '新增单位'}
         open={modalOpen}
         onOk={handleSubmit}
         onCancel={() => setModalOpen(false)}
-        width={600}
+        width={700}
       >
         <Form form={form} layout="vertical">
-          <Form.Item name="name" label="客户名称" rules={[{ required: true }]}>
-            <Input />
+          <Form.Item name="name" label="单位名称" rules={[{ required: true, message: '请输入单位名称' }]}>
+            <Input placeholder="请输入单位全称" />
           </Form.Item>
-          <Form.Item name="shortName" label="简称">
-            <Input />
-          </Form.Item>
-          <Form.Item name="type" label="客户类型">
-            <Select options={[
-              { value: '企业', label: '企业' },
-              { value: '政府', label: '政府' },
-              { value: '科研院所', label: '科研院所' },
-              { value: '个人', label: '个人' },
-            ]} />
-          </Form.Item>
-          <Form.Item name="contact" label="联系人">
-            <Input />
-          </Form.Item>
-          <Form.Item name="phone" label="电话">
-            <Input />
-          </Form.Item>
-          <Form.Item name="email" label="邮箱">
-            <Input />
-          </Form.Item>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+            <Form.Item name="contact" label="联系人">
+              <Input placeholder="请输入联系人" />
+            </Form.Item>
+            <Form.Item name="phone" label="联系方式">
+              <Input placeholder="请输入联系电话" />
+            </Form.Item>
+          </div>
           <Form.Item name="address" label="地址">
-            <Input />
+            <Input placeholder="请输入地址" />
           </Form.Item>
-          <Form.Item name="creditCode" label="统一社会信用代码">
-            <Input />
+          <div style={{ background: '#f5f5f5', padding: 16, borderRadius: 4, marginBottom: 16 }}>
+            <div style={{ fontWeight: 500, marginBottom: 12 }}>开票信息</div>
+            <Form.Item name="creditCode" label="税号" style={{ marginBottom: 12 }}>
+              <Input placeholder="如: 91340200713920435C" />
+            </Form.Item>
+            <Form.Item name="bankName" label="开户银行" style={{ marginBottom: 12 }}>
+              <Input placeholder="如: 中国工商银行芜湖分行" />
+            </Form.Item>
+            <Form.Item name="bankAccount" label="银行账号" style={{ marginBottom: 0 }}>
+              <Input placeholder="如: 1307023009022100123" />
+            </Form.Item>
+          </div>
+          <Form.Item name="remark" label="备注">
+            <Input.TextArea rows={2} placeholder="请输入备注" />
           </Form.Item>
-          <Form.Item name="status" label="状态" initialValue={1}>
+          <Form.Item name="status" label="状态" initialValue="approved">
             <Select options={[
-              { value: 1, label: '启用' },
-              { value: 0, label: '禁用' },
+              { value: 'approved', label: '已批准' },
+              { value: 'pending', label: '待审批' },
+              { value: 'rejected', label: '已拒绝' },
             ]} />
           </Form.Item>
         </Form>
