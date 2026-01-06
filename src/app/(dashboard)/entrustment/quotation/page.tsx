@@ -140,7 +140,7 @@ const itemColumns: ColumnsType<QuotationItem> = [
     title: '小计(元)',
     dataIndex: 'totalPrice',
     width: 100,
-    render: (value) => `¥${value?.toFixed(2) || '0.00'}`,
+    render: (value) => `¥${Number(value || 0).toFixed(2)}`,
   },
   {
     title: '操作',
@@ -319,7 +319,7 @@ export default function QuotationPage() {
       title: '报价金额',
       dataIndex: 'finalAmount',
       width: 120,
-      render: (v) => v ? `¥${v.toFixed(2)}` : '-',
+      render: (v) => v ? `¥${Number(v).toFixed(2)}` : '-',
     },
     {
       title: '客户反馈',
@@ -574,14 +574,14 @@ export default function QuotationPage() {
                         {dayjs(currentQuotation.quotationDate).format('YYYY-MM-DD')}
                       </Descriptions.Item>
                       <Descriptions.Item label="有效期">{currentQuotation.validDays}天</Descriptions.Item>
-                      <Descriptions.Item label="报价合计">¥{currentQuotation.totalAmount?.toFixed(2)}</Descriptions.Item>
-                      <Descriptions.Item label="税额">¥{currentQuotation.taxAmount?.toFixed(2)}</Descriptions.Item>
-                      <Descriptions.Item label="含税合计">¥{currentQuotation.totalWithTax?.toFixed(2)}</Descriptions.Item>
+                      <Descriptions.Item label="报价合计">¥{Number(currentQuotation.totalAmount || 0).toFixed(2)}</Descriptions.Item>
+                      <Descriptions.Item label="税额">¥{Number(currentQuotation.taxAmount || 0).toFixed(2)}</Descriptions.Item>
+                      <Descriptions.Item label="含税合计">¥{Number(currentQuotation.totalWithTax || 0).toFixed(2)}</Descriptions.Item>
                       <Descriptions.Item label="优惠金额">
                         {currentQuotation.discountAmount ? `¥${currentQuotation.discountAmount}` : '-'}
                       </Descriptions.Item>
                       <Descriptions.Item label="最终金额" style={{ fontWeight: 'bold', color: '#f5222d' }}>
-                        ¥{currentQuotation.finalAmount?.toFixed(2)}
+                        ¥{Number(currentQuotation.finalAmount || 0).toFixed(2)}
                       </Descriptions.Item>
                       <Descriptions.Item label="状态">
                         <StatusTag type="quotation" status={currentQuotation.status} />
@@ -598,7 +598,7 @@ export default function QuotationPage() {
                         { title: '方法/标准', dataIndex: 'methodStandard' },
                         { title: '数量', dataIndex: 'quantity' },
                         { title: '单价', dataIndex: 'unitPrice', render: (v) => `¥${v}` },
-                        { title: '小计', dataIndex: 'totalPrice', render: (v) => `¥${v?.toFixed(2)}` },
+                        { title: '小计', dataIndex: 'totalPrice', render: (v) => `¥${Number(v || 0).toFixed(2)}` },
                       ]}
                       dataSource={currentQuotation.items}
                       rowKey="id"
