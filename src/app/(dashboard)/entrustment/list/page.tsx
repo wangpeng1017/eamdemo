@@ -118,8 +118,13 @@ export default function EntrustmentListPage() {
     setLoading(true)
     const res = await fetch(`/api/entrustment?page=${p}&pageSize=10`)
     const json = await res.json()
-    setData(json.list || [])
-    setTotal(json.total || 0)
+    if (json.success && json.data) {
+      setData(json.data.list || [])
+      setTotal(json.data.total || 0)
+    } else {
+      setData(json.list || [])
+      setTotal(json.total || 0)
+    }
     setLoading(false)
   }
 
