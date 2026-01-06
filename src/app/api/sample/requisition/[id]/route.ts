@@ -4,10 +4,11 @@ import { NextRequest, NextResponse } from 'next/server'
 // 获取单个领用记录详情
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
+  const { id } = await params
   const requisition = await prisma.sampleRequisition.findUnique({
-    where: { id: params.id },
+    where: { id },
     include: {
       sample: true
     }
@@ -23,13 +24,14 @@ export async function GET(
 // 更新领用记录（归还样品）
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
+  const { id } = await params
   const data = await request.json()
   const { actualReturnDate, status, remark } = data
 
   const requisition = await prisma.sampleRequisition.update({
-    where: { id: params.id },
+    where: { id },
     data: {
       actualReturnDate: actualReturnDate ? new Date(actualReturnDate) : null,
       status: status || 'returned',
@@ -43,10 +45,11 @@ export async function PUT(
 // 删除领用记录
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
+  const { id } = await params
   await prisma.sampleRequisition.delete({
-    where: { id: params.id }
+    where: { id }
   })
 
   return NextResponse.json({ success: true })

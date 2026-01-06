@@ -4,10 +4,11 @@ import { NextRequest, NextResponse } from 'next/server'
 // 获取单个客户
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
+  const { id } = await params
   const client = await prisma.client.findUnique({
-    where: { id: params.id }
+    where: { id }
   })
 
   if (!client) {
@@ -20,12 +21,13 @@ export async function GET(
 // 更新客户
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
+  const { id } = await params
   const data = await request.json()
 
   const client = await prisma.client.update({
-    where: { id: params.id },
+    where: { id },
     data
   })
 
@@ -35,10 +37,11 @@ export async function PUT(
 // 删除客户
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
+  const { id } = await params
   await prisma.client.delete({
-    where: { id: params.id }
+    where: { id }
   })
 
   return NextResponse.json({ success: true })
