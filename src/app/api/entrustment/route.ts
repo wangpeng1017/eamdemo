@@ -76,9 +76,14 @@ export const GET = withErrorHandler(async (request: NextRequest) => {
           select: {
             id: true,
             name: true,
+            testItems: true,
+            method: true,
+            standard: true,
             status: true,
             assignTo: true,
             subcontractor: true,
+            deviceId: true,
+            deadline: true,
           },
         },
         samples: {
@@ -126,16 +131,42 @@ export const POST = withErrorHandler(async (request: NextRequest) => {
   // 验证必填字段
   validateRequired(data, ['clientName', 'sampleName'])
 
+  // 分离检测项目数据
+  const { projects, ...entrustmentData } = data
+
   // 生成委托单号
   const entrustmentNo = await generateNo(NumberPrefixes.ENTRUSTMENT, 4)
 
+  // 创建委托单
   const entrustment = await prisma.entrustment.create({
     data: {
-      ...data,
+      ...entrustmentData,
       entrustmentNo,
-      status: data.status || 'pending',
-      sampleDate: data.sampleDate ? new Date(data.sampleDate) : new Date(),
+      status: entrustmentData.status || 'pending',
+      sampleDate: entrustmentData.sampleDate ? new Date(entrustmentData.sampleDate) : new Date(),
     },
+  })
+
+  // 创建检测项目
+  if (projects && Array.isArray(projects) && projects.length > 0) {
+    const validProjects = projects.filter((p: { name?: string }) => p.name)
+    if (validProjects.length > 0) {
+      await prisma.entrustmentProject.createMany({
+        data: validProjects.map((p: { name: string; testItems?: string | string[]; method?: string; standard?: string }) => ({
+          entrustmentId: entrustment.id,
+          name: p.name,
+          testItems: typeof p.testItems === 'string' ? p.testItems : JSON.stringify(p.testItems || []),
+          method: p.method || null,
+          standard: p.standard || null,
+          status: 'pending',
+        }))
+      })
+    }
+  }
+
+  // 返回完整数据
+  const result = await prisma.entrustment.findUnique({
+    where: { id: entrustment.id },
     include: {
       client: true,
       contract: true,
@@ -144,5 +175,5 @@ export const POST = withErrorHandler(async (request: NextRequest) => {
     },
   })
 
-  return success(entrustment)
+  return success(result)
 })
