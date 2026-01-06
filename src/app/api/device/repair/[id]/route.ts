@@ -10,7 +10,7 @@ import {
 // 获取维修记录详情
 export const GET = withErrorHandler(async (
   request: NextRequest,
-  context?: { params: Promise<{ id: string }> }
+  context?: { params: Promise<Record<string, string>> }
 ) => {
   const { id } = await context!.params
 
@@ -20,7 +20,7 @@ export const GET = withErrorHandler(async (
       device: {
         select: {
           id: true,
-          code: true,
+          deviceNo: true,
           name: true,
           model: true,
           manufacturer: true,
@@ -43,7 +43,7 @@ export const GET = withErrorHandler(async (
 // 更新维修记录
 export const PUT = withErrorHandler(async (
   request: NextRequest,
-  context?: { params: Promise<{ id: string }> }
+  context?: { params: Promise<Record<string, string>> }
 ) => {
   const { id } = await context!.params
   const data = await request.json()
@@ -76,7 +76,7 @@ export const PUT = withErrorHandler(async (
 // 删除维修记录
 export const DELETE = withErrorHandler(async (
   request: NextRequest,
-  context?: { params: Promise<{ id: string }> }
+  context?: { params: Promise<Record<string, string>> }
 ) => {
   const { id } = await context!.params
 
@@ -113,7 +113,7 @@ export const DELETE = withErrorHandler(async (
 // 更新维修状态
 export const PATCH = withErrorHandler(async (
   request: NextRequest,
-  context?: { params: Promise<{ id: string }> }
+  context?: { params: Promise<Record<string, string>> }
 ) => {
   const { id } = await context!.params
   const data = await request.json()
@@ -126,7 +126,7 @@ export const PATCH = withErrorHandler(async (
     notFound('维修记录不存在')
   }
 
-  const action = validateEnum(data.action, ['start', 'complete'])
+  const action = validateEnum(data.action, ['start', 'complete'] as const, 'action')
 
   let updateData: Record<string, unknown> = {}
 

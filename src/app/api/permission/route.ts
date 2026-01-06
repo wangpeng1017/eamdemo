@@ -9,7 +9,7 @@ export const GET = withErrorHandler(async (request: NextRequest) => {
   const type = searchParams.get('type')
 
   const where: Record<string, unknown> = {}
-  if (type) where.type = type
+  if (type) where.type = parseInt(type)
 
   const permissions = await prisma.permission.findMany({
     where,
@@ -32,7 +32,7 @@ export const GET = withErrorHandler(async (request: NextRequest) => {
   return success({ list: permissions, total: permissions.length })
 })
 
-// 创建权��
+// 创建权限
 export const POST = withErrorHandler(async (request: NextRequest) => {
   const data = await request.json()
 
@@ -42,10 +42,8 @@ export const POST = withErrorHandler(async (request: NextRequest) => {
     data: {
       name: data.name,
       code: data.code,
-      type: data.type,
+      type: parseInt(data.type),
       parentId: data.parentId || null,
-      path: data.path || null,
-      icon: data.icon || null,
       sort: data.sort || 0,
       status: data.status ?? 1,
     },

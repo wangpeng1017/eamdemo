@@ -34,7 +34,7 @@ const STATUS_APPROVAL_CONFIG = {
 // 获取单个报价（含明细和审批记录）
 export const GET = withErrorHandler(async (
   request: NextRequest,
-  context?: { params: Promise<{ id: string }> }
+  context?: { params: Promise<Record<string, string>> }
 ) => {
   const { id } = await context!.params
 
@@ -76,7 +76,7 @@ export const GET = withErrorHandler(async (
 // 更新报价
 export const PUT = withErrorHandler(async (
   request: NextRequest,
-  context?: { params: Promise<{ id: string }> }
+  context?: { params: Promise<Record<string, string>> }
 ) => {
   const { id } = await context!.params
   const data = await request.json()
@@ -149,7 +149,7 @@ export const PUT = withErrorHandler(async (
 // 删除报价
 export const DELETE = withErrorHandler(async (
   request: NextRequest,
-  context?: { params: Promise<{ id: string }> }
+  context?: { params: Promise<Record<string, string>> }
 ) => {
   const { id } = await context!.params
 
@@ -181,7 +181,7 @@ export const DELETE = withErrorHandler(async (
  */
 export const PATCH = withErrorHandler(async (
   request: NextRequest,
-  context?: { params: Promise<{ id: string }> }
+  context?: { params: Promise<Record<string, string>> }
 ) => {
   const { id } = await context!.params
   const data = await request.json()

@@ -5,7 +5,7 @@ import { withErrorHandler, success, notFound, badRequest, validateEnum } from '@
 // 获取单个评价
 export const GET = withErrorHandler(async (
   request: NextRequest,
-  context?: { params: Promise<{ id: string }> }
+  context?: { params: Promise<Record<string, string>> }
 ) => {
   const { id } = await context!.params
 
@@ -30,7 +30,7 @@ export const GET = withErrorHandler(async (
 // 更新评价
 export const PUT = withErrorHandler(async (
   request: NextRequest,
-  context?: { params: Promise<{ id: string }> }
+  context?: { params: Promise<Record<string, string>> }
 ) => {
   const { id } = await context!.params
   const data = await request.json()
@@ -83,7 +83,7 @@ export const PUT = withErrorHandler(async (
 // 审批操作
 export const PATCH = withErrorHandler(async (
   request: NextRequest,
-  context?: { params: Promise<{ id: string }> }
+  context?: { params: Promise<Record<string, string>> }
 ) => {
   const { id } = await context!.params
   const data = await request.json()
@@ -134,7 +134,7 @@ export const PATCH = withErrorHandler(async (
 // 删除评价
 export const DELETE = withErrorHandler(async (
   request: NextRequest,
-  context?: { params: Promise<{ id: string }> }
+  context?: { params: Promise<Record<string, string>> }
 ) => {
   const { id } = await context!.params
 

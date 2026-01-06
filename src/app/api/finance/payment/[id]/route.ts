@@ -10,7 +10,7 @@ import {
 // 获取收款记录详情
 export const GET = withErrorHandler(async (
   request: NextRequest,
-  context?: { params: Promise<{ id: string }> }
+  context?: { params: Promise<Record<string, string>> }
 ) => {
   const { id } = await context!.params
 
@@ -46,7 +46,7 @@ export const GET = withErrorHandler(async (
 // 删除收款记录（需要回滚应收账款）
 export const DELETE = withErrorHandler(async (
   request: NextRequest,
-  context?: { params: Promise<{ id: string }> }
+  context?: { params: Promise<Record<string, string>> }
 ) => {
   const { id } = await context!.params
 

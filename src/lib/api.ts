@@ -82,9 +82,9 @@ async function request<T = any>(
   } = config
 
   // 构建请求头
-  const headers: HeadersInit = {
+  const headers: Record<string, string> = {
     'Content-Type': 'application/json',
-    ...fetchConfig.headers,
+    ...(fetchConfig.headers as Record<string, string>),
   }
 
   // 添加认证 token

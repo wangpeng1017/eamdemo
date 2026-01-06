@@ -9,7 +9,7 @@ export async function GET(request: NextRequest) {
   const status = searchParams.get('status')
   const planType = searchParams.get('planType')
 
-  const where: any = {}
+  const where: Record<string, unknown> = {}
   if (status) where.status = status
   if (planType) where.planType = planType
 
@@ -18,10 +18,10 @@ export async function GET(request: NextRequest) {
       where,
       include: {
         device: {
-          select: { name: true },
+          select: { id: true, name: true, deviceNo: true },
         },
       },
-      orderBy: { nextDate: 'asc' },
+      orderBy: { nextMaintenanceDate: 'asc' },
       skip: (page - 1) * pageSize,
       take: pageSize,
     }),
@@ -29,15 +29,17 @@ export async function GET(request: NextRequest) {
   ])
 
   // 格式化数据
-  const formattedList = list.map((item: any) => ({
+  const formattedList = list.map((item) => ({
     id: item.id,
     deviceId: item.deviceId,
     deviceName: item.device?.name,
+    deviceNo: item.device?.deviceNo,
     planName: item.planName,
     planType: item.planType,
-    interval: item.intervalDays,
-    nextDate: item.nextDate,
-    responsiblePerson: item.maintenanceBy,
+    interval: item.interval,
+    nextMaintenanceDate: item.nextMaintenanceDate,
+    lastMaintenanceDate: item.lastMaintenanceDate,
+    responsiblePerson: item.responsiblePerson,
     maintenanceItems: item.maintenanceItems,
     status: item.status,
     createdAt: item.createdAt,
@@ -55,9 +57,10 @@ export async function POST(request: NextRequest) {
       deviceId: data.deviceId,
       planName: data.planName,
       planType: data.planType,
-      intervalDays: data.interval,
-      nextDate: data.nextDate ? new Date(data.nextDate) : null,
-      maintenanceBy: data.responsiblePerson,
+      interval: data.interval,
+      nextMaintenanceDate: data.nextMaintenanceDate ? new Date(data.nextMaintenanceDate) : null,
+      lastMaintenanceDate: data.lastMaintenanceDate ? new Date(data.lastMaintenanceDate) : null,
+      responsiblePerson: data.responsiblePerson,
       maintenanceItems: data.maintenanceItems,
       status: data.status || 'active',
     },

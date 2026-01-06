@@ -14,7 +14,7 @@ export async function GET(request: NextRequest) {
   const pageSize = parseInt(searchParams.get('pageSize') || '10')
   const status = searchParams.get('status')
 
-  const where: any = {
+  const where: Record<string, unknown> = {
     requisitionBy: session.user.name
   }
   if (status) where.status = status
@@ -42,7 +42,7 @@ export async function GET(request: NextRequest) {
   // 统计各状态数量
   const stats = await prisma.sampleRequisition.groupBy({
     by: ['status'],
-    where: { requisitionBy: session.user.name },
+    where: { requisitionBy: session.user.name || undefined },
     _count: true
   })
 

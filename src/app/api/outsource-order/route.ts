@@ -11,16 +11,14 @@ export const GET = withErrorHandler(async (request: NextRequest) => {
   const status = searchParams.get('status')
   const supplierId = searchParams.get('supplierId')
   const keyword = searchParams.get('keyword')
-  const createdBy = searchParams.get('createdBy')
 
   const where: Record<string, unknown> = {}
   if (status) where.status = status
   if (supplierId) where.supplierId = supplierId
-  if (createdBy) where.createdBy = createdBy
   if (keyword) {
     where.OR = [
       { orderNo: { contains: keyword } },
-      { sampleName: { contains: keyword } },
+      { supplierName: { contains: keyword } },
       { supplier: { name: { contains: keyword } } },
     ]
   }
@@ -45,14 +43,14 @@ export const GET = withErrorHandler(async (request: NextRequest) => {
   })
 
   // 统计总费用
-  const totalCost = await prisma.outsourceOrder.aggregate({
-    _sum: { cost: true },
+  const totalAmount = await prisma.outsourceOrder.aggregate({
+    _sum: { amount: true },
   })
 
   return success({
     list: list.map(item => ({
       ...item,
-      cost: Number(item.cost || 0),
+      amount: item.amount ? Number(item.amount) : 0,
     })),
     total,
     page,
@@ -62,7 +60,7 @@ export const GET = withErrorHandler(async (request: NextRequest) => {
         acc[item.status] = item._count
         return acc
       }, {} as Record<string, number>),
-      totalCost: Number(totalCost._sum.cost || 0),
+      totalAmount: Number(totalAmount._sum?.amount || 0),
     },
   })
 })
@@ -71,25 +69,20 @@ export const GET = withErrorHandler(async (request: NextRequest) => {
 export const POST = withErrorHandler(async (request: NextRequest) => {
   const data = await request.json()
 
-  validateRequired(data, ['supplierId', 'sampleName', 'testItems'])
+  validateRequired(data, ['supplierId'])
 
-  const orderNo = await generateNo(NumberPrefixes.OUTSOURCE, 4)
+  const orderNo = await generateNo(NumberPrefixes.ENTRUSTMENT, 4)
 
   const order = await prisma.outsourceOrder.create({
     data: {
       orderNo,
       supplierId: data.supplierId,
-      entrustmentNo: data.entrustmentNo || null,
-      clientName: data.clientName || null,
-      sampleName: data.sampleName,
-      testItems: data.testItems,
+      supplierName: data.supplierName || null,
+      taskId: data.taskId || null,
+      items: data.items ? JSON.stringify(data.items) : null,
       status: 'pending',
-      sendDate: data.sendDate ? new Date(data.sendDate) : null,
       expectedDate: data.expectedDate ? new Date(data.expectedDate) : null,
-      actualDate: null,
-      cost: data.cost || 0,
-      progress: 0,
-      createdBy: data.createdBy || '系统',
+      amount: data.amount || 0,
       remark: data.remark || null,
     },
     include: { supplier: true },
@@ -97,6 +90,6 @@ export const POST = withErrorHandler(async (request: NextRequest) => {
 
   return success({
     ...order,
-    cost: Number(order.cost),
+    amount: order.amount ? Number(order.amount) : 0,
   })
 })

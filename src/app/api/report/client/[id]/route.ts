@@ -23,7 +23,7 @@ const STATUS_FLOW = {
 // 获取单个客户报告
 export const GET = withErrorHandler(async (
   request: NextRequest,
-  context?: { params: Promise<{ id: string }> }
+  context?: { params: Promise<Record<string, string>> }
 ) => {
   const { id } = await context!.params
 
@@ -50,7 +50,7 @@ export const GET = withErrorHandler(async (
 // 更新客户报告
 export const PUT = withErrorHandler(async (
   request: NextRequest,
-  context?: { params: Promise<{ id: string }> }
+  context?: { params: Promise<Record<string, string>> }
 ) => {
   const { id } = await context!.params
   const data = await request.json()
@@ -93,7 +93,7 @@ export const PUT = withErrorHandler(async (
 // 删除客户报告
 export const DELETE = withErrorHandler(async (
   request: NextRequest,
-  context?: { params: Promise<{ id: string }> }
+  context?: { params: Promise<Record<string, string>> }
 ) => {
   const { id } = await context!.params
 
@@ -125,7 +125,7 @@ export const DELETE = withErrorHandler(async (
  */
 export const PATCH = withErrorHandler(async (
   request: NextRequest,
-  context?: { params: Promise<{ id: string }> }
+  context?: { params: Promise<Record<string, string>> }
 ) => {
   const { id } = await context!.params
   const data = await request.json()

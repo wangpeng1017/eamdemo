@@ -5,7 +5,7 @@ import { withErrorHandler, success, notFound } from '@/lib/api-handler'
 // 获取单个易耗品
 export const GET = withErrorHandler(async (
   request: NextRequest,
-  context?: { params: Promise<{ id: string }> }
+  context?: { params: Promise<Record<string, string>> }
 ) => {
   const { id } = await context!.params
 
@@ -20,14 +20,15 @@ export const GET = withErrorHandler(async (
 
   return success({
     ...consumable,
-    unitPrice: Number(consumable.unitPrice),
+    stockQuantity: Number(consumable.stockQuantity),
+    minStock: consumable.minStock ? Number(consumable.minStock) : null,
   })
 })
 
 // 更新易耗品
 export const PUT = withErrorHandler(async (
   request: NextRequest,
-  context?: { params: Promise<{ id: string }> }
+  context?: { params: Promise<Record<string, string>> }
 ) => {
   const { id } = await context!.params
   const data = await request.json()
@@ -35,21 +36,6 @@ export const PUT = withErrorHandler(async (
   const existing = await prisma.consumable.findUnique({ where: { id } })
   if (!existing) {
     notFound('易耗品不存在')
-  }
-
-  // 计算状态
-  const currentStock = data.currentStock ?? existing.currentStock
-  const minStock = data.minStock ?? existing.minStock
-  const expiryDate = data.expiryDate ? new Date(data.expiryDate) : existing.expiryDate
-
-  let status = 'normal'
-  if (currentStock === 0) {
-    status = 'out'
-  } else if (currentStock < minStock) {
-    status = 'low'
-  }
-  if (expiryDate && expiryDate < new Date()) {
-    status = 'expired'
   }
 
   const consumable = await prisma.consumable.update({
@@ -60,14 +46,10 @@ export const PUT = withErrorHandler(async (
       categoryId: data.categoryId,
       specification: data.specification,
       unit: data.unit,
-      currentStock,
-      minStock,
-      maxStock: data.maxStock,
-      unitPrice: data.unitPrice,
-      supplier: data.supplier,
+      stockQuantity: data.stockQuantity !== undefined ? data.stockQuantity : undefined,
+      minStock: data.minStock !== undefined ? data.minStock : undefined,
       location: data.location,
-      expiryDate,
-      status,
+      status: data.status !== undefined ? parseInt(data.status) : undefined,
       remark: data.remark,
     },
     include: { category: true },
@@ -75,14 +57,15 @@ export const PUT = withErrorHandler(async (
 
   return success({
     ...consumable,
-    unitPrice: Number(consumable.unitPrice),
+    stockQuantity: Number(consumable.stockQuantity),
+    minStock: consumable.minStock ? Number(consumable.minStock) : null,
   })
 })
 
 // 删除易耗品
 export const DELETE = withErrorHandler(async (
   request: NextRequest,
-  context?: { params: Promise<{ id: string }> }
+  context?: { params: Promise<Record<string, string>> }
 ) => {
   const { id } = await context!.params
 

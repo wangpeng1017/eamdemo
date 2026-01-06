@@ -5,7 +5,7 @@ import {
   success,
   validateRequired,
 } from '@/lib/api-handler'
-import { generateNo } from '@/lib/generate-no'
+import { generateNo, NumberPrefixes } from '@/lib/generate-no'
 
 // 获取设备维修记录列表
 export const GET = withErrorHandler(async (request: NextRequest) => {
@@ -52,7 +52,7 @@ export const GET = withErrorHandler(async (request: NextRequest) => {
         device: {
           select: {
             id: true,
-            code: true,
+            deviceNo: true,
             name: true,
             model: true,
             location: true,
@@ -105,7 +105,7 @@ export const POST = withErrorHandler(async (request: NextRequest) => {
   }
 
   // 生成维修单号
-  const repairNo = await generateNo('WX', 'device_repair')
+  const repairNo = await generateNo(NumberPrefixes.REPAIR)
 
   const repair = await prisma.deviceRepair.create({
     data: {

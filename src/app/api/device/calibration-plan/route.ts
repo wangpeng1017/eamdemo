@@ -7,40 +7,36 @@ export async function GET(request: NextRequest) {
   const page = parseInt(searchParams.get('page') || '1')
   const pageSize = parseInt(searchParams.get('pageSize') || '10')
   const status = searchParams.get('status')
-  const cycleType = searchParams.get('cycleType')
 
-  const where: any = {}
+  const where: Record<string, unknown> = {}
   if (status) where.status = status
-  if (cycleType) where.planType = cycleType
 
   const [list, total] = await Promise.all([
-    prisma.calibrationPlan.findMany({
+    prisma.deviceCalibration.findMany({
       where,
       include: {
         device: {
-          select: { name: true },
+          select: { id: true, name: true, deviceNo: true },
         },
       },
-      orderBy: { nextCalibrationDate: 'asc' },
+      orderBy: { nextDate: 'asc' },
       skip: (page - 1) * pageSize,
       take: pageSize,
     }),
-    prisma.calibrationPlan.count({ where }),
+    prisma.deviceCalibration.count({ where }),
   ])
 
   // 格式化数据
-  const formattedList = list.map((item: any) => ({
+  const formattedList = list.map((item) => ({
     id: item.id,
     deviceId: item.deviceId,
     deviceName: item.device?.name,
-    planName: item.planName,
-    cycleType: item.planType,
-    cycleMonths: item.cycleMonths,
-    lastCalibrationDate: item.lastCalibrationDate,
-    nextCalibrationDate: item.nextCalibrationDate,
-    responsiblePerson: item.responsiblePerson,
-    calibratingOrganization: item.calibratingOrganization,
+    deviceNo: item.device?.deviceNo,
+    lastDate: item.lastDate,
+    nextDate: item.nextDate,
+    interval: item.interval,
     status: item.status,
+    result: item.result,
   }))
 
   return NextResponse.json({ list: formattedList, total, page, pageSize })
@@ -50,19 +46,16 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   const data = await request.json()
 
-  const plan = await prisma.calibrationPlan.create({
+  const calibration = await prisma.deviceCalibration.create({
     data: {
       deviceId: data.deviceId,
-      planName: data.planName,
-      planType: data.cycleType,
-      cycleMonths: data.cycleMonths,
-      lastCalibrationDate: data.lastCalibrationDate ? new Date(data.lastCalibrationDate) : null,
-      nextCalibrationDate: data.nextCalibrationDate ? new Date(data.nextCalibrationDate) : null,
-      responsiblePerson: data.responsiblePerson,
-      calibratingOrganization: data.calibratingOrganization,
+      lastDate: data.lastDate ? new Date(data.lastDate) : null,
+      nextDate: data.nextDate ? new Date(data.nextDate) : null,
+      interval: data.interval || null,
       status: data.status || 'pending',
+      result: data.result || null,
     },
   })
 
-  return NextResponse.json(plan)
+  return NextResponse.json(calibration)
 }

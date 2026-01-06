@@ -23,11 +23,13 @@ export async function GET(
     id: plan.id,
     deviceId: plan.deviceId,
     deviceName: plan.device?.name,
+    deviceNo: plan.device?.deviceNo,
     planName: plan.planName,
     planType: plan.planType,
-    interval: plan.intervalDays,
-    nextDate: plan.nextDate,
-    responsiblePerson: plan.maintenanceBy,
+    interval: plan.interval,
+    nextMaintenanceDate: plan.nextMaintenanceDate,
+    lastMaintenanceDate: plan.lastMaintenanceDate,
+    responsiblePerson: plan.responsiblePerson,
     maintenanceItems: plan.maintenanceItems,
     status: plan.status,
   }
@@ -43,13 +45,14 @@ export async function PUT(
   const { id } = await params
   const data = await request.json()
 
-  const updateData: any = {}
+  const updateData: Record<string, unknown> = {}
   if (data.deviceId !== undefined) updateData.deviceId = data.deviceId
   if (data.planName !== undefined) updateData.planName = data.planName
   if (data.planType !== undefined) updateData.planType = data.planType
-  if (data.interval !== undefined) updateData.intervalDays = data.interval
-  if (data.nextDate !== undefined) updateData.nextDate = data.nextDate ? new Date(data.nextDate) : null
-  if (data.responsiblePerson !== undefined) updateData.maintenanceBy = data.responsiblePerson
+  if (data.interval !== undefined) updateData.interval = data.interval
+  if (data.nextMaintenanceDate !== undefined) updateData.nextMaintenanceDate = data.nextMaintenanceDate ? new Date(data.nextMaintenanceDate) : null
+  if (data.lastMaintenanceDate !== undefined) updateData.lastMaintenanceDate = data.lastMaintenanceDate ? new Date(data.lastMaintenanceDate) : null
+  if (data.responsiblePerson !== undefined) updateData.responsiblePerson = data.responsiblePerson
   if (data.maintenanceItems !== undefined) updateData.maintenanceItems = data.maintenanceItems
   if (data.status !== undefined) updateData.status = data.status
 

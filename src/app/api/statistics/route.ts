@@ -75,9 +75,9 @@ export const GET = withErrorHandler(async (request: NextRequest) => {
 
   // 人员任务量统计 Top 10
   const assigneeStats = await prisma.testTask.groupBy({
-    by: ['assignedTo'],
+    by: ['assignedToId'],
     _count: { id: true },
-    where: { assignedTo: { not: null } },
+    where: { assignedToId: { not: null } },
     orderBy: { _count: { id: 'desc' } },
     take: 10,
   })
@@ -107,7 +107,7 @@ export const GET = withErrorHandler(async (request: NextRequest) => {
       count: t._count.id,
     })),
     assigneeStats: assigneeStats.map((a) => ({
-      assignee: a.assignedTo || '未分配',
+      assignee: a.assignedToId || '未分配',
       count: a._count.id,
     })),
     financeStats,

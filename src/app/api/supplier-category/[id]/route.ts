@@ -5,7 +5,7 @@ import { withErrorHandler, success, notFound, badRequest } from '@/lib/api-handl
 // 获取单个分类
 export const GET = withErrorHandler(async (
   request: NextRequest,
-  context?: { params: Promise<{ id: string }> }
+  context?: { params: Promise<Record<string, string>> }
 ) => {
   const { id } = await context!.params
 
@@ -23,7 +23,7 @@ export const GET = withErrorHandler(async (
 // 更新分类
 export const PUT = withErrorHandler(async (
   request: NextRequest,
-  context?: { params: Promise<{ id: string }> }
+  context?: { params: Promise<Record<string, string>> }
 ) => {
   const { id } = await context!.params
   const data = await request.json()
@@ -51,7 +51,7 @@ export const PUT = withErrorHandler(async (
 // 删除分类
 export const DELETE = withErrorHandler(async (
   request: NextRequest,
-  context?: { params: Promise<{ id: string }> }
+  context?: { params: Promise<Record<string, string>> }
 ) => {
   const { id } = await context!.params
 

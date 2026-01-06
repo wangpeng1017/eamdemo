@@ -5,7 +5,7 @@ import { withErrorHandler, success, notFound, badRequest } from '@/lib/api-handl
 // 获取单个权限
 export const GET = withErrorHandler(async (
   request: NextRequest,
-  context?: { params: Promise<{ id: string }> }
+  context?: { params: Promise<Record<string, string>> }
 ) => {
   const { id } = await context!.params
 
@@ -23,7 +23,7 @@ export const GET = withErrorHandler(async (
 // 更新权限
 export const PUT = withErrorHandler(async (
   request: NextRequest,
-  context?: { params: Promise<{ id: string }> }
+  context?: { params: Promise<Record<string, string>> }
 ) => {
   const { id } = await context!.params
   const data = await request.json()
@@ -38,10 +38,8 @@ export const PUT = withErrorHandler(async (
     data: {
       name: data.name,
       code: data.code,
-      type: data.type,
+      type: data.type !== undefined ? parseInt(data.type) : undefined,
       parentId: data.parentId,
-      path: data.path,
-      icon: data.icon,
       sort: data.sort,
       status: data.status,
     },
@@ -53,7 +51,7 @@ export const PUT = withErrorHandler(async (
 // 删除权限
 export const DELETE = withErrorHandler(async (
   request: NextRequest,
-  context?: { params: Promise<{ id: string }> }
+  context?: { params: Promise<Record<string, string>> }
 ) => {
   const { id } = await context!.params
 

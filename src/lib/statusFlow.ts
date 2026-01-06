@@ -15,7 +15,8 @@ export const consultationStatusFlow = {
  * 检查咨询状态是否可以转换
  */
 export function canChangeConsultationStatus(from: string, to: string): boolean {
-  return consultationStatusFlow[from as keyof typeof consultationStatusFlow]?.includes(to as any) || false
+  const flow = consultationStatusFlow[from as keyof typeof consultationStatusFlow]
+  return flow ? (flow as readonly string[]).includes(to) : false
 }
 
 // ==================== 报价状态流转 ====================
@@ -33,7 +34,8 @@ export const quotationStatusFlow = {
  * 检查报价状态是否可以转换
  */
 export function canChangeQuotationStatus(from: string, to: string): boolean {
-  return quotationStatusFlow[from as keyof typeof quotationStatusFlow]?.includes(to as any) || false
+  const flow = quotationStatusFlow[from as keyof typeof quotationStatusFlow]
+  return flow ? (flow as readonly string[]).includes(to) : false
 }
 
 /**
@@ -61,7 +63,8 @@ export const contractStatusFlow = {
  * 检查合同状态是否可以转换
  */
 export function canChangeContractStatus(from: string, to: string): boolean {
-  return contractStatusFlow[from as keyof typeof contractStatusFlow]?.includes(to as any) || false
+  const flow = contractStatusFlow[from as keyof typeof contractStatusFlow]
+  return flow ? (flow as readonly string[]).includes(to) : false
 }
 
 // ==================== 样品状态流转 ====================
@@ -80,7 +83,8 @@ export const sampleStatusFlow = {
  * 检查样品状态是否可以转换
  */
 export function canChangeSampleStatus(from: string, to: string): boolean {
-  return sampleStatusFlow[from as keyof typeof sampleStatusFlow]?.includes(to as any) || false
+  const flow = sampleStatusFlow[from as keyof typeof sampleStatusFlow]
+  return flow ? (flow as readonly string[]).includes(to) : false
 }
 
 // ==================== 任务状态流转 ====================
@@ -95,7 +99,8 @@ export const taskStatusFlow = {
  * 检查任务状态是否可以转换
  */
 export function canChangeTaskStatus(from: string, to: string): boolean {
-  return taskStatusFlow[from as keyof typeof taskStatusFlow]?.includes(to as any) || false
+  const flow = taskStatusFlow[from as keyof typeof taskStatusFlow]
+  return flow ? (flow as readonly string[]).includes(to) : false
 }
 
 // ==================== 检测项目状态流转 ====================
@@ -110,7 +115,8 @@ export const projectStatusFlow = {
  * 检查检测项目状态是否可以转换
  */
 export function canChangeProjectStatus(from: string, to: string): boolean {
-  return projectStatusFlow[from as keyof typeof projectStatusFlow]?.includes(to as any) || false
+  const flow = projectStatusFlow[from as keyof typeof projectStatusFlow]
+  return flow ? (flow as readonly string[]).includes(to) : false
 }
 
 // ==================== 报告状态流转 ====================
@@ -125,7 +131,8 @@ export const reportStatusFlow = {
  * 检查报告状态是否可以转换
  */
 export function canChangeReportStatus(from: string, to: string): boolean {
-  return reportStatusFlow[from as keyof typeof reportStatusFlow]?.includes(to as any) || false
+  const flow = reportStatusFlow[from as keyof typeof reportStatusFlow]
+  return flow ? (flow as readonly string[]).includes(to) : false
 }
 
 // ==================== 设备状态流转 ====================
@@ -140,7 +147,8 @@ export const deviceStatusFlow = {
  * 检查设备状态是否可以转换
  */
 export function canChangeDeviceStatus(from: string, to: string): boolean {
-  return deviceStatusFlow[from as keyof typeof deviceStatusFlow]?.includes(to as any) || false
+  const flow = deviceStatusFlow[from as keyof typeof deviceStatusFlow]
+  return flow ? (flow as readonly string[]).includes(to) : false
 }
 
 // ==================== 财务应收状态流转 ====================
@@ -154,7 +162,8 @@ export const receivableStatusFlow = {
  * 检查应收状态是否可以转换
  */
 export function canChangeReceivableStatus(from: string, to: string): boolean {
-  return receivableStatusFlow[from as keyof typeof receivableStatusFlow]?.includes(to as any) || false
+  const flow = receivableStatusFlow[from as keyof typeof receivableStatusFlow]
+  return flow ? (flow as readonly string[]).includes(to) : false
 }
 
 // ==================== 发票状态流转 ====================
@@ -167,7 +176,8 @@ export const invoiceStatusFlow = {
  * 检查发票状态是否可以转换
  */
 export function canChangeInvoiceStatus(from: string, to: string): boolean {
-  return invoiceStatusFlow[from as keyof typeof invoiceStatusFlow]?.includes(to as any) || false
+  const flow = invoiceStatusFlow[from as keyof typeof invoiceStatusFlow]
+  return flow ? (flow as readonly string[]).includes(to) : false
 }
 
 // ==================== 样品领用状态流转 ====================
@@ -181,7 +191,8 @@ export const sampleRequisitionStatusFlow = {
  * 检查样品领用状态是否可以转换
  */
 export function canChangeSampleRequisitionStatus(from: string, to: string): boolean {
-  return sampleRequisitionStatusFlow[from as keyof typeof sampleRequisitionStatusFlow]?.includes(to as any) || false
+  const flow = sampleRequisitionStatusFlow[from as keyof typeof sampleRequisitionStatusFlow]
+  return flow ? (flow as readonly string[]).includes(to) : false
 }
 
 // ==================== 审批级别定义 ====================

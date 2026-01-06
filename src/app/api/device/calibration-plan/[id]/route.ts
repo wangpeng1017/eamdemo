@@ -8,29 +8,27 @@ export async function GET(
 ) {
   const { id } = await params
 
-  const plan = await prisma.calibrationPlan.findUnique({
+  const calibration = await prisma.deviceCalibration.findUnique({
     where: { id },
     include: {
       device: true,
     },
   })
 
-  if (!plan) {
+  if (!calibration) {
     return NextResponse.json({ error: '定检计划不存在' }, { status: 404 })
   }
 
   const formatted = {
-    id: plan.id,
-    deviceId: plan.deviceId,
-    deviceName: plan.device?.name,
-    planName: plan.planName,
-    cycleType: plan.planType,
-    cycleMonths: plan.cycleMonths,
-    lastCalibrationDate: plan.lastCalibrationDate,
-    nextCalibrationDate: plan.nextCalibrationDate,
-    responsiblePerson: plan.responsiblePerson,
-    calibratingOrganization: plan.calibratingOrganization,
-    status: plan.status,
+    id: calibration.id,
+    deviceId: calibration.deviceId,
+    deviceName: calibration.device?.name,
+    deviceNo: calibration.device?.deviceNo,
+    lastDate: calibration.lastDate,
+    nextDate: calibration.nextDate,
+    interval: calibration.interval,
+    status: calibration.status,
+    result: calibration.result,
   }
 
   return NextResponse.json(formatted)
@@ -44,23 +42,20 @@ export async function PUT(
   const { id } = await params
   const data = await request.json()
 
-  const updateData: any = {}
+  const updateData: Record<string, unknown> = {}
   if (data.deviceId !== undefined) updateData.deviceId = data.deviceId
-  if (data.planName !== undefined) updateData.planName = data.planName
-  if (data.cycleType !== undefined) updateData.planType = data.cycleType
-  if (data.cycleMonths !== undefined) updateData.cycleMonths = data.cycleMonths
-  if (data.lastCalibrationDate !== undefined) updateData.lastCalibrationDate = data.lastCalibrationDate ? new Date(data.lastCalibrationDate) : null
-  if (data.nextCalibrationDate !== undefined) updateData.nextCalibrationDate = data.nextCalibrationDate ? new Date(data.nextCalibrationDate) : null
-  if (data.responsiblePerson !== undefined) updateData.responsiblePerson = data.responsiblePerson
-  if (data.calibratingOrganization !== undefined) updateData.calibratingOrganization = data.calibratingOrganization
+  if (data.lastDate !== undefined) updateData.lastDate = data.lastDate ? new Date(data.lastDate) : null
+  if (data.nextDate !== undefined) updateData.nextDate = data.nextDate ? new Date(data.nextDate) : null
+  if (data.interval !== undefined) updateData.interval = data.interval
   if (data.status !== undefined) updateData.status = data.status
+  if (data.result !== undefined) updateData.result = data.result
 
-  const plan = await prisma.calibrationPlan.update({
+  const calibration = await prisma.deviceCalibration.update({
     where: { id },
     data: updateData,
   })
 
-  return NextResponse.json(plan)
+  return NextResponse.json(calibration)
 }
 
 // 删除定检计划
@@ -70,7 +65,7 @@ export async function DELETE(
 ) {
   const { id } = await params
 
-  await prisma.calibrationPlan.delete({
+  await prisma.deviceCalibration.delete({
     where: { id },
   })
 

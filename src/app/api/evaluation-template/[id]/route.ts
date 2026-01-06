@@ -5,7 +5,7 @@ import { withErrorHandler, success, notFound, validateRequired } from '@/lib/api
 // 获取单个模板
 export const GET = withErrorHandler(async (
   request: NextRequest,
-  context?: { params: Promise<{ id: string }> }
+  context?: { params: Promise<Record<string, string>> }
 ) => {
   const { id } = await context!.params
 
@@ -27,7 +27,7 @@ export const GET = withErrorHandler(async (
 // 更新模板
 export const PUT = withErrorHandler(async (
   request: NextRequest,
-  context?: { params: Promise<{ id: string }> }
+  context?: { params: Promise<Record<string, string>> }
 ) => {
   const { id } = await context!.params
   const data = await request.json()
@@ -78,7 +78,7 @@ export const PUT = withErrorHandler(async (
 // 删除模板
 export const DELETE = withErrorHandler(async (
   request: NextRequest,
-  context?: { params: Promise<{ id: string }> }
+  context?: { params: Promise<Record<string, string>> }
 ) => {
   const { id } = await context!.params
 

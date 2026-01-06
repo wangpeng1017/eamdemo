@@ -13,7 +13,7 @@ export const GET = withErrorHandler(async (request: NextRequest) => {
 
   const where: Record<string, unknown> = {}
   if (categoryId) where.categoryId = categoryId
-  if (status) where.status = status
+  if (status) where.status = parseInt(status)
   if (keyword) {
     where.OR = [
       { code: { contains: keyword } },
@@ -40,25 +40,27 @@ export const GET = withErrorHandler(async (request: NextRequest) => {
     _count: true,
   })
 
-  // 计算库存总值
-  const totalValue = await prisma.consumable.aggregate({
+  // 计算库存总量
+  const totalStock = await prisma.consumable.aggregate({
     _sum: {
-      currentStock: true,
+      stockQuantity: true,
     },
   })
 
   return success({
     list: list.map(item => ({
       ...item,
-      unitPrice: Number(item.unitPrice),
+      stockQuantity: Number(item.stockQuantity),
+      minStock: item.minStock ? Number(item.minStock) : null,
     })),
     total,
     page,
     pageSize,
+    totalStock: Number(totalStock._sum.stockQuantity || 0),
     stats: stats.reduce((acc, item) => {
       acc[item.status] = item._count
       return acc
-    }, {} as Record<string, number>),
+    }, {} as Record<number, number>),
   })
 })
 
@@ -68,16 +70,8 @@ export const POST = withErrorHandler(async (request: NextRequest) => {
 
   validateRequired(data, ['code', 'name', 'unit'])
 
-  // 计算状态
-  let status = 'normal'
-  if (data.currentStock === 0) {
-    status = 'out'
-  } else if (data.currentStock < (data.minStock || 0)) {
-    status = 'low'
-  }
-  if (data.expiryDate && new Date(data.expiryDate) < new Date()) {
-    status = 'expired'
-  }
+  // 计算状态: 1=正常, 0=禁用
+  const status = data.status !== undefined ? parseInt(data.status) : 1
 
   const consumable = await prisma.consumable.create({
     data: {
@@ -86,13 +80,9 @@ export const POST = withErrorHandler(async (request: NextRequest) => {
       categoryId: data.categoryId || null,
       specification: data.specification || null,
       unit: data.unit,
-      currentStock: data.currentStock || 0,
-      minStock: data.minStock || 0,
-      maxStock: data.maxStock || 0,
-      unitPrice: data.unitPrice || 0,
-      supplier: data.supplier || null,
+      stockQuantity: data.stockQuantity || 0,
+      minStock: data.minStock || null,
       location: data.location || null,
-      expiryDate: data.expiryDate ? new Date(data.expiryDate) : null,
       status,
       remark: data.remark || null,
     },
@@ -101,6 +91,7 @@ export const POST = withErrorHandler(async (request: NextRequest) => {
 
   return success({
     ...consumable,
-    unitPrice: Number(consumable.unitPrice),
+    stockQuantity: Number(consumable.stockQuantity),
+    minStock: consumable.minStock ? Number(consumable.minStock) : null,
   })
 })
