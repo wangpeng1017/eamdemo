@@ -763,9 +763,10 @@ model ConsumableTransaction {
   transactionNo   String     @unique @db.VarChar(50)
   type            String     @db.VarChar(20) // in/out
   quantity        Decimal    @db.Decimal(10, 2)
-  stockBefore     Decimal    @db.Decimal(10, 2)
-  stockAfter      Decimal    @db.Decimal(10, 2)
+  unitPrice       Decimal    @db.Decimal(10, 2)
+  totalAmount     Decimal    @db.Decimal(10, 2)
   reason          String?    @db.VarChar(200)
+  relatedOrder    String?    @db.VarChar(100)
   operator        String     @db.VarChar(50)
   transactionDate DateTime   @default(now())
   remark          String?    @db.Text
