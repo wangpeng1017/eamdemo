@@ -1,19 +1,19 @@
 import { prisma } from '@/lib/prisma'
 import { NextRequest, NextResponse } from 'next/server'
-import { getServerSession } from 'next-auth'
-import { authOptions } from '@/lib/auth'
+import { auth } from '@/lib/auth'
 
 // 保存/更新测试数据
 export async function POST(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
-  const session = await getServerSession(authOptions)
+  const session = await auth()
   if (!session?.user) {
     return NextResponse.json({ error: '未登录' }, { status: 401 })
   }
 
   const body = await request.json()
+  const { id } = await params
   const { sheetData, status, summary, conclusion } = body
 
   // 更新任务
@@ -35,7 +35,7 @@ export async function POST(
   if (conclusion) updateData.conclusion = conclusion
 
   const task = await prisma.testTask.update({
-    where: { id: params.id },
+    where: { id },
     data: updateData,
   })
 
