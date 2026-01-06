@@ -212,7 +212,7 @@ export default function ConsultationPage() {
 
   const columns: ColumnsType<Consultation> = [
     { title: '咨询单号', dataIndex: 'consultationNo', width: 150 },
-    { title: '客户公司', dataIndex: 'clientCompany', ellipsis: true },
+    { title: '客户公司', dataIndex: 'clientCompany', width: 180, ellipsis: true },
     { title: '联系人', dataIndex: 'contactPerson', width: 100 },
     { title: '联系电话', dataIndex: 'contactPhone', width: 130 },
     {

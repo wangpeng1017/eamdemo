@@ -94,7 +94,6 @@ export default function ClientPage() {
       title: '状态', dataIndex: 'status', width: 80,
       render: (s: string) => <Tag color={s === 'approved' ? 'success' : 'default'}>{s === 'approved' ? '已批准' : s}</Tag>
     },
-    { title: '备注', dataIndex: 'remark', width: 120, ellipsis: true },
     {
       title: '创建时间', dataIndex: 'createdAt', width: 160,
       render: (t: string) => dayjs(t).format('YYYY-MM-DD HH:mm:ss')
@@ -160,9 +159,6 @@ export default function ClientPage() {
               <Input placeholder="如: 1307023009022100123" />
             </Form.Item>
           </div>
-          <Form.Item name="remark" label="备注">
-            <Input.TextArea rows={2} placeholder="请输入备注" />
-          </Form.Item>
           <Form.Item name="status" label="状态" initialValue="approved">
             <Select options={[
               { value: 'approved', label: '已批准' },
