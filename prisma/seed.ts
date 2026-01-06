@@ -354,6 +354,7 @@ async function main() {
   // ==================== 报价单 ====================
   console.log('💰 创建报价单...')
   const quotations = await Promise.all([
+    // 已批准 - 客户已确认
     prisma.quotation.create({
       data: {
         quotationNo: 'BJ20250105001',
@@ -374,6 +375,60 @@ async function main() {
         status: 'approved',
         clientStatus: 'ok',
         consultationNo: 'ZX20250105001',
+      },
+    }),
+    // 草稿状态
+    prisma.quotation.create({
+      data: {
+        quotationNo: 'BJ20250106001',
+        clientId: clients[1].id,
+        clientCompany: '比亚迪股份有限公司',
+        clientContact: '张经理',
+        clientTel: '13900139000',
+        serviceCompany: '江苏国轻检测技术有限公司',
+        serviceContact: '张馨',
+        serviceTel: '15952575002',
+        sampleName: '动力电池结构件',
+        subtotal: 5000,
+        taxTotal: 5300,
+        discountTotal: 4800,
+        status: 'draft',
+      },
+    }),
+    // 待销售审批
+    prisma.quotation.create({
+      data: {
+        quotationNo: 'BJ20250106002',
+        clientId: clients[2].id,
+        clientCompany: '上海汽车集团股份有限公司',
+        clientContact: '王总',
+        clientTel: '13700137000',
+        serviceCompany: '江苏国轻检测技术有限公司',
+        serviceContact: '张馨',
+        serviceTel: '15952575002',
+        sampleName: '变速箱齿轮',
+        subtotal: 8000,
+        taxTotal: 8480,
+        discountTotal: 7500,
+        status: 'pending_sales',
+      },
+    }),
+    // 待财务审批
+    prisma.quotation.create({
+      data: {
+        quotationNo: 'BJ20250106003',
+        clientId: clients[3].id,
+        clientCompany: '某机械制造有限公司',
+        clientContact: '刘工',
+        clientTel: '13600136000',
+        serviceCompany: '江苏国轻检测技术有限公司',
+        serviceContact: '张馨',
+        serviceTel: '15952575002',
+        sampleName: '液压缸活塞杆',
+        subtotal: 2500,
+        taxTotal: 2650,
+        discountTotal: 2400,
+        status: 'pending_finance',
       },
     }),
   ])
@@ -442,6 +497,7 @@ async function main() {
   // ==================== 合同 ====================
   console.log('📄 创建合同...')
   const contracts = await Promise.all([
+    // 已签订 - 执行中
     prisma.contract.create({
       data: {
         contractNo: 'HT20250105001',
@@ -464,9 +520,66 @@ async function main() {
         signDate: new Date('2025-01-05'),
         effectiveDate: new Date('2025-01-05'),
         expiryDate: new Date('2025-12-31'),
-        status: 'signed',
+        status: 'executing',
         termsPaymentTerms: '合同签订后预付50%，检测完成后付清余款',
         termsDeliveryTerms: '检测完成后5个工作日内交付报告',
+      },
+    }),
+    // 草稿状态
+    prisma.contract.create({
+      data: {
+        contractNo: 'HT20250106001',
+        contractName: '检测服务合同-比亚迪',
+        clientId: clients[1].id,
+        partyACompany: '比亚迪股份有限公司',
+        partyAContact: '张经理',
+        partyATel: '13900139000',
+        partyBCompany: '江苏国轻检测技术有限公司',
+        partyBContact: '张馨',
+        partyBTel: '15952575002',
+        contractAmount: 4800,
+        sampleName: '动力电池结构件',
+        status: 'draft',
+      },
+    }),
+    // 已签订
+    prisma.contract.create({
+      data: {
+        contractNo: 'HT20250104001',
+        contractName: '检测服务合同-上汽集团',
+        clientId: clients[2].id,
+        partyACompany: '上海汽车集团股份有限公司',
+        partyAContact: '王总',
+        partyATel: '13700137000',
+        partyBCompany: '江苏国轻检测技术有限公司',
+        partyBContact: '张馨',
+        partyBTel: '15952575002',
+        contractAmount: 7500,
+        sampleName: '变速箱齿轮',
+        signDate: new Date('2025-01-04'),
+        effectiveDate: new Date('2025-01-04'),
+        expiryDate: new Date('2025-06-30'),
+        status: 'signed',
+      },
+    }),
+    // 已完成
+    prisma.contract.create({
+      data: {
+        contractNo: 'HT20241220001',
+        contractName: '检测服务合同-某机械',
+        clientId: clients[3].id,
+        partyACompany: '某机械制造有限公司',
+        partyAContact: '刘工',
+        partyATel: '13600136000',
+        partyBCompany: '江苏国轻检测技术有限公司',
+        partyBContact: '张馨',
+        partyBTel: '15952575002',
+        contractAmount: 2000,
+        sampleName: '液压缸活塞杆',
+        signDate: new Date('2024-12-20'),
+        effectiveDate: new Date('2024-12-20'),
+        expiryDate: new Date('2025-01-20'),
+        status: 'completed',
       },
     }),
   ])
@@ -514,6 +627,7 @@ async function main() {
   // ==================== 样品 ====================
   console.log('🧪 创建样品...')
   await Promise.all([
+    // 检测中
     prisma.sample.create({
       data: {
         sampleNo: 'S20250105001',
@@ -532,6 +646,7 @@ async function main() {
         createdById: users[7].id,
       },
     }),
+    // 已完成
     prisma.sample.create({
       data: {
         sampleNo: 'S20250104001',
@@ -546,6 +661,40 @@ async function main() {
         storageLocation: 'B区-02-01',
         remainingQuantity: '3',
         status: '已完成',
+        createdById: users[7].id,
+      },
+    }),
+    // 待收样
+    prisma.sample.create({
+      data: {
+        sampleNo: 'S20250106001',
+        name: '动力电池结构件',
+        type: '金属制品',
+        specification: 'EV-BAT-001',
+        quantity: '10',
+        totalQuantity: '10',
+        unit: '件',
+        storageLocation: 'C区-01-01',
+        remainingQuantity: '10',
+        status: '待收样',
+        createdById: users[7].id,
+      },
+    }),
+    // 已收样
+    prisma.sample.create({
+      data: {
+        sampleNo: 'S20250106002',
+        name: '变速箱齿轮',
+        type: '金属制品',
+        specification: 'GR-2023-A',
+        quantity: '6',
+        totalQuantity: '6',
+        unit: '个',
+        receiptDate: new Date('2025-01-06'),
+        receiptPerson: '赵样品',
+        storageLocation: 'A区-02-03',
+        remainingQuantity: '6',
+        status: '已收样',
         createdById: users[7].id,
       },
     }),
@@ -616,6 +765,7 @@ async function main() {
   // ==================== 检测任务 ====================
   console.log('📊 创建检测任务...')
   await Promise.all([
+    // 进行中
     prisma.testTask.create({
       data: {
         taskNo: 'T20250105001',
@@ -632,11 +782,43 @@ async function main() {
         progress: 30,
       },
     }),
+    // 待开始
+    prisma.testTask.create({
+      data: {
+        taskNo: 'T20250106001',
+        sampleName: '动力电池结构件',
+        parameters: JSON.stringify(['化学成分分析', '硬度测试']),
+        testMethod: 'GB/T 4336-2016',
+        deviceId: devices[0].id,
+        assignedToId: users[5].id, // 李四
+        plannedDate: new Date('2025-01-08'),
+        dueDate: new Date('2025-01-15'),
+        status: '待开始',
+        progress: 0,
+      },
+    }),
+    // 已完成
+    prisma.testTask.create({
+      data: {
+        taskNo: 'T20250104001',
+        sampleName: 'C30混凝土试块',
+        parameters: JSON.stringify(['抗压强度']),
+        testMethod: 'GB/T 50081-2019',
+        deviceId: devices[1].id,
+        assignedToId: users[4].id, // 张三
+        plannedDate: new Date('2025-01-04'),
+        dueDate: new Date('2025-01-05'),
+        actualDate: new Date('2025-01-05'),
+        status: '已完成',
+        progress: 100,
+      },
+    }),
   ])
 
   // ==================== 财务应收 ====================
   console.log('💵 创建财务数据...')
   await Promise.all([
+    // 部分收款
     prisma.financeReceivable.create({
       data: {
         receivableNo: 'AR-20250105-001',
@@ -650,11 +832,36 @@ async function main() {
         reportNos: JSON.stringify(['RPT-20250105-001']),
       },
     }),
+    // 未收款
+    prisma.financeReceivable.create({
+      data: {
+        receivableNo: 'AR-20250106-001',
+        clientId: clients[1].id,
+        clientName: '比亚迪股份有限公司',
+        amount: 4800,
+        receivedAmount: 0,
+        status: 'pending',
+        dueDate: new Date('2025-01-25'),
+      },
+    }),
+    // 已收款
+    prisma.financeReceivable.create({
+      data: {
+        receivableNo: 'AR-20241220-001',
+        clientId: clients[3].id,
+        clientName: '某机械制造有限公司',
+        amount: 2000,
+        receivedAmount: 2000,
+        status: 'completed',
+        dueDate: new Date('2025-01-10'),
+      },
+    }),
   ])
 
   // ==================== 供应商 ====================
   console.log('🏭 创建供应商...')
   await Promise.all([
+    // 启用
     prisma.supplier.create({
       data: {
         name: 'SGS通标标准技术服务有限公司',
@@ -666,6 +873,33 @@ async function main() {
         address: '上海市闵行区',
         qualification: JSON.stringify({ scope: ['金属材料检测', '非金属材料检测'] }),
         status: 1,
+      },
+    }),
+    // 启用
+    prisma.supplier.create({
+      data: {
+        name: '中国检验认证集团',
+        code: 'CCIC001',
+        type: '检测机构',
+        contact: '王主任',
+        phone: '010-87654321',
+        email: 'wang@ccic.com',
+        address: '北京市朝阳区',
+        qualification: JSON.stringify({ scope: ['产品认证', '体系认证'] }),
+        status: 1,
+      },
+    }),
+    // 禁用
+    prisma.supplier.create({
+      data: {
+        name: '某地方检测中心',
+        code: 'LOCAL001',
+        type: '检测机构',
+        contact: '张工',
+        phone: '0512-12345678',
+        email: 'zhang@local.com',
+        address: '江苏省苏州市',
+        status: 0,
       },
     }),
   ])
