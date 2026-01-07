@@ -124,6 +124,13 @@ model Client {
   remark         String?  @db.Text
   status         String   @default("approved") // draft/pending/approved/rejected
   creator        String?  @db.VarChar(50)
+
+  // 新增：审批相关字段
+  approvalStatus   String?   @default("pending") // pending/approved/rejected/cancelled
+  approvalStep     Int?      @default(0) // 当前审批步骤
+  approvalInstanceId String?  @unique
+  approvalInstance ApprovalInstance? @relation(fields: [approvalInstanceId], references: [id])
+
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
 
@@ -231,6 +238,13 @@ model Quotation {
   ngReason       String?  @db.Text // 客户拒绝原因
   consultationNo String?  @db.VarChar(50) // 来源咨询单号
   contractNo     String?  @db.VarChar(50) // 生成的合同编号
+
+  // 新增：审批相关字段
+  approvalStatus   String?   @default("pending") // pending/approved/rejected/cancelled
+  approvalStep     Int?      @default(0) // 当前审批步骤
+  approvalInstanceId String?  @unique
+  approvalInstance ApprovalInstance? @relation(fields: [approvalInstanceId], references: [id])
+
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
 
@@ -276,6 +290,12 @@ model Contract {
   effectiveDate DateTime? // 生效日期
   expiryDate    DateTime? // 到期日期
   status        String    @default("draft") // draft/signed/executing/completed/terminated
+
+  // 新增：审批相关字段
+  approvalStatus   String?   @default("pending") // pending/approved/rejected/cancelled
+  approvalStep     Int?      @default(0) // 当前审批步骤
+  approvalInstanceId String?  @unique
+  approvalInstance ApprovalInstance? @relation(fields: [approvalInstanceId], references: [id])
 
   // 合同条款 JSON
   termsPaymentTerms         String? @db.Text // 付款条款
@@ -768,6 +788,57 @@ model ConsumableTransaction {
 }
 
 // ==================== 审批管理 ====================
+
+// 统一审批实例表
+model ApprovalInstance {
+  id            String          @id @default(cuid())
+  bizType       String          @db.VarChar(50) // 业务类型: quotation/contract/client
+  bizId         String          @db.VarChar(100) // 业务ID
+  flowCode      String          @db.VarChar(100) // 流程编码
+  currentStep   Int             @default(0) // 当前步骤(0=未提交,1=第一级...)
+  status        String          @default("pending") // pending/approved/rejected/cancelled
+  submitterId   String          @db.VarChar(50) // 提交人ID
+  submitterName String          @db.VarChar(100) // 提交人姓名
+  submittedAt   DateTime? // 提交时间
+  completedAt   DateTime? // 完成时间
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+
+  // 关联审批记录
+  records       ApprovalRecord[]
+
+  // 反向关系 - 业务对象
+  quotation     Quotation?
+  contract      Contract?
+  client        Client?
+
+  @@unique([bizType, bizId])
+  @@index([bizType, bizId, status])
+  @@map("sys_approval_instance")
+}
+
+// 统一审批记录表
+model ApprovalRecord {
+  id           String           @id @default(cuid())
+  instanceId   String
+  instance     ApprovalInstance @relation(fields: [instanceId], references: [id], onDelete: Cascade)
+
+  step         Int // 审批步骤(1/2/3...)
+  nodeType     String           @db.VarChar(20) // role/user/department
+  targetType   String           @db.VarChar(50) // 审批对象(角色编码/用户ID/部门ID)
+  targetName   String           @db.VarChar(100) // 审批人/角色名称
+
+  approverId   String?          @db.VarChar(50) // 实际审批人ID
+  approverName String?          @db.VarChar(100) // 实际审批人姓名
+  action       String           @db.VarChar(20) // approve/reject/cancel
+  comment      String?          @db.Text
+  actedAt      DateTime? // 操作时间
+
+  createdAt    DateTime         @default(now())
+
+  @@index([instanceId, step])
+  @@map("sys_approval_record")
+}
 
 model ApprovalFlow {
   id           String   @id @default(cuid())

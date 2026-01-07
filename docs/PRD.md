@@ -1,9 +1,10 @@
 # LIMS 实验室信息管理系统 - 产品需求文档 (PRD)
 
-> **版本**: 1.1
-> **最后更新**: 2026-01-06
+> **版本**: 1.2
+> **最后更新**: 2026-01-07
 > **文档类型**: 详细需求规格说明书
 > **技术栈变更**: 已迁移至 Next.js 全栈方案
+> **审批流系统**: 统一可配置审批流系统 v1.0
 
 ---
 
@@ -888,9 +889,90 @@ LIMS（Laboratory Information Management System）是一套面向检测实验室
 
 **页面路径**：`/system/permission`
 
-#### 3.9.5 审批流程配置 (ApprovalWorkflowConfig)
+#### 3.9.5 审批流程管理 (ApprovalFlow)
 
 **页面路径**：`/system/approval-flow`
+
+**功能描述**：统一审批流系统，支持为不同业务类型配置审批流程。
+
+**核心功能**：
+1. **审批流程配置** - 为报价单、合同、客户单位等业务配置审批流程
+2. **可视化配置** - 拖拽式配置审批节点，支持角色/用户/部门负责人审批
+3. **灵活可扩展** - 新增业务类型无需改代码，仅配置即可
+
+**审批流程配置字段**：
+
+| 字段名 | 字段标识 | 类型 | 必填 | 说明 |
+|--------|----------|------|------|------|
+| 流程名称 | name | string | 是 | 审批流程名称 |
+| 流程编码 | code | string | 是 | 唯一标识，如 QUOTATION_APPROVAL |
+| 业务类型 | businessType | string | 是 | quotation/contract/client |
+| 流程描述 | description | string | 否 | 流程说明 |
+| 审批节点 | nodes | json | 是 | 审批节点配置 |
+| 状态 | status | boolean | 是 | 是否启用 |
+
+**审批节点配置格式**：
+```json
+[
+  {
+    "step": 1,
+    "name": "销售经理审批",
+    "type": "role",
+    "targetId": "sales_manager",
+    "targetName": "销售经理",
+    "required": true
+  },
+  {
+    "step": 2,
+    "name": "财务审批",
+    "type": "role",
+    "targetId": "finance",
+    "targetName": "财务",
+    "required": true
+  }
+]
+```
+
+**支持的审批类型**：
+| 类型 | 说明 | targetId 示例 |
+|------|------|---------------|
+| role | 角色审批 | sales_manager, finance, lab_director |
+| user | 指定用户 | user_id_123 |
+| department | 部门负责人 | dept_id_456 |
+
+**已配置的审批流程**：
+
+1. **报价审批流程** (QUOTATION_APPROVAL)
+   - 第1级：销售经理审批
+   - 第2级：财务审批
+   - 第3级：实验室负责人审批
+
+2. **合同审批流程** (CONTRACT_APPROVAL)
+   - 第1级：部门经理审批
+   - 第2级：法务审批
+
+3. **客户单位审批流程** (CLIENT_APPROVAL)
+   - 第1级：销售经理审批
+
+**审批状态流转**：
+```
+[草稿] → [提交审批] → [pending - 审批中]
+                              ↓
+                    ┌─────────┴─────────┐
+                    ↓                   ↓
+               [通过]               [驳回]
+                    ↓                   ↓
+            [下一级/完成]          [rejected]
+                    ↓
+            [approved - 已批准]
+```
+
+**相关文件**：
+- 审批引擎：`src/lib/approval/engine.ts`
+- 审批类型：`src/lib/approval/types.ts`
+- 统一审批 API：`src/app/api/approval/route.ts`
+- 审批操作 API：`src/app/api/approval/[id]/route.ts`
+- 前端组件：`src/components/approval/`
 
 ---
 
