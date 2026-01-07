@@ -64,12 +64,18 @@ export async function POST(request: NextRequest) {
   })
   const consultationNo = `ZX${today}${String(count + 1).padStart(4, '0')}`
 
+  // 转换 estimatedQuantity 为整数
+  const createData: any = {
+    ...data,
+    consultationNo,
+    testItems: data.testItems || [],
+  }
+  if (data.estimatedQuantity !== undefined && data.estimatedQuantity !== null) {
+    createData.estimatedQuantity = parseInt(data.estimatedQuantity, 10) || 0
+  }
+
   const consultation = await prisma.consultation.create({
-    data: {
-      ...data,
-      consultationNo,
-      testItems: data.testItems || [],
-    }
+    data: createData
   })
 
   return NextResponse.json(consultation)
