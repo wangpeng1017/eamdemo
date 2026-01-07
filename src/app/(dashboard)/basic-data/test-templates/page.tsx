@@ -110,8 +110,8 @@ export default function TestTemplatesPage() {
   }
 
   const columns: ColumnsType<TestTemplate> = [
-    { title: '模版编号', dataIndex: 'code', width: 140 },
-    { title: '模版名称', dataIndex: 'name', width: 200 },
+    { title: '项目编号', dataIndex: 'code', width: 140 },
+    { title: '项目名称', dataIndex: 'name', width: 200 },
     {
       title: '分类', dataIndex: 'category', width: 100,
       render: (cat) => <Tag>{cat}</Tag>
@@ -141,7 +141,7 @@ export default function TestTemplatesPage() {
   return (
     <div>
       <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'space-between' }}>
-        <h2 style={{ margin: 0 }}>检测模版管理</h2>
+        <h2 style={{ margin: 0 }}>检测项目管理</h2>
         <Space>
           <Select
             placeholder="分类筛选"
@@ -158,7 +158,7 @@ export default function TestTemplatesPage() {
             }}
             options={categoryOptions}
           />
-          <Button type="primary" icon={<PlusOutlined />} onClick={handleAdd}>新增模版</Button>
+          <Button type="primary" icon={<PlusOutlined />} onClick={handleAdd}>新增项目</Button>
         </Space>
       </div>
       <Table
@@ -172,14 +172,14 @@ export default function TestTemplatesPage() {
 
       {/* 新增/编辑弹窗 */}
       <Modal
-        title={editingId ? '编辑检测模版' : '新增检测模版'}
+        title={editingId ? '编辑检测项目' : '新增检测项目'}
         open={modalOpen}
         onOk={handleSubmit}
         onCancel={() => setModalOpen(false)}
         width={700}
       >
         <Form form={form} layout="vertical">
-          <Form.Item name="name" label="模版名称" rules={[{ required: true }]}>
+          <Form.Item name="name" label="项目名称" rules={[{ required: true }]}>
             <Input placeholder="如：复合材料拉伸性能检测(GB/T)" />
           </Form.Item>
           <Form.Item name="category" label="分类" rules={[{ required: true }]}>
@@ -219,7 +219,7 @@ export default function TestTemplatesPage() {
 
       {/* 预览弹窗 */}
       <Modal
-        title="模版预览"
+        title="项目预览"
         open={previewOpen}
         onCancel={() => setPreviewOpen(false)}
         footer={null}

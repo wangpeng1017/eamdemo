@@ -1,11 +1,13 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Table, Button, Space, Modal, Form, Input, InputNumber, Select, DatePicker, message, Drawer, Tag, Row, Col, Divider, Popconfirm, Tabs, Descriptions, Card, Radio } from 'antd'
-import { PlusOutlined, EditOutlined, DeleteOutlined, EyeOutlined, CheckOutlined, CloseOutlined, SendOutlined } from '@ant-design/icons'
+import { Table, Button, Space, Modal, Form, Input, InputNumber, Select, DatePicker, message, Drawer, Tag, Row, Col, Divider, Popconfirm, Tabs, Descriptions, Card, Radio, Upload } from 'antd'
+import { PlusOutlined, EditOutlined, DeleteOutlined, EyeOutlined, CheckOutlined, CloseOutlined, SendOutlined, FilePdfOutlined, FolderOutlined, FileAddOutlined, MessageOutlined, UploadOutlined } from '@ant-design/icons'
 import { StatusTag } from '@/components/StatusTag'
+import UserSelect from '@/components/UserSelect'
 import type { ColumnsType } from 'antd/es/table'
 import dayjs from 'dayjs'
+import { useRouter } from 'next/navigation'
 
 interface Client {
   id: string
@@ -39,9 +41,11 @@ interface QuotationApproval {
 interface Quotation {
   id: string
   quotationNo: string
+  consultationNo?: string | null
   clientId?: string
   client?: Client
   clientContactPerson?: string
+  sampleName?: string | null
   consultationId?: string | null
   quotationDate: string
   validDays: number
@@ -78,30 +82,30 @@ const CLIENT_RESPONSE_OPTIONS = [
   { value: 'ng', label: '拒绝' },
 ]
 
-const SERVICE_ITEM_OPTIONS = [
-  { value: '机械性能测试', label: '机械性能测试' },
-  { value: '化学成分分析', label: '化学成分分析' },
-  { value: '金相检验', label: '金相检验' },
-  { value: '无损检测', label: '无损检测' },
-  { value: '尺寸测量', label: '尺寸测量' },
-  { value: '盐雾试验', label: '盐雾试验' },
-  { value: '硬度测试', label: '硬度测试' },
-  { value: '拉伸试验', label: '拉伸试验' },
-]
+interface TestTemplate {
+  id: string
+  name: string
+  method?: string
+}
+
+// 检测项目选项将在组件内动态加载
+let testTemplateOptions: { value: string; label: string }[] = []
 
 // 明细项表格列定义
 const itemColumns: ColumnsType<QuotationItem> = [
   {
-    title: '服务项目',
+    title: '检测项目',
     dataIndex: 'serviceItem',
     width: 150,
     render: (value, record, index) => (
       <Select
         showSearch
-        options={SERVICE_ITEM_OPTIONS}
+        optionFilterProp="label"
+        options={testTemplateOptions}
         value={value}
         onChange={(val) => updateItem(index, 'serviceItem', val)}
         style={{ width: '100%' }}
+        placeholder="选择检测项目"
       />
     ),
   },
@@ -165,8 +169,8 @@ const itemColumns: ColumnsType<QuotationItem> = [
 ]
 
 // 全局变量用于更新函数
-let updateItemFunc: (index: number, field: string, value: any) => void = () => {}
-let removeItemFunc: (index: number) => void = () => {}
+let updateItemFunc: (index: number, field: string, value: any) => void = () => { }
+let removeItemFunc: (index: number) => void = () => { }
 
 function updateItem(index: number, field: string, value: any) {
   updateItemFunc(index, field, value)
@@ -177,6 +181,7 @@ function removeItem(index: number) {
 }
 
 export default function QuotationPage() {
+  const router = useRouter()
   const [data, setData] = useState<Quotation[]>([])
   const [loading, setLoading] = useState(false)
   const [total, setTotal] = useState(0)
@@ -189,9 +194,20 @@ export default function QuotationPage() {
   const [items, setItems] = useState<QuotationItem[]>([])
   const [clients, setClients] = useState<Client[]>([])
   const [clientsLoading, setClientsLoading] = useState(false)
+  const [testTemplates, setTestTemplates] = useState<TestTemplate[]>([])
   const [form] = Form.useForm()
   const [approvalForm] = Form.useForm()
   const [filters, setFilters] = useState<any>({})
+
+  // 行选择
+  const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([])
+  const [selectedRows, setSelectedRows] = useState<Quotation[]>([])
+
+  // 新功能弹窗
+  const [feedbackModalOpen, setFeedbackModalOpen] = useState(false)
+  const [contractModalOpen, setContractModalOpen] = useState(false)
+  const [feedbackForm] = Form.useForm()
+  const [contractForm] = Form.useForm()
 
   // 设置全局更新函数
   updateItemFunc = (index: number, field: string, value: any) => {
@@ -223,6 +239,20 @@ export default function QuotationPage() {
     }
   }
 
+  // 获取检测项目列表
+  const fetchTestTemplates = async () => {
+    try {
+      const res = await fetch('/api/test-template?pageSize=1000')
+      const json = await res.json()
+      const templates = json.list || []
+      setTestTemplates(templates)
+      // 更新全局选项
+      testTemplateOptions = templates.map((t: TestTemplate) => ({ value: t.name, label: t.name }))
+    } catch (error) {
+      console.error('获取检测项目列表失败:', error)
+    }
+  }
+
   const fetchData = async (p = page, f = filters) => {
     setLoading(true)
     const params = new URLSearchParams({
@@ -237,12 +267,12 @@ export default function QuotationPage() {
       setTotal(json.data.total || 0)
     } else {
       if (json.success && json.data) {
-      setData(json.data.list || [])
-      setTotal(json.data.total || 0)
-    } else {
-      setData(json.list || [])
-      setTotal(json.total || 0)
-    }
+        setData(json.data.list || [])
+        setTotal(json.data.total || 0)
+      } else {
+        setData(json.list || [])
+        setTotal(json.total || 0)
+      }
     }
     setLoading(false)
   }
@@ -250,6 +280,7 @@ export default function QuotationPage() {
   useEffect(() => {
     fetchData()
     fetchClients()
+    fetchTestTemplates()
   }, [page])
 
   const handleAdd = () => {
@@ -353,6 +384,143 @@ export default function QuotationPage() {
     setViewDrawerOpen(false)
   }
 
+  // ===== 新功能处理函数 =====
+
+  // 提交审批
+  const handleSubmitApproval = async () => {
+    if (selectedRows.length !== 1) {
+      message.warning('请选择一条记录')
+      return
+    }
+    const quotation = selectedRows[0]
+    if (quotation.status !== 'draft') {
+      message.warning('只有草稿状态可以提交审批')
+      return
+    }
+    await fetch(`/api/quotation/${quotation.id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ status: 'pending_sales' }),
+    })
+    message.success('已提交审批')
+    setSelectedRowKeys([])
+    setSelectedRows([])
+    fetchData()
+  }
+
+  // 生成PDF
+  const handleGeneratePDF = () => {
+    if (selectedRows.length !== 1) {
+      message.warning('请选择一条记录')
+      return
+    }
+    window.open(`/api/quotation/${selectedRows[0].id}/pdf`, '_blank')
+  }
+
+  // 归档
+  const handleArchive = async () => {
+    if (selectedRows.length === 0) {
+      message.warning('请选择记录')
+      return
+    }
+    for (const row of selectedRows) {
+      await fetch(`/api/quotation/${row.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: 'archived' }),
+      })
+    }
+    message.success('已归档')
+    setSelectedRowKeys([])
+    setSelectedRows([])
+    fetchData()
+  }
+
+  // 打开客户反馈弹窗
+  const handleOpenFeedback = () => {
+    if (selectedRows.length !== 1) {
+      message.warning('请选择一条记录')
+      return
+    }
+    feedbackForm.resetFields()
+    setFeedbackModalOpen(true)
+  }
+
+  // 提交客户反馈
+  const handleFeedbackSubmit = async () => {
+    const values = await feedbackForm.validateFields()
+    await fetch(`/api/quotation/${selectedRows[0].id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        clientResponse: values.clientResponse,
+        status: values.clientResponse === 'ok' ? 'archived' : 'rejected',
+      }),
+    })
+    message.success('客户反馈已保存')
+    setFeedbackModalOpen(false)
+    setSelectedRowKeys([])
+    setSelectedRows([])
+    fetchData()
+  }
+
+  // 打开生成合同弹窗
+  const handleOpenContract = () => {
+    if (selectedRows.length !== 1) {
+      message.warning('请选择一条报价单')
+      return
+    }
+    const quotation = selectedRows[0]
+    if (quotation.status !== 'approved') {
+      message.warning('只有已批准的报价单可以生成合同')
+      return
+    }
+    contractForm.resetFields()
+    contractForm.setFieldsValue({
+      quotationId: quotation.id,
+      quotationNo: quotation.quotationNo,
+      clientName: quotation.client?.name,
+      sampleName: quotation.sampleName,
+      amount: quotation.finalAmount,
+      clientContact: quotation.clientContactPerson,
+      contractName: `${quotation.sampleName || '检测'}委托合同`,
+      signDate: dayjs(),
+      startDate: dayjs(),
+      endDate: dayjs().add(1, 'year'),
+    })
+    setContractModalOpen(true)
+  }
+
+  // 提交生成合同
+  const handleContractSubmit = async () => {
+    const values = await contractForm.validateFields()
+    const contractData = {
+      quotationId: values.quotationId,
+      quotationNo: values.quotationNo,
+      clientName: values.clientName,
+      clientContact: values.clientContact,
+      amount: values.amount,
+      signDate: values.signDate?.toISOString(),
+      startDate: values.startDate?.toISOString(),
+      endDate: values.endDate?.toISOString(),
+      paymentTerms: values.paymentTerms,
+      deliveryTerms: values.deliveryTerms,
+    }
+    const res = await fetch('/api/contract', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(contractData),
+    })
+    const json = await res.json()
+    if (json.success || json.id) {
+      message.success(`合同创建成功`)
+      setContractModalOpen(false)
+      router.push('/entrustment/contract')
+    } else {
+      message.error('创建合同失败')
+    }
+  }
+
   // 计算金额
   const totalAmount = items.reduce((sum, item) => sum + item.totalPrice, 0)
   const taxAmount = totalAmount * 0.06
@@ -362,6 +530,19 @@ export default function QuotationPage() {
 
   const columns: ColumnsType<Quotation> = [
     { title: '报价单号', dataIndex: 'quotationNo', width: 150 },
+    {
+      title: '咨询单号',
+      dataIndex: 'consultationNo',
+      width: 140,
+      render: (no: string) => no ? (
+        <a
+          style={{ color: '#1890ff' }}
+          onClick={() => router.push(`/entrustment/consultation?id=${no}`)}
+        >
+          {no}
+        </a>
+      ) : '-'
+    },
     {
       title: '客户名称',
       dataIndex: 'client',
@@ -414,9 +595,46 @@ export default function QuotationPage() {
 
   return (
     <div>
-      <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'space-between' }}>
+      <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <h2 style={{ margin: 0 }}>报价管理</h2>
-        <Button type="primary" icon={<PlusOutlined />} onClick={handleAdd}>新增报价</Button>
+        <Space>
+          <Button
+            icon={<SendOutlined />}
+            onClick={handleSubmitApproval}
+            disabled={selectedRowKeys.length !== 1 || selectedRows[0]?.status !== 'draft'}
+          >
+            提交审批
+          </Button>
+          <Button
+            icon={<FilePdfOutlined />}
+            onClick={handleGeneratePDF}
+            disabled={selectedRowKeys.length !== 1}
+          >
+            生成PDF
+          </Button>
+          <Button
+            icon={<FolderOutlined />}
+            onClick={handleArchive}
+            disabled={selectedRowKeys.length === 0}
+          >
+            归档
+          </Button>
+          <Button
+            icon={<FileAddOutlined />}
+            onClick={handleOpenContract}
+            disabled={selectedRowKeys.length !== 1 || selectedRows[0]?.status !== 'approved'}
+          >
+            生成合同
+          </Button>
+          <Button
+            icon={<MessageOutlined />}
+            onClick={handleOpenFeedback}
+            disabled={selectedRowKeys.length !== 1}
+          >
+            客户反馈
+          </Button>
+          <Button type="primary" icon={<PlusOutlined />} onClick={handleAdd}>新增报价</Button>
+        </Space>
       </div>
 
       {/* 筛选条件 */}
@@ -450,7 +668,14 @@ export default function QuotationPage() {
         columns={columns}
         dataSource={data}
         loading={loading}
-        scroll={{ x: 1200 }}
+        scroll={{ x: 1300 }}
+        rowSelection={{
+          selectedRowKeys,
+          onChange: (keys, rows) => {
+            setSelectedRowKeys(keys)
+            setSelectedRows(rows)
+          },
+        }}
         pagination={{ current: page, total, pageSize: 10, onChange: setPage, showSizeChanger: false }}
       />
 
@@ -718,8 +943,103 @@ export default function QuotationPage() {
           <Form.Item name="comment" label="审批意见">
             <Input.TextArea rows={4} placeholder="请输入审批意见" />
           </Form.Item>
-          <Form.Item name="approver" label="审批人" rules={[{ required: true }]} initialValue="当前用户">
+          <Form.Item name="approver" label="审批人" rules={[{ required: true }]}>
+            <UserSelect placeholder="请选择审批人" />
+          </Form.Item>
+        </Form>
+      </Modal>
+
+      {/* 客户反馈弹窗 */}
+      <Modal
+        title="客户反馈处理"
+        open={feedbackModalOpen}
+        onOk={handleFeedbackSubmit}
+        onCancel={() => setFeedbackModalOpen(false)}
+      >
+        <Form form={feedbackForm} layout="vertical">
+          <Form.Item
+            name="clientResponse"
+            label="反馈结果"
+            rules={[{ required: true, message: '请选择反馈结果' }]}
+          >
+            <Radio.Group>
+              <Radio value="ok">客户确认OK</Radio>
+              <Radio value="ng">客户拒绝(NG)</Radio>
+            </Radio.Group>
+          </Form.Item>
+          <Form.Item name="attachmentUrl" label="上传盖章合同">
+            <Upload maxCount={1} accept=".pdf,.jpg,.png">
+              <Button icon={<UploadOutlined />}>选择合同文件</Button>
+            </Upload>
+            <div style={{ fontSize: 12, color: '#999', marginTop: 4 }}>
+              支持PDF、JPG、PNG格式，文件大小不超过10MB
+            </div>
+          </Form.Item>
+        </Form>
+      </Modal>
+
+      {/* 生成合同弹窗 */}
+      <Modal
+        title="生成委托合同"
+        open={contractModalOpen}
+        onOk={handleContractSubmit}
+        onCancel={() => setContractModalOpen(false)}
+        width={700}
+        okText="生成"
+      >
+        <Form form={contractForm} layout="vertical">
+          <Form.Item name="quotationId" hidden>
             <Input />
+          </Form.Item>
+          <Form.Item name="quotationNo" hidden>
+            <Input />
+          </Form.Item>
+
+          {/* 自动带入的信息（只读展示） */}
+          <div style={{ background: '#f5f5f5', padding: 12, marginBottom: 16, borderRadius: 4 }}>
+            <Row gutter={16}>
+              <Col span={12}><span>客户：</span><strong>{contractForm.getFieldValue('clientName')}</strong></Col>
+              <Col span={12}><span>样品：</span><strong>{contractForm.getFieldValue('sampleName')}</strong></Col>
+            </Row>
+            <Row gutter={16} style={{ marginTop: 8 }}>
+              <Col span={12}><span>金额：</span><strong>¥{contractForm.getFieldValue('amount')}</strong></Col>
+              <Col span={12}><span>联系人：</span><strong>{contractForm.getFieldValue('clientContact')}</strong></Col>
+            </Row>
+          </div>
+
+          <Form.Item name="clientName" hidden><Input /></Form.Item>
+          <Form.Item name="sampleName" hidden><Input /></Form.Item>
+          <Form.Item name="amount" hidden><InputNumber /></Form.Item>
+          <Form.Item name="clientContact" hidden><Input /></Form.Item>
+
+          <Form.Item name="contractName" label="合同名称" rules={[{ required: true }]}>
+            <Input />
+          </Form.Item>
+
+          <Row gutter={16}>
+            <Col span={8}>
+              <Form.Item name="signDate" label="签订日期" rules={[{ required: true }]}>
+                <DatePicker style={{ width: '100%' }} />
+              </Form.Item>
+            </Col>
+            <Col span={8}>
+              <Form.Item name="startDate" label="生效日期" rules={[{ required: true }]}>
+                <DatePicker style={{ width: '100%' }} />
+              </Form.Item>
+            </Col>
+            <Col span={8}>
+              <Form.Item name="endDate" label="到期日期" rules={[{ required: true }]}>
+                <DatePicker style={{ width: '100%' }} />
+              </Form.Item>
+            </Col>
+          </Row>
+
+          <Divider>合同条款（可选）</Divider>
+          <Form.Item name="paymentTerms" label="付款条款">
+            <Input.TextArea rows={2} placeholder="留空使用默认条款" />
+          </Form.Item>
+          <Form.Item name="deliveryTerms" label="交付条款">
+            <Input.TextArea rows={2} placeholder="留空使用默认条款" />
           </Form.Item>
         </Form>
       </Modal>

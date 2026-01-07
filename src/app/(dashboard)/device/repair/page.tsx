@@ -6,6 +6,7 @@ import {
   InputNumber, message, Card, Row, Col, Statistic, Popconfirm, Descriptions
 } from 'antd'
 import { PlusOutlined, DeleteOutlined, EyeOutlined, EditOutlined, PlayCircleOutlined, CheckCircleOutlined } from '@ant-design/icons'
+import UserSelect from '@/components/UserSelect'
 import type { ColumnsType } from 'antd/es/table'
 import dayjs from 'dayjs'
 
@@ -343,7 +344,7 @@ export default function DeviceRepairPage() {
           <Row gutter={16}>
             <Col span={12}>
               <Form.Item name="repairBy" label="维修人">
-                <Input placeholder="维修负责人" />
+                <UserSelect placeholder="选择维修负责人" />
               </Form.Item>
             </Col>
             <Col span={12}>
@@ -386,7 +387,7 @@ export default function DeviceRepairPage() {
           </Row>
 
           <Form.Item name="repairBy" label="维修人">
-            <Input />
+            <UserSelect placeholder="选择维修人" />
           </Form.Item>
 
           <Form.Item name="remark" label="备注">

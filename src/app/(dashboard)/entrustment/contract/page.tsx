@@ -10,11 +10,12 @@ import dayjs from 'dayjs'
 interface Contract {
   id: string
   contractNo: string
+  quotationId?: string | null
+  quotationNo?: string | null
   clientName: string | null
   clientContact?: string | null
   clientPhone?: string | null
   clientAddress?: string | null
-  quotationId?: string | null
   amount: number | null
   prepaymentAmount?: number | null
   prepaymentRatio?: number | null
@@ -68,12 +69,12 @@ export default function ContractPage() {
       setTotal(json.data.total || 0)
     } else {
       if (json.success && json.data) {
-      setData(json.data.list || [])
-      setTotal(json.data.total || 0)
-    } else {
-      setData(json.list || [])
-      setTotal(json.total || 0)
-    }
+        setData(json.data.list || [])
+        setTotal(json.data.total || 0)
+      } else {
+        setData(json.list || [])
+        setTotal(json.total || 0)
+      }
     }
     setLoading(false)
   }
@@ -146,6 +147,14 @@ export default function ContractPage() {
 
   const columns: ColumnsType<Contract> = [
     { title: '合同编号', dataIndex: 'contractNo', width: 150 },
+    {
+      title: '报价单号',
+      dataIndex: 'quotationNo',
+      width: 140,
+      render: (no: string) => no ? (
+        <a style={{ color: '#1890ff' }}>{no}</a>
+      ) : '-'
+    },
     { title: '客户名称', dataIndex: 'clientName', ellipsis: true },
     { title: '联系人', dataIndex: 'clientContact', width: 100 },
     {
@@ -520,8 +529,8 @@ export default function ContractPage() {
                     )}
                     {!currentContract.paymentTerms && !currentContract.deliveryTerms && !currentContract.qualityTerms &&
                       !currentContract.confidentialityTerms && !currentContract.breachTerms && !currentContract.disputeTerms && !currentContract.otherTerms && (
-                      <div style={{ textAlign: 'center', padding: 20, color: '#999' }}>暂无合同条款</div>
-                    )}
+                        <div style={{ textAlign: 'center', padding: 20, color: '#999' }}>暂无合同条款</div>
+                      )}
                   </div>
                 ),
               },

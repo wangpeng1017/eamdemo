@@ -29,7 +29,7 @@ const menuItems = [
   {
     key: '/entrustment',
     icon: <FileTextOutlined />,
-    label: '委托管理',
+    label: '业务管理',
     children: [
       { key: '/entrustment/consultation', label: <Link href="/entrustment/consultation">咨询管理</Link> },
       { key: '/entrustment/quotation', label: <Link href="/entrustment/quotation">报价管理</Link> },
@@ -116,7 +116,7 @@ const menuItems = [
     icon: <DatabaseOutlined />,
     label: '基础数据配置',
     children: [
-      { key: '/basic-data/test-templates', label: <Link href="/basic-data/test-templates">检测模版</Link> },
+      { key: '/basic-data/test-templates', label: <Link href="/basic-data/test-templates">检测项目</Link> },
       { key: '/basic-data/inspection-standards', label: <Link href="/basic-data/inspection-standards">检查标准/依据</Link> },
       { key: '/basic-data/report-categories', label: <Link href="/basic-data/report-categories">报告分类</Link> },
     ],

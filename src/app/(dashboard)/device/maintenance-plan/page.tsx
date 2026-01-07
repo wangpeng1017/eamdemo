@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { Table, Button, Space, Modal, Form, Input, Select, DatePicker, InputNumber, message, Tag, Popconfirm, Row, Col } from 'antd'
 import { PlusOutlined, EditOutlined, DeleteOutlined, CheckOutlined, ClockCircleOutlined } from '@ant-design/icons'
 import { StatusTag } from '@/components/StatusTag'
+import UserSelect from '@/components/UserSelect'
 import type { ColumnsType } from 'antd/es/table'
 import dayjs from 'dayjs'
 
@@ -68,12 +69,12 @@ export default function MaintenancePlanPage() {
       setTotal(json.data.total || 0)
     } else {
       if (json.success && json.data) {
-      setData(json.data.list || [])
-      setTotal(json.data.total || 0)
-    } else {
-      setData(json.list || [])
-      setTotal(json.total || 0)
-    }
+        setData(json.data.list || [])
+        setTotal(json.data.total || 0)
+      } else {
+        setData(json.list || [])
+        setTotal(json.total || 0)
+      }
     }
     setLoading(false)
   }
@@ -381,7 +382,7 @@ export default function MaintenancePlanPage() {
           <Row gutter={16}>
             <Col span={12}>
               <Form.Item name="responsiblePerson" label="负责人" rules={[{ required: true }]}>
-                <Input placeholder="请输入负责人" />
+                <UserSelect placeholder="请选择负责人" />
               </Form.Item>
             </Col>
             <Col span={12}>
