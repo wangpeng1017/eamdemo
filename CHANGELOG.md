@@ -4,6 +4,31 @@
 
 ---
 
+## [1.3.0] - 2026-01-07
+
+### 新增
+- **客户下拉选择功能**
+  - 咨询管理页面：客户信息改为下拉选择，仅显示已审批通过的客户
+  - 报价管理页面：客户信息改为下拉选择，仅显示已审批通过的客户
+  - 选择客户后自动填充联系人信息
+
+### 变更
+- **客户字段统一**
+  - 客户 API (`/api/entrustment/client`) 默认只返回 `status='approved'` 的客户
+  - 删除 Consultation 模型冗余字段：`clientCompany`、`clientContact`、`clientTel`、`clientEmail`、`clientAddress`
+  - 删除 Quotation 模型冗余字段：`clientCompany`、`clientContact`、`clientTel`、`clientEmail`、`clientAddress`
+  - 删除 Entrustment 模型冗余字段：`clientName`
+  - 统一字段命名为 `clientContactPerson`
+  - 咨询/报价通过 `clientId` 关联查询客户信息
+
+### 数据库
+- Prisma Schema 更新
+  - `biz_consultation` 表删除冗余字段，添加 `clientContactPerson`
+  - `biz_quotation` 表删除冗余字段，添加 `clientContactPerson`
+  - `biz_entrustment` 表删除 `clientName` 字段
+
+---
+
 ## [1.2.0] - 2026-01-06
 
 ### 新增
