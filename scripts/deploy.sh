@@ -1,59 +1,51 @@
 #!/bin/bash
-# LIMS-Next 部署脚本
-# 用法: ssh root@8.130.182.148 "bash /root/lims-next/scripts/deploy.sh"
-
-set -e  # 遇到错误立即退出
-
-PROJECT_DIR="/root/lims-next"
-STANDALONE_DIR="$PROJECT_DIR/.next/standalone"
-
 echo "=========================================="
-echo "🚀 LIMS-Next 部署开始"
+echo "审批流系统部署到阿里云"
 echo "=========================================="
 
-cd $PROJECT_DIR
+cd /Users/wangpeng/Downloads/limsnext
 
-# 1. 拉取最新代码
+echo "步骤 1/2: 推送代码到 GitHub"
+echo "------------------------------------------"
+git push
+
 echo ""
-echo "📥 [1/5] 拉取最新代码..."
+echo "步骤 2/2: 服务器部署（需要输入服务器密码）"
+echo "------------------------------------------"
+
+ssh root@8.130.182.148 << 'ENDSSH'
+cd /root/lims-next
+
+echo "拉取最新代码..."
 git pull
 
-# 2. 检查是否需要安装依赖
-echo ""
-echo "📦 [2/5] 检查依赖..."
-if [ -f package-lock.json ]; then
-    # 使用 npm ci 快速安装（需要 lock 文件）
-    npm ci --prefer-offline 2>/dev/null || npm install
-else
-    npm install
-fi
+echo "执行数据库迁移..."
+npx prisma db push
 
-# 3. 构建项目
-echo ""
-echo "🔨 [3/5] 构建项目..."
-npm run build
+echo "生成 Prisma Client..."
+npx prisma generate
 
-# 4. 复制静态文件到 standalone
-echo ""
-echo "📁 [4/5] 复制静态文件..."
-cp -r .next/static $STANDALONE_DIR/.next/
-cp -r public $STANDALONE_DIR/
+echo "导入审批流程配置..."
+mysql -uroot -pword_mysql_root -h127.0.0.1 -P3307 lims << 'SQL'
+INSERT INTO sys_approval_flow (id, name, code, businessType, description, nodes, status, createdAt, updatedAt)
+VALUES ('quotation_approval_flow','报价审批流程','QUOTATION_APPROVAL','quotation','报价单三级审批流程','[{"step":1,"name":"销售经理审批","type":"role","targetId":"sales_manager","targetName":"销售经理","required":true},{"step":2,"name":"财务审批","type":"role","targetId":"finance","targetName":"财务","required":true},{"step":3,"name":"实验室负责人审批","type":"role","targetId":"lab_director","targetName":"实验室负责人","required":true}]',true,NOW(),NOW()) ON DUPLICATE KEY UPDATE updatedAt = NOW();
 
-# 5. 重启 PM2
-echo ""
-echo "🔄 [5/5] 重启服务..."
-pm2 restart lims-next || {
-    echo "PM2 进程不存在，创建新进程..."
-    cd $STANDALONE_DIR
-    PORT=3004 pm2 start server.js --name lims-next
-    pm2 save
-}
+INSERT INTO sys_approval_flow (id, name, code, businessType, description, nodes, status, createdAt, updatedAt)
+VALUES ('contract_approval_flow','合同审批流程','CONTRACT_APPROVAL','contract','合同两级审批流程','[{"step":1,"name":"部门经理审批","type":"role","targetId":"dept_manager","targetName":"部门经理","required":true},{"step":2,"name":"法务审批","type":"role","targetId":"legal","targetName":"法务","required":true}]',true,NOW(),NOW()) ON DUPLICATE KEY UPDATE updatedAt = NOW();
+
+INSERT INTO sys_approval_flow (id, name, code, businessType, description, nodes, status, createdAt, updatedAt)
+VALUES ('client_approval_flow','客户单位审批流程','CLIENT_APPROVAL','client','客户单位单级审批流程','[{"step":1,"name":"销售经理审批","type":"role","targetId":"sales_manager","targetName":"销售经理","required":true}]',true,NOW(),NOW()) ON DUPLICATE KEY UPDATE updatedAt = NOW();
+SQL
+
+echo "重启服务..."
+pm2 restart lims-next
+
+echo "部署完成！"
+ENDSSH
 
 echo ""
 echo "=========================================="
-echo "✅ 部署完成！"
-echo "🌐 访问地址: http://8.130.182.148:3004"
+echo "✓ 部署成功！"
 echo "=========================================="
-
-# 显示服务状态
-pm2 show lims-next | grep -E "status|uptime|memory"
+echo "访问地址: http://8.130.182.148:3004"
+echo ""
