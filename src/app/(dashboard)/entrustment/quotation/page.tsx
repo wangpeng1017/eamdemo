@@ -7,6 +7,16 @@ import { StatusTag } from '@/components/StatusTag'
 import type { ColumnsType } from 'antd/es/table'
 import dayjs from 'dayjs'
 
+interface Client {
+  id: string
+  name: string
+  shortName?: string
+  contact?: string
+  phone?: string
+  email?: string
+  address?: string
+}
+
 interface QuotationItem {
   id?: string
   serviceItem: string
@@ -29,11 +39,9 @@ interface QuotationApproval {
 interface Quotation {
   id: string
   quotationNo: string
-  clientName: string | null
-  contactPerson: string | null
-  contactPhone?: string | null
-  clientEmail?: string | null
-  clientAddress?: string | null
+  clientId?: string
+  client?: Client
+  clientContactPerson?: string
   consultationId?: string | null
   quotationDate: string
   validDays: number
@@ -179,6 +187,8 @@ export default function QuotationPage() {
   const [editingId, setEditingId] = useState<string | null>(null)
   const [currentQuotation, setCurrentQuotation] = useState<Quotation | null>(null)
   const [items, setItems] = useState<QuotationItem[]>([])
+  const [clients, setClients] = useState<Client[]>([])
+  const [clientsLoading, setClientsLoading] = useState(false)
   const [form] = Form.useForm()
   const [approvalForm] = Form.useForm()
   const [filters, setFilters] = useState<any>({})
@@ -197,6 +207,20 @@ export default function QuotationPage() {
 
   removeItemFunc = (index: number) => {
     setItems(items.filter((_, i) => i !== index))
+  }
+
+  // 获取客户列表（仅已审批通过）
+  const fetchClients = async () => {
+    setClientsLoading(true)
+    try {
+      const res = await fetch('/api/entrustment/client?status=approved&pageSize=1000')
+      const json = await res.json()
+      setClients(json.list || [])
+    } catch (error) {
+      console.error('获取客户列表失败:', error)
+    } finally {
+      setClientsLoading(false)
+    }
   }
 
   const fetchData = async (p = page, f = filters) => {
@@ -223,7 +247,10 @@ export default function QuotationPage() {
     setLoading(false)
   }
 
-  useEffect(() => { fetchData() }, [page])
+  useEffect(() => {
+    fetchData()
+    fetchClients()
+  }, [page])
 
   const handleAdd = () => {
     setEditingId(null)
@@ -242,6 +269,7 @@ export default function QuotationPage() {
     setItems(record.items || [])
     const formData = {
       ...record,
+      clientId: record.clientId || record.client?.id,
       quotationDate: dayjs(record.quotationDate),
     }
     form.setFieldsValue(formData)
@@ -265,6 +293,7 @@ export default function QuotationPage() {
       ...values,
       quotationDate: values.quotationDate.toISOString(),
       items,
+      finalAmount: form.getFieldValue('finalAmount'),
     }
 
     if (editingId) {
@@ -284,6 +313,16 @@ export default function QuotationPage() {
     }
     setModalOpen(false)
     fetchData()
+  }
+
+  // 客户选择变化时自动填充联系人
+  const handleClientChange = (clientId: string) => {
+    const client = clients.find(c => c.id === clientId)
+    if (client) {
+      form.setFieldsValue({
+        clientContactPerson: client.contact || '',
+      })
+    }
   }
 
   const handleAddItem = () => {
@@ -323,8 +362,13 @@ export default function QuotationPage() {
 
   const columns: ColumnsType<Quotation> = [
     { title: '报价单号', dataIndex: 'quotationNo', width: 150 },
-    { title: '客户名称', dataIndex: 'clientName', ellipsis: true },
-    { title: '联系人', dataIndex: 'contactPerson', width: 100 },
+    {
+      title: '客户名称',
+      dataIndex: 'client',
+      ellipsis: true,
+      render: (client: Client) => client?.name || '-'
+    },
+    { title: '联系人', dataIndex: 'clientContactPerson', width: 100 },
     {
       title: '报价金额',
       dataIndex: 'finalAmount',
@@ -425,33 +469,24 @@ export default function QuotationPage() {
         <Form form={form} layout="vertical">
           <Row gutter={16}>
             <Col span={12}>
-              <Form.Item name="clientName" label="客户名称" rules={[{ required: true, message: '请输入客户名称' }]}>
-                <Input placeholder="请输入客户名称" />
+              <Form.Item name="clientId" label="客户" rules={[{ required: true, message: '请选择客户' }]}>
+                <Select
+                  showSearch
+                  allowClear
+                  placeholder="选择客户"
+                  loading={clientsLoading}
+                  optionFilterProp="label"
+                  options={clients.map(c => ({ value: c.id, label: c.name }))}
+                  onChange={handleClientChange}
+                />
               </Form.Item>
             </Col>
             <Col span={12}>
-              <Form.Item name="contactPerson" label="联系人" rules={[{ required: true, message: '请输入联系人' }]}>
+              <Form.Item name="clientContactPerson" label="联系人" rules={[{ required: true, message: '请输入联系人' }]}>
                 <Input placeholder="请输入联系人" />
               </Form.Item>
             </Col>
           </Row>
-
-          <Row gutter={16}>
-            <Col span={12}>
-              <Form.Item name="contactPhone" label="联系电话" rules={[{ required: true, message: '请输入联系电话' }]}>
-                <Input placeholder="请输入联系电话" />
-              </Form.Item>
-            </Col>
-            <Col span={12}>
-              <Form.Item name="clientEmail" label="客户邮箱">
-                <Input placeholder="请输入客户邮箱" />
-              </Form.Item>
-            </Col>
-          </Row>
-
-          <Form.Item name="clientAddress" label="客户地址">
-            <Input placeholder="请输入客户地址" />
-          </Form.Item>
 
           <Divider orientationMargin="0">报价明细</Divider>
 
@@ -575,11 +610,11 @@ export default function QuotationPage() {
                   <div>
                     <Descriptions column={2} bordered size="small">
                       <Descriptions.Item label="报价单号">{currentQuotation.quotationNo}</Descriptions.Item>
-                      <Descriptions.Item label="客户名称">{currentQuotation.clientName}</Descriptions.Item>
-                      <Descriptions.Item label="联系人">{currentQuotation.contactPerson}</Descriptions.Item>
-                      <Descriptions.Item label="联系电话">{currentQuotation.contactPhone}</Descriptions.Item>
-                      <Descriptions.Item label="客户邮箱">{currentQuotation.clientEmail || '-'}</Descriptions.Item>
-                      <Descriptions.Item label="客户地址">{currentQuotation.clientAddress || '-'}</Descriptions.Item>
+                      <Descriptions.Item label="客户名称">{currentQuotation.client?.name || '-'}</Descriptions.Item>
+                      <Descriptions.Item label="联系人">{currentQuotation.clientContactPerson || '-'}</Descriptions.Item>
+                      <Descriptions.Item label="联系电话">{currentQuotation.client?.phone || '-'}</Descriptions.Item>
+                      <Descriptions.Item label="客户邮箱">{currentQuotation.client?.email || '-'}</Descriptions.Item>
+                      <Descriptions.Item label="客户地址">{currentQuotation.client?.address || '-'}</Descriptions.Item>
                       <Descriptions.Item label="报价日期">
                         {dayjs(currentQuotation.quotationDate).format('YYYY-MM-DD')}
                       </Descriptions.Item>

@@ -45,6 +45,7 @@ export const GET = withErrorHandler(async (
       approvals: {
         orderBy: { timestamp: 'desc' },
       },
+      client: true,  // 添加客户关联查询
     },
   })
 
@@ -55,9 +56,8 @@ export const GET = withErrorHandler(async (
   // 格式化数据以匹配前端期望的字段名
   const formatted = {
     ...quotation,
-    clientName: quotation.clientCompany,
-    contactPerson: quotation.clientContact,
-    contactPhone: quotation.clientTel,
+    // 客户信息从关联对象获取
+    clientName: quotation.client?.name || quotation.clientCompany,
     quotationDate: quotation.createdAt,
     validDays: 30,
     totalAmount: quotation.subtotal,
@@ -112,11 +112,8 @@ export const PUT = withErrorHandler(async (
 
   // 映射前端字段名到数据库字段名
   const updateData: Record<string, unknown> = {}
-  if (data.clientName !== undefined) updateData.clientCompany = data.clientName
-  if (data.contactPerson !== undefined) updateData.clientContact = data.contactPerson
-  if (data.contactPhone !== undefined) updateData.clientTel = data.contactPhone
-  if (data.clientEmail !== undefined) updateData.clientEmail = data.clientEmail
-  if (data.clientAddress !== undefined) updateData.clientAddress = data.clientAddress
+  if (data.clientId !== undefined) updateData.clientId = data.clientId
+  if (data.clientContactPerson !== undefined) updateData.clientContactPerson = data.clientContactPerson
   if (data.subtotal !== undefined) updateData.subtotal = data.subtotal
   if (data.taxTotal !== undefined) updateData.taxTotal = data.taxTotal
   if (data.discountTotal !== undefined) updateData.discountTotal = data.discountTotal

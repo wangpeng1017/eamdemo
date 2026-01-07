@@ -155,11 +155,7 @@ model Consultation {
   consultationNo     String    @unique @db.VarChar(50) // ZX+年月日+序号
   clientId           String?
   client             Client?   @relation(fields: [clientId], references: [id])
-  clientCompany      String?   @db.VarChar(200) // 客户公司（冗余）
-  clientContact      String?   @db.VarChar(50) // 联系人
-  clientTel          String?   @db.VarChar(20)
-  clientEmail        String?   @db.VarChar(100)
-  clientAddress      String?   @db.VarChar(500)
+  clientContactPerson String?  @db.VarChar(50) // 联系人
   sampleName         String?   @db.VarChar(200) // 样品名称
   sampleModel        String?   @db.VarChar(100) // 型号规格
   sampleMaterial     String?   @db.VarChar(100) // 材质信息
@@ -219,11 +215,7 @@ model Quotation {
   quotationNo    String   @unique @db.VarChar(50) // BJ+年月日+序号
   clientId       String?
   client         Client?  @relation(fields: [clientId], references: [id])
-  clientCompany  String?  @db.VarChar(200) // 委托方公司
-  clientContact  String?  @db.VarChar(50) // 联系人
-  clientTel      String?  @db.VarChar(20)
-  clientEmail    String?  @db.VarChar(100)
-  clientAddress  String?  @db.VarChar(500)
+  clientContactPerson String?  @db.VarChar(50) // 联系人
   serviceCompany String   @default("江苏国轻检测技术有限公司") @db.VarChar(200)
   serviceContact String?  @db.VarChar(50) // 业务员
   serviceTel     String?  @db.VarChar(20)
@@ -328,7 +320,6 @@ model Entrustment {
   contract      Contract? @relation(fields: [contractNo], references: [contractNo])
   clientId      String?
   client        Client?   @relation(fields: [clientId], references: [id])
-  clientName    String?   @db.VarChar(200)
   contactPerson String?   @db.VarChar(50)
   sampleDate    DateTime? // 送样时间
   follower      String?   @db.VarChar(50) // 跟进人

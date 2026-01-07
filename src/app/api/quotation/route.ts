@@ -18,8 +18,8 @@ export async function GET(request: NextRequest) {
   }
   if (keyword) {
     where.OR = [
-      { clientCompany: { contains: keyword } },
-      { clientContact: { contains: keyword } },
+      { client: { name: { contains: keyword } } },  // 通过关联查询客户名称
+      { clientContactPerson: { contains: keyword } },
       { quotationNo: { contains: keyword } },
     ]
   }
@@ -40,6 +40,7 @@ export async function GET(request: NextRequest) {
         approvals: {
           orderBy: { timestamp: 'desc' },
         },
+        client: true,  // 添加客户关联查询
       },
     }),
     prisma.quotation.count({ where }),
@@ -48,9 +49,8 @@ export async function GET(request: NextRequest) {
   // 格式化数据以匹配前端期望的字段名
   const formattedList = list.map((item: any) => ({
     ...item,
-    clientName: item.clientCompany,
-    contactPerson: item.clientContact,
-    contactPhone: item.clientTel,
+    // 客户信息从关联对象获取
+    clientName: item.client?.name || item.clientCompany,
     quotationDate: item.createdAt,
     validDays: 30,
     totalAmount: item.subtotal,
@@ -88,11 +88,8 @@ export async function POST(request: NextRequest) {
   const quotation = await prisma.quotation.create({
     data: {
       quotationNo,
-      clientCompany: data.clientName,
-      clientContact: data.contactPerson,
-      clientTel: data.contactPhone,
-      clientEmail: data.clientEmail,
-      clientAddress: data.clientAddress,
+      clientId: data.clientId,  // 使用客户ID
+      clientContactPerson: data.clientContactPerson,  // 联系人（可覆盖客户默认联系人）
       consultationNo: data.consultationId,
       sampleName: data.sampleName,
       clientRemark: data.paymentTerms,

@@ -10,9 +10,10 @@ export async function GET(request: NextRequest) {
   const status = searchParams.get('status')
   const keyword = searchParams.get('keyword')
 
-  const where: any = {}
+  const where: any = { status: 'approved' }  // 默认只返回已审批客户
   if (type) where.type = type
-  if (status) where.status = status
+  // 允许通过参数覆盖默认状态过滤
+  if (status && status !== 'approved') where.status = status
   if (keyword) {
     where.OR = [
       { name: { contains: keyword } },

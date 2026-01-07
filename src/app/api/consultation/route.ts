@@ -22,8 +22,8 @@ export async function GET(request: NextRequest) {
   }
   if (keyword) {
     where.OR = [
-      { clientCompany: { contains: keyword } },
-      { contactPerson: { contains: keyword } },
+      { client: { name: { contains: keyword } } },  // 通过关联查询客户名称
+      { clientContactPerson: { contains: keyword } },
       { consultationNo: { contains: keyword } },
     ]
   }
@@ -44,6 +44,7 @@ export async function GET(request: NextRequest) {
           orderBy: { date: 'desc' },
           take: 1,
         },
+        client: true,  // 添加客户关联查询
       },
     }),
     prisma.consultation.count({ where }),

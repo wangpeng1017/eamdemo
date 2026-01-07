@@ -7,14 +7,22 @@ import { StatusTag } from '@/components/StatusTag'
 import type { ColumnsType } from 'antd/es/table'
 import dayjs from 'dayjs'
 
+interface Client {
+  id: string
+  name: string
+  shortName?: string
+  contact?: string
+  phone?: string
+  email?: string
+  address?: string
+}
+
 interface Consultation {
   id: string
   consultationNo: string
-  clientCompany: string | null
-  contactPerson: string | null
-  contactPhone: string | null
-  clientEmail?: string | null
-  clientAddress?: string | null
+  clientId?: string
+  client?: Client
+  clientContactPerson?: string
   sampleName?: string | null
   sampleModel?: string | null
   sampleMaterial?: string | null
@@ -82,9 +90,25 @@ export default function ConsultationPage() {
   const [currentConsultation, setCurrentConsultation] = useState<Consultation | null>(null)
   const [followUps, setFollowUps] = useState<ConsultationFollowUp[]>([])
   const [followUpLoading, setFollowUpLoading] = useState(false)
+  const [clients, setClients] = useState<Client[]>([])
+  const [clientsLoading, setClientsLoading] = useState(false)
   const [form] = Form.useForm()
   const [followUpForm] = Form.useForm()
   const [filters, setFilters] = useState<any>({})
+
+  // 获取客户列表（仅已审批通过）
+  const fetchClients = async () => {
+    setClientsLoading(true)
+    try {
+      const res = await fetch('/api/entrustment/client?status=approved&pageSize=1000')
+      const json = await res.json()
+      setClients(json.list || [])
+    } catch (error) {
+      console.error('获取客户列表失败:', error)
+    } finally {
+      setClientsLoading(false)
+    }
+  }
 
   const fetchData = async (p = page, f = filters) => {
     setLoading(true)
@@ -105,7 +129,10 @@ export default function ConsultationPage() {
     setLoading(false)
   }
 
-  useEffect(() => { fetchData() }, [page])
+  useEffect(() => {
+    fetchData()
+    fetchClients()
+  }, [page])
 
   const handleAdd = () => {
     setEditingId(null)
@@ -117,6 +144,7 @@ export default function ConsultationPage() {
     setEditingId(record.id)
     const formData = {
       ...record,
+      clientId: record.clientId || record.client?.id,
       expectedDeadline: record.expectedDeadline ? dayjs(record.expectedDeadline) : undefined,
       testItems: record.testItems || [],
     }
@@ -181,6 +209,16 @@ export default function ConsultationPage() {
     fetchData()
   }
 
+  // 客户选择变化时自动填充联系人
+  const handleClientChange = (clientId: string) => {
+    const client = clients.find(c => c.id === clientId)
+    if (client) {
+      form.setFieldsValue({
+        clientContactPerson: client.contact || '',
+      })
+    }
+  }
+
   const handleAddFollowUp = async () => {
     const values = await followUpForm.validateFields()
     await fetch(`/api/consultation/${currentConsultation!.id}/follow-ups`, {
@@ -217,9 +255,14 @@ export default function ConsultationPage() {
 
   const columns: ColumnsType<Consultation> = [
     { title: '咨询单号', dataIndex: 'consultationNo', width: 150 },
-    { title: '客户公司', dataIndex: 'clientCompany', width: 180, ellipsis: true },
-    { title: '联系人', dataIndex: 'contactPerson', width: 100 },
-    { title: '联系电话', dataIndex: 'contactPhone', width: 130 },
+    {
+      title: '客户名称',
+      dataIndex: 'client',
+      width: 180,
+      ellipsis: true,
+      render: (client: Client) => client?.name || '-'
+    },
+    { title: '联系人', dataIndex: 'clientContactPerson', width: 100 },
     {
       title: '跟进人',
       dataIndex: 'follower',
@@ -303,33 +346,24 @@ export default function ConsultationPage() {
         <Form form={form} layout="vertical">
           <Row gutter={16}>
             <Col span={12}>
-              <Form.Item name="clientCompany" label="客户公司" rules={[{ required: true, message: '请输入客户公司' }]}>
-                <Input placeholder="请输入客户公司名称" />
+              <Form.Item name="clientId" label="客户" rules={[{ required: true, message: '请选择客户' }]}>
+                <Select
+                  showSearch
+                  allowClear
+                  placeholder="选择客户"
+                  loading={clientsLoading}
+                  optionFilterProp="label"
+                  options={clients.map(c => ({ value: c.id, label: c.name }))}
+                  onChange={handleClientChange}
+                />
               </Form.Item>
             </Col>
             <Col span={12}>
-              <Form.Item name="contactPerson" label="联系人" rules={[{ required: true, message: '请输入联系人' }]}>
+              <Form.Item name="clientContactPerson" label="联系人" rules={[{ required: true, message: '请输入联系人' }]}>
                 <Input placeholder="请输入联系人姓名" />
               </Form.Item>
             </Col>
           </Row>
-
-          <Row gutter={16}>
-            <Col span={12}>
-              <Form.Item name="contactPhone" label="联系电话" rules={[{ required: true, message: '请输入联系电话' }]}>
-                <Input placeholder="请输入联系电话" />
-              </Form.Item>
-            </Col>
-            <Col span={12}>
-              <Form.Item name="clientEmail" label="客户邮箱">
-                <Input placeholder="请输入客户邮箱" />
-              </Form.Item>
-            </Col>
-          </Row>
-
-          <Form.Item name="clientAddress" label="客户地址">
-            <Input placeholder="请输入客户地址" />
-          </Form.Item>
 
           <Divider orientationMargin="0">样品信息</Divider>
 
@@ -548,11 +582,11 @@ export default function ConsultationPage() {
 function Descriptions({ title, data }: { title: string; data: Consultation }) {
   const items = [
     { label: '咨询单号', value: data.consultationNo },
-    { label: '客户公司', value: data.clientCompany },
-    { label: '联系人', value: data.contactPerson },
-    { label: '联系电话', value: data.contactPhone },
-    { label: '客户邮箱', value: data.clientEmail },
-    { label: '客户地址', value: data.clientAddress },
+    { label: '客户名称', value: data.client?.name || '-' },
+    { label: '联系人', value: data.clientContactPerson || '-' },
+    { label: '联系电话', value: data.client?.phone || '-' },
+    { label: '客户邮箱', value: data.client?.email || '-' },
+    { label: '客户地址', value: data.client?.address || '-' },
     { label: '样品名称', value: data.sampleName },
     { label: '规格型号', value: data.sampleModel },
     { label: '样品材质', value: data.sampleMaterial },

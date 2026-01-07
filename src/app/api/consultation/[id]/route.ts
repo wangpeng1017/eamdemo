@@ -13,6 +13,7 @@ export async function GET(
       followUps: {
         orderBy: { date: 'desc' },
       },
+      client: true,  // 添加客户关联查询
     },
   })
   return NextResponse.json(consultation)
