@@ -34,6 +34,8 @@ model User {
   approvalLogs        ApprovalLog[]
   todos               Todo[]
   createdSamples      Sample[]      @relation("SampleCreatedBy")
+  capabilities        PersonnelCapability[]
+  capabilityReviews   CapabilityReview[]
 
   @@map("sys_user")
 }
@@ -976,4 +978,90 @@ model NumberCounter {
 
   @@id([prefix, date])
   @@map("sys_number_counter")
+}
+
+// ==================== 基础数据配置 ====================
+
+// 检测模版
+model TestTemplate {
+  id         String   @id @default(cuid())
+  code       String   @unique @db.VarChar(50)  // 模版编号
+  name       String   @db.VarChar(200)         // 模版名称
+  category   String   @db.VarChar(50)          // 分类
+  method     String   @db.VarChar(200)         // 检测方法/标准
+  unit       String?  @db.VarChar(20)          // 默认单位
+  version    String   @default("1.0") @db.VarChar(20)
+  schema     String   @db.LongText             // JSON 表单结构
+  status     String   @default("active")       // active/archived
+  author     String?  @db.VarChar(50)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@map("biz_test_template")
+}
+
+// 检查标准/依据
+model InspectionStandard {
+  id          String   @id @default(cuid())
+  standardNo  String   @unique @db.VarChar(100) // 标准编号
+  name        String   @db.VarChar(500)         // 标准名称
+  description String?  @db.Text                 // 描述
+  validity    String   @default("valid")        // valid/invalid
+  devices     String?  @db.Text                 // JSON 关联设备ID列表
+  parameters  String?  @db.Text                 // JSON 检测参数列表
+  personnel   String?  @db.Text                 // JSON 可检测人员ID列表
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  capabilities PersonnelCapability[]
+
+  @@map("biz_inspection_standard")
+}
+
+// 样品报告分类
+model ReportCategory {
+  id           String   @id @default(cuid())
+  categoryCode String   @unique @db.VarChar(50)
+  categoryName String   @db.VarChar(100)
+  testTypes    String   @db.Text                // JSON 适用试验类型
+  templateName String   @db.VarChar(200)        // 模板名称
+  description  String?  @db.Text
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@map("biz_report_category")
+}
+
+// 人员资质(能力值)
+model PersonnelCapability {
+  id          String              @id @default(cuid())
+  userId      String
+  user        User                @relation(fields: [userId], references: [id])
+  standardId  String
+  standard    InspectionStandard  @relation(fields: [standardId], references: [id])
+  parameter   String              @db.VarChar(200)  // 检测参数/项目
+  certificate String              @db.VarChar(200)  // 证书/资质
+  expiryDate  DateTime                              // 有效期至
+  createdAt   DateTime            @default(now())
+  updatedAt   DateTime            @updatedAt
+
+  reviews     CapabilityReview[]
+
+  @@map("biz_personnel_capability")
+}
+
+// 能力评审
+model CapabilityReview {
+  id              String               @id @default(cuid())
+  userId          String
+  user            User                 @relation(fields: [userId], references: [id])
+  capabilityId    String?
+  capability      PersonnelCapability? @relation(fields: [capabilityId], references: [id])
+  trainingContent String               @db.Text      // 培训/考核内容
+  examDate        DateTime                           // 考核日期
+  examResult      String               @db.VarChar(20) // Pass/Fail
+  createdAt       DateTime             @default(now())
+  updatedAt       DateTime             @updatedAt
+
+  @@map("biz_capability_review")
 }

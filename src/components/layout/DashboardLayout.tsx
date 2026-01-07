@@ -15,6 +15,8 @@ import {
   BankOutlined,
   AuditOutlined,
   BarChartOutlined,
+  TeamOutlined,
+  DatabaseOutlined,
 } from '@ant-design/icons'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
@@ -107,6 +109,25 @@ const menuItems = [
       { key: '/system/user', label: <Link href="/system/user">用户管理</Link> },
       { key: '/system/role', label: <Link href="/system/role">角色管理</Link> },
       { key: '/system/dept', label: <Link href="/system/dept">部门管理</Link> },
+    ],
+  },
+  {
+    key: '/basic-data',
+    icon: <DatabaseOutlined />,
+    label: '基础数据配置',
+    children: [
+      { key: '/basic-data/test-templates', label: <Link href="/basic-data/test-templates">检测模版</Link> },
+      { key: '/basic-data/inspection-standards', label: <Link href="/basic-data/inspection-standards">检查标准/依据</Link> },
+      { key: '/basic-data/report-categories', label: <Link href="/basic-data/report-categories">报告分类</Link> },
+    ],
+  },
+  {
+    key: '/personnel',
+    icon: <TeamOutlined />,
+    label: '人员管理',
+    children: [
+      { key: '/personnel/capability', label: <Link href="/personnel/capability">人员资质</Link> },
+      { key: '/personnel/review', label: <Link href="/personnel/review">能力评审</Link> },
     ],
   },
 ]
