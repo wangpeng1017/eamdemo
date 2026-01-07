@@ -1,3 +1,8 @@
+// @input: NextRequest, Prisma Client
+// @output: JSON - 咨询列表/创建结果
+// @pos: 委托咨询API，处理咨询记录的CRUD
+// ⚠️ 更新我时，请同步更新本注释及所属文件夹的 _INDEX.md
+
 import { prisma } from '@/lib/prisma'
 import { NextRequest, NextResponse } from 'next/server'
 

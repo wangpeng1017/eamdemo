@@ -4,6 +4,18 @@
 
 ---
 
+## [1.3.1] - 2026-01-07
+
+### 修复
+- **委托咨询 API** (`src/app/api/consultation/route.ts`)
+  - 修复 `estimatedQuantity` 类型转换错误（String → Int）
+- **部署配置**
+  - 去除 Next.js standalone 模式，改用标准 `npm start` 启动
+  - 部署端口统一为 3001
+  - 更新 DEPLOY.md 部署文档
+
+---
+
 ## [1.3.0] - 2026-01-07
 
 ### 新增
