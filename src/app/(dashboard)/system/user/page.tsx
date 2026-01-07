@@ -93,8 +93,8 @@ export default function UserPage() {
       render: (s: number) => <Tag color={s === 1 ? 'success' : 'error'}>{s === 1 ? '启用' : '禁用'}</Tag>
     },
     {
-      title: '创建时间', dataIndex: 'createdAt', width: 180,
-      render: (t: string) => dayjs(t).format('YYYY-MM-DD HH:mm')
+      title: '创建时间', dataIndex: 'createdAt', width: 170,
+      render: (t: string) => dayjs(t).format('YYYY-MM-DD HH:mm:ss')
     },
     {
       title: '操作', width: 150,

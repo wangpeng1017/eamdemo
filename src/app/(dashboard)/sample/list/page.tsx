@@ -43,13 +43,8 @@ export default function SampleListPage() {
       setData(json.data.list || [])
       setTotal(json.data.total || 0)
     } else {
-      if (json.success && json.data) {
-      setData(json.data.list || [])
-      setTotal(json.data.total || 0)
-    } else {
       setData(json.list || [])
       setTotal(json.total || 0)
-    }
     }
     setLoading(false)
   }
@@ -104,11 +99,15 @@ export default function SampleListPage() {
     { title: '存放位置', dataIndex: 'storageLocation', width: 120 },
     {
       title: '状态', dataIndex: 'status', width: 100,
-      render: (s: string) => <Tag color={statusMap[s]?.color}>{statusMap[s]?.text}</Tag>
+      render: (s: string) => <Tag color={statusMap[s]?.color}>{statusMap[s]?.text || s}</Tag>
     },
     {
       title: '接收日期', dataIndex: 'receivedDate', width: 120,
       render: (t: string) => t ? dayjs(t).format('YYYY-MM-DD') : '-'
+    },
+    {
+      title: '创建时间', dataIndex: 'createdAt', width: 170,
+      render: (t: string) => t ? dayjs(t).format('YYYY-MM-DD HH:mm:ss') : '-'
     },
     {
       title: '操作', width: 150,

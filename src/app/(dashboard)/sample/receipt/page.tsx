@@ -87,13 +87,19 @@ export default function SampleReceiptPage() {
       title: "状态",
       dataIndex: "status",
       width: 100,
-      render: (s: string) => <Tag color={statusMap[s]?.color}>{statusMap[s]?.text}</Tag>
+      render: (s: string) => <Tag color={statusMap[s]?.color}>{statusMap[s]?.text || s}</Tag>
     },
     {
       title: "收样日期",
       dataIndex: "receiptDate",
       width: 120,
       render: (d: string) => d ? dayjs(d).format("YYYY-MM-DD") : "-",
+    },
+    {
+      title: "创建时间",
+      dataIndex: "createdAt",
+      width: 170,
+      render: (t: string) => t ? dayjs(t).format("YYYY-MM-DD HH:mm:ss") : "-",
     },
   ]
 

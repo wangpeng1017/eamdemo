@@ -104,11 +104,15 @@ export default function DevicePage() {
     { title: '存放位置', dataIndex: 'location', width: 120 },
     {
       title: '状态', dataIndex: 'status', width: 100,
-      render: (s: string) => <Tag color={statusMap[s]?.color}>{statusMap[s]?.text}</Tag>
+      render: (s: string) => <Tag color={statusMap[s]?.color}>{statusMap[s]?.text || s}</Tag>
     },
     {
       title: '下次校准', dataIndex: 'nextCalibration', width: 120,
       render: (t: string) => t ? dayjs(t).format('YYYY-MM-DD') : '-'
+    },
+    {
+      title: '创建时间', dataIndex: 'createdAt', width: 170,
+      render: (t: string) => t ? dayjs(t).format('YYYY-MM-DD HH:mm:ss') : '-'
     },
     {
       title: '操作', width: 150,
