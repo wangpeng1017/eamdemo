@@ -2,10 +2,12 @@
 
 import { useState, useEffect } from 'react'
 import { Table, Button, Space, Modal, Form, Input, InputNumber, Select, DatePicker, message, Drawer, Tag, Row, Col, Divider, Popconfirm, Tabs, Descriptions } from 'antd'
-import { PlusOutlined, EditOutlined, DeleteOutlined, EyeOutlined, FileTextOutlined } from '@ant-design/icons'
+import { PlusOutlined, EditOutlined, DeleteOutlined, EyeOutlined, FileTextOutlined, DownloadOutlined, FileAddOutlined } from '@ant-design/icons'
 import { StatusTag } from '@/components/StatusTag'
 import type { ColumnsType } from 'antd/es/table'
 import dayjs from 'dayjs'
+import { useRouter } from 'next/navigation'
+import { exportContractPDF } from '@/lib/exportContractPDF'
 
 interface Contract {
   id: string
@@ -44,6 +46,7 @@ const STATUS_OPTIONS = [
 ]
 
 export default function ContractPage() {
+  const router = useRouter()
   const [data, setData] = useState<Contract[]>([])
   const [loading, setLoading] = useState(false)
   const [total, setTotal] = useState(0)
@@ -54,6 +57,7 @@ export default function ContractPage() {
   const [currentContract, setCurrentContract] = useState<Contract | null>(null)
   const [form] = Form.useForm()
   const [filters, setFilters] = useState<any>({})
+  const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([])
 
   const fetchData = async (p = page, f = filters) => {
     setLoading(true)
@@ -145,6 +149,55 @@ export default function ContractPage() {
     setViewDrawerOpen(false)
   }
 
+  const handleDownloadPDF = async () => {
+    if (selectedRowKeys.length !== 1) {
+      message.warning('请选择一条合同记录')
+      return
+    }
+    const contract = data.find(c => c.id === selectedRowKeys[0])
+    if (!contract) return
+
+    await exportContractPDF({
+      contractNo: contract.contractNo,
+      partyACompany: contract.clientName,
+      partyAContact: contract.clientContact,
+      partyATel: contract.clientPhone,
+      partyAAddress: contract.clientAddress,
+      contractAmount: contract.amount,
+      prepaymentRatio: contract.prepaymentRatio,
+      prepaymentAmount: contract.prepaymentAmount,
+      signDate: contract.signDate,
+      startDate: contract.startDate,
+      endDate: contract.endDate,
+      termsPaymentTerms: contract.paymentTerms,
+      termsDeliveryTerms: contract.deliveryTerms,
+      termsQualityTerms: contract.qualityTerms,
+      termsConfidentialityTerms: contract.confidentialityTerms,
+      termsLiabilityTerms: contract.breachTerms,
+      termsDisputeResolution: contract.disputeTerms,
+    })
+  }
+
+  const handleGenerateEntrustment = () => {
+    if (selectedRowKeys.length !== 1) {
+      message.warning('请选择一条合同记录')
+      return
+    }
+    const contract = data.find(c => c.id === selectedRowKeys[0])
+    if (!contract) return
+
+    const params = new URLSearchParams({
+      contractNo: contract.contractNo,
+      clientName: contract.clientName || '',
+      contactPerson: contract.clientContact || '',
+      contactPhone: contract.clientPhone || '',
+      clientAddress: contract.clientAddress || '',
+    })
+
+    router.push(`/entrustment/list?${params.toString()}`)
+    setSelectedRowKeys([])
+  }
+
   const columns: ColumnsType<Contract> = [
     { title: '合同编号', dataIndex: 'contractNo', width: 150 },
     {
@@ -211,7 +264,15 @@ export default function ContractPage() {
     <div>
       <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'space-between' }}>
         <h2 style={{ margin: 0 }}>合同管理</h2>
-        <Button type="primary" icon={<PlusOutlined />} onClick={handleAdd}>新增合同</Button>
+        <Space>
+          <Button icon={<DownloadOutlined />} disabled={selectedRowKeys.length !== 1} onClick={handleDownloadPDF}>
+            下载PDF
+          </Button>
+          <Button icon={<FileAddOutlined />} disabled={selectedRowKeys.length !== 1} onClick={handleGenerateEntrustment}>
+            生成委托单
+          </Button>
+          <Button type="primary" icon={<PlusOutlined />} onClick={handleAdd}>新增合同</Button>
+        </Space>
       </div>
 
       {/* 筛选条件 */}
@@ -240,6 +301,11 @@ export default function ContractPage() {
         loading={loading}
         scroll={{ x: 1200 }}
         pagination={{ current: page, total, pageSize: 10, onChange: setPage, showSizeChanger: false }}
+        rowSelection={{
+          type: 'radio',
+          selectedRowKeys,
+          onChange: (selectedKeys) => setSelectedRowKeys(selectedKeys),
+        }}
       />
 
       {/* 新增/编辑模态框 */}

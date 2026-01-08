@@ -8,6 +8,7 @@ import { StatusTag } from '@/components/StatusTag'
 import type { ColumnsType } from 'antd/es/table'
 import dayjs from 'dayjs'
 import { exportToExcel } from '@/hooks/useExport'
+import { useRouter, useSearchParams } from 'next/navigation'
 
 // 类型定义
 interface EntrustmentProject {
@@ -90,6 +91,8 @@ const TEST_ITEM_OPTIONS = [
 ]
 
 export default function EntrustmentListPage() {
+  const router = useRouter()
+  const searchParams = useSearchParams()
   const [data, setData] = useState<Entrustment[]>([])
   const [loading, setLoading] = useState(false)
   const [total, setTotal] = useState(0)
@@ -165,6 +168,34 @@ export default function EntrustmentListPage() {
     fetchData()
     fetchOptions()
   }, [page])
+
+  // 处理从合同页面传递的参数
+  useEffect(() => {
+    const contractNo = searchParams.get('contractNo')
+    const clientName = searchParams.get('clientName')
+    const contactPerson = searchParams.get('contactPerson')
+    const contactPhone = searchParams.get('contactPhone')
+    const clientAddress = searchParams.get('clientAddress')
+
+    if (contractNo || clientName) {
+      // 自动填充并打开新建抽屉
+      setEditingId(null)
+      form.resetFields()
+      form.setFieldsValue({
+        contractNo,
+        clientName,
+        contactPerson,
+        contactPhone,
+        clientAddress,
+        isSampleReturn: false,
+        projects: [{}],
+      })
+      setModalOpen(true)
+
+      // 清除 URL 参数
+      router.replace('/entrustment/list', { scroll: false })
+    }
+  }, [searchParams])
 
   // 新增委托单
   const handleAdd = () => {
@@ -406,6 +437,29 @@ export default function EntrustmentListPage() {
     setSelectedRows([])
   }
 
+  // 生成外部链接
+  const handleGenerateExternalLink = async (record: Entrustment) => {
+    try {
+      message.loading({ content: '正在生成外部链接...', key: 'externalLink' })
+
+      const res = await fetch(`/api/entrustment/${record.id}/external-link`, {
+        method: 'POST',
+      })
+
+      const json = await res.json()
+
+      if (json.success) {
+        // 复制链接到剪贴板
+        navigator.clipboard.writeText(json.data.link)
+        message.success({ content: '外部链接已生成并复制到剪贴板', key: 'externalLink', duration: 3 })
+      } else {
+        message.error({ content: json.message || '生成失败', key: 'externalLink' })
+      }
+    } catch (error) {
+      message.error({ content: '生成外部链接失败', key: 'externalLink' })
+    }
+  }
+
   // 检测项目子表格列
   const projectColumns: ColumnsType<EntrustmentProject> = [
     { title: '项目名称', dataIndex: 'name', width: 150 },
@@ -537,15 +591,30 @@ export default function EntrustmentListPage() {
       title: '关联合同',
       dataIndex: 'contractNo',
       width: 140,
-      render: (no: string) => no ? <a style={{ color: '#1890ff' }}>{no}</a> : '-'
+      render: (no: string) => no ? (
+        <a
+          style={{ color: '#1890ff', cursor: 'pointer' }}
+          onClick={() => router.push(`/entrustment/contract?keyword=${encodeURIComponent(no)}`)}
+        >
+          {no}
+        </a>
+      ) : '-'
     },
     {
       title: '操作',
-      width: 120,
+      width: 180,
       fixed: 'right',
       render: (_, record) => (
         <Space size="small">
           <Button size="small" type="link" onClick={() => handleEdit(record)}>编辑</Button>
+          <Button
+            size="small"
+            type="link"
+            icon={<ShareAltOutlined />}
+            onClick={() => handleGenerateExternalLink(record)}
+          >
+            外部链接
+          </Button>
           <Popconfirm title="确认删除？" onConfirm={() => handleDelete(record.id)}>
             <Button size="small" type="link" danger>删除</Button>
           </Popconfirm>
