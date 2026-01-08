@@ -17,6 +17,7 @@ import {
   BarChartOutlined,
   TeamOutlined,
   DatabaseOutlined,
+  CheckCircleOutlined,
 } from '@ant-design/icons'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
@@ -26,6 +27,11 @@ const { Header, Sider, Content } = Layout
 
 const menuItems = [
   { key: '/', icon: <DashboardOutlined />, label: <Link href="/">工作台</Link> },
+  {
+    key: '/approval',
+    icon: <CheckCircleOutlined />,
+    label: <Link href="/approval">审批中心</Link>,
+  },
   {
     key: '/entrustment',
     icon: <FileTextOutlined />,
