@@ -1136,3 +1136,24 @@ model CapabilityReview {
 
   @@map("biz_capability_review")
 }
+
+// ==================== 操作日志 ====================
+
+model AuditLog {
+  id          String   @id @default(cuid())
+  userId      String   @db.VarChar(50)        // 操作人ID
+  userName    String   @db.VarChar(100)       // 操作人姓名
+  action      String   @db.VarChar(50)        // 操作类型
+  module      String   @db.VarChar(50)        // 操作模块
+  description String   @db.VarChar(500)       // 操作描述
+  details     String?  @db.Text               // 详细信息（JSON）
+  targetId    String?  @db.VarChar(100)       // 目标对象ID
+  ip          String?  @db.VarChar(50)        // IP地址
+  createdAt   DateTime @default(now())
+
+  @@index([userId])
+  @@index([module])
+  @@index([action])
+  @@index([createdAt])
+  @@map("sys_audit_log")
+}

@@ -2,9 +2,10 @@
 
 import { useState, useEffect } from 'react'
 import { Table, Button, Modal, Form, Input, Select, message, Space, Card, Tag, Descriptions } from 'antd'
-import { FileAddOutlined, EyeOutlined, PrinterOutlined } from '@ant-design/icons'
+import { FileAddOutlined, EyeOutlined, PrinterOutlined, DownloadOutlined } from '@ant-design/icons'
 import type { ColumnsType } from 'antd/es/table'
 import dayjs from 'dayjs'
+import { exportReportPDF } from '@/lib/exportPDF'
 
 interface Task {
   id: string
@@ -122,8 +123,45 @@ export default function ReportGeneratePage() {
     setPreviewModalOpen(true)
   }
 
-  const handlePrint = (record: Task) => {
-    message.info('打印功能开发中...')
+  const handlePrint = async (record: Task) => {
+    try {
+      // 获取任务详细信息
+      const res = await fetch(`/api/task/${record.id}`)
+      const json = await res.json()
+
+      if (json.success && json.data) {
+        const taskData = json.data
+
+        // 准备报告数据
+        const reportData = {
+          reportNo: `RPT-${taskData.taskNo}`,
+          sampleName: taskData.sample?.name || taskData.sampleName || 'Unknown',
+          sampleNo: taskData.sample?.sampleNo || 'N/A',
+          clientName: taskData.entrustment?.client?.name || 'Unknown',
+          testItems: taskData.testItems?.map((item: any) => ({
+            name: item.name || 'N/A',
+            method: item.method || '-',
+            standard: item.standard || '-',
+            result: item.result || '-',
+            conclusion: item.conclusion || '-',
+          })) || [],
+          conclusion: taskData.conclusion || 'pending',
+          testDate: taskData.updatedAt
+            ? dayjs(taskData.updatedAt).format('YYYY-MM-DD')
+            : dayjs().format('YYYY-MM-DD'),
+          tester: taskData.assignedTo?.name || 'N/A',
+          auditor: 'Pending',
+          approver: 'Pending',
+        }
+
+        await exportReportPDF(reportData)
+      } else {
+        message.error('获取任务信息失败')
+      }
+    } catch (error) {
+      console.error('导出 PDF 失败:', error)
+      message.error('导出 PDF 失败')
+    }
   }
 
   const columns: ColumnsType<Task> = [
@@ -183,10 +221,10 @@ export default function ReportGeneratePage() {
           </Button>
           <Button
             size="small"
-            icon={<PrinterOutlined />}
+            icon={<DownloadOutlined />}
             onClick={() => handlePrint(record)}
           >
-            打印
+            导出PDF
           </Button>
         </Space>
       ),

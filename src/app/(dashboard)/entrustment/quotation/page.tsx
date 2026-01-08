@@ -86,10 +86,11 @@ interface TestTemplate {
   id: string
   name: string
   method?: string
+  unit?: string
 }
 
 // 检测项目选项将在组件内动态加载
-let testTemplateOptions: { value: string; label: string }[] = []
+let testTemplateOptions: { value: string; label: string; method?: string }[] = []
 
 // 明细项表格列定义
 const itemColumns: ColumnsType<QuotationItem> = [
@@ -103,7 +104,15 @@ const itemColumns: ColumnsType<QuotationItem> = [
         optionFilterProp="label"
         options={testTemplateOptions}
         value={value}
-        onChange={(val) => updateItem(index, 'serviceItem', val)}
+        onChange={(val, option) => {
+          // 更新检测项目
+          updateItem(index, 'serviceItem', val)
+          // 自动填充检测标准
+          const method = (option as any)?.method || ''
+          if (method) {
+            updateItem(index, 'methodStandard', method)
+          }
+        }}
         style={{ width: '100%' }}
         placeholder="选择检测项目"
       />
@@ -246,8 +255,12 @@ export default function QuotationPage() {
       const json = await res.json()
       const templates = json.list || []
       setTestTemplates(templates)
-      // 更新全局选项
-      testTemplateOptions = templates.map((t: TestTemplate) => ({ value: t.name, label: t.name }))
+      // 更新全局选项，包含 method 字段
+      testTemplateOptions = templates.map((t: TestTemplate) => ({
+        value: t.name,
+        label: t.name,
+        method: t.method || '',
+      }))
     } catch (error) {
       console.error('获取检测项目列表失败:', error)
     }
