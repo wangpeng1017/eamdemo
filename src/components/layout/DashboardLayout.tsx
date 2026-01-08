@@ -115,6 +115,7 @@ const menuItems = [
       { key: '/system/user', label: <Link href="/system/user">用户管理</Link> },
       { key: '/system/role', label: <Link href="/system/role">角色管理</Link> },
       { key: '/system/dept', label: <Link href="/system/dept">部门管理</Link> },
+      { key: '/system/approval-flow', label: <Link href="/system/approval-flow">审批流程</Link> },
     ],
   },
   {
