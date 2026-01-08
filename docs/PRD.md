@@ -1,10 +1,10 @@
 # LIMS 实验室信息管理系统 - 产品需求文档 (PRD)
 
-> **版本**: 1.2
-> **最后更新**: 2026-01-07
+> **版本**: 1.3
+> **最后更新**: 2026-01-08
 > **文档类型**: 详细需求规格说明书
 > **技术栈变更**: 已迁移至 Next.js 全栈方案
-> **审批流系统**: 统一可配置审批流系统 v1.0
+> **审批流系统**: 统一可配置审批流系统 v1.1
 
 ---
 
@@ -857,7 +857,50 @@ LIMS（Laboratory Information Management System）是一套面向检测实验室
 
 ### 3.9 系统管理模块
 
-#### 3.9.1 用户管理 (UserManagement)
+#### 3.9.1 审批中心 (ApprovalCenter)
+
+**页面路径**：`/approval`
+
+**功能描述**：统一审批中心，集中处理所有待审批业务和查看我的审批提交。
+
+**核心功能**：
+1. **待我审批** - 查看所有需要当前用户审批的申请
+2. **我的提交** - 查看当前用户提交的所有审批申请
+3. **快速审批** - 支持通过、驳回操作
+4. **审批历史** - 查看完整的审批记录和流转状态
+
+**展示字段**：
+
+| 字段名 | 字段标识 | 类型 | 说明 |
+|--------|----------|------|------|
+| 业务类型 | bizType | enum | quotation/contract/client |
+| 业务编号 | bizId | string | 关联业务单号 |
+| 提交人 | submitterName | string | 申请人姓名 |
+| 当前步骤 | currentStep | number | 当前审批级别 |
+| 状态 | status | enum | pending/approved/rejected/cancelled |
+| 提交时间 | submittedAt | datetime | 提交时间 |
+
+**操作按钮**：
+
+| 按钮 | 功能 | 说明 |
+|------|------|------|
+| 通过 | approve | 同意该审批，进入下一级或完成 |
+| 驳回 | reject | 拒绝该审批，流程结束 |
+| 详情 | view | 查看业务详细信息和审批历史 |
+
+**筛选条件**：
+- 状态筛选：全部/审批中/已通过/已驳回
+- 业务类型筛选：报价单/合同/客户单位
+- 提交人筛选
+- 日期范围筛选
+
+**相关文件**：
+- 审批中心页面：`src/app/(dashboard)/approval/page.tsx`
+- 审批实例查询 API：`src/app/api/approval/route.ts`
+
+---
+
+#### 3.9.2 用户管理 (UserManagement)
 
 **页面路径**：`/system/user`
 
@@ -867,7 +910,7 @@ LIMS（Laboratory Information Management System）是一套面向检测实验室
 - 角色、状态
 - 创建时间、最后登录时间
 
-#### 3.9.2 角色管理 (RoleManagement)
+#### 3.9.3 角色管理 (RoleManagement)
 
 **页面路径**：`/system/role`
 
@@ -876,7 +919,7 @@ LIMS（Laboratory Information Management System）是一套面向检测实验室
 - 角色描述、状态
 - 权限列表
 
-#### 3.9.3 部门管理 (DepartmentManagement)
+#### 3.9.4 部门管理 (DepartmentManagement)
 
 **页面路径**：`/system/dept`
 
@@ -885,11 +928,11 @@ LIMS（Laboratory Information Management System）是一套面向检测实验室
 - 上级部门、负责人
 - 排序、状态
 
-#### 3.9.4 权限配置 (PermissionConfig)
+#### 3.9.5 权限配置 (PermissionConfig)
 
 **页面路径**：`/system/permission`
 
-#### 3.9.5 审批流程管理 (ApprovalFlow)
+#### 3.9.6 审批流程管理 (ApprovalFlow)
 
 **页面路径**：`/system/approval-flow`
 
@@ -1310,6 +1353,55 @@ client/src/
 ├── utils/                    # 工具函数
 └── config/                   # 配置文件
 ```
+
+---
+
+## 七、变更历史
+
+### v1.3 - 2026-01-08
+
+**新增功能**：
+- ✅ 统一审批流系统上线
+  - 新增 ApprovalInstance 和 ApprovalRecord 数据模型
+  - 实现审批引擎 (approvalEngine)
+  - 创建统一审批 API (/api/approval)
+- ✅ 审批中心页面
+  - 待我审批：集中处理所有待审批业务
+  - 我的提交：查看我提交的所有审批申请
+  - 支持快速审批（通过/驳回）
+- ✅ 审批流程配置管理
+  - 系统设置 > 审批流程菜单
+  - 可视化配置审批节点和审批人
+  - 支持角色/用户/部门负责人三种审批类型
+- ✅ 预置审批流程
+  - 报价审批流程（三级：销售经理 → 财务 → 实验室负责人）
+  - 合同审批流程（两级：部门经理 → 法务）
+  - 客户单位审批流程（单级：销售经理）
+
+**Bug 修复**：
+- ✅ 修复咨询管理页面 testItems 字段类型不匹配问题
+  - 数据库存储 JSON 字符串，前端期望数组
+  - 统一在 API 层进行序列化/反序列化处理
+
+**技术改进**：
+- 统一审批流引擎设计，支持扩展新业务类型
+- 前端审批组件化（ApprovalActions、ApprovalHistory、ApprovalStatus）
+- 审批权限验证机制
+
+---
+
+### v1.2 - 2026-01-07
+
+**初始功能**：
+- 委托管理模块（咨询、报价、合同、委托单、客户单位）
+- 样品管理模块
+- 任务管理模块
+- 检测管理模块
+- 报告管理模块
+- 财务管理模块
+- 设备管理模块
+- 统计报表模块
+- 系统管理模块
 
 ---
 
