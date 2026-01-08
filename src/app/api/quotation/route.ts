@@ -1,8 +1,9 @@
 import { prisma } from '@/lib/prisma'
-import { NextRequest, NextResponse } from 'next/server'
+import { NextRequest } from 'next/server'
+import { withErrorHandler, success } from '@/lib/api-handler'
 
 // 获取报价列表
-export async function GET(request: NextRequest) {
+export const GET = withErrorHandler(async (request: NextRequest) => {
   const { searchParams } = new URL(request.url)
   const page = parseInt(searchParams.get('page') || '1')
   const pageSize = parseInt(searchParams.get('pageSize') || '10')
@@ -13,12 +14,10 @@ export async function GET(request: NextRequest) {
 
   const where: any = {}
 
-  if (status) {
-    where.status = status
-  }
+  if (status) where.status = status
   if (keyword) {
     where.OR = [
-      { client: { name: { contains: keyword } } },  // 通过关联查询客户名称
+      { client: { name: { contains: keyword } } },
       { clientContactPerson: { contains: keyword } },
       { quotationNo: { contains: keyword } },
     ]
@@ -37,22 +36,17 @@ export async function GET(request: NextRequest) {
       take: pageSize,
       include: {
         items: true,
-        approvals: {
-          orderBy: { timestamp: 'desc' },
-        },
-        client: true,  // 添加客户关联查询
+        approvals: { orderBy: { timestamp: 'desc' } },
+        client: true,
       },
     }),
     prisma.quotation.count({ where }),
   ])
 
-  // 格式化数据以匹配前端期望的字段名
   const formattedList = list.map((item: any) => ({
     ...item,
-    // 客户信息从关联对象获取
     clientName: item.client?.name || item.clientCompany,
     quotationDate: item.createdAt,
-    validDays: 30,
     totalAmount: item.subtotal,
     taxRate: 0.06,
     taxAmount: item.taxTotal ? (Number(item.taxTotal) - Number(item.subtotal)) : 0,
@@ -63,25 +57,21 @@ export async function GET(request: NextRequest) {
     clientResponse: item.clientStatus,
   }))
 
-  return NextResponse.json({ list: formattedList, total, page, pageSize })
-}
+  return success({ list: formattedList, total, page, pageSize })
+})
 
 // 创建报价
-export async function POST(request: NextRequest) {
+export const POST = withErrorHandler(async (request: NextRequest) => {
   const data = await request.json()
 
-  // 生成报价单号
   const today = new Date().toISOString().slice(0, 10).replace(/-/g, '')
   const count = await prisma.quotation.count({
     where: { quotationNo: { startsWith: `BJ${today}` } }
   })
   const quotationNo = `BJ${today}${String(count + 1).padStart(4, '0')}`
 
-  // 计算总金额
   const items = data.items || []
-  const subtotal = items.reduce((sum: number, item: any) => {
-    return sum + (item.quantity || 1) * (item.unitPrice || 0)
-  }, 0)
+  const subtotal = items.reduce((sum: number, item: any) => sum + (item.quantity || 1) * (item.unitPrice || 0), 0)
   const taxTotal = subtotal * 1.06
   const discountTotal = data.finalAmount || taxTotal
 
@@ -111,7 +101,7 @@ export async function POST(request: NextRequest) {
     include: { items: true },
   })
 
-  // 回写咨询单：更新 quotationNo 和状态
+  // 回写咨询单
   const consultationNo = data.consultationNo || data.consultationId
   if (consultationNo) {
     await prisma.consultation.updateMany({
@@ -120,5 +110,5 @@ export async function POST(request: NextRequest) {
     })
   }
 
-  return NextResponse.json(quotation)
-}
+  return success(quotation)
+})

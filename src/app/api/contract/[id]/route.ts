@@ -1,30 +1,35 @@
 import { prisma } from '@/lib/prisma'
-import { NextRequest, NextResponse } from 'next/server'
+import { NextRequest } from 'next/server'
+import { withErrorHandler, success, notFound } from '@/lib/api-handler'
 
-export async function GET(
+export const GET = withErrorHandler(async (
   request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
-  const { id } = await params
-  const contract = await prisma.contract.findUnique({ where: { id } })
-  return NextResponse.json(contract)
-}
+  context?: { params: Promise<Record<string, string>> }
+) => {
+  const { id } = await context!.params
+  const contract = await prisma.contract.findUnique({
+    where: { id },
+    include: { client: true, quotation: true },
+  })
+  if (!contract) notFound('合同不存在')
+  return success(contract)
+})
 
-export async function PUT(
+export const PUT = withErrorHandler(async (
   request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
-  const { id } = await params
+  context?: { params: Promise<Record<string, string>> }
+) => {
+  const { id } = await context!.params
   const data = await request.json()
   const contract = await prisma.contract.update({ where: { id }, data })
-  return NextResponse.json(contract)
-}
+  return success(contract)
+})
 
-export async function DELETE(
+export const DELETE = withErrorHandler(async (
   request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
-  const { id } = await params
+  context?: { params: Promise<Record<string, string>> }
+) => {
+  const { id } = await context!.params
   await prisma.contract.delete({ where: { id } })
-  return NextResponse.json({ success: true })
-}
+  return success({ success: true })
+})

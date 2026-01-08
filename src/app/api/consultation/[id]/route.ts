@@ -1,69 +1,50 @@
 import { prisma } from '@/lib/prisma'
-import { NextRequest, NextResponse } from 'next/server'
+import { NextRequest } from 'next/server'
+import { withErrorHandler, success, notFound } from '@/lib/api-handler'
 
-// 获取单个咨询（含跟进记录）
-export async function GET(
+export const GET = withErrorHandler(async (
   request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
-  const { id } = await params
+  context?: { params: Promise<Record<string, string>> }
+) => {
+  const { id } = await context!.params
   const consultation = await prisma.consultation.findUnique({
     where: { id },
-    include: {
-      followUps: {
-        orderBy: { date: 'desc' },
-      },
-      client: true,  // 添加客户关联查询
-    },
+    include: { followUps: { orderBy: { date: 'desc' } }, client: true },
   })
 
-  if (!consultation) {
-    return NextResponse.json({ error: 'Consultation not found' }, { status: 404 })
-  }
+  if (!consultation) notFound('咨询单不存在')
 
-  // 解析 JSON 字符串字段为数组
-  const parsed = {
+  return success({
     ...consultation,
     testItems: consultation.testItems ? JSON.parse(consultation.testItems) : [],
-  }
+  })
+})
 
-  return NextResponse.json(parsed)
-}
-
-// 更新咨询
-export async function PUT(
+export const PUT = withErrorHandler(async (
   request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
-  const { id } = await params
+  context?: { params: Promise<Record<string, string>> }
+) => {
+  const { id } = await context!.params
   const data = await request.json()
 
-  // 如果 testItems 是数组，转换为 JSON 字符串
   const updateData: any = { ...data }
-  if (data.testItems && Array.isArray(data.testItems)) {
+  if (Array.isArray(data.testItems)) {
     updateData.testItems = JSON.stringify(data.testItems)
   }
 
-  const consultation = await prisma.consultation.update({
-    where: { id },
-    data: updateData,
-  })
+  const consultation = await prisma.consultation.update({ where: { id }, data: updateData })
 
-  // 返回时也要解析为数组
-  const parsed = {
+  return success({
     ...consultation,
     testItems: consultation.testItems ? JSON.parse(consultation.testItems) : [],
-  }
+  })
+})
 
-  return NextResponse.json(parsed)
-}
-
-// 删除咨询
-export async function DELETE(
+export const DELETE = withErrorHandler(async (
   request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
-  const { id } = await params
+  context?: { params: Promise<Record<string, string>> }
+) => {
+  const { id } = await context!.params
   await prisma.consultation.delete({ where: { id } })
-  return NextResponse.json({ success: true })
-}
+  return success({ success: true })
+})
