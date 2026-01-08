@@ -171,7 +171,6 @@ LIMS（Laboratory Information Management System）是一套面向检测实验室
 | 预计数量 | estimatedQuantity | number | 否 | 预估样品数量 |
 | 检测项目 | testItems | string[] | 是 | 检测项目列表（多选） |
 | 检测目的 | testPurpose | enum | 是 | quality_inspection/product_certification/rd_testing/other |
-| 紧急程度 | urgencyLevel | enum | 是 | normal/urgent/very_urgent |
 | 期望完成时间 | expectedDeadline | date | 否 | 期望报告交付日期 |
 | 客户要求 | clientRequirements | text | 否 | 特殊要求说明 |
 | 预算范围 | budgetRange | string | 否 | 如"5000-10000" |
@@ -1357,6 +1356,13 @@ client/src/
 ---
 
 ## 七、变更历史
+
+### v1.4 - 2026-01-08
+
+**文档优化**：
+- 移除咨询单 urgencyLevel（紧急程度）字段，实际业务不需要
+
+---
 
 ### v1.3 - 2026-01-08
 

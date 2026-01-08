@@ -88,9 +88,9 @@ export async function POST(request: NextRequest) {
   const quotation = await prisma.quotation.create({
     data: {
       quotationNo,
-      clientId: data.clientId,  // 使用客户ID
-      clientContactPerson: data.clientContactPerson,  // 联系人（可覆盖客户默认联系人）
-      consultationNo: data.consultationId,
+      clientId: data.clientId,
+      clientContactPerson: data.clientContactPerson,
+      consultationNo: data.consultationNo || data.consultationId,
       sampleName: data.sampleName,
       clientRemark: data.paymentTerms,
       subtotal,
@@ -108,10 +108,17 @@ export async function POST(request: NextRequest) {
         })),
       },
     },
-    include: {
-      items: true,
-    },
+    include: { items: true },
   })
+
+  // 回写咨询单：更新 quotationNo 和状态
+  const consultationNo = data.consultationNo || data.consultationId
+  if (consultationNo) {
+    await prisma.consultation.updateMany({
+      where: { consultationNo },
+      data: { quotationNo, status: 'quoted' },
+    })
+  }
 
   return NextResponse.json(quotation)
 }
