@@ -330,6 +330,12 @@ export default function ConsultationPage() {
   const columns: ColumnsType<Consultation> = [
     { title: '咨询单号', dataIndex: 'consultationNo', width: 140 },
     {
+      title: '客户名称',
+      width: 150,
+      ellipsis: true,
+      render: (_, record) => record.client?.name || '-'
+    },
+    {
       title: '联系人/电话',
       width: 130,
       render: (_, record) => (
@@ -435,7 +441,7 @@ export default function ConsultationPage() {
         dataSource={data}
         loading={loading}
         rowSelection={rowSelection}
-        scroll={{ x: 900 }}
+        scroll={{ x: 1050 }}
         pagination={{ current: page, total, pageSize: 10, onChange: setPage, showSizeChanger: false }}
       />
 
