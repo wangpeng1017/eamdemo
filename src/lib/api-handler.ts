@@ -91,8 +91,23 @@ export function error(
 }
 
 /**
- * API 处理器包装函数
+ * API 处理器包装函数（无路由参数版本）
  * 提供统一的错误处理和响应格式
+ */
+export function withErrorHandler<T>(
+  handler: (request: NextRequest) => Promise<T>
+): (request: NextRequest) => Promise<NextResponse>
+
+/**
+ * API 处理器包装函数（有路由参数版本）
+ * 提供统一的错误处理和响应格式
+ */
+export function withErrorHandler<T>(
+  handler: (request: NextRequest, context: { params: Promise<Record<string, string>> }) => Promise<T>
+): (request: NextRequest, context: { params: Promise<Record<string, string>> }) => Promise<NextResponse>
+
+/**
+ * API 处理器包装函数实现
  */
 export function withErrorHandler<T>(
   handler: (request: NextRequest, context?: { params: Promise<Record<string, string>> }) => Promise<T>
