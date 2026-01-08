@@ -55,7 +55,13 @@ export async function GET(request: NextRequest) {
     prisma.consultation.count({ where }),
   ])
 
-  return NextResponse.json({ list, total, page, pageSize })
+  // 解析 JSON 字符串字段为数组
+  const parsedList = list.map(item => ({
+    ...item,
+    testItems: item.testItems ? JSON.parse(item.testItems) : [],
+  }))
+
+  return NextResponse.json({ list: parsedList, total, page, pageSize })
 }
 
 // 创建咨询
@@ -73,8 +79,15 @@ export async function POST(request: NextRequest) {
   const createData: any = {
     ...data,
     consultationNo,
-    testItems: data.testItems || [],
   }
+
+  // 如果 testItems 是数组，转换为 JSON 字符串
+  if (data.testItems && Array.isArray(data.testItems)) {
+    createData.testItems = JSON.stringify(data.testItems)
+  } else {
+    createData.testItems = '[]'
+  }
+
   if (data.estimatedQuantity !== undefined && data.estimatedQuantity !== null) {
     createData.estimatedQuantity = parseInt(data.estimatedQuantity, 10) || 0
   }
@@ -83,5 +96,11 @@ export async function POST(request: NextRequest) {
     data: createData
   })
 
-  return NextResponse.json(consultation)
+  // 返回时解析为数组
+  const parsed = {
+    ...consultation,
+    testItems: consultation.testItems ? JSON.parse(consultation.testItems) : [],
+  }
+
+  return NextResponse.json(parsed)
 }
