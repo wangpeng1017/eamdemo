@@ -1,5 +1,6 @@
 import useSWR from 'swr'
 import useSWRMutation from 'swr/mutation'
+import { message } from 'antd'
 
 // 通用列表数据 Hook
 interface ListParams {
@@ -9,14 +10,19 @@ interface ListParams {
 }
 
 interface ListResponse<T> {
-  success: boolean
-  data: {
+  success?: boolean
+  data?: {
     list: T[]
     total: number
     page: number
     pageSize: number
     stats?: Record<string, number>
   }
+  // 兼容旧格式
+  list?: T[]
+  total?: number
+  page?: number
+  pageSize?: number
 }
 
 export function useList<T>(
@@ -37,10 +43,15 @@ export function useList<T>(
     enabled ? url : null
   )
 
+  // 兼容新旧两种响应格式
+  const list = data?.data?.list || data?.list || []
+  const total = data?.data?.total || data?.total || 0
+  const stats = data?.data?.stats || {}
+
   return {
-    data: data?.data?.list || [],
-    total: data?.data?.total || 0,
-    stats: data?.data?.stats || {},
+    data: list,
+    total,
+    stats,
     isLoading,
     isError: !!error,
     error,
