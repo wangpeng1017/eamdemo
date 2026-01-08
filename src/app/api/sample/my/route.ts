@@ -1,12 +1,13 @@
 import { prisma } from '@/lib/prisma'
-import { NextRequest, NextResponse } from 'next/server'
+import { NextRequest } from 'next/server'
+import { withErrorHandler, success, unauthorized } from '@/lib/api-handler'
 import { auth } from '@/lib/auth'
 
 // 获取当前用户的样品领用列表
-export async function GET(request: NextRequest) {
+export const GET = withErrorHandler(async (request: NextRequest) => {
   const session = await auth()
   if (!session?.user) {
-    return NextResponse.json({ error: '未登录' }, { status: 401 })
+    return unauthorized('未登录')
   }
 
   const { searchParams } = new URL(request.url)
@@ -46,14 +47,14 @@ export async function GET(request: NextRequest) {
     _count: true
   })
 
-  return NextResponse.json({
+  return success({
     list,
     total,
     page,
     pageSize,
-    stats: stats.reduce((acc, item) => {
+    stats: stats.reduce((acc: any, item: any) => {
       acc[item.status] = item._count
       return acc
     }, {} as Record<string, number>)
   })
-}
+})

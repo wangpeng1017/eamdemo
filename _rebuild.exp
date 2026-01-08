@@ -1,0 +1,55 @@
+#!/usr/bin/expect -f
+set timeout 600
+set password "xx198910170014Z"
+set server "root@8.130.182.148"
+set dir "/root/lims-next"
+
+puts "\n========================================="
+puts "  停止所有 lims-next 进程"
+puts "========================================="
+spawn ssh $server "pm2 delete lims-next || true"
+expect "password:" { send "$password\r" }
+expect eof
+
+puts "\n========================================="
+puts "  杀死占用端口的进程"
+puts "========================================="
+spawn ssh $server "lsof -ti:3000 | xargs kill -9 2>/dev/null || true; lsof -ti:3001 | xargs kill -9 2>/dev/null || true"
+expect "password:" { send "$password\r" }
+expect eof
+
+puts "\n========================================="
+puts "  清理并完整构建（需要3-5分钟）"
+puts "========================================="
+spawn ssh $server "cd $dir && rm -rf .next && npm run build"
+expect "password:" { send "$password\r" }
+expect {
+    "✓ Compiled" { puts "构建成功！" }
+    "✓ Build" { puts "构建成功！" }
+    timeout { puts "构建超时！"; exit 1 }
+    eof
+}
+expect eof
+
+puts "\n========================================="
+puts "  等待5秒确保构建完成"
+puts "========================================="
+after 5000
+
+puts "\n========================================="
+puts "  启动服务"
+puts "========================================="
+spawn ssh $server "cd $dir && pm2 start npm --name lims-next -- start"
+expect "password:" { send "$password\r" }
+expect eof
+
+puts "\n========================================="
+puts "  查看服务状态"
+puts "========================================="
+spawn ssh $server "pm2 status && sleep 3 && pm2 logs lims-next --lines 20 --nostream"
+expect "password:" { send "$password\r" }
+expect eof
+
+puts "\n========================================="
+puts "  完成！"
+puts "========================================="

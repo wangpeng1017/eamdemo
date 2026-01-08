@@ -1,8 +1,9 @@
 import { prisma } from '@/lib/prisma'
-import { NextRequest, NextResponse } from 'next/server'
+import { NextRequest } from 'next/server'
+import { withErrorHandler, success } from '@/lib/api-handler'
 
 // 获取定检计划列表
-export async function GET(request: NextRequest) {
+export const GET = withErrorHandler(async (request: NextRequest) => {
   const { searchParams } = new URL(request.url)
   const page = parseInt(searchParams.get('page') || '1')
   const pageSize = parseInt(searchParams.get('pageSize') || '10')
@@ -27,7 +28,7 @@ export async function GET(request: NextRequest) {
   ])
 
   // 格式化数据
-  const formattedList = list.map((item) => ({
+  const formattedList = list.map((item: any) => ({
     id: item.id,
     deviceId: item.deviceId,
     deviceName: item.device?.name,
@@ -39,11 +40,11 @@ export async function GET(request: NextRequest) {
     result: item.result,
   }))
 
-  return NextResponse.json({ list: formattedList, total, page, pageSize })
-}
+  return success({ list: formattedList, total, page, pageSize })
+})
 
 // 创建定检计划
-export async function POST(request: NextRequest) {
+export const POST = withErrorHandler(async (request: NextRequest) => {
   const data = await request.json()
 
   const calibration = await prisma.deviceCalibration.create({
@@ -57,5 +58,5 @@ export async function POST(request: NextRequest) {
     },
   })
 
-  return NextResponse.json(calibration)
-}
+  return success(calibration)
+})

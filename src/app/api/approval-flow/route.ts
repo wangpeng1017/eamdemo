@@ -18,9 +18,9 @@ export const GET = withErrorHandler(async (request: NextRequest) => {
   })
 
   return success({
-    list: flows.map(flow => ({
+    list: flows.map((flow: any) => ({
       ...flow,
-      nodes: flow.nodes ? JSON.parse(flow.nodes) : [],
+      nodes: flow.nodes ? JSON.parse(flow.nodes as string) : [],
     })),
     total: flows.length,
   })
@@ -45,6 +45,6 @@ export const POST = withErrorHandler(async (request: NextRequest) => {
 
   return success({
     ...flow,
-    nodes: flow.nodes ? JSON.parse(flow.nodes) : [],
+    nodes: flow.nodes ? JSON.parse(flow.nodes as string) : [],
   })
 })

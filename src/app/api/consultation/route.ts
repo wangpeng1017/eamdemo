@@ -17,7 +17,7 @@ export const GET = withErrorHandler(async (request: NextRequest) => {
   const startDate = searchParams.get('startDate')
   const endDate = searchParams.get('endDate')
 
-  const where: any = {}
+  const where: Record<string, unknown> = {}
 
   if (status) where.status = status
   if (follower) where.follower = follower
@@ -30,8 +30,8 @@ export const GET = withErrorHandler(async (request: NextRequest) => {
   }
   if (startDate || endDate) {
     where.createdAt = {}
-    if (startDate) where.createdAt.gte = new Date(startDate)
-    if (endDate) where.createdAt.lte = new Date(endDate)
+    if (startDate) (where.createdAt as Record<string, Date>).gte = new Date(startDate)
+    if (endDate) (where.createdAt as Record<string, Date>).lte = new Date(endDate)
   }
 
   const [list, total] = await Promise.all([
@@ -48,9 +48,9 @@ export const GET = withErrorHandler(async (request: NextRequest) => {
     prisma.consultation.count({ where }),
   ])
 
-  const parsedList = list.map(item => ({
+  const parsedList = list.map((item: any) => ({
     ...item,
-    testItems: item.testItems ? JSON.parse(item.testItems) : [],
+    testItems: item.testItems ? JSON.parse(item.testItems as string) : [],
   }))
 
   return success({ list: parsedList, total, page, pageSize })
@@ -66,7 +66,7 @@ export const POST = withErrorHandler(async (request: NextRequest) => {
   })
   const consultationNo = `ZX${today}${String(count + 1).padStart(4, '0')}`
 
-  const createData: any = { ...data, consultationNo }
+  const createData: Record<string, unknown> = { ...data, consultationNo }
   createData.testItems = Array.isArray(data.testItems) ? JSON.stringify(data.testItems) : '[]'
   if (data.estimatedQuantity != null) {
     createData.estimatedQuantity = parseInt(data.estimatedQuantity, 10) || 0
@@ -76,6 +76,6 @@ export const POST = withErrorHandler(async (request: NextRequest) => {
 
   return success({
     ...consultation,
-    testItems: consultation.testItems ? JSON.parse(consultation.testItems) : [],
+    testItems: consultation.testItems ? JSON.parse(consultation.testItems as string) : [],
   })
 })

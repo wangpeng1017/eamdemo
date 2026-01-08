@@ -7,7 +7,8 @@ interface RouteParams {
 }
 
 // 获取单个委托单详情
-export const GET = withErrorHandler(async (request: NextRequest, { params }: RouteParams) => {
+export const GET = withErrorHandler(async (request: NextRequest, context?: { params: Promise<Record<string, string>> }) => {
+  const { params } = context!
   const { id } = await params
   const entrustment = await prisma.entrustment.findUnique({
     where: { id },
@@ -27,7 +28,8 @@ export const GET = withErrorHandler(async (request: NextRequest, { params }: Rou
 })
 
 // 更新委托单（含检测项目）
-export const PUT = withErrorHandler(async (request: NextRequest, { params }: RouteParams) => {
+export const PUT = withErrorHandler(async (request: NextRequest, context?: { params: Promise<Record<string, string>> }) => {
+  const { params } = context!
   const { id } = await params
   const data = await request.json()
 
@@ -49,12 +51,12 @@ export const PUT = withErrorHandler(async (request: NextRequest, { params }: Rou
     const existingProjects = await prisma.entrustmentProject.findMany({
       where: { entrustmentId: id }
     })
-    const existingIds = existingProjects.map(p => p.id)
+    const existingIds = existingProjects.map((p: any) => p.id)
 
     // 分类处理
-    const toUpdate = projects.filter((p: { id?: string }) => p.id && existingIds.includes(p.id))
-    const toCreate = projects.filter((p: { id?: string; name?: string }) => !p.id && p.name)
-    const toDeleteIds = existingIds.filter(eid => !projects.some((p: { id?: string }) => p.id === eid))
+    const toUpdate = projects.filter((p: any) => p.id && existingIds.includes(p.id))
+    const toCreate = projects.filter((p: any) => !p.id && p.name)
+    const toDeleteIds = existingIds.filter((eid: string) => !projects.some((p: { id?: string }) => p.id === eid))
 
     // 删除不再需要的项目
     if (toDeleteIds.length > 0) {
@@ -105,7 +107,8 @@ export const PUT = withErrorHandler(async (request: NextRequest, { params }: Rou
 })
 
 // 删除委托单
-export const DELETE = withErrorHandler(async (request: NextRequest, { params }: RouteParams) => {
+export const DELETE = withErrorHandler(async (request: NextRequest, context?: { params: Promise<Record<string, string>> }) => {
+  const { params } = context!
   const { id } = await params
 
   // 先删除关联的检测项目

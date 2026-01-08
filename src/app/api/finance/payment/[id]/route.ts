@@ -4,15 +4,16 @@ import {
   withErrorHandler,
   success,
   notFound,
-  badRequest,
 } from '@/lib/api-handler'
+import { Prisma } from '@prisma/client'
 
 // 获取收款记录详情
 export const GET = withErrorHandler(async (
   request: NextRequest,
   context?: { params: Promise<Record<string, string>> }
 ) => {
-  const { id } = await context!.params
+  const { params } = context!
+  const { id } = await params
 
   const payment = await prisma.financePayment.findUnique({
     where: { id },
@@ -48,7 +49,8 @@ export const DELETE = withErrorHandler(async (
   request: NextRequest,
   context?: { params: Promise<Record<string, string>> }
 ) => {
-  const { id } = await context!.params
+  const { params } = context!
+  const { id } = await params
 
   const payment = await prisma.financePayment.findUnique({
     where: { id },
@@ -60,7 +62,7 @@ export const DELETE = withErrorHandler(async (
   }
 
   // 使用事务删除收款记录并回滚应收账款
-  await prisma.$transaction(async (tx) => {
+  await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
     // 删除收款记录
     await tx.financePayment.delete({ where: { id } })
 

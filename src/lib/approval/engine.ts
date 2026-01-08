@@ -221,6 +221,7 @@ export class ApprovalEngine {
       bizType: instance.bizType,
       bizId: instance.bizId,
       approvalStatus: 'cancelled',
+      approvalStep: instance.currentStep,
     })
   }
 

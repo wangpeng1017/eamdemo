@@ -6,6 +6,7 @@ import {
   validateRequired,
   badRequest,
 } from '@/lib/api-handler'
+import { Prisma } from '@prisma/client'
 
 // 获取收款记录列表
 export const GET = withErrorHandler(async (request: NextRequest) => {
@@ -86,8 +87,8 @@ export const POST = withErrorHandler(async (request: NextRequest) => {
   }
 
   const paymentAmount = parseFloat(data.amount)
-  const currentReceived = Number(receivable.receivedAmount)
-  const totalAmount = Number(receivable.amount)
+  const currentReceived = Number(receivable!.receivedAmount)
+  const totalAmount = Number(receivable!.amount)
 
   // 检查收款金额是否超过剩余应收
   if (paymentAmount > totalAmount - currentReceived) {
@@ -95,7 +96,7 @@ export const POST = withErrorHandler(async (request: NextRequest) => {
   }
 
   // 使用事务创建收款记录并更新应收账款
-  const result = await prisma.$transaction(async (tx) => {
+  const result = await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
     // 创建收款记录
     const payment = await tx.financePayment.create({
       data: {

@@ -7,7 +7,8 @@ interface RouteParams {
 }
 
 // 更新检测项目（分配/分包）
-export const PUT = withErrorHandler(async (request: NextRequest, { params }: RouteParams) => {
+export const PUT = withErrorHandler(async (request: NextRequest, context?: { params: Promise<Record<string, string>> }) => {
+  const { params } = context!
   const { id: entrustmentId, projectId } = await params
   const data = await request.json()
 
@@ -22,7 +23,7 @@ export const PUT = withErrorHandler(async (request: NextRequest, { params }: Rou
   }
 
   // 验证检测项目存在
-  const project = entrustment.projects.find(p => p.id === projectId)
+  const project = entrustment.projects.find((p: any) => p.id === projectId)
   if (!project) {
     return notFound('检测项目不存在')
   }
@@ -44,7 +45,8 @@ export const PUT = withErrorHandler(async (request: NextRequest, { params }: Rou
 })
 
 // 获取单个检测项目详情
-export const GET = withErrorHandler(async (request: NextRequest, { params }: RouteParams) => {
+export const GET = withErrorHandler(async (request: NextRequest, context?: { params: Promise<Record<string, string>> }) => {
+  const { params } = context!
   const { id: entrustmentId, projectId } = await params
 
   const project = await prisma.entrustmentProject.findFirst({

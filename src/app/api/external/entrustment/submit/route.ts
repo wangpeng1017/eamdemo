@@ -22,7 +22,7 @@ export const POST = withErrorHandler(async (request: NextRequest) => {
   } = body
 
   // 验证必填字段
-  validateRequired(body, 'token')
+  validateRequired(body, ['token'])
 
   if (!token) {
     return Response.json({ success: false, message: '缺少 token' }, { status: 400 })
@@ -38,10 +38,10 @@ export const POST = withErrorHandler(async (request: NextRequest) => {
   })
 
   // 找到匹配的委托单
-  const matched = entrustments.find((e) => {
+  const matched = entrustments.find((e: any) => {
     if (!e.remark) return false
     try {
-      const data = JSON.parse(e.remark)
+      const data = JSON.parse(e.remark as string)
       return data.externalLink?.token === token
     } catch {
       return false
@@ -53,9 +53,9 @@ export const POST = withErrorHandler(async (request: NextRequest) => {
   }
 
   // 检查是否过期
-  let remarkData = {}
+  let remarkData: Record<string, any> = {}
   try {
-    remarkData = JSON.parse(matched.remark || '{}')
+    remarkData = JSON.parse(matched.remark as string || '{}')
   } catch {
     remarkData = {}
   }

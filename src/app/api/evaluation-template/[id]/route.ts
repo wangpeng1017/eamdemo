@@ -1,13 +1,15 @@
 import { prisma } from '@/lib/prisma'
 import { NextRequest } from 'next/server'
-import { withErrorHandler, success, notFound, validateRequired } from '@/lib/api-handler'
+import { withErrorHandler, success, notFound } from '@/lib/api-handler'
+import { Prisma } from '@prisma/client'
 
 // 获取单个模板
 export const GET = withErrorHandler(async (
   request: NextRequest,
   context?: { params: Promise<Record<string, string>> }
 ) => {
-  const { id } = await context!.params
+  const { params } = context!
+  const { id } = await params
 
   const template = await prisma.evaluationTemplate.findUnique({
     where: { id },
@@ -29,7 +31,8 @@ export const PUT = withErrorHandler(async (
   request: NextRequest,
   context?: { params: Promise<Record<string, string>> }
 ) => {
-  const { id } = await context!.params
+  const { params } = context!
+  const { id } = await params
   const data = await request.json()
 
   const existing = await prisma.evaluationTemplate.findUnique({ where: { id } })
@@ -38,7 +41,7 @@ export const PUT = withErrorHandler(async (
   }
 
   // 使用事务更新模板和评价项
-  const template = await prisma.$transaction(async (tx) => {
+  const template = await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
     // 更新模板基本信息
     await tx.evaluationTemplate.update({
       where: { id },
@@ -80,7 +83,8 @@ export const DELETE = withErrorHandler(async (
   request: NextRequest,
   context?: { params: Promise<Record<string, string>> }
 ) => {
-  const { id } = await context!.params
+  const { params } = context!
+  const { id } = await params
 
   const existing = await prisma.evaluationTemplate.findUnique({ where: { id } })
   if (!existing) {

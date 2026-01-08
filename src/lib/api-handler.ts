@@ -1,5 +1,24 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { Prisma } from '@prisma/client'
+
+// Prisma 错误类型检查辅助函数
+function isPrismaKnownRequestError(err: unknown): err is { code: string; meta?: { target?: unknown; field_name?: unknown } } {
+  return (
+    typeof err === 'object' &&
+    err !== null &&
+    'code' in err &&
+    typeof (err as { code: unknown }).code === 'string' &&
+    (err as { code: string }).code.startsWith('P')
+  )
+}
+
+function isPrismaValidationError(err: unknown): boolean {
+  return (
+    typeof err === 'object' &&
+    err !== null &&
+    'name' in err &&
+    (err as { name: string }).name === 'PrismaClientValidationError'
+  )
+}
 
 /**
  * API 响应类型
@@ -101,7 +120,7 @@ export function withErrorHandler<T>(
       }
 
       // 处理 Prisma 错误
-      if (err instanceof Prisma.PrismaClientKnownRequestError) {
+      if (isPrismaKnownRequestError(err)) {
         switch (err.code) {
           case 'P2002':
             // 唯一约束冲突
@@ -132,7 +151,7 @@ export function withErrorHandler<T>(
         }
       }
 
-      if (err instanceof Prisma.PrismaClientValidationError) {
+      if (isPrismaValidationError(err)) {
         return error(
           ErrorCodes.VALIDATION_ERROR,
           '数据验证失败',

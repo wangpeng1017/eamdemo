@@ -140,7 +140,7 @@ export async function getAuditLogs(params: {
   ])
 
   return {
-    list: list.map((log) => ({
+    list: list.map((log: { details: string | null }) => ({
       ...log,
       details: log.details ? JSON.parse(log.details) : null,
     })),
@@ -182,13 +182,13 @@ export async function getAuditStats(params: {
 
   // 按操作类型统计
   const actionStats: Record<string, number> = {}
-  logs.forEach((log) => {
+  logs.forEach((log: { action: string }) => {
     actionStats[log.action] = (actionStats[log.action] || 0) + 1
   })
 
   // 按模块统计
   const moduleStats: Record<string, number> = {}
-  logs.forEach((log) => {
+  logs.forEach((log: { module: string }) => {
     moduleStats[log.module] = (moduleStats[log.module] || 0) + 1
   })
 
@@ -202,7 +202,7 @@ export async function getAuditStats(params: {
     dateStats[dateStr] = 0
   }
 
-  logs.forEach((log) => {
+  logs.forEach((log: { createdAt: Date }) => {
     const dateStr = log.createdAt.toISOString().split('T')[0]
     if (dateStats.hasOwnProperty(dateStr)) {
       dateStats[dateStr]++

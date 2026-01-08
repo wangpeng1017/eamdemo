@@ -2,6 +2,7 @@ import { prisma } from '@/lib/prisma'
 import { NextRequest } from 'next/server'
 import { withErrorHandler, success, validateRequired, badRequest } from '@/lib/api-handler'
 import { generateNo } from '@/lib/generate-no'
+import { Prisma } from '@prisma/client'
 
 // 获取出入库记录列表
 export const GET = withErrorHandler(async (request: NextRequest) => {
@@ -53,7 +54,7 @@ export const GET = withErrorHandler(async (request: NextRequest) => {
   })
 
   return success({
-    list: list.map(item => ({
+    list: list.map((item: any) => ({
       ...item,
       unitPrice: Number(item.unitPrice),
       totalAmount: Number(item.totalAmount),
@@ -99,7 +100,7 @@ export const POST = withErrorHandler(async (request: NextRequest) => {
   const totalAmount = data.quantity * unitPrice
 
   // 使用事务创建记录并更新库存
-  const result = await prisma.$transaction(async (tx) => {
+  const result = await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
     // 创建出入库记录
     const transaction = await tx.consumableTransaction.create({
       data: {

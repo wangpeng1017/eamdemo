@@ -1,0 +1,9 @@
+#!/usr/bin/expect -f
+set timeout 60
+set password "xx198910170014Z"
+set server "root@8.130.182.148"
+
+puts "\nPM2 状态和日志..."
+spawn ssh $server "pm2 status lims-next && pm2 logs lims-next --lines 50 --nostream"
+expect "password:" { send "$password\r" }
+expect eof

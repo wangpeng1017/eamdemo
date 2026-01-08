@@ -3,6 +3,20 @@ import Credentials from "next-auth/providers/credentials"
 import { prisma } from "@/lib/prisma"
 import bcrypt from "bcryptjs"
 
+// 扩展 Session 类型
+declare module "next-auth" {
+  interface Session {
+    user: {
+      id: string
+      name?: string | null
+      email?: string | null
+      image?: string | null
+      roles?: string[]
+      permissions?: string[]
+    }
+  }
+}
+
 export const { handlers, signIn, signOut, auth } = NextAuth({
   providers: [
     Credentials({
@@ -45,8 +59,9 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           return null
         }
 
-        const permissions = user.roles.flatMap(ur =>
-          ur.role.permissions.map(rp => rp.permission.code)
+        const roles = user.roles.map((ur: { role: { code: string } }) => ur.role.code)
+        const permissions = user.roles.flatMap((ur: { role: { permissions: { permission: { code: string } }[] } }) =>
+          ur.role.permissions.map((rp: { permission: { code: string } }) => rp.permission.code)
         )
 
         return {
@@ -54,6 +69,8 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           name: user.name,
           email: user.email || undefined,
           image: user.avatar || undefined,
+          roles,
+          permissions,
         }
       }
     })
@@ -62,12 +79,16 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
     async jwt({ token, user }) {
       if (user) {
         token.id = user.id
+        token.roles = (user as { roles?: string[] }).roles || []
+        token.permissions = (user as { permissions?: string[] }).permissions || []
       }
       return token
     },
     async session({ session, token }) {
       if (session.user && token.id) {
         session.user.id = token.id as string
+        session.user.roles = (token.roles as string[]) || []
+        session.user.permissions = (token.permissions as string[]) || []
       }
       return session
     }

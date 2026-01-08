@@ -1,15 +1,14 @@
 import { prisma } from '@/lib/prisma'
-import { NextRequest, NextResponse } from 'next/server'
+import { NextRequest } from 'next/server'
 import {
   withErrorHandler,
   success,
   notFound,
   badRequest,
-  ApiError,
-  ErrorCodes,
   validateRequired,
   validateEnum,
 } from '@/lib/api-handler'
+import { Prisma } from '@prisma/client'
 
 /**
  * 报价单状态流转规则
@@ -36,7 +35,8 @@ export const GET = withErrorHandler(async (
   request: NextRequest,
   context?: { params: Promise<Record<string, string>> }
 ) => {
-  const { id } = await context!.params
+  const { params } = context!
+  const { id } = await params
 
   const quotation = await prisma.quotation.findUnique({
     where: { id },
@@ -78,7 +78,8 @@ export const PUT = withErrorHandler(async (
   request: NextRequest,
   context?: { params: Promise<Record<string, string>> }
 ) => {
-  const { id } = await context!.params
+  const { params } = context!
+  const { id } = await params
   const data = await request.json()
 
   // 检查报价是否存在
@@ -148,7 +149,8 @@ export const DELETE = withErrorHandler(async (
   request: NextRequest,
   context?: { params: Promise<Record<string, string>> }
 ) => {
-  const { id } = await context!.params
+  const { params } = context!
+  const { id } = await params
 
   // 检查报价是否存在
   const existing = await prisma.quotation.findUnique({ where: { id } })
@@ -180,7 +182,8 @@ export const PATCH = withErrorHandler(async (
   request: NextRequest,
   context?: { params: Promise<Record<string, string>> }
 ) => {
-  const { id } = await context!.params
+  const { params } = context!
+  const { id } = await params
   const data = await request.json()
 
   // 验证必填字段
@@ -245,7 +248,7 @@ export const PATCH = withErrorHandler(async (
   }
 
   // 使用事务确保数据一致性
-  const updated = await prisma.$transaction(async (tx) => {
+  const updated = await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
     // 创建审批记录（submit 操作也记录）
     await tx.quotationApproval.create({
       data: {

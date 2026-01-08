@@ -48,7 +48,7 @@ export const GET = withErrorHandler(async (request: NextRequest) => {
   })
 
   return success({
-    list: list.map(item => ({
+    list: list.map((item: any) => ({
       ...item,
       stockQuantity: Number(item.stockQuantity),
       minStock: item.minStock ? Number(item.minStock) : null,
@@ -57,7 +57,7 @@ export const GET = withErrorHandler(async (request: NextRequest) => {
     page,
     pageSize,
     totalStock: Number(totalStock._sum.stockQuantity || 0),
-    stats: stats.reduce((acc, item) => {
+    stats: stats.reduce((acc: any, item: any) => {
       acc[item.status] = item._count
       return acc
     }, {} as Record<number, number>),

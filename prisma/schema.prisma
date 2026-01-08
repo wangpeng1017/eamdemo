@@ -252,6 +252,10 @@ model Quotation {
   approvals QuotationApproval[]
   contracts Contract[]
 
+  @@index([clientId])
+  @@index([status])
+  @@index([approvalStatus])
+  @@index([createdAt])
   @@map("biz_quotation")
 }
 
@@ -311,6 +315,10 @@ model Contract {
 
   entrustments Entrustment[]
 
+  @@index([clientId])
+  @@index([status])
+  @@index([approvalStatus])
+  @@index([createdAt])
   @@map("biz_contract")
 }
 
@@ -365,6 +373,9 @@ model Entrustment {
   samples     Sample[]
   receivables FinanceReceivable[]
 
+  @@index([clientId])
+  @@index([status])
+  @@index([createdAt])
   @@map("biz_entrustment")
 }
 
@@ -417,6 +428,9 @@ model Sample {
   testTasks    TestTask[]
   requisitions SampleRequisition[]
 
+  @@index([entrustmentId])
+  @@index([status])
+  @@index([createdAt])
   @@map("biz_sample")
 }
 
@@ -449,6 +463,10 @@ model TestTask {
   testData TestData[]
   reports  TestReport[]
 
+  @@index([sampleId])
+  @@index([assignedToId])
+  @@index([status])
+  @@index([createdAt])
   @@map("biz_test_task")
 }
 

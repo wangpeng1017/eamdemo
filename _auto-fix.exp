@@ -1,0 +1,69 @@
+#!/usr/bin/expect -f
+set timeout 300
+set password "xx198910170014Z"
+set server "root@8.130.182.148"
+set dir "/root/lims-next"
+
+puts "\n========================================="
+puts "  检查服务状态"
+puts "========================================="
+spawn ssh $server "pm2 status"
+expect "password:" { send "$password\r" }
+expect eof
+
+puts "\n========================================="
+puts "  停止服务"
+puts "========================================="
+spawn ssh $server "pm2 stop lims-next || pm2 delete lims-next || true"
+expect "password:" { send "$password\r" }
+expect eof
+
+puts "\n========================================="
+puts "  释放端口 3001"
+puts "========================================="
+spawn ssh $server "lsof -ti:3001 | xargs kill -9 2>/dev/null || true"
+expect "password:" { send "$password\r" }
+expect eof
+
+puts "\n========================================="
+puts "  拉取最新代码"
+puts "========================================="
+spawn ssh $server "cd $dir && git fetch origin && git reset --hard origin/master"
+expect "password:" { send "$password\r" }
+expect eof
+
+puts "\n========================================="
+puts "  清理并重新构建"
+puts "========================================="
+spawn ssh $server "cd $dir && rm -rf .next && npm run build"
+expect "password:" { send "$password\r" }
+expect {
+    "Build error" { puts "构建失败！"; exit 1 }
+    -timeout 180 { puts "构建超时！"; exit 1 }
+    eof
+}
+
+puts "\n========================================="
+puts "  启动服务 (端口 3001)"
+puts "========================================="
+spawn ssh $server "cd $dir && PORT=3001 pm2 start npm --name lims-next -- start -- -H 0.0.0.0 -p 3001"
+expect "password:" { send "$password\r" }
+expect eof
+
+puts "\n========================================="
+puts "  查看服务状态"
+puts "========================================="
+spawn ssh $server "pm2 status"
+expect "password:" { send "$password\r" }
+expect eof
+
+puts "\n========================================="
+puts "  查看日志"
+puts "========================================="
+spawn ssh $server "pm2 logs lims-next --lines 30 --nostream"
+expect "password:" { send "$password\r" }
+expect eof
+
+puts "\n========================================="
+puts "  完成！访问 http://8.130.182.148"
+puts "========================================="

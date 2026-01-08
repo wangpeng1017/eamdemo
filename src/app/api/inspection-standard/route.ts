@@ -1,13 +1,14 @@
 import { prisma } from '@/lib/prisma'
-import { NextRequest, NextResponse } from 'next/server'
+import { NextRequest } from 'next/server'
+import { withErrorHandler, success } from '@/lib/api-handler'
 
-export async function GET(request: NextRequest) {
+export const GET = withErrorHandler(async (request: NextRequest) => {
   const { searchParams } = new URL(request.url)
   const page = parseInt(searchParams.get('page') || '1')
   const pageSize = parseInt(searchParams.get('pageSize') || '10')
   const validity = searchParams.get('validity')
 
-  const where: any = {}
+  const where: Record<string, unknown> = {}
   if (validity) where.validity = validity
 
   const [list, total] = await Promise.all([
@@ -21,17 +22,17 @@ export async function GET(request: NextRequest) {
   ])
 
   // 解析 JSON 字段
-  const parsedList = list.map(item => ({
+  const parsedList = list.map((item: any) => ({
     ...item,
-    devices: item.devices ? JSON.parse(item.devices) : [],
-    parameters: item.parameters ? JSON.parse(item.parameters) : [],
-    personnel: item.personnel ? JSON.parse(item.personnel) : [],
+    devices: item.devices ? JSON.parse(item.devices as string) : [],
+    parameters: item.parameters ? JSON.parse(item.parameters as string) : [],
+    personnel: item.personnel ? JSON.parse(item.personnel as string) : [],
   }))
 
-  return NextResponse.json({ list: parsedList, total, page, pageSize })
-}
+  return success({ list: parsedList, total, page, pageSize })
+})
 
-export async function POST(request: NextRequest) {
+export const POST = withErrorHandler(async (request: NextRequest) => {
   const data = await request.json()
 
   const standard = await prisma.inspectionStandard.create({
@@ -43,5 +44,5 @@ export async function POST(request: NextRequest) {
     }
   })
 
-  return NextResponse.json(standard)
-}
+  return success(standard)
+})

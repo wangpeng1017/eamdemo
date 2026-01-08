@@ -106,18 +106,18 @@ export function usePaginatedFetch<T = unknown>(
   const [pageSize] = useState(params.pageSize || 10)
   const [loading, setLoading] = useState(false)
 
-  const fetch = useCallback(async (p = page) => {
+  const fetchData = useCallback(async (p = page) => {
     setLoading(true)
     try {
       const searchParams = new URLSearchParams({
         page: String(p),
         pageSize: String(pageSize),
         ...Object.fromEntries(
-          Object.entries(params).filter(([_, v]) => v !== undefined && v !== '')
+          Object.entries(params).filter(([, v]) => v !== undefined && v !== '')
         ),
       })
 
-      const response = await fetch(`${baseUrl}?${searchParams}`)
+      const response = await globalThis.fetch(`${baseUrl}?${searchParams}`)
       const result: ApiResponse<PaginatedResponse<T>> = await response.json()
 
       if (result.success && result.data) {
@@ -134,7 +134,7 @@ export function usePaginatedFetch<T = unknown>(
     }
   }, [baseUrl, pageSize, page, params])
 
-  return { data, total, page, setPage, loading, fetch }
+  return { data, total, page, setPage, loading, fetch: fetchData }
 }
 
 /**

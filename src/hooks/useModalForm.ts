@@ -13,7 +13,7 @@ interface UseModalFormReturn<T> {
   openModal: () => void
   openEditModal: (record: T) => void
   closeModal: () => void
-  handleSubmit: (onSubmit: (values: any) => Promise<void>) => Promise<void>
+  handleSubmit: (onSubmit: (values: any) => Promise<void>) => Promise<boolean>
   modalProps: ModalProps
 }
 

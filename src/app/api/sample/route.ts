@@ -102,7 +102,7 @@ export const GET = withErrorHandler(async (request: NextRequest) => {
     total,
     page,
     pageSize,
-    stats: stats.reduce((acc, item) => {
+    stats: stats.reduce((acc: any, item: any) => {
       acc[item.status] = item._count
       return acc
     }, {} as Record<string, number>),

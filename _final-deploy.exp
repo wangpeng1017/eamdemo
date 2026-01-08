@@ -1,0 +1,57 @@
+#!/usr/bin/expect -f
+set timeout 600
+set password "xx198910170014Z"
+set server "root@8.130.182.148"
+set dir "/root/lims-next"
+
+puts "\n========================================="
+puts "  完整部署流程"
+puts "========================================="
+
+puts "\n步骤1: 清理旧构建"
+spawn ssh $server "cd $dir && rm -rf .next"
+expect "password:" { send "$password\r" }
+expect eof
+
+puts "\n步骤2: 后台构建（约需3-5分钟）"
+spawn ssh $server "cd $dir && nohup npm run build > /tmp/build.log 2>&1 & echo '构建进程已启动'"
+expect "password:" { send "$password\r" }
+expect eof
+after 3000
+
+puts "\n步骤3: 等待构建完成，监控日志..."
+spawn ssh $server "tail -f /tmp/build.log"
+expect "password:" { send "$password\r" }
+expect {
+    "Compiled" {
+        puts "\n>>> 构建成功！"
+        close
+    }
+    timeout 120 {
+        puts "\n>>> 等待超时，检查构建状态..."
+        close
+    }
+}
+
+after 3000
+
+puts "\n步骤4: 检查 .next 目录"
+spawn ssh $server "ls -la $dir/.next/ 2>&1 | head -5"
+expect "password:" { send "$password\r" }
+expect eof
+
+puts "\n步骤5: 启动服务"
+spawn ssh $server "cd $dir && pm2 delete lims-next 2>/dev/null; pm2 start npm --name lims-next -- start"
+expect "password:" { send "$password\r" }
+expect eof
+
+after 3000
+
+puts "\n步骤6: 查看服务状态"
+spawn ssh $server "pm2 status"
+expect "password:" { send "$password\r" }
+expect eof
+
+puts "\n========================================="
+puts "  部署完成！访问 http://8.130.182.148"
+puts "========================================="

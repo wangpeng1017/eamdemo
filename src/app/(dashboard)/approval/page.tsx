@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { Table, Card, Tabs, Tag, Button, Space, Tooltip } from 'antd'
+import { Table, Card, Tabs, Tag, Button, Space, Tooltip, message } from 'antd'
 import { CheckCircleOutlined, CloseOutlined, EyeOutlined } from '@ant-design/icons'
 import type { ColumnsType } from 'antd/es/table'
 
@@ -66,8 +66,22 @@ export default function ApprovalPage() {
   }
 
   const handleApprove = async (instanceId: string, action: 'approve' | 'reject') => {
-    // TODO: 实现审批操作
-    console.log('审批操作:', instanceId, action)
+    try {
+      const response = await fetch(`/api/approval/${instanceId}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action, comment: '' }),
+      })
+      if (response.ok) {
+        message.success(action === 'approve' ? '审批通过' : '已驳回')
+        fetchApprovals()
+      } else {
+        const data = await response.json()
+        message.error(data.error || '操作失败')
+      }
+    } catch {
+      message.error('操作失败')
+    }
   }
 
   const getBizTypeTag = (bizType: string) => {

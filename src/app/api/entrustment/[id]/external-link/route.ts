@@ -13,8 +13,9 @@ import { randomBytes } from 'crypto'
 // 生成外部链接
 export const POST = withErrorHandler(async (
   request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  context?: { params: Promise<Record<string, string>> }
 ) => {
+  const { params } = context!
   const { id } = await params
 
   // 检查委托单是否存在

@@ -38,7 +38,7 @@ export const GET = withErrorHandler(async (request: NextRequest) => {
   })
 
   return success({
-    list: list.map(item => ({
+    list: list.map((item: { scores: string | null; totalScore: unknown }) => ({
       ...item,
       scores: item.scores ? JSON.parse(item.scores) : [],
       totalScore: Number(item.totalScore),
@@ -46,7 +46,7 @@ export const GET = withErrorHandler(async (request: NextRequest) => {
     total,
     page,
     pageSize,
-    stats: stats.reduce((acc, item) => {
+    stats: stats.reduce((acc: Record<string, number>, item: { level: string; _count: number }) => {
       acc[item.level] = item._count
       return acc
     }, {} as Record<string, number>),

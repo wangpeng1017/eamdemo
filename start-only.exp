@@ -1,0 +1,20 @@
+#!/usr/bin/expect -f
+set timeout 120
+set password "xx198910170014Z"
+set server "root@8.130.182.148"
+set dir "/root/lims-next"
+
+puts "\n重启 lims-next（仅启动，不重建）..."
+spawn ssh $server "pm2 stop lims-next || pm2 delete lims-next || true"
+expect "password:" { send "$password\r" }
+expect eof
+
+puts "\n启动 (端口 3001)..."
+spawn ssh $server "cd $dir && PORT=3001 pm2 start npm --name lims-next -- start -- -H 0.0.0.0 -p 3001"
+expect "password:" { send "$password\r" }
+expect eof
+
+puts "\n状态 + 最近日志..."
+spawn ssh $server "pm2 status lims-next && pm2 logs lims-next --lines 20 --nostream"
+expect "password:" { send "$password\r" }
+expect eof

@@ -500,7 +500,7 @@ export default function EntrustmentListPage() {
     {
       title: '操作',
       width: 150,
-      render: (_, record, index, action) => {
+      render: (_, record) => {
         // 从父级获取 entrustmentId
         const entrustment = data.find(d => d.projects?.some(p => p.id === record.id))
         if (!entrustment) return null

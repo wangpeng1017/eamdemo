@@ -48,7 +48,7 @@ export const GET = withErrorHandler(async (request: NextRequest) => {
   })
 
   return success({
-    list: list.map(item => ({
+    list: list.map((item: any) => ({
       ...item,
       amount: item.amount ? Number(item.amount) : 0,
     })),
@@ -56,7 +56,7 @@ export const GET = withErrorHandler(async (request: NextRequest) => {
     page,
     pageSize,
     stats: {
-      ...stats.reduce((acc, item) => {
+      ...stats.reduce((acc: any, item: any) => {
         acc[item.status] = item._count
         return acc
       }, {} as Record<string, number>),

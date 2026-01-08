@@ -1,0 +1,9 @@
+#!/usr/bin/expect -f
+set timeout 60
+set password "xx198910170014Z"
+set server "root@8.130.182.148"
+
+puts "\n检查 3000/3001 端口占用..."
+spawn ssh $server "lsof -nP -i:3000 -i:3001 || true; ss -ltnp | grep -E \"3000|3001\" || true"
+expect "password:" { send "$password\r" }
+expect eof

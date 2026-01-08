@@ -16,6 +16,7 @@ interface TestTemplate {
   status: string
   author: string
   createdAt: string
+  schema?: string | null  // JSON 表单结构
 }
 
 const categoryOptions = [

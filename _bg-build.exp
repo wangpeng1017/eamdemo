@@ -1,0 +1,58 @@
+#!/usr/bin/expect -f
+set timeout 60
+set password "xx198910170014Z"
+set server "root@8.130.182.148"
+set dir "/root/lims-next"
+
+puts "\n========================================="
+puts "  后台构建并部署"
+puts "========================================="
+
+puts "\n1. 清理旧构建..."
+spawn ssh $server "cd $dir && rm -rf .next"
+expect "password:" { send "$password\r" }
+expect eof
+
+puts "\n2. 后台构建（nohup）..."
+spawn ssh $server "cd $dir && nohup sh -c 'npm run build 2>&1 | tee /tmp/build.log' > /dev/null 2>&1 &"
+expect "password:" { send "$password\r" }
+expect eof
+
+puts "\n3. 等待构建开始..."
+after 3000
+
+puts "\n4. 检查构建进度（每10秒检查一次）..."
+set count 0
+spawn ssh $server "tail -f /tmp/build.log"
+expect "password:" { send "$password\r" }
+expect {
+    "✓ Compiled" {
+        puts "\n构建成功！"
+        close
+    }
+    "✓ Build" {
+        puts "\n构建成功！"
+        close
+    }
+    timeout 300 {
+        puts "\n等待5分钟后检查..."
+        close
+    }
+}
+
+puts "\n5. 等待5秒确保文件写入..."
+after 5000
+
+puts "\n6. 启动服务..."
+spawn ssh $server "cd $dir && pm2 start npm --name lims-next -- start"
+expect "password:" { send "$password\r" }
+expect eof
+
+puts "\n7. 查看状态..."
+spawn ssh $server "pm2 status"
+expect "password:" { send "$password\r" }
+expect eof
+
+puts "\n========================================="
+puts "  完成！访问 http://8.130.182.148"
+puts "========================================="

@@ -2,6 +2,19 @@ import { prisma } from '@/lib/prisma'
 import { NextRequest } from 'next/server'
 import { withErrorHandler, success, validateRequired } from '@/lib/api-handler'
 
+type PermissionWithChildren = {
+  id: string
+  name: string
+  code: string
+  type: number
+  parentId: string | null
+  sort: number
+  status: number
+  createdAt: Date
+  updatedAt: Date
+  children?: PermissionWithChildren[]
+}
+
 // 获取权限列表
 export const GET = withErrorHandler(async (request: NextRequest) => {
   const { searchParams } = new URL(request.url)
@@ -18,10 +31,10 @@ export const GET = withErrorHandler(async (request: NextRequest) => {
 
   // 如果需要树形结构
   if (tree) {
-    const buildTree = (items: typeof permissions, parentId: string | null = null): typeof permissions => {
+    const buildTree = (items: typeof permissions, parentId: string | null = null): PermissionWithChildren[] => {
       return items
-        .filter(item => item.parentId === parentId)
-        .map(item => ({
+        .filter((item: any) => item.parentId === parentId)
+        .map((item: any) => ({
           ...item,
           children: buildTree(items, item.id),
         }))

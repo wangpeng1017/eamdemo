@@ -94,24 +94,24 @@ export const GET = withErrorHandler(async (request: NextRequest) => {
   return success({
     ...overview,
     monthlyTrend,
-    topClients: topClients.map((c) => ({
+    topClients: topClients.map((c: any) => ({
       clientName: c.clientName || '未知',
       count: c._count.id,
     })),
-    sampleStatusDist: sampleStatusDist.map((s) => ({
+    sampleStatusDist: sampleStatusDist.map((s: any) => ({
       status: s.status,
       count: s._count.id,
     })),
-    taskStatusDist: taskStatusDist.map((t) => ({
+    taskStatusDist: taskStatusDist.map((t: any) => ({
       status: t.status,
       count: t._count.id,
     })),
-    assigneeStats: assigneeStats.map((a) => ({
+    assigneeStats: assigneeStats.map((a: any) => ({
       assignee: a.assignedToId || '未分配',
       count: a._count.id,
     })),
     financeStats,
-    deviceStats: deviceStats.map((d) => ({
+    deviceStats: deviceStats.map((d: any) => ({
       status: d.status,
       count: d._count.id,
     })),

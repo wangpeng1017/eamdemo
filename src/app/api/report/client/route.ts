@@ -60,7 +60,7 @@ export const GET = withErrorHandler(async (request: NextRequest) => {
     total,
     page,
     pageSize,
-    stats: stats.reduce((acc, item) => {
+    stats: stats.reduce((acc: any, item: any) => {
       acc[item.status] = item._count
       return acc
     }, {} as Record<string, number>),
@@ -84,7 +84,7 @@ export const POST = withErrorHandler(async (request: NextRequest) => {
       where: { id: { in: data.taskReportIds } },
       select: { reportNo: true },
     })
-    taskReportNos = taskReports.map(r => r.reportNo)
+    taskReportNos = taskReports.map((r: any) => r.reportNo)
   }
 
   const report = await prisma.clientReport.create({
