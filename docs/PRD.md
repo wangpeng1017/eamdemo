@@ -1,7 +1,8 @@
 # LIMS 实验室信息管理系统 - 产品需求文档 (PRD)
 
-> **版本**: 1.3
+> **版本**: 1.4
 > **最后更新**: 2026-01-08
+> **本次更新**: 委托合同和委托单功能增强
 > **文档类型**: 详细需求规格说明书
 > **技术栈变更**: 已迁移至 Next.js 全栈方案
 > **审批流系统**: 统一可配置审批流系统 v1.1
@@ -337,10 +338,10 @@ LIMS（Laboratory Information Management System）是一套面向检测实验室
 | 编辑 | status = "draft" | 打开编辑表单 |
 | 签订 | status = "draft" | 状态改为"signed" |
 | 开始执行 | status = "signed" | 状态改为"executing" |
-| 生成委托单 | status = "signed" 或 "executing" | 跳转委托单页面 |
+| 生成委托单 | status = "signed" 或 "executing" | 跳转委托单页面并自动填充信息 |
+| 下载PDF | 选中一条记录 | 导出完整合同PDF文件 |
 | 完成 | status = "executing" | 状态改为"completed" |
 | 终止 | status != "completed" | 状态改为"terminated" |
-| 生成PDF | 任意状态 | 下载合同PDF |
 | 上传附件 | 任意状态 | 上传盖章合同等文件 |
 
 ---
@@ -395,6 +396,47 @@ LIMS（Laboratory Information Management System）是一套面向检测实验室
 | 分配（内部） | 项目status = "pending" | 打开分配抽屉，选择内部人员 |
 | 分配（外包） | 项目status = "pending" | 打开分配抽屉，选择外包供应商 |
 | 生成外部链接 | 已选中记录 | 生成客户填写链接 |
+| 关联合同跳转 | 合同编号列存在 | 点击跳转到对应合同详情 |
+
+**外部链接功能**：
+
+*功能描述*：为委托单生成外部链接，供客户在线填写样品信息和检测要求。
+
+*使用场景*：
+- 客户需要补充样品详细信息
+- 客户需要提供特殊检测要求
+- 减少电话沟通，提高信息准确性
+
+*功能流程*：
+1. 业务员在委托单列表点击"外部链接"按钮
+2. 系统生成唯一 token（64位十六进制）和7天有效期
+3. 链接自动复制到剪贴板
+4. 业务员将链接发送给客户
+5. 客户通过链接访问填写页面（无需登录）
+6. 客户填写样品信息、检测项目、特殊要求
+7. 提交后数据直接更新到委托单
+
+*客户填写页面字段*：
+
+| 字段名 | 字段标识 | 类型 | 必填 | 说明 |
+|--------|----------|------|------|------|
+| 委托单号 | entrustmentNo | string | - | 只读显示 |
+| 委托单位 | clientName | string | - | 只读显示 |
+| 样品名称 | sampleName | string | 是 | 样品名称 |
+| 规格型号 | sampleModel | string | 否 | 样品规格 |
+| 材质牌号 | sampleMaterial | string | 否 | 材质信息 |
+| 样品数量 | sampleQuantity | number | 是 | 样品数量 |
+| 特殊要求 | specialRequirements | text | 否 | 特殊检测要求 |
+| 其他需求 | otherRequirements | text | 否 | 其他补充说明 |
+| 验证码 | captcha | string | 是 | 4位数字验证码 |
+
+*技术实现*：
+- Token 存储：Entrustment.remark 字段（JSON格式）
+- 外部页面路径：`/external/entrustment/[token]`
+- API 路由：
+  - `POST /api/entrustment/[id]/external-link` - 生成链接
+  - `GET /api/external/entrustment/validate?token=xxx` - 验证token
+  - `POST /api/external/entrustment/submit` - 提交数据
 
 ---
 
