@@ -25,30 +25,39 @@ fi
 
 # 1. 本地构建
 echo ""
-echo "[1/4] 本地构建项目..."
+echo "[1/5] 本地构建项目..."
 npm run build
 
-# 2. 打包 standalone 目录
+# 2. 打包 standalone 目录（包含 static）
 echo ""
-echo "[2/4] 打包构建产物..."
+echo "[2/5] 打包构建产物..."
 cd .next
 tar -czf standalone.tar.gz standalone static
 cd ..
 
 # 3. 上传到服务器
 echo ""
-echo "[3/4] 上传到服务器..."
+echo "[3/5] 上传到服务器..."
 sshpass -p "$SERVER_PASS" scp -o StrictHostKeyChecking=no .next/standalone.tar.gz "$SERVER:$REMOTE_DIR/"
 
-# 4. 服务器解压并重启
+# 4. 服务器解压并配置
 echo ""
-echo "[4/4] 服务器部署..."
+echo "[4/5] 服务器解压并配置..."
 sshpass -p "$SERVER_PASS" ssh -o StrictHostKeyChecking=no "$SERVER" "cd $REMOTE_DIR && \
   rm -rf .next/standalone .next/static 2>/dev/null || true && \
   tar -xzf standalone.tar.gz -C .next && \
+  cp -r .next/static .next/standalone/.next/ && \
   cp -r public .next/standalone/ 2>/dev/null || true && \
-  rm standalone.tar.gz && \
-  pm2 restart lims-next"
+  cp .env .next/standalone/ 2>/dev/null || true && \
+  rm standalone.tar.gz"
+
+# 5. 重启服务（使用 PORT 环境变量）
+echo ""
+echo "[5/5] 重启服务..."
+sshpass -p "$SERVER_PASS" ssh -o StrictHostKeyChecking=no "$SERVER" "cd $REMOTE_DIR/.next/standalone && \
+  pm2 delete lims-next 2>/dev/null || true && \
+  PORT=3001 pm2 start server.js --name lims-next && \
+  pm2 save"
 
 # 清理本地临时文件
 rm -f .next/standalone.tar.gz

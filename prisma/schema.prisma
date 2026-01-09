@@ -3,7 +3,8 @@
 // 根据 PRD 完整更新 - 2026-01-05
 
 generator client {
-  provider = "prisma-client-js"
+  provider      = "prisma-client-js"
+  binaryTargets = ["native", "rhel-openssl-1.1.x"]
 }
 
 datasource db {

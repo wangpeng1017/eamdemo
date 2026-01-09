@@ -4,6 +4,26 @@
 
 ---
 
+## [1.4.1] - 2026-01-10
+
+### 修复
+- **部署脚本优化** (`deploy-fast.sh`)
+  - 修复 standalone 模式下 static 文件未正确复制的问题
+  - 修复 .env 文件未复制到 standalone 目录的问题
+  - 使用 PORT 环境变量正确配置端口
+  - 部署步骤从 4 步优化为 5 步，确保一次部署成功
+
+- **Prisma 跨平台支持** (`prisma/schema.prisma`)
+  - 添加 `binaryTargets = ["native", "rhel-openssl-1.1.x"]`
+  - 解决 Mac 本地构建部署到 Linux 服务器的兼容问题
+
+### 文档
+- **部署文档更新** (`docs/部署文档-阿里云.md`)
+  - 新增「常见部署问题及解决方案」章节
+  - 记录 5 个常见问题：Prisma 跨平台、NEXTAUTH_URL、端口配置、Static 文件 404、.env 未复制
+
+---
+
 ## [1.4.0] - 2026-01-09
 
 ### 性能优化
