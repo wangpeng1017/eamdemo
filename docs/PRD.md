@@ -1415,6 +1415,9 @@ client/src/
   - 新增 `/api/statistics/dashboard` - 工作台统计数据
   - 新增 `/api/todo` - 待办事项列表
   - 新增 `/api/recent-activities` - 最近活动列表
+- ✅ 修复委托单"外部链接"按钮点击无反应
+  - API 使用正确的服务器地址 (8.130.182.148:3001)
+  - 添加剪贴板降级方案，在 HTTP 环境下显示弹窗让用户手动复制
 
 ---
 
