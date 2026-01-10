@@ -123,7 +123,8 @@ export const PUT = withErrorHandler(async (
   if (data.discountTotal !== undefined) updateData.discountTotal = data.discountTotal
   if (data.paymentTerms !== undefined) updateData.clientRemark = data.paymentTerms
   if (data.clientResponse !== undefined) updateData.clientStatus = data.clientResponse
-  // 注意：status 不能通过 PUT 直接修改，需要走审批流程
+  // 归档操作允许修改 status
+  if (isArchiveOnly && data.status === 'archived') updateData.status = 'archived'
 
   const quotation = await prisma.quotation.update({
     where: { id },
