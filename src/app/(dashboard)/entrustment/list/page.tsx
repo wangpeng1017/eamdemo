@@ -622,19 +622,11 @@ export default function EntrustmentListPage() {
     },
     {
       title: '操作',
-      width: 180,
+      width: 120,
       fixed: 'right',
-      render: (_, record) => (
+      render: (_: any, record: Entrustment) => (
         <Space size="small">
           <Button size="small" type="link" onClick={() => handleEdit(record)}>编辑</Button>
-          <Button
-            size="small"
-            type="link"
-            icon={<ShareAltOutlined />}
-            onClick={() => handleGenerateExternalLink(record)}
-          >
-            外部链接
-          </Button>
           <Popconfirm title="确认删除？" onConfirm={() => handleDelete(record.id)}>
             <Button size="small" type="link" danger>删除</Button>
           </Popconfirm>
@@ -648,6 +640,15 @@ export default function EntrustmentListPage() {
       <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <h2 style={{ margin: 0 }}>委托单管理</h2>
         <Space>
+          {/* 外部链接按钮 - 仅当选中一个待受理的委托单时可用 */}
+          {selectedRowKeys.length === 1 && selectedRows[0]?.status === 'pending' && (
+            <Button
+              icon={<ShareAltOutlined />}
+              onClick={() => handleGenerateExternalLink(selectedRows[0])}
+            >
+              生成外部链接
+            </Button>
+          )}
           {selectedRowKeys.length > 0 && (
             <>
               <Dropdown menu={{
