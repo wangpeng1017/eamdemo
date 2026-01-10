@@ -57,17 +57,11 @@ export const GET = withErrorHandler(async (
   const formatted = {
     ...quotation,
     // 客户信息从关联对象获取
-    clientName: quotation.client?.name || quotation.clientCompany,
-    quotationDate: quotation.createdAt,
-    validDays: 30,
-    totalAmount: quotation.subtotal,
-    taxRate: 0.06,
-    taxAmount: quotation.taxTotal ? (Number(quotation.taxTotal) - Number(quotation.subtotal)) : 0,
-    totalWithTax: quotation.taxTotal || quotation.subtotal,
-    discountAmount: quotation.discountTotal ? (Number(quotation.taxTotal || quotation.subtotal) - Number(quotation.discountTotal)) : 0,
-    finalAmount: quotation.discountTotal || quotation.taxTotal || quotation.subtotal,
-    paymentTerms: quotation.clientRemark,
     clientResponse: quotation.clientStatus,
+    sampleModel: quotation.sampleModel,
+    sampleMaterial: quotation.sampleMaterial,
+    sampleQuantity: quotation.sampleQuantity,
+    follower: quotation.follower,
   }
 
   return success(formatted)
@@ -127,6 +121,11 @@ export const PUT = withErrorHandler(async (
   if (data.discountTotal !== undefined) updateData.discountTotal = data.discountTotal
   if (data.paymentTerms !== undefined) updateData.clientRemark = data.paymentTerms
   if (data.clientResponse !== undefined) updateData.clientStatus = data.clientResponse
+  if (data.sampleName !== undefined) updateData.sampleName = data.sampleName
+  if (data.sampleModel !== undefined) updateData.sampleModel = data.sampleModel
+  if (data.sampleMaterial !== undefined) updateData.sampleMaterial = data.sampleMaterial
+  if (data.sampleQuantity !== undefined) updateData.sampleQuantity = data.sampleQuantity
+  if (data.follower !== undefined) updateData.follower = data.follower
   // 归档操作允许修改 status
   if (isArchiveOnly && data.status === 'archived') updateData.status = 'archived'
 

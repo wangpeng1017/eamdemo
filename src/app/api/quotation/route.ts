@@ -45,7 +45,7 @@ export const GET = withErrorHandler(async (request: NextRequest) => {
 
   const formattedList = list.map((item: any) => ({
     ...item,
-    clientName: item.client?.name || item.clientCompany,
+    clientName: item.client?.name || '',
     quotationDate: item.createdAt,
     totalAmount: item.subtotal,
     taxRate: 0.06,
@@ -82,6 +82,10 @@ export const POST = withErrorHandler(async (request: NextRequest) => {
       clientContactPerson: data.clientContactPerson,
       consultationNo: data.consultationNo || data.consultationId,
       sampleName: data.sampleName,
+      sampleModel: data.sampleModel,
+      sampleMaterial: data.sampleMaterial,
+      sampleQuantity: data.sampleQuantity,
+      follower: data.follower,
       clientRemark: data.paymentTerms,
       subtotal,
       taxTotal,

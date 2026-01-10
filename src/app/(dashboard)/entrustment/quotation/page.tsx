@@ -145,11 +145,9 @@ export default function QuotationPage() {
           showSearch
           optionFilterProp="label"
           options={testTemplates.map(t => ({ value: t.name, label: t.name, method: t.method || '' }))}
-          value={value}
+          value={value || undefined}
           onChange={(val, option) => {
-            // 更新检测项目
             updateItem(index, 'serviceItem', val)
-            // 自动填充检测标准
             const method = (option as any)?.method || ''
             if (method) {
               updateItem(index, 'methodStandard', method)
@@ -728,6 +726,34 @@ export default function QuotationPage() {
             </Col>
           </Row>
 
+          <Divider orientationMargin="0">任务信息</Divider>
+
+          <Row gutter={16}>
+            <Col span={12}>
+              <Form.Item name="sampleName" label="样品名称">
+                <Input placeholder="请输入样品名称" />
+              </Form.Item>
+            </Col>
+            <Col span={12}>
+              <Form.Item name="sampleModel" label="规格型号">
+                <Input placeholder="请输入规格型号" />
+              </Form.Item>
+            </Col>
+          </Row>
+
+          <Row gutter={16}>
+            <Col span={12}>
+              <Form.Item name="sampleMaterial" label="样品材质">
+                <Input placeholder="请输入样品材质" />
+              </Form.Item>
+            </Col>
+            <Col span={12}>
+              <Form.Item name="sampleQuantity" label="预估数量">
+                <InputNumber min={0} style={{ width: '100%' }} placeholder="请输入数量" />
+              </Form.Item>
+            </Col>
+          </Row>
+
           <Divider orientationMargin="0">报价明细</Divider>
 
           <Table
@@ -799,6 +825,14 @@ export default function QuotationPage() {
                 <Input placeholder="如：检测完成后3个工作日内出具报告" />
               </Form.Item>
             </Col>
+            <Col span={12}>
+              <Form.Item name="follower" label="跟进人">
+                <Input placeholder="请输入跟进人" />
+              </Form.Item>
+            </Col>
+          </Row>
+
+          <Row gutter={16}>
             <Col span={12}>
               {editingId && (
                 <Form.Item name="status" label="状态">

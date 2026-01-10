@@ -230,6 +230,10 @@ model Quotation {
   serviceContact String?  @db.VarChar(50) // 业务员
   serviceTel     String?  @db.VarChar(20)
   sampleName     String?  @db.VarChar(200) // 样品名称
+  sampleModel    String?  @db.VarChar(100) // 规格型号
+  sampleMaterial String?  @db.VarChar(100) // 材质信息
+  sampleQuantity Int?                      // 预估数量
+  follower       String?  @db.VarChar(50)  // 跟进人
   clientRemark   String?  @db.Text // 客户特殊要求
   subtotal       Decimal? @db.Decimal(12, 2) // 报价合计
   taxTotal       Decimal? @db.Decimal(12, 2) // 含税合计
