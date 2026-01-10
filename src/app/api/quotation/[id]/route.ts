@@ -88,8 +88,11 @@ export const PUT = withErrorHandler(async (
     notFound('报价单不存在')
   }
 
-  // 只有草稿状态才能编辑
-  if (existing.status !== 'draft') {
+  // 如果只是归档操作，允许任何状态
+  const isArchiveOnly = Object.keys(data).length === 1 && data.status === 'archived'
+
+  // 如果不是归档操作，只有草稿状态才能编辑
+  if (!isArchiveOnly && existing.status !== 'draft') {
     badRequest('只有草稿状态的报价单可以编辑')
   }
 

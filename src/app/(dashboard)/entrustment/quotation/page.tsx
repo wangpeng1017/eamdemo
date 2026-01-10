@@ -389,15 +389,20 @@ export default function QuotationPage() {
       message.warning('只有草稿状态可以提交审批')
       return
     }
-    await fetch(`/api/quotation/${quotation.id}`, {
-      method: 'PUT',
+    const res = await fetch(`/api/quotation/${quotation.id}`, {
+      method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ status: 'pending_sales' }),
+      body: JSON.stringify({ action: 'submit' }),
     })
-    message.success('已提交审批')
-    setSelectedRowKeys([])
-    setSelectedRows([])
-    fetchData()
+    if (res.ok) {
+      message.success('已提交审批')
+      setSelectedRowKeys([])
+      setSelectedRows([])
+      fetchData()
+    } else {
+      const error = await res.json()
+      message.error(error.message || '提交失败')
+    }
   }
 
   // 生成PDF
