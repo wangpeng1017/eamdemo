@@ -14,12 +14,8 @@ export const GET = withErrorHandler(async (request: NextRequest) => {
     const recentEntrustments = await prisma.entrustment.findMany({
         take: 5,
         orderBy: { createdAt: 'desc' },
-        select: {
-            id: true,
-            entrustmentNo: true,
-            clientName: true,
-            status: true,
-            createdAt: true,
+        include: {
+            client: { select: { name: true } },
         },
     })
     recentEntrustments.forEach(e => {
@@ -27,7 +23,7 @@ export const GET = withErrorHandler(async (request: NextRequest) => {
             id: `entrustment-${e.id}`,
             type: 'entrustment',
             no: e.entrustmentNo,
-            client: e.clientName,
+            client: e.client?.name || e.remark || '未知客户',
             status: e.status,
             createdAt: dayjs(e.createdAt).format('YYYY-MM-DD HH:mm'),
         })
@@ -54,12 +50,8 @@ export const GET = withErrorHandler(async (request: NextRequest) => {
     const recentContracts = await prisma.contract.findMany({
         take: 5,
         orderBy: { createdAt: 'desc' },
-        select: {
-            id: true,
-            contractNo: true,
-            clientName: true,
-            status: true,
-            createdAt: true,
+        include: {
+            client: { select: { name: true } },
         },
     })
     recentContracts.forEach(c => {
@@ -67,7 +59,7 @@ export const GET = withErrorHandler(async (request: NextRequest) => {
             id: `contract-${c.id}`,
             type: 'contract',
             no: c.contractNo,
-            client: c.clientName,
+            client: c.client?.name || c.partyACompany || '未知客户',
             status: c.status,
             createdAt: dayjs(c.createdAt).format('YYYY-MM-DD HH:mm'),
         })
