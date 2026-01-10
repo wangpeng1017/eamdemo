@@ -37,16 +37,15 @@ export const GET = withErrorHandler(async (request: NextRequest) => {
   if (keyword) {
     where.OR = [
       { entrustmentNo: { contains: keyword } },
-      { clientName: { contains: keyword } },
       { sampleName: { contains: keyword } },
       { contractNo: { contains: keyword } },
     ]
   }
 
-  if (startDate || endDate) {
+  if ((startDate && startDate.trim()) || (endDate && endDate.trim())) {
     where.createdAt = {}
-    if (startDate) (where.createdAt as Record<string, Date>).gte = new Date(startDate)
-    if (endDate) (where.createdAt as Record<string, Date>).lte = new Date(endDate)
+    if (startDate && startDate.trim()) (where.createdAt as Record<string, Date>).gte = new Date(startDate)
+    if (endDate && endDate.trim()) (where.createdAt as Record<string, Date>).lte = new Date(endDate)
   }
 
   const [list, total] = await Promise.all([

@@ -43,10 +43,10 @@ export const GET = withErrorHandler(async (request: NextRequest) => {
     ]
   }
 
-  if (startDate || endDate) {
+  if ((startDate && startDate.trim()) || (endDate && endDate.trim())) {
     where.receiptDate = {}
-    if (startDate) (where.receiptDate as Record<string, Date>).gte = new Date(startDate)
-    if (endDate) (where.receiptDate as Record<string, Date>).lte = new Date(endDate)
+    if (startDate && startDate.trim()) (where.receiptDate as Record<string, Date>).gte = new Date(startDate)
+    if (endDate && endDate.trim()) (where.receiptDate as Record<string, Date>).lte = new Date(endDate)
   }
 
   const [list, total] = await Promise.all([

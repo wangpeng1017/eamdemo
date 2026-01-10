@@ -23,7 +23,12 @@ export async function GET(request: NextRequest) {
       where,
       include: {
         entrustment: {
-          select: { clientName: true },
+          select: {
+            id: true,
+            client: {
+              select: { name: true }
+            }
+          },
         },
         requisitions: {
           where: { status: { in: ['requisitioned', 'overdue'] } },
@@ -41,7 +46,7 @@ export async function GET(request: NextRequest) {
   // 格式化数据
   const formattedList = list.map((item: any) => ({
     ...item,
-    clientName: item.entrustment?.clientName,
+    clientName: item.entrustment?.client?.name,
   }))
 
   return NextResponse.json({
