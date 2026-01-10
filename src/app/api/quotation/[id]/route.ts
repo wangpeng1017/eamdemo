@@ -88,11 +88,15 @@ export const PUT = withErrorHandler(async (
     notFound('报价单不存在')
   }
 
-  // 如果只是归档操作，允许任何状态
+  // 如果是归档操作，只允许已批准或已拒绝的报价单归档
   const isArchiveOnly = Object.keys(data).length === 1 && data.status === 'archived'
-
+  if (isArchiveOnly) {
+    if (!['approved', 'rejected'].includes(existing.status)) {
+      badRequest('只有已批准或已拒绝的报价单可以归档')
+    }
+  }
   // 如果不是归档操作，只有草稿状态才能编辑
-  if (!isArchiveOnly && existing.status !== 'draft') {
+  else if (existing.status !== 'draft') {
     badRequest('只有草稿状态的报价单可以编辑')
   }
 

@@ -420,6 +420,14 @@ export default function QuotationPage() {
       message.warning('请选择记录')
       return
     }
+    // 检查状态，只有已批准或已拒绝的可以归档
+    const invalidRows = selectedRows.filter(row => !['approved', 'rejected'].includes(row.status))
+    if (invalidRows.length > 0) {
+      const invalidNos = invalidRows.map(r => r.quotationNo).join(', ')
+      message.warning(`以下报价单无法归档：${invalidNos}。当前仅支持“已批准”或“已拒绝”状态的单据进行归档。`)
+      return
+    }
+
     try {
       for (const row of selectedRows) {
         const res = await fetch(`/api/quotation/${row.id}`, {

@@ -13,6 +13,7 @@ export const GET = withErrorHandler(async (request: NextRequest) => {
     // 1. 待审批的报价单
     const pendingQuotations = await prisma.quotation.findMany({
         where: { status: { in: ['pending_sales', 'pending_finance', 'pending_lab'] } },
+        include: { client: true },
         take: 5,
         orderBy: { createdAt: 'desc' },
     })
@@ -31,14 +32,14 @@ export const GET = withErrorHandler(async (request: NextRequest) => {
     const pendingProjects = await prisma.entrustmentProject.findMany({
         where: { status: 'pending' },
         take: 5,
-        include: { entrustment: true },
+        include: { entrustment: { include: { client: true } } },
     })
     pendingProjects.forEach(p => {
         todos.push({
             id: `project-${p.id}`,
             type: 'entrustment',
             title: `检测项目 ${p.name} 待分配`,
-            description: p.entrustment?.clientName || '未知客户',
+            description: p.entrustment?.client?.name || p.entrustment?.clientName || '未知客户',
             priority: 'medium',
             link: '/entrustment/list',
         })
