@@ -62,8 +62,8 @@ export const POST = withErrorHandler(async (
     },
   })
 
-  // 生成外部链接
-  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || request.nextUrl.origin
+  // 生成外部链接 - 使用实际服务器地址
+  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://8.130.182.148:3001'
   const link = `${baseUrl}/external/entrustment/${token}`
 
   return success({

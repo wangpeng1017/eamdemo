@@ -449,9 +449,29 @@ export default function EntrustmentListPage() {
       const json = await res.json()
 
       if (json.success) {
-        // 复制链接到剪贴板
-        navigator.clipboard.writeText(json.data.link)
-        message.success({ content: '外部链接已生成并复制到剪贴板', key: 'externalLink', duration: 3 })
+        const link = json.data.link
+        // 尝试复制链接到剪贴板
+        try {
+          await navigator.clipboard.writeText(link)
+          message.success({ content: '外部链接已生成并复制到剪贴板', key: 'externalLink', duration: 3 })
+        } catch (clipboardError) {
+          // 剪贴板 API 在 HTTP 环境下可能失败，显示弹窗让用户手动复制
+          message.destroy('externalLink')
+          Modal.info({
+            title: '外部链接已生成',
+            content: (
+              <div>
+                <p>请复制以下链接发送给客户：</p>
+                <Input.TextArea value={link} autoSize readOnly style={{ marginTop: 8 }} />
+                <p style={{ marginTop: 8, color: '#666', fontSize: 12 }}>
+                  有效期：7天
+                </p>
+              </div>
+            ),
+            okText: '关闭',
+            width: 500,
+          })
+        }
       } else {
         message.error({ content: json.message || '生成失败', key: 'externalLink' })
       }
