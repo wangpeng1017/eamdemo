@@ -41,6 +41,45 @@ export const PUT = withErrorHandler(async (request: NextRequest, context?: { par
     }
   })
 
+  // 自动更新委托单主表状态
+  const allProjects = await prisma.entrustmentProject.findMany({
+    where: { entrustmentId },
+    select: { status: true }
+  })
+
+  // 获取当前委托单状态
+  const currentEntrustment = await prisma.entrustment.findUnique({
+    where: { id: entrustmentId },
+    select: { status: true }
+  })
+
+  let newEntrustmentStatus = currentEntrustment?.status
+
+  // 1. 如果所有项目都完成，委托单状态变为 completed
+  const allCompleted = allProjects.every(p => p.status === 'completed')
+  if (allCompleted && allProjects.length > 0) {
+    newEntrustmentStatus = 'completed'
+  }
+  // 2. 如果有项目被分配/分包但不是全部完成，委托单状态变为 testing
+  else if (allProjects.some(p => p.status === 'assigned' || p.status === 'subcontracted')) {
+    if (currentEntrustment?.status !== 'completed') {
+      newEntrustmentStatus = 'testing'
+    }
+  }
+  // 3. 如果委托单还是 pending 且有项目被分配，变为 accepted
+  else if (currentEntrustment?.status === 'pending' &&
+    allProjects.some(p => p.status !== 'pending')) {
+    newEntrustmentStatus = 'accepted'
+  }
+
+  // 更新委托单状态（如果有变化）
+  if (newEntrustmentStatus && newEntrustmentStatus !== currentEntrustment?.status) {
+    await prisma.entrustment.update({
+      where: { id: entrustmentId },
+      data: { status: newEntrustmentStatus }
+    })
+  }
+
   return success(updatedProject)
 })
 
