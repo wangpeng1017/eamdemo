@@ -511,19 +511,19 @@ export default function EntrustmentListPage() {
               size="small"
               type="link"
               icon={<TeamOutlined />}
-              disabled={record.status !== 'pending'}
+              disabled={record.status === 'completed' || record.status === 'subcontracted'}
               onClick={() => handleAssign(entrustment.id, record)}
             >
-              分配
+              {record.status === 'assigned' ? '重新分配' : '分配'}
             </Button>
             <Button
               size="small"
               type="link"
               icon={<ShareAltOutlined />}
-              disabled={record.status !== 'pending'}
+              disabled={record.status === 'completed' || record.status === 'assigned'}
               onClick={() => handleSubcontract(entrustment.id, record)}
             >
-              分包
+              {record.status === 'subcontracted' ? '重新分包' : '分包'}
             </Button>
           </Space>
         )
@@ -630,11 +630,13 @@ export default function EntrustmentListPage() {
         <Space>
           {selectedRowKeys.length > 0 && (
             <>
-              <Dropdown menu={{ items: [
-                { key: 'delete', label: '批量删除', danger: true, onClick: handleBatchDelete },
-                { key: 'assign', label: '批量分配', onClick: handleBatchAssign },
-                { key: 'export', label: '批量导出', onClick: handleBatchExport },
-              ] as MenuProps['items'] }}>
+              <Dropdown menu={{
+                items: [
+                  { key: 'delete', label: '批量删除', danger: true, onClick: handleBatchDelete },
+                  { key: 'assign', label: '批量分配', onClick: handleBatchAssign },
+                  { key: 'export', label: '批量导出', onClick: handleBatchExport },
+                ] as MenuProps['items']
+              }}>
                 <Button icon={<DownOutlined />}>
                   批量操作 ({selectedRowKeys.length})
                 </Button>
