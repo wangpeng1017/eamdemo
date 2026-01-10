@@ -211,12 +211,16 @@ export default function ConsultationPage() {
       return
     }
     const consultation = selectedRows[0]
-    const items = (consultation.testItems || []).map(item => ({
-      name: item,
-      standard: '',
-      quantity: 10,
-      unitPrice: 0,
-    }))
+    const items = (consultation.testItems || []).map(item => {
+      // 查找检测项目模板，获取检测标准
+      const template = testTemplates.find(t => t.name === item)
+      return {
+        name: item,
+        standard: template?.method || '',
+        quantity: 10,
+        unitPrice: 0,
+      }
+    })
     setQuoteItems(items)
     generateQuoteForm.setFieldsValue({
       consultationId: consultation.id,
@@ -314,6 +318,15 @@ export default function ConsultationPage() {
   const handleUpdateQuoteItem = (index: number, field: string, value: any) => {
     const newItems = [...quoteItems]
     newItems[index] = { ...newItems[index], [field]: value }
+
+    // 如果选择了检测项目，自动带出检测标准
+    if (field === 'name') {
+      const template = testTemplates.find(t => t.name === value)
+      if (template?.method) {
+        newItems[index].standard = template.method
+      }
+    }
+
     setQuoteItems(newItems)
   }
 
