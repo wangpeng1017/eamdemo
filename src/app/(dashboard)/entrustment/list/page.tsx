@@ -640,15 +640,15 @@ export default function EntrustmentListPage() {
       <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <h2 style={{ margin: 0 }}>委托单管理</h2>
         <Space>
-          {/* 外部链接按钮 - 仅当选中一个待受理的委托单时可用 */}
-          {selectedRowKeys.length === 1 && selectedRows[0]?.status === 'pending' && (
-            <Button
-              icon={<ShareAltOutlined />}
-              onClick={() => handleGenerateExternalLink(selectedRows[0])}
-            >
-              生成外部链接
-            </Button>
-          )}
+          {/* 外部链接按钮 - 始终显示，仅对待受理状态可点击 */}
+          <Button
+            icon={<ShareAltOutlined />}
+            disabled={selectedRowKeys.length !== 1 || selectedRows[0]?.status !== 'pending'}
+            onClick={() => selectedRows[0] && handleGenerateExternalLink(selectedRows[0])}
+            title={selectedRowKeys.length !== 1 ? '请选择一个委托单' : selectedRows[0]?.status !== 'pending' ? '仅待受理状态可生成外部链接' : ''}
+          >
+            生成外部链接
+          </Button>
           {selectedRowKeys.length > 0 && (
             <>
               <Dropdown menu={{

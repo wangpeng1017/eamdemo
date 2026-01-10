@@ -47,10 +47,12 @@ export const POST = withErrorHandler(async (
     }
   }
 
-  // 更新 remark 字段，存储外部链接信息
+  // 更新 remark 字段并自动变更状态为"已受理"
   await prisma.entrustment.update({
     where: { id },
     data: {
+      // 自动将状态从 pending 变为 accepted（已受理）
+      status: entrustment.status === 'pending' ? 'accepted' : entrustment.status,
       remark: JSON.stringify({
         ...remarkData,
         externalLink: {
