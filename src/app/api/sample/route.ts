@@ -60,8 +60,13 @@ export const GET = withErrorHandler(async (request: NextRequest) => {
           select: {
             id: true,
             entrustmentNo: true,
-            clientName: true,
             sampleName: true,
+            client: {
+              select: {
+                id: true,
+                name: true,
+              },
+            },
           },
         },
         createdBy: {

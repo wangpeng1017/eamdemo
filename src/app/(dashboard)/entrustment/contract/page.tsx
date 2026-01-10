@@ -37,6 +37,16 @@ interface Contract {
   createdAt: string
 }
 
+interface Client {
+  id: string
+  name: string
+  shortName?: string
+  contact?: string
+  phone?: string
+  email?: string
+  address?: string
+}
+
 const STATUS_OPTIONS = [
   { value: 'draft', label: '草稿' },
   { value: 'signed', label: '已签订' },
@@ -58,6 +68,8 @@ export default function ContractPage() {
   const [form] = Form.useForm()
   const [filters, setFilters] = useState<any>({})
   const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([])
+  const [clients, setClients] = useState<Client[]>([])
+  const [clientsLoading, setClientsLoading] = useState(false)
 
   const fetchData = async (p = page, f = filters) => {
     setLoading(true)
@@ -83,7 +95,21 @@ export default function ContractPage() {
     setLoading(false)
   }
 
-  useEffect(() => { fetchData() }, [page])
+  // 获取客户列表（仅已审批通过）
+  const fetchClients = async () => {
+    setClientsLoading(true)
+    try {
+      const res = await fetch('/api/entrustment/client?status=approved&pageSize=1000')
+      const json = await res.json()
+      setClients(json.list || [])
+    } catch (error) {
+      console.error('获取客户列表失败:', error)
+    } finally {
+      setClientsLoading(false)
+    }
+  }
+
+  useEffect(() => { fetchData(); fetchClients() }, [page])
 
   const handleAdd = () => {
     setEditingId(null)
@@ -93,6 +119,19 @@ export default function ContractPage() {
       prepaymentRatio: 30,
     })
     setModalOpen(true)
+  }
+
+  // 客户选择变化时自动填充联系人、电话、地址
+  const handleClientChange = (clientId: string) => {
+    const client = clients.find(c => c.id === clientId)
+    if (client) {
+      form.setFieldsValue({
+        clientName: client.name,
+        clientContact: client.contact || '',
+        clientPhone: client.phone || '',
+        clientAddress: client.address || '',
+      })
+    }
   }
 
   const handleEdit = (record: Contract) => {
@@ -323,8 +362,19 @@ export default function ContractPage() {
         <Form form={form} layout="vertical">
           <Row gutter={16}>
             <Col span={12}>
-              <Form.Item name="clientName" label="客户名称" rules={[{ required: true, message: '请输入客户名称' }]}>
-                <Input placeholder="请输入客户名称" />
+              <Form.Item name="clientId" label="客户名称" rules={[{ required: true, message: '请选择客户' }]}>
+                <Select
+                  showSearch
+                  allowClear
+                  placeholder="选择客户"
+                  loading={clientsLoading}
+                  optionFilterProp="label"
+                  options={clients.map(c => ({ value: c.id, label: c.name }))}
+                  onChange={handleClientChange}
+                />
+              </Form.Item>
+              <Form.Item name="clientName" hidden>
+                <Input />
               </Form.Item>
             </Col>
             <Col span={12}>

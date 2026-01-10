@@ -89,105 +89,6 @@ interface TestTemplate {
   unit?: string
 }
 
-// 检测项目选项将在组件内动态加载
-let testTemplateOptions: { value: string; label: string; method?: string }[] = []
-
-// 明细项表格列定义
-const itemColumns: ColumnsType<QuotationItem> = [
-  {
-    title: '检测项目',
-    dataIndex: 'serviceItem',
-    width: 150,
-    render: (value, record, index) => (
-      <Select
-        showSearch
-        optionFilterProp="label"
-        options={testTemplateOptions}
-        value={value}
-        onChange={(val, option) => {
-          // 更新检测项目
-          updateItem(index, 'serviceItem', val)
-          // 自动填充检测标准
-          const method = (option as any)?.method || ''
-          if (method) {
-            updateItem(index, 'methodStandard', method)
-          }
-        }}
-        style={{ width: '100%' }}
-        placeholder="选择检测项目"
-      />
-    ),
-  },
-  {
-    title: '方法/标准',
-    dataIndex: 'methodStandard',
-    width: 180,
-    render: (value, record, index) => (
-      <Input
-        value={value}
-        onChange={(e) => updateItem(index, 'methodStandard', e.target.value)}
-        placeholder="如：GB/T 228.1-2021"
-      />
-    ),
-  },
-  {
-    title: '数量',
-    dataIndex: 'quantity',
-    width: 80,
-    render: (value, record, index) => (
-      <InputNumber
-        min={1}
-        value={value}
-        onChange={(val) => updateItem(index, 'quantity', val || 1)}
-        style={{ width: '100%' }}
-      />
-    ),
-  },
-  {
-    title: '单价(元)',
-    dataIndex: 'unitPrice',
-    width: 100,
-    render: (value, record, index) => (
-      <InputNumber
-        min={0}
-        precision={2}
-        value={value}
-        onChange={(val) => updateItem(index, 'unitPrice', val || 0)}
-        style={{ width: '100%' }}
-      />
-    ),
-  },
-  {
-    title: '小计(元)',
-    dataIndex: 'totalPrice',
-    width: 100,
-    render: (value) => `¥${Number(value || 0).toFixed(2)}`,
-  },
-  {
-    title: '操作',
-    width: 60,
-    render: (_, record, index) => (
-      <Button
-        size="small"
-        danger
-        icon={<DeleteOutlined />}
-        onClick={() => removeItem(index)}
-      />
-    ),
-  },
-]
-
-// 全局变量用于更新函数
-let updateItemFunc: (index: number, field: string, value: any) => void = () => { }
-let removeItemFunc: (index: number) => void = () => { }
-
-function updateItem(index: number, field: string, value: any) {
-  updateItemFunc(index, field, value)
-}
-
-function removeItem(index: number) {
-  removeItemFunc(index)
-}
 
 export default function QuotationPage() {
   const router = useRouter()
@@ -218,8 +119,7 @@ export default function QuotationPage() {
   const [feedbackForm] = Form.useForm()
   const [contractForm] = Form.useForm()
 
-  // 设置全局更新函数
-  updateItemFunc = (index: number, field: string, value: any) => {
+  const updateItem = (index: number, field: string, value: any) => {
     const newItems = [...items]
     const item = { ...newItems[index] }
     // @ts-ignore - 动态字段更新
@@ -230,9 +130,94 @@ export default function QuotationPage() {
     setItems(newItems)
   }
 
-  removeItemFunc = (index: number) => {
+  const removeItem = (index: number) => {
     setItems(items.filter((_, i) => i !== index))
   }
+
+  // 明细项表格列定义
+  const itemColumns: ColumnsType<QuotationItem> = [
+    {
+      title: '检测项目',
+      dataIndex: 'serviceItem',
+      width: 150,
+      render: (value, record, index) => (
+        <Select
+          showSearch
+          optionFilterProp="label"
+          options={testTemplates.map(t => ({ value: t.name, label: t.name, method: t.method || '' }))}
+          value={value}
+          onChange={(val, option) => {
+            // 更新检测项目
+            updateItem(index, 'serviceItem', val)
+            // 自动填充检测标准
+            const method = (option as any)?.method || ''
+            if (method) {
+              updateItem(index, 'methodStandard', method)
+            }
+          }}
+          style={{ width: '100%' }}
+          placeholder="选择检测项目"
+        />
+      ),
+    },
+    {
+      title: '方法/标准',
+      dataIndex: 'methodStandard',
+      width: 180,
+      render: (value, record, index) => (
+        <Input
+          value={value}
+          onChange={(e) => updateItem(index, 'methodStandard', e.target.value)}
+          placeholder="如：GB/T 228.1-2021"
+        />
+      ),
+    },
+    {
+      title: '数量',
+      dataIndex: 'quantity',
+      width: 80,
+      render: (value, record, index) => (
+        <InputNumber
+          min={1}
+          value={value}
+          onChange={(val) => updateItem(index, 'quantity', val || 1)}
+          style={{ width: '100%' }}
+        />
+      ),
+    },
+    {
+      title: '单价(元)',
+      dataIndex: 'unitPrice',
+      width: 100,
+      render: (value, record, index) => (
+        <InputNumber
+          min={0}
+          precision={2}
+          value={value}
+          onChange={(val) => updateItem(index, 'unitPrice', val || 0)}
+          style={{ width: '100%' }}
+        />
+      ),
+    },
+    {
+      title: '小计(元)',
+      dataIndex: 'totalPrice',
+      width: 100,
+      render: (value) => `¥${Number(value || 0).toFixed(2)}`,
+    },
+    {
+      title: '操作',
+      width: 60,
+      render: (_, record, index) => (
+        <Button
+          size="small"
+          danger
+          icon={<DeleteOutlined />}
+          onClick={() => removeItem(index)}
+        />
+      ),
+    },
+  ]
 
   // 获取客户列表（仅已审批通过）
   const fetchClients = async () => {
@@ -255,12 +240,6 @@ export default function QuotationPage() {
       const json = await res.json()
       const templates = json.list || []
       setTestTemplates(templates)
-      // 更新全局选项，包含 method 字段
-      testTemplateOptions = templates.map((t: TestTemplate) => ({
-        value: t.name,
-        label: t.name,
-        method: t.method || '',
-      }))
     } catch (error) {
       console.error('获取检测项目列表失败:', error)
     }
