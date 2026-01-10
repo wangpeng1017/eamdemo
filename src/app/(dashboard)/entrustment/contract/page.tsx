@@ -248,7 +248,16 @@ export default function ContractPage() {
       ) : '-'
     },
     { title: '客户名称', dataIndex: 'clientName', ellipsis: true },
-    { title: '联系人', dataIndex: 'clientContact', width: 100 },
+    {
+      title: '联系人/电话',
+      width: 140,
+      render: (_, record) => (
+        <div>
+          <div>{record.clientContact || '-'}</div>
+          <div style={{ fontSize: 12, color: '#999' }}>{record.clientPhone || '-'}</div>
+        </div>
+      )
+    },
     {
       title: '合同金额',
       dataIndex: 'amount',
@@ -265,7 +274,7 @@ export default function ContractPage() {
       title: '签订日期',
       dataIndex: 'signDate',
       width: 110,
-      render: (t: string) => t ? dayjs(t).format('YYYY-MM-DD') : '-',
+      render: (t: string) => t ? dayjs(t).format('YYYY-MM-DD HH:mm:ss') : '-',
     },
     {
       title: '合同期限',

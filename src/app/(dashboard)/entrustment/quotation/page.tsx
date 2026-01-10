@@ -8,6 +8,7 @@ import UserSelect from '@/components/UserSelect'
 import type { ColumnsType } from 'antd/es/table'
 import dayjs from 'dayjs'
 import { useRouter } from 'next/navigation'
+import { useSession } from 'next-auth/react'
 
 interface Client {
   id: string
@@ -92,6 +93,7 @@ interface TestTemplate {
 
 export default function QuotationPage() {
   const router = useRouter()
+  const { data: session } = useSession()
   const [data, setData] = useState<Quotation[]>([])
   const [loading, setLoading] = useState(false)
   const [total, setTotal] = useState(0)
@@ -352,15 +354,28 @@ export default function QuotationPage() {
 
   const handleApproval = async () => {
     const values = await approvalForm.validateFields()
-    await fetch(`/api/quotation/${currentQuotation!.id}`, {
+    // 自动附加当前用户作为审批人
+    const submitData = {
+      ...values,
+      approver: session?.user?.id,
+      submitterName: session?.user?.name || session?.user?.email || '未知用户'
+    }
+
+    const res = await fetch(`/api/quotation/${currentQuotation!.id}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(values),
+      body: JSON.stringify(submitData),
     })
-    message.success('审批提交成功')
-    setApprovalModalOpen(false)
-    fetchData()
-    setViewDrawerOpen(false)
+
+    if (res.ok) {
+      message.success('审批提交成功')
+      setApprovalModalOpen(false)
+      fetchData()
+      setViewDrawerOpen(false)
+    } else {
+      const error = await res.json()
+      message.error(error.message || '审批失败')
+    }
   }
 
   const handleClientResponse = async (response: string) => {
@@ -382,6 +397,13 @@ export default function QuotationPage() {
       message.warning('请选择一条记录')
       return
     }
+
+    // 检查用户登录状态
+    if (!session?.user?.id) {
+      message.error('无法获取用户信息，请刷新页面或重新登录')
+      return
+    }
+
     const quotation = selectedRows[0]
     if (quotation.status !== 'draft') {
       message.warning('只有草稿状态可以提交审批')
@@ -390,7 +412,12 @@ export default function QuotationPage() {
     const res = await fetch(`/api/quotation/${quotation.id}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action: 'submit' }),
+      body: JSON.stringify({
+        action: 'submit',
+        approver: session.user.id,
+        submitterName: session.user.name || session.user.email || '未知用户',
+        comment: ''
+      }),
     })
     if (res.ok) {
       message.success('已提交审批')
@@ -562,7 +589,16 @@ export default function QuotationPage() {
       ellipsis: true,
       render: (client: Client) => client?.name || '-'
     },
-    { title: '联系人', dataIndex: 'clientContactPerson', width: 100 },
+    {
+      title: '联系人/电话',
+      width: 130,
+      render: (_, record) => (
+        <div>
+          <div>{record.clientContactPerson || '-'}</div>
+          <div style={{ fontSize: 12, color: '#999' }}>{record.client?.phone || '-'}</div>
+        </div>
+      )
+    },
     {
       title: '报价金额',
       dataIndex: 'finalAmount',
@@ -584,25 +620,65 @@ export default function QuotationPage() {
     {
       title: '报价日期',
       dataIndex: 'quotationDate',
-      width: 120,
-      render: (t: string) => dayjs(t).format('YYYY-MM-DD'),
+      width: 160,
+      render: (t: string) => dayjs(t).format('YYYY-MM-DD HH:mm:ss'),
     },
     {
       title: '操作',
-      width: 200,
+      width: 250,
       fixed: 'right',
-      render: (_, record) => (
-        <Space size="small">
-          <Button size="small" icon={<EyeOutlined />} onClick={() => handleView(record)}>查看</Button>
-          <Button size="small" icon={<EditOutlined />} onClick={() => handleEdit(record)} />
-          <Popconfirm
-            title="确认删除"
-            onConfirm={() => handleDelete(record.id)}
-          >
-            <Button size="small" danger icon={<DeleteOutlined />} />
-          </Popconfirm>
-        </Space>
-      ),
+      render: (_, record) => {
+        const canAudit = (
+          (record.status === 'pending_sales' && session?.user?.roles?.includes('sales_manager')) ||
+          (record.status === 'pending_finance' && session?.user?.roles?.includes('finance')) ||
+          (record.status === 'pending_lab' && session?.user?.roles?.includes('lab_director'))
+        )
+
+        return (
+          <Space size="small">
+            <Button
+              size="small"
+              icon={<EyeOutlined />}
+              onClick={() => handleView(record)}
+            >
+              查看
+            </Button>
+            <Button
+              size="small"
+              icon={<EditOutlined />}
+              onClick={() => handleEdit(record)}
+              disabled={record.status !== 'draft'}
+            >
+              编辑
+            </Button>
+            <Popconfirm
+              title="确认删除"
+              onConfirm={() => handleDelete(record.id)}
+              disabled={record.status !== 'draft'}
+            >
+              <Button
+                size="small"
+                danger
+                icon={<DeleteOutlined />}
+                disabled={record.status !== 'draft'}
+              />
+            </Popconfirm>
+            {canAudit && (
+              <Button
+                type="primary"
+                size="small"
+                onClick={() => {
+                  setCurrentQuotation(record)
+                  approvalForm.resetFields()
+                  setApprovalModalOpen(true)
+                }}
+              >
+                审核
+              </Button>
+            )}
+          </Space>
+        )
+      },
     },
   ]
 
@@ -976,8 +1052,9 @@ export default function QuotationPage() {
       </Drawer>
 
       {/* 审批模态框 */}
+      {/* 审批模态框 */}
       <Modal
-        title="提交审批"
+        title="审批"
         open={approvalModalOpen}
         onOk={handleApproval}
         onCancel={() => setApprovalModalOpen(false)}
@@ -991,9 +1068,6 @@ export default function QuotationPage() {
           </Form.Item>
           <Form.Item name="comment" label="审批意见">
             <Input.TextArea rows={4} placeholder="请输入审批意见" />
-          </Form.Item>
-          <Form.Item name="approver" label="审批人" rules={[{ required: true }]}>
-            <UserSelect placeholder="请选择审批人" />
           </Form.Item>
         </Form>
       </Modal>

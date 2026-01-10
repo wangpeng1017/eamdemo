@@ -44,13 +44,14 @@ export const GET = withErrorHandler(async (request: NextRequest) => {
       quotation: {
         select: {
           quotationNo: true,
-          totalAmount: true,
+          subtotal: true,
+          taxTotal: true,
         },
       },
       contract: {
         select: {
           contractNo: true,
-          amount: true,
+          contractAmount: true,
         },
       },
       client: {

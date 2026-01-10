@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { Layout, Menu, Avatar, Dropdown, Button, theme } from 'antd'
+import { Layout, Menu, Avatar, Dropdown, Button, theme, message } from 'antd'
 import {
   DashboardOutlined,
   FileTextOutlined,
@@ -21,7 +21,7 @@ import {
 } from '@ant-design/icons'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { signOut } from 'next-auth/react'
+import { signOut, useSession } from 'next-auth/react'
 
 const { Header, Sider, Content } = Layout
 
@@ -140,6 +140,7 @@ const menuItems = [
 ]
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
+  const session = useSession()
   const [collapsed, setCollapsed] = useState(false)
   const pathname = usePathname()
   const { token: { colorBgContainer, borderRadiusLG } } = theme.useToken()
@@ -222,10 +223,18 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             icon={collapsed ? <MenuUnfoldOutlined /> : <MenuFoldOutlined />}
             onClick={() => setCollapsed(!collapsed)}
           />
-          <Dropdown menu={{ items: userMenuItems }} placement="bottomRight">
+          <Dropdown menu={{
+            items: userMenuItems,
+            onClick: ({ key }) => {
+              if (key === 'profile') {
+                // TODO: Implement profile page
+                message.info('个人中心功能开发中')
+              }
+            }
+          }} placement="bottomRight">
             <div style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8 }}>
-              <Avatar icon={<UserOutlined />} />
-              <span>管理员</span>
+              <Avatar icon={<UserOutlined />} src={session?.data?.user?.image} />
+              <span>{session?.data?.user?.name || '用户'}</span>
             </div>
           </Dropdown>
         </Header>

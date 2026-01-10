@@ -202,7 +202,7 @@ export const PATCH = withErrorHandler(async (
     'action'
   )
 
-  const { comment, approver } = data
+  const { comment, approver, submitterName } = data
 
   // 获取当前报价
   const quotation = await prisma.quotation.findUnique({
@@ -225,13 +225,17 @@ export const PATCH = withErrorHandler(async (
         badRequest('只有草稿状态的报价单可以提交审批')
       }
 
+      if (!approver) {
+        badRequest('提交人信息缺失')
+      }
+
       const { approvalEngine } = await import('@/lib/approval/engine')
       const instance = await approvalEngine.submit({
         bizType: 'quotation',
         bizId: id,
         flowCode: 'QUOTATION_APPROVAL',
-        submitterId: approver || 'admin',
-        submitterName: '当前用户',
+        submitterId: approver,
+        submitterName: submitterName || '未知用户',
       })
 
       newStatus = 'pending_sales' // 保持冗余状态同步

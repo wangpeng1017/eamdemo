@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import { Table, Card, Tabs, Tag, Button, Space, Tooltip, message } from 'antd'
 import { CheckCircleOutlined, CloseOutlined, EyeOutlined } from '@ant-design/icons'
 import type { ColumnsType } from 'antd/es/table'
+import { useSession } from 'next-auth/react'
 
 interface ApprovalInstance {
   id: string
@@ -20,11 +21,12 @@ interface ApprovalInstance {
   // 关联的业务数据
   quotation?: {
     quotationNo: string
-    totalAmount: string
+    subtotal: string
+    taxTotal: string
   }
   contract?: {
     contractNo: string
-    amount: string
+    contractAmount: string
   }
   client?: {
     name: string
@@ -33,30 +35,58 @@ interface ApprovalInstance {
 }
 
 export default function ApprovalPage() {
+  const { data: session } = useSession()
   const [loading, setLoading] = useState(false)
   const [pendingApprovals, setPendingApprovals] = useState<ApprovalInstance[]>([])
   const [myApprovals, setMyApprovals] = useState<ApprovalInstance[]>([])
   const [activeTab, setActiveTab] = useState('pending')
 
   useEffect(() => {
-    fetchApprovals()
-  }, [])
+    if (session?.user) {
+      fetchApprovals()
+    }
+  }, [session])
 
   const fetchApprovals = async () => {
     setLoading(true)
     try {
       // 获取待我审批的数据
+      // 这里的逻辑需要在前端过滤，或者后端支持根据角色筛选
+      // 目前简单逻辑：
+      // 1. 获取所有 pending 状态的审批
+      // 2. 根据当前用户角色过滤:
+      //    - sales_manager -> step 1
+      //    - finance -> step 2
+      //    - lab_director -> step 3
       const pendingRes = await fetch('/api/approval?status=pending')
       if (pendingRes.ok) {
-        const data = await pendingRes.json()
-        setPendingApprovals(data.data || [])
+        const json = await pendingRes.json()
+        const allPending = json.data || []
+
+        const userRoles = session?.user?.roles || []
+
+        // 过滤逻辑
+        const myPending = allPending.filter((item: ApprovalInstance) => {
+          // 如果是管理员，可以看到所有（便于测试）
+          if (userRoles.includes('admin')) return true
+
+          if (item.currentStep === 1 && userRoles.includes('sales_manager')) return true
+          if (item.currentStep === 2 && userRoles.includes('finance')) return true
+          if (item.currentStep === 3 && userRoles.includes('lab_director')) return true
+
+          return false
+        })
+
+        setPendingApprovals(myPending)
       }
 
       // 获取我提交的审批
-      const myRes = await fetch('/api/approval?submitterId=admin')
-      if (myRes.ok) {
-        const data = await myRes.json()
-        setMyApprovals(data.data || [])
+      if (session?.user?.id) {
+        const myRes = await fetch(`/api/approval?submitterId=${session.user.id}`)
+        if (myRes.ok) {
+          const data = await myRes.json()
+          setMyApprovals(data.data || [])
+        }
       }
     } catch (error) {
       console.error('获取审批列表失败:', error)
@@ -73,8 +103,8 @@ export default function ApprovalPage() {
         body: JSON.stringify({
           action,
           comment: '',
-          approverId: 'admin', // 简化处理，实际应从 auth 获取
-          approverName: '系统管理员'
+          approverId: session?.user?.id,
+          approverName: session?.user?.name || '审批人'
         }),
       })
       if (response.ok) {
@@ -124,10 +154,11 @@ export default function ApprovalPage() {
       key: 'bizId',
       render: (bizId: string, record) => {
         if (record.bizType === 'quotation' && record.quotation) {
-          return record.quotation.quotationNo
+          const amount = Number(record.quotation.subtotal || 0) + Number(record.quotation.taxTotal || 0)
+          return `${record.quotation.quotationNo} (¥${amount.toFixed(2)})`
         }
         if (record.bizType === 'contract' && record.contract) {
-          return record.contract.contractNo
+          return `${record.contract.contractNo} (¥${Number(record.contract.contractAmount || 0).toFixed(2)})`
         }
         if (record.bizType === 'client' && record.client) {
           return record.client.name

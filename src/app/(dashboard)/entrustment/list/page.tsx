@@ -42,6 +42,9 @@ interface Entrustment {
   status: string
   createdAt: string
   projects: EntrustmentProject[]
+  client?: {
+    phone?: string
+  }
 }
 
 interface User {
@@ -574,12 +577,22 @@ export default function EntrustmentListPage() {
       render: (no: string) => <a style={{ color: '#1890ff' }}>{no}</a>
     },
     { title: '委托单位', dataIndex: 'clientName', ellipsis: true },
+    {
+      title: '联系人/电话',
+      width: 140,
+      render: (_, record) => (
+        <div>
+          <div>{record.contactPerson || '-'}</div>
+          <div style={{ fontSize: 12, color: '#999' }}>{record.client?.phone || '-'}</div>
+        </div>
+      )
+    },
     { title: '样品名称', dataIndex: 'sampleName', ellipsis: true },
     {
       title: '订单时间',
-      dataIndex: 'sampleDate',
-      width: 110,
-      render: (t: string) => t ? dayjs(t).format('YYYY-MM-DD') : '-'
+      dataIndex: 'createdAt',
+      width: 160,
+      render: (t: string) => t ? dayjs(t).format('YYYY-MM-DD HH:mm:ss') : '-'
     },
     {
       title: '检测项目',
