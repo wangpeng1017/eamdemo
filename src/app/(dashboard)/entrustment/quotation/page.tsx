@@ -420,17 +420,27 @@ export default function QuotationPage() {
       message.warning('请选择记录')
       return
     }
-    for (const row of selectedRows) {
-      await fetch(`/api/quotation/${row.id}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status: 'archived' }),
-      })
+    try {
+      for (const row of selectedRows) {
+        const res = await fetch(`/api/quotation/${row.id}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ status: 'archived' }),
+        })
+        if (!res.ok) {
+          const error = await res.json()
+          message.error(error.message || `归档失败: ${row.quotationNo}`)
+          return
+        }
+      }
+      message.success('已归档')
+      setSelectedRowKeys([])
+      setSelectedRows([])
+      fetchData()
+    } catch (error) {
+      message.error('归档失败，请重试')
+      console.error('Archive error:', error)
     }
-    message.success('已归档')
-    setSelectedRowKeys([])
-    setSelectedRows([])
-    fetchData()
   }
 
   // 打开客户反馈弹窗
