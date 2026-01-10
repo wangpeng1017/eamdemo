@@ -60,16 +60,11 @@ export const PUT = withErrorHandler(async (request: NextRequest, context?: { par
   if (allCompleted && allProjects.length > 0) {
     newEntrustmentStatus = 'completed'
   }
-  // 2. 如果有项目被分配/分包但不是全部完成，委托单状态变为 testing
-  else if (allProjects.some(p => p.status === 'assigned' || p.status === 'subcontracted')) {
+  // 2. 如果有项目被分配/分包，委托单状态变为 in_progress（进行中）
+  else if (allProjects.some(p => p.status === 'assigned' || p.status === 'subcontracted' || p.status === 'completed')) {
     if (currentEntrustment?.status !== 'completed') {
-      newEntrustmentStatus = 'testing'
+      newEntrustmentStatus = 'in_progress'
     }
-  }
-  // 3. 如果委托单还是 pending 且有项目被分配，变为 accepted
-  else if (currentEntrustment?.status === 'pending' &&
-    allProjects.some(p => p.status !== 'pending')) {
-    newEntrustmentStatus = 'accepted'
   }
 
   // 更新委托单状态（如果有变化）

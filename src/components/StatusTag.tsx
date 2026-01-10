@@ -46,9 +46,8 @@ const STATUS_TEXT_MAP: Record<string, Record<string, string>> = {
     terminated: '已终止',
   },
   entrustment: {
-    pending: '待受理',
-    accepted: '已受理',
-    testing: '检测中',
+    pending: '待分配',
+    in_progress: '进行中',
     completed: '已完成',
   },
   sample: {
@@ -143,8 +142,7 @@ const STATUS_COLOR_MAP: Record<string, Record<string, string>> = {
   },
   entrustment: {
     pending: 'default',
-    accepted: 'processing',
-    testing: 'processing',
+    in_progress: 'processing',
     completed: 'success',
   },
   sample: {
