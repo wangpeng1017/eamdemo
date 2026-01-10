@@ -221,11 +221,21 @@ export const PATCH = withErrorHandler(async (
 
   switch (action) {
     case 'submit':
-      // 提交审批：draft -> pending_sales
+      // 提交审批：使用统一审批引擎
       if (quotation.status !== 'draft') {
         badRequest('只有草稿状态的报价单可以提交审批')
       }
-      newStatus = 'pending_sales'
+
+      const { approvalEngine } = await import('@/lib/approval/engine')
+      const instance = await approvalEngine.submit({
+        bizType: 'quotation',
+        bizId: id,
+        flowCode: 'QUOTATION_APPROVAL',
+        submitterId: approver || 'admin',
+        submitterName: '当前用户',
+      })
+
+      newStatus = 'pending_sales' // 保持冗余状态同步
       approvalLevel = 0
       approvalRole = 'submitter'
       break

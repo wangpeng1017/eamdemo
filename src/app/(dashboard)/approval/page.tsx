@@ -68,9 +68,14 @@ export default function ApprovalPage() {
   const handleApprove = async (instanceId: string, action: 'approve' | 'reject') => {
     try {
       const response = await fetch(`/api/approval/${instanceId}`, {
-        method: 'POST',
+        method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action, comment: '' }),
+        body: JSON.stringify({
+          action,
+          comment: '',
+          approverId: 'admin', // 简化处理，实际应从 auth 获取
+          approverName: '系统管理员'
+        }),
       })
       if (response.ok) {
         message.success(action === 'approve' ? '审批通过' : '已驳回')
