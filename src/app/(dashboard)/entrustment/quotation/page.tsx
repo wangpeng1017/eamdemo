@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { Table, Button, Space, Modal, Form, Input, InputNumber, Select, DatePicker, message, Drawer, Tag, Row, Col, Divider, Popconfirm, Tabs, Descriptions, Card, Radio, Upload } from 'antd'
 import { PlusOutlined, EditOutlined, DeleteOutlined, EyeOutlined, CheckOutlined, CloseOutlined, SendOutlined, FilePdfOutlined, FolderOutlined, FileAddOutlined, MessageOutlined, UploadOutlined } from '@ant-design/icons'
 import { StatusTag } from '@/components/StatusTag'
+import { ApprovalTimeline } from '@/components/ApprovalTimeline'
 import UserSelect from '@/components/UserSelect'
 import type { ColumnsType } from 'antd/es/table'
 import dayjs from 'dayjs'
@@ -1024,26 +1025,34 @@ export default function QuotationPage() {
                 label: '审批记录',
                 children: (
                   <div>
-                    {currentQuotation.approvals && currentQuotation.approvals.length > 0 ? (
-                      currentQuotation.approvals.map((record) => (
-                        <Card key={record.id} size="small" style={{ marginBottom: 12 }}>
-                          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
-                            <Tag color={record.action === 'approve' ? 'success' : 'error'}>
-                              {record.action === 'approve' ? '通过' : '拒绝'}
-                            </Tag>
-                            <span style={{ fontSize: 12, color: '#999' }}>
-                              {dayjs(record.timestamp).format('YYYY-MM-DD HH:mm')}
-                            </span>
-                          </div>
-                          <div><strong>审批人：</strong>{record.approver}</div>
-                          <div><strong>角色：</strong>{record.role}</div>
-                          <div><strong>级别：</strong>第{record.level}级</div>
-                          {record.comment && <div><strong>审批意见：</strong>{record.comment}</div>}
-                        </Card>
-                      ))
-                    ) : (
-                      <div style={{ textAlign: 'center', padding: 20, color: '#999' }}>暂无审批记录</div>
-                    )}
+                    <ApprovalTimeline
+                      nodes={[
+                        { step: 1, name: '销售审批', role: '销售经理' },
+                        { step: 2, name: '财务审批', role: '财务经理' }
+                      ]}
+                      currentStep={
+                        currentQuotation.status === 'pending_sales' ? 1
+                          : currentQuotation.status === 'pending_finance' ? 2
+                            : currentQuotation.status === 'approved' ? 3
+                              : 1 // fallback
+                      }
+                      status={
+                        currentQuotation.status === 'approved' ? 'approved'
+                          : currentQuotation.status === 'rejected' ? 'rejected'
+                            : 'pending'
+                      }
+                      submitterName={currentQuotation.approvals?.find(r => r.role === 'submitter')?.approver || '申请人'}
+                      submittedAt={currentQuotation.createdAt}
+                      records={currentQuotation.approvals?.filter(r => r.role !== 'submitter').map(r => ({
+                        id: r.id,
+                        step: r.level,
+                        action: r.action as 'approve' | 'reject',
+                        approverId: '', // not available in frontend model
+                        approverName: r.approver,
+                        comment: r.comment,
+                        createdAt: r.timestamp
+                      }))}
+                    />
                   </div>
                 ),
               },

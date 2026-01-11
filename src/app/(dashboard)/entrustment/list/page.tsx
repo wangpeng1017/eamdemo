@@ -327,6 +327,7 @@ export default function EntrustmentListPage() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         subcontractor: values.subcontractor,
+        subcontractAssignee: values.subcontractAssignee,
         deadline: values.deadline?.toISOString(),
         status: 'subcontracted',
       })
@@ -942,6 +943,14 @@ export default function EntrustmentListPage() {
               placeholder="选择外包供应商"
               optionFilterProp="label"
               options={suppliers.map(s => ({ value: s.name, label: `${s.code} - ${s.name}` }))}
+            />
+          </Form.Item>
+          <Form.Item name="subcontractAssignee" label="检测人员" rules={[{ required: true, message: '请选择检测人员' }]}>
+            <Select
+              showSearch
+              placeholder="选择检测人员"
+              optionFilterProp="label"
+              options={users.map(u => ({ value: u.name, label: u.name }))}
             />
           </Form.Item>
           <Form.Item name="deadline" label="截止日期">

@@ -339,6 +339,7 @@ model EntrustmentProject {
   status        String      @default("pending") // pending/assigned/subcontracted/completed
   assignTo      String?     @db.VarChar(50) // 内部检测人员
   subcontractor String?     @db.VarChar(200) // 外包供应商
+  subcontractAssignee String? @db.VarChar(50) // 外包检测人员(用户ID或名称)
   deviceId      String?     @db.VarChar(50) // 检测设备ID
   assignDate    DateTime? // 分配日期
   deadline      DateTime? // 完成截止日期

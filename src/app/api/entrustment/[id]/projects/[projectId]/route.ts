@@ -35,6 +35,7 @@ export const PUT = withErrorHandler(async (request: NextRequest, context?: { par
       status: data.status,
       assignTo: data.assignTo || null,
       subcontractor: data.subcontractor || null,
+      subcontractAssignee: data.subcontractAssignee || null,
       deviceId: data.deviceId || null,
       deadline: data.deadline ? new Date(data.deadline) : null,
       assignDate: data.status === 'assigned' || data.status === 'subcontracted' ? new Date() : undefined,
@@ -73,6 +74,44 @@ export const PUT = withErrorHandler(async (request: NextRequest, context?: { par
       where: { id: entrustmentId },
       data: { status: newEntrustmentStatus }
     })
+  }
+
+  // 如果指定了外包检测人员，自动创建/更新检测任务
+  if (data.subcontractAssignee) {
+    const user = await prisma.user.findFirst({
+      where: { name: data.subcontractAssignee }
+    })
+
+    if (user) {
+      // 检查任务是否存在
+      const existingTask = await prisma.testTask.findFirst({
+        where: { projectId: projectId }
+      })
+
+      const taskData = {
+        taskNo: existingTask?.taskNo || `T${new Date().toISOString().slice(0, 10).replace(/-/g, '')}${Math.floor(Math.random() * 1000).toString().padStart(3, '0')}`,
+        entrustmentId: entrustmentId,
+        projectId: projectId,
+        sampleId: null, // 关联样品ID如果需要可以查找
+        sampleName: project.testItems, //以此作为简要描述
+        assignedToId: user.id,
+        isOutsourced: true,
+        status: 'pending',
+        plannedDate: new Date(),
+        dueDate: data.deadline ? new Date(data.deadline) : undefined,
+      }
+
+      if (existingTask) {
+        await prisma.testTask.update({
+          where: { id: existingTask.id },
+          data: taskData
+        })
+      } else {
+        await prisma.testTask.create({
+          data: taskData
+        })
+      }
+    }
   }
 
   return success(updatedProject)
