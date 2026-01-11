@@ -233,32 +233,39 @@ export default function EntrustmentListPage() {
 
   // 提交表单
   const handleSubmit = async () => {
-    const values = await form.validateFields()
-    const submitData = {
-      ...values,
-      sampleDate: values.sampleDate?.toISOString(),
-      projects: values.projects?.filter((p: any) => p.name).map((p: any) => ({
-        ...p,
-        testItems: p.testItems || [],
-        deadline: p.deadline?.toISOString(),
-      })),
-    }
+    try {
+      const values = await form.validateFields()
+      const submitData = {
+        ...values,
+        sampleDate: values.sampleDate?.toISOString() || null,
+        projects: values.projects?.filter((p: any) => p.name).map((p: any) => ({
+          name: p.name,
+          method: p.method || null,
+          testItems: p.testItems || [],
+          deadline: p.deadline?.toISOString() || null,
+        })) || [],
+      }
 
-    const url = editingId ? `/api/entrustment/${editingId}` : '/api/entrustment'
-    const method = editingId ? 'PUT' : 'POST'
+      const url = editingId ? `/api/entrustment/${editingId}` : '/api/entrustment'
+      const method = editingId ? 'PUT' : 'POST'
 
-    const res = await fetch(url, {
-      method,
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(submitData)
-    })
+      const res = await fetch(url, {
+        method,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(submitData)
+      })
 
-    if (res.ok) {
-      message.success(editingId ? '更新成功' : '创建成功')
-      setModalOpen(false)
-      fetchData()
-    } else {
-      message.error('操作失败')
+      if (res.ok) {
+        message.success(editingId ? '更新成功' : '创建成功')
+        setModalOpen(false)
+        fetchData()
+      } else {
+        const errorData = await res.json().catch(() => ({}))
+        message.error(errorData.error || errorData.message || `操作失败(${res.status})`)
+      }
+    } catch (err: any) {
+      console.error('提交失败:', err)
+      message.error(err.message || '提交失败')
     }
   }
 
