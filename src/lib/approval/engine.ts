@@ -269,6 +269,24 @@ export class ApprovalEngine {
 
     switch (bizType) {
       case 'quotation':
+        // 同步更新旧的 status 字段,确保前端显示正确
+        if (approvalStatus === 'pending') {
+          // 根据当前步骤设置对应的待审批状态
+          if (approvalStep === 1) {
+            updateData.status = 'pending_sales'
+          } else if (approvalStep === 2) {
+            updateData.status = 'pending_finance'
+          } else if (approvalStep === 3) {
+            updateData.status = 'pending_lab'
+          }
+        } else if (approvalStatus === 'approved') {
+          updateData.status = 'approved'
+        } else if (approvalStatus === 'rejected') {
+          updateData.status = 'rejected'
+        } else if (approvalStatus === 'cancelled') {
+          updateData.status = 'draft'
+        }
+
         await prisma.quotation.update({
           where: { id: bizId },
           data: updateData,
