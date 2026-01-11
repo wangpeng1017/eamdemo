@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Table, Button, Space, Modal, Form, Input, message } from 'antd'
+import { Table, Button, Space, Modal, Form, Input, message, Popconfirm } from 'antd'
 import { PlusOutlined, EditOutlined, DeleteOutlined } from '@ant-design/icons'
 import type { ColumnsType } from 'antd/es/table'
 
@@ -30,13 +30,8 @@ export default function RolePage() {
       setData(json.data.list || [])
       setTotal(json.data.total || 0)
     } else {
-      if (json.success && json.data) {
-      setData(json.data.list || [])
-      setTotal(json.data.total || 0)
-    } else {
       setData(json.list || [])
       setTotal(json.total || 0)
-    }
     }
     setLoading(false)
   }
@@ -63,6 +58,12 @@ export default function RolePage() {
 
   const handleSubmit = async () => {
     const values = await form.validateFields()
+
+    // 如果新增且未填编码，自动生成
+    if (!editingId && !values.code) {
+      values.code = `role_${Date.now()}`
+    }
+
     const url = editingId ? `/api/role/${editingId}` : '/api/role'
     const method = editingId ? 'PUT' : 'POST'
     await fetch(url, {
@@ -85,7 +86,9 @@ export default function RolePage() {
       render: (_, record) => (
         <Space>
           <Button size="small" icon={<EditOutlined />} onClick={() => handleEdit(record)} />
-          <Button size="small" danger icon={<DeleteOutlined />} onClick={() => handleDelete(record.id)} />
+          <Popconfirm title="确认删除此角色?" onConfirm={() => handleDelete(record.id)}>
+            <Button size="small" danger icon={<DeleteOutlined />} />
+          </Popconfirm>
         </Space>
       )
     }
@@ -112,17 +115,18 @@ export default function RolePage() {
         width={500}
       >
         <Form form={form} layout="vertical">
-          <Form.Item name="name" label="角色名称" rules={[{ required: true }]}>
-            <Input />
+          <Form.Item name="name" label="角色名称" rules={[{ required: true, message: '请输入角色名称' }]}>
+            <Input placeholder="如：销售经理、检测人员" />
           </Form.Item>
-          <Form.Item name="code" label="角色编码" rules={[{ required: true }]}>
-            <Input disabled={!!editingId} placeholder="如：admin, user, tester" />
+          <Form.Item name="code" label="角色编码" tooltip="可选，不填则自动生成">
+            <Input disabled={!!editingId} placeholder="可选，系统自动生成" />
           </Form.Item>
           <Form.Item name="description" label="描述">
-            <Input.TextArea rows={3} />
+            <Input.TextArea rows={3} placeholder="角色职责说明（可选）" />
           </Form.Item>
         </Form>
       </Modal>
     </div>
   )
 }
+

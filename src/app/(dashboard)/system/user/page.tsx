@@ -1,8 +1,8 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Table, Button, Space, Tag, Modal, Form, Input, Select, message } from 'antd'
-import { PlusOutlined, EditOutlined, DeleteOutlined } from '@ant-design/icons'
+import { Table, Button, Space, Tag, Modal, Form, Input, Select, message, Popconfirm } from 'antd'
+import { PlusOutlined, EditOutlined, DeleteOutlined, CheckCircleOutlined, StopOutlined } from '@ant-design/icons'
 import type { ColumnsType } from 'antd/es/table'
 import dayjs from 'dayjs'
 
@@ -34,13 +34,8 @@ export default function UserPage() {
       setData(json.data.list || [])
       setTotal(json.data.total || 0)
     } else {
-      if (json.success && json.data) {
-      setData(json.data.list || [])
-      setTotal(json.data.total || 0)
-    } else {
       setData(json.list || [])
       setTotal(json.total || 0)
-    }
     }
     setLoading(false)
   }
@@ -65,8 +60,29 @@ export default function UserPage() {
     fetchData()
   }
 
+  const handleToggleStatus = async (record: User) => {
+    const newStatus = record.status === 1 ? 0 : 1
+    const res = await fetch(`/api/user/${record.id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ status: newStatus })
+    })
+    if (res.ok) {
+      message.success(newStatus === 1 ? '已启用' : '已禁用')
+      fetchData()
+    } else {
+      message.error('操作失败')
+    }
+  }
+
   const handleSubmit = async () => {
     const values = await form.validateFields()
+
+    // 如果新增且未填用户名，自动生成
+    if (!editingId && !values.username) {
+      values.username = values.phone || values.email?.split('@')[0] || `user_${Date.now()}`
+    }
+
     const url = editingId ? `/api/user/${editingId}` : '/api/user'
     const method = editingId ? 'PUT' : 'POST'
     await fetch(url, {
@@ -80,7 +96,6 @@ export default function UserPage() {
   }
 
   const columns: ColumnsType<User> = [
-    { title: '用户名', dataIndex: 'username', width: 120 },
     { title: '姓名', dataIndex: 'name', width: 100 },
     { title: '手机号', dataIndex: 'phone', width: 130 },
     { title: '邮箱', dataIndex: 'email' },
@@ -97,11 +112,22 @@ export default function UserPage() {
       render: (t: string) => dayjs(t).format('YYYY-MM-DD HH:mm:ss')
     },
     {
-      title: '操作', width: 150,
+      title: '操作', width: 200,
       render: (_, record) => (
         <Space>
           <Button size="small" icon={<EditOutlined />} onClick={() => handleEdit(record)} />
-          <Button size="small" danger icon={<DeleteOutlined />} onClick={() => handleDelete(record.id)} />
+          {record.status === 1 ? (
+            <Popconfirm title="确认禁用此用户?" onConfirm={() => handleToggleStatus(record)}>
+              <Button size="small" icon={<StopOutlined />} danger>禁用</Button>
+            </Popconfirm>
+          ) : (
+            <Popconfirm title="确认启用此用户?" onConfirm={() => handleToggleStatus(record)}>
+              <Button size="small" icon={<CheckCircleOutlined />} style={{ color: '#52c41a', borderColor: '#52c41a' }}>启用</Button>
+            </Popconfirm>
+          )}
+          <Popconfirm title="确认删除?" onConfirm={() => handleDelete(record.id)}>
+            <Button size="small" danger icon={<DeleteOutlined />} />
+          </Popconfirm>
         </Space>
       )
     }
@@ -128,20 +154,17 @@ export default function UserPage() {
         width={500}
       >
         <Form form={form} layout="vertical">
-          <Form.Item name="username" label="用户名" rules={[{ required: true }]}>
-            <Input disabled={!!editingId} />
+          <Form.Item name="name" label="姓名" rules={[{ required: true, message: '请输入姓名' }]}>
+            <Input placeholder="请输入用户姓名" />
           </Form.Item>
-          <Form.Item name="name" label="姓名" rules={[{ required: true }]}>
-            <Input />
+          <Form.Item name="phone" label="手机号" rules={[{ required: true, message: '请输入手机号' }]}>
+            <Input placeholder="请输入手机号（用于登录）" />
           </Form.Item>
-          <Form.Item name="password" label="密码" rules={editingId ? [] : [{ required: true }]}>
+          <Form.Item name="password" label="密码" rules={editingId ? [] : [{ required: true, message: '请输入密码' }]}>
             <Input.Password placeholder={editingId ? '留空则不修改' : '请输入密码'} />
           </Form.Item>
-          <Form.Item name="phone" label="手机号">
-            <Input />
-          </Form.Item>
           <Form.Item name="email" label="邮箱">
-            <Input />
+            <Input placeholder="可选" />
           </Form.Item>
           <Form.Item name="status" label="状态" initialValue={1}>
             <Select options={[
@@ -154,3 +177,4 @@ export default function UserPage() {
     </div>
   )
 }
+
