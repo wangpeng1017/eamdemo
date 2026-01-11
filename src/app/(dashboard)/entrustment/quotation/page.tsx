@@ -537,6 +537,7 @@ export default function QuotationPage() {
     const contractData = {
       quotationId: values.quotationId,
       quotationNo: values.quotationNo,
+      contractName: values.contractName,
       clientName: values.clientName,
       clientContact: values.clientContact,
       amount: values.amount,

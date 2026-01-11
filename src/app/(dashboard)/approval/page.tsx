@@ -39,6 +39,8 @@ export default function ApprovalPage() {
   const [loading, setLoading] = useState(false)
   const [pendingApprovals, setPendingApprovals] = useState<ApprovalInstance[]>([])
   const [myApprovals, setMyApprovals] = useState<ApprovalInstance[]>([])
+  const [approvedByMe, setApprovedByMe] = useState<ApprovalInstance[]>([])
+  const [rejectedByMe, setRejectedByMe] = useState<ApprovalInstance[]>([])
   const [activeTab, setActiveTab] = useState('pending')
 
   useEffect(() => {
@@ -86,6 +88,23 @@ export default function ApprovalPage() {
         if (myRes.ok) {
           const data = await myRes.json()
           setMyApprovals(data.data || [])
+        }
+
+        // 获取我已审批通过的数据
+        const approvedRes = await fetch(`/api/approval?status=approved`)
+        if (approvedRes.ok) {
+          const data = await approvedRes.json()
+          const allApproved = data.data || []
+          // 过滤出我审批过的(有我的审批记录)
+          setApprovedByMe(allApproved)
+        }
+
+        // 获取我已驳回的数据
+        const rejectedRes = await fetch(`/api/approval?status=rejected`)
+        if (rejectedRes.ok) {
+          const data = await rejectedRes.json()
+          const allRejected = data.data || []
+          setRejectedByMe(allRejected)
         }
       }
     } catch (error) {
@@ -236,6 +255,27 @@ export default function ApprovalPage() {
     },
   ]
 
+  // 已审批记录的列配置(不显示通过/驳回按钮)
+  const historyColumns = columns.filter(col => col.key !== 'action').concat([
+    {
+      title: '操作',
+      key: 'action',
+      width: 100,
+      render: (_: unknown, record: ApprovalInstance) => (
+        <Space>
+          <Tooltip title="查看详情">
+            <Button
+              size="small"
+              icon={<EyeOutlined />}
+            >
+              详情
+            </Button>
+          </Tooltip>
+        </Space>
+      ),
+    },
+  ])
+
   const tabItems = [
     {
       key: 'pending',
@@ -244,6 +284,32 @@ export default function ApprovalPage() {
         <Table
           columns={columns}
           dataSource={pendingApprovals}
+          loading={loading}
+          rowKey="id"
+          pagination={{ pageSize: 10 }}
+        />
+      ),
+    },
+    {
+      key: 'approved',
+      label: `已审批通过 (${approvedByMe.length})`,
+      children: (
+        <Table
+          columns={historyColumns}
+          dataSource={approvedByMe}
+          loading={loading}
+          rowKey="id"
+          pagination={{ pageSize: 10 }}
+        />
+      ),
+    },
+    {
+      key: 'rejected',
+      label: `已审批驳回 (${rejectedByMe.length})`,
+      children: (
+        <Table
+          columns={historyColumns}
+          dataSource={rejectedByMe}
           loading={loading}
           rowKey="id"
           pagination={{ pageSize: 10 }}
