@@ -38,12 +38,12 @@ cd ..
 # 3. 上传到服务器
 echo ""
 echo "[3/5] 上传到服务器..."
-sshpass -p "$SERVER_PASS" scp -o StrictHostKeyChecking=no .next/standalone.tar.gz "$SERVER:$REMOTE_DIR/"
+sshpass -p "$SERVER_PASS" scp -o StrictHostKeyChecking=no -o ServerAliveInterval=60 .next/standalone.tar.gz "$SERVER:$REMOTE_DIR/"
 
 # 4. 服务器解压并配置
 echo ""
 echo "[4/5] 服务器解压并配置..."
-sshpass -p "$SERVER_PASS" ssh -o StrictHostKeyChecking=no "$SERVER" "cd $REMOTE_DIR && \
+sshpass -p "$SERVER_PASS" ssh -o StrictHostKeyChecking=no -o ServerAliveInterval=60 "$SERVER" "cd $REMOTE_DIR && \
   rm -rf .next/standalone .next/static 2>/dev/null || true && \
   tar -xzf standalone.tar.gz -C .next && \
   cp -r .next/static .next/standalone/.next/ && \
@@ -54,7 +54,7 @@ sshpass -p "$SERVER_PASS" ssh -o StrictHostKeyChecking=no "$SERVER" "cd $REMOTE_
 # 5. 重启服务（使用 PORT 环境变量）
 echo ""
 echo "[5/5] 重启服务..."
-sshpass -p "$SERVER_PASS" ssh -o StrictHostKeyChecking=no "$SERVER" "cd $REMOTE_DIR/.next/standalone && \
+sshpass -p "$SERVER_PASS" ssh -o StrictHostKeyChecking=no -o ServerAliveInterval=60 "$SERVER" "cd $REMOTE_DIR/.next/standalone && \
   pm2 delete lims-next 2>/dev/null || true && \
   PORT=3001 pm2 start server.js --name lims-next && \
   pm2 save"

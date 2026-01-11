@@ -1,7 +1,5 @@
-'use client'
-
 import { useEffect, useState } from 'react'
-import { Table, Card, Tabs, Tag, Button, Space, Tooltip, message } from 'antd'
+import { Table, Card, Tabs, Tag, Button, Space, Tooltip, message, Modal, Input } from 'antd'
 import { CheckCircleOutlined, CloseOutlined, EyeOutlined } from '@ant-design/icons'
 import type { ColumnsType } from 'antd/es/table'
 import { useSession } from 'next-auth/react'
@@ -43,6 +41,11 @@ export default function ApprovalPage() {
   const [rejectedByMe, setRejectedByMe] = useState<ApprovalInstance[]>([])
   const [activeTab, setActiveTab] = useState('pending')
 
+  // 驳回弹窗状态
+  const [rejectModalOpen, setRejectModalOpen] = useState(false)
+  const [rejectItemId, setRejectItemId] = useState('')
+  const [rejectReason, setRejectReason] = useState('')
+
   useEffect(() => {
     if (session?.user) {
       fetchApprovals()
@@ -53,29 +56,17 @@ export default function ApprovalPage() {
     setLoading(true)
     try {
       // 获取待我审批的数据
-      // 这里的逻辑需要在前端过滤，或者后端支持根据角色筛选
-      // 目前简单逻辑：
-      // 1. 获取所有 pending 状态的审批
-      // 2. 根据当前用户角色过滤:
-      //    - sales_manager -> step 1
-      //    - finance -> step 2
-      //    - lab_director -> step 3
       const pendingRes = await fetch('/api/approval?status=pending')
       if (pendingRes.ok) {
         const json = await pendingRes.json()
         const allPending = json.data || []
-
         const userRoles = session?.user?.roles || []
 
-        // 过滤逻辑
         const myPending = allPending.filter((item: ApprovalInstance) => {
-          // 如果是管理员，可以看到所有（便于测试）
           if (userRoles.includes('admin')) return true
-
           if (item.currentStep === 1 && userRoles.includes('sales_manager')) return true
           if (item.currentStep === 2 && userRoles.includes('finance')) return true
           if (item.currentStep === 3 && userRoles.includes('lab_director')) return true
-
           return false
         })
 
@@ -95,7 +86,6 @@ export default function ApprovalPage() {
         if (approvedRes.ok) {
           const data = await approvedRes.json()
           const allApproved = data.data || []
-          // 过滤出我审批过的(有我的审批记录)
           setApprovedByMe(allApproved)
         }
 
@@ -114,14 +104,14 @@ export default function ApprovalPage() {
     }
   }
 
-  const handleApprove = async (instanceId: string, action: 'approve' | 'reject') => {
+  const handleApprove = async (instanceId: string, action: 'approve' | 'reject', comment: string = '') => {
     try {
       const response = await fetch(`/api/approval/${instanceId}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           action,
-          comment: '',
+          comment,
           approverId: session?.user?.id,
           approverName: session?.user?.name || '审批人'
         }),
@@ -225,7 +215,15 @@ export default function ApprovalPage() {
                   type="primary"
                   size="small"
                   icon={<CheckCircleOutlined />}
-                  onClick={() => handleApprove(record.id, 'approve')}
+                  onClick={() => {
+                    Modal.confirm({
+                      title: '确认审批通过？',
+                      content: '确认后将进入下一环节或完成审批。',
+                      onOk: async () => {
+                        await handleApprove(record.id, 'approve')
+                      }
+                    })
+                  }}
                 >
                   通过
                 </Button>
@@ -235,7 +233,11 @@ export default function ApprovalPage() {
                   danger
                   size="small"
                   icon={<CloseOutlined />}
-                  onClick={() => handleApprove(record.id, 'reject')}
+                  onClick={() => {
+                    setRejectItemId(record.id)
+                    setRejectReason('')
+                    setRejectModalOpen(true)
+                  }}
                 >
                   驳回
                 </Button>
@@ -336,6 +338,27 @@ export default function ApprovalPage() {
       <Card title="审批中心" bordered={false}>
         <Tabs activeKey={activeTab} onChange={setActiveTab} items={tabItems} />
       </Card>
+
+      <Modal
+        title="驳回审批"
+        open={rejectModalOpen}
+        onOk={async () => {
+          if (!rejectReason.trim()) {
+            message.error('请输入驳回原因')
+            return
+          }
+          await handleApprove(rejectItemId, 'reject', rejectReason)
+          setRejectModalOpen(false)
+        }}
+        onCancel={() => setRejectModalOpen(false)}
+      >
+        <Input.TextArea
+          rows={4}
+          placeholder="请输入驳回原因"
+          value={rejectReason}
+          onChange={(e) => setRejectReason(e.target.value)}
+        />
+      </Modal>
     </div>
   )
 }

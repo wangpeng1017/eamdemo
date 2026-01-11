@@ -1,7 +1,5 @@
-'use client'
-
 import { useState, useEffect } from 'react'
-import { Card, Row, Col, Statistic, List, Tag, Typography, Space, Button, message } from 'antd'
+import { Card, Row, Col, Statistic, List, Tag, Typography, Space, Button, message, Modal, Input } from 'antd'
 import {
   FileTextOutlined,
   ExperimentOutlined,
@@ -66,6 +64,11 @@ export default function DashboardPage() {
   const [tasks, setTasks] = useState<TaskItem[]>([])
   const [loading, setLoading] = useState(true)
 
+  // 驳回弹窗状态
+  const [rejectModalOpen, setRejectModalOpen] = useState(false)
+  const [rejectItemId, setRejectItemId] = useState('')
+  const [rejectReason, setRejectReason] = useState('')
+
   useEffect(() => {
     if (session?.user) {
       fetchDashboardData()
@@ -105,7 +108,7 @@ export default function DashboardPage() {
     }
   }
 
-  const handleApprove = async (instanceId: string, action: 'approve' | 'reject') => {
+  const handleApprove = async (instanceId: string, action: 'approve' | 'reject', comment: string = '') => {
     try {
       const res = await fetch(`/api/approval/${instanceId}`, {
         method: 'PATCH',
@@ -114,7 +117,7 @@ export default function DashboardPage() {
           action,
           approverId: session?.user?.id,
           approverName: session?.user?.name || '审批人',
-          comment: '',
+          comment,
         }),
       })
       if (res.ok) {
@@ -279,13 +282,20 @@ export default function DashboardPage() {
                           type="primary"
                           size="small"
                           icon={<CheckOutlined />}
-                          onClick={async (e) => {
+                          onClick={(e) => {
                             e.stopPropagation()
                             if (!session?.user?.id) {
                               message.error('请先登录')
                               return
                             }
-                            await handleApprove(item.id, 'approve')
+
+                            Modal.confirm({
+                              title: '确认审批通过？',
+                              content: '确认后将进入下一环节或完成审批。',
+                              onOk: async () => {
+                                await handleApprove(item.id, 'approve')
+                              }
+                            })
                           }}
                         >
                           通过
@@ -295,13 +305,15 @@ export default function DashboardPage() {
                           size="small"
                           danger
                           icon={<CloseOutlined />}
-                          onClick={async (e) => {
+                          onClick={(e) => {
                             e.stopPropagation()
                             if (!session?.user?.id) {
                               message.error('请先登录')
                               return
                             }
-                            await handleApprove(item.id, 'reject')
+                            setRejectItemId(item.id)
+                            setRejectReason('')
+                            setRejectModalOpen(true)
                           }}
                         >
                           驳回
@@ -412,6 +424,27 @@ export default function DashboardPage() {
           </Card>
         </Col>
       </Row>
+
+      <Modal
+        title="驳回审批"
+        open={rejectModalOpen}
+        onOk={async () => {
+          if (!rejectReason.trim()) {
+            message.error('请输入驳回原因')
+            return
+          }
+          await handleApprove(rejectItemId, 'reject', rejectReason)
+          setRejectModalOpen(false)
+        }}
+        onCancel={() => setRejectModalOpen(false)}
+      >
+        <Input.TextArea
+          rows={4}
+          placeholder="请输入驳回原因"
+          value={rejectReason}
+          onChange={(e) => setRejectReason(e.target.value)}
+        />
+      </Modal>
     </div>
   )
 }
