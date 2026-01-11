@@ -381,6 +381,7 @@ LIMS（Laboratory Information Management System）是一套面向检测实验室
 | 状态 | status | enum | pending/assigned/subcontracted/completed |
 | 分配给 | assignTo | string | 内部检测人员 |
 | 分包商 | subcontractor | string | 外包供应商 |
+| 外包检测员 | subcontractAssignee | string | 外包方具体检测人员 |
 | 使用设备 | deviceId | string | 检测设备ID |
 | 分配日期 | assignDate | date | 任务分配日期 |
 | 截止日期 | deadline | date | 完成截止日期 |
@@ -560,7 +561,7 @@ LIMS（Laboratory Information Management System）是一套面向检测实验室
 | 执行人 | assignedTo | string | 分配的检测人员 |
 | 截止日期 | dueDate | date | 完成截止日期 |
 | 进度 | progress | number | 完成进度百分比 |
-| 是否外包 | isOutsourced | boolean | 是否委外任务 |
+| 是否外包 | isOutsourced | boolean | 是否委外任务（分包时自动创建） |
 
 **分配表单字段**：
 
@@ -900,7 +901,7 @@ LIMS（Laboratory Information Management System）是一套面向检测实验室
 
 #### 3.9.1 审批中心 (ApprovalCenter)
 
-**页面路径**：`/approval`
+**页面路径**：`/approval` （入口已集成至工作台 `/dashboard`）
 
 **功能描述**：统一审批中心，集中处理所有待审批业务和查看我的审批提交。
 
@@ -1426,6 +1427,29 @@ client/src/
 - ✅ 检测数据保存/提交分离
   - 保存：仅保存数据，不变更状态
   - 提交：校验结论必填 → 任务完成 → 项目完成 → 委托单自动完成
+
+---
+
+### v1.6 - 2026-01-11
+
+**功能增强**：
+- ✅ **分包管理升级**
+  - 分包弹窗新增"检测人员"选择字段 (`subcontractAssignee`)
+  - 分包分配后自动为指定人员创建检测任务 (`TestTask`)
+  - 外包任务自动同步至"任务管理 -> 我的任务"列表
+- ✅ **审批可视化**
+  - 新增 `ApprovalTimeline` 组件，直观展示审批节点进度
+  - 报价单详情页应用时间线组件，显示销售→财务→实验室的三级审批状态
+- ✅ **交互体验优化**
+  - 委托单新增/编辑页面由 Drawer 改为 Modal，统一弹窗体验
+  - 委托单检测项目表单简化：移除复杂参数，改为"检测项目"选择 + "方法/标准"自动填充
+  - 工作台新增"待审批" (显示提交时间) 和 "我的任务" 模块
+  - 侧边栏移除"审批中心"入口，功能融合至工作台
+
+**工程化与部署**：
+- ✅ 新增快速部署脚本 `deploy-fast.sh` (本地构建+上传架构)
+- ✅ 数据库新增 `EntrustmentProject.subcontractAssignee` 字段
+- ✅ 修复所有状态标签的国际化显示 (English -> 中文)
 
 ---
 
