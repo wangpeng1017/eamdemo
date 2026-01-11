@@ -835,43 +835,25 @@ export default function EntrustmentListPage() {
                         <Form.Item
                           {...restField}
                           name={[name, 'name']}
-                          label="项目名称"
-                          rules={[{ required: true, message: '请输入项目名称' }]}
-                        >
-                          <Input placeholder="请输入项目名称" />
-                        </Form.Item>
-                      </Col>
-                      <Col span={12}>
-                        <Form.Item
-                          {...restField}
-                          name={[name, 'testItems']}
-                          label="检测参数"
+                          label="检测项目"
+                          rules={[{ required: true, message: '请选择检测项目' }]}
                         >
                           <Select
-                            mode="multiple"
-                            placeholder="选择检测参数"
+                            showSearch
+                            allowClear
+                            placeholder="选择检测项目"
+                            optionFilterProp="label"
                             options={TEST_ITEM_OPTIONS}
                           />
                         </Form.Item>
                       </Col>
-                    </Row>
-                    <Row gutter={16}>
                       <Col span={12}>
                         <Form.Item
                           {...restField}
                           name={[name, 'method']}
-                          label="检测方法"
+                          label="方法/标准"
                         >
                           <Input placeholder="如: GB/T 228.1-2021" />
-                        </Form.Item>
-                      </Col>
-                      <Col span={12}>
-                        <Form.Item
-                          {...restField}
-                          name={[name, 'standard']}
-                          label="判定标准"
-                        >
-                          <Input placeholder="如: GB 17691-2018" />
                         </Form.Item>
                       </Col>
                     </Row>
