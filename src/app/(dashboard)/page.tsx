@@ -1,3 +1,5 @@
+'use client'
+
 import { useState, useEffect } from 'react'
 import { Card, Row, Col, Statistic, List, Tag, Typography, Space, Button, message, Modal, Input } from 'antd'
 import {
