@@ -27,7 +27,7 @@ export const GET = withErrorHandler(async (request: NextRequest) => {
     if (endDate) where.createdAt.lte = new Date(endDate)
   }
 
-  const [list, total] = await Promise.all([
+  const [rawList, total] = await Promise.all([
     prisma.contract.findMany({
       where,
       orderBy: { createdAt: 'desc' },
@@ -37,6 +37,31 @@ export const GET = withErrorHandler(async (request: NextRequest) => {
     }),
     prisma.contract.count({ where }),
   ])
+
+  // 字段映射:将数据库字段名映射为前端期望的字段名
+  const list = rawList.map((contract: any) => ({
+    ...contract,
+    // 前端期望的字段名
+    clientName: contract.partyACompany || contract.client?.name || null,
+    clientContact: contract.partyAContact || null,
+    clientPhone: contract.partyATel || contract.client?.phone || null,
+    clientAddress: contract.partyAAddress || contract.client?.address || null,
+    amount: contract.contractAmount ? Number(contract.contractAmount) : null,
+    prepaymentAmount: contract.advancePaymentAmount ? Number(contract.advancePaymentAmount) : null,
+    prepaymentRatio: contract.hasAdvancePayment && contract.contractAmount && contract.advancePaymentAmount
+      ? Math.round(Number(contract.advancePaymentAmount) / Number(contract.contractAmount) * 100)
+      : null,
+    quotationNo: contract.quotation?.quotationNo || null,
+    startDate: contract.effectiveDate,
+    endDate: contract.expiryDate,
+    // 合同条款字段映射
+    paymentTerms: contract.termsPaymentTerms,
+    deliveryTerms: contract.termsDeliveryTerms,
+    qualityTerms: contract.termsQualityTerms,
+    confidentialityTerms: contract.termsConfidentialityTerms,
+    breachTerms: contract.termsLiabilityTerms,
+    disputeTerms: contract.termsDisputeResolution,
+  }))
 
   return success({ list, total, page, pageSize })
 })
