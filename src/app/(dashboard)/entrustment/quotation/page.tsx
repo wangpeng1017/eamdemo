@@ -990,7 +990,7 @@ export default function QuotationPage() {
                     <Divider orientationMargin="0">报价明细</Divider>
                     <Table
                       columns={[
-                        { title: '服务项目', dataIndex: 'serviceItem' },
+                        { title: '检测项目', dataIndex: 'serviceItem' },
                         { title: '方法/标准', dataIndex: 'methodStandard' },
                         { title: '数量', dataIndex: 'quantity' },
                         { title: '单价', dataIndex: 'unitPrice', render: (v) => `¥${v}` },
