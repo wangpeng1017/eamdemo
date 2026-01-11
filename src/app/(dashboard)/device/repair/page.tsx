@@ -141,7 +141,7 @@ export default function DeviceRepairPage() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         ...values,
-        faultDate: values.faultDate?.format('YYYY-MM-DD'),
+        faultDate: values.faultDate?.format('YYYY-MM-DD HH:mm:ss'),
       }),
     })
     const json = await res.json()
@@ -196,7 +196,7 @@ export default function DeviceRepairPage() {
     { title: '设备名称', dataIndex: ['device', 'name'], ellipsis: true },
     {
       title: '故障日期', dataIndex: 'faultDate', width: 110,
-      render: (t: string) => dayjs(t).format('YYYY-MM-DD'),
+      render: (t: string) => dayjs(t).format('YYYY-MM-DD HH:mm:ss'),
     },
     { title: '故障描述', dataIndex: 'faultDesc', ellipsis: true },
     { title: '维修类型', dataIndex: 'repairType', width: 100 },
@@ -415,7 +415,7 @@ export default function DeviceRepairPage() {
             <Descriptions.Item label="设备编号">{currentRepair.device.code}</Descriptions.Item>
             <Descriptions.Item label="设备名称">{currentRepair.device.name}</Descriptions.Item>
             <Descriptions.Item label="故障日期">
-              {dayjs(currentRepair.faultDate).format('YYYY-MM-DD')}
+              {dayjs(currentRepair.faultDate).format('YYYY-MM-DD HH:mm:ss')}
             </Descriptions.Item>
             <Descriptions.Item label="维修类型">{currentRepair.repairType || '-'}</Descriptions.Item>
             <Descriptions.Item label="故障描述" span={2}>{currentRepair.faultDesc}</Descriptions.Item>
@@ -424,7 +424,7 @@ export default function DeviceRepairPage() {
               {currentRepair.repairCost ? `¥${Number(currentRepair.repairCost).toLocaleString()}` : '-'}
             </Descriptions.Item>
             <Descriptions.Item label="完成日期">
-              {currentRepair.completedDate ? dayjs(currentRepair.completedDate).format('YYYY-MM-DD') : '-'}
+              {currentRepair.completedDate ? dayjs(currentRepair.completedDate).format('YYYY-MM-DD HH:mm:ss') : '-'}
             </Descriptions.Item>
             <Descriptions.Item label="登记时间">
               {dayjs(currentRepair.createdAt).format('YYYY-MM-DD HH:mm')}

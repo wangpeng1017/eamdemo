@@ -282,7 +282,7 @@ export default function ContractPage() {
       width: 160,
       render: (_, record) => {
         const start = record.startDate ? dayjs(record.startDate).format('MM-DD') : '-'
-        const end = record.endDate ? dayjs(record.endDate).format('YYYY-MM-DD') : '-'
+        const end = record.endDate ? dayjs(record.endDate).format('YYYY-MM-DD HH:mm:ss') : '-'
         return `${start} ~ ${end}`
       },
     },
@@ -576,19 +576,19 @@ export default function ContractPage() {
                         ¥{currentContract.prepaymentAmount?.toLocaleString()}
                       </Descriptions.Item>
                       <Descriptions.Item label="签订日期">
-                        {currentContract.signDate ? dayjs(currentContract.signDate).format('YYYY-MM-DD') : '-'}
+                        {currentContract.signDate ? dayjs(currentContract.signDate).format('YYYY-MM-DD HH:mm:ss') : '-'}
                       </Descriptions.Item>
                       <Descriptions.Item label="合同开始日期">
-                        {currentContract.startDate ? dayjs(currentContract.startDate).format('YYYY-MM-DD') : '-'}
+                        {currentContract.startDate ? dayjs(currentContract.startDate).format('YYYY-MM-DD HH:mm:ss') : '-'}
                       </Descriptions.Item>
                       <Descriptions.Item label="合同结束日期">
-                        {currentContract.endDate ? dayjs(currentContract.endDate).format('YYYY-MM-DD') : '-'}
+                        {currentContract.endDate ? dayjs(currentContract.endDate).format('YYYY-MM-DD HH:mm:ss') : '-'}
                       </Descriptions.Item>
                       <Descriptions.Item label="状态">
                         <StatusTag type="contract" status={currentContract.status} />
                       </Descriptions.Item>
                       <Descriptions.Item label="创建日期">
-                        {dayjs(currentContract.createdAt).format('YYYY-MM-DD')}
+                        {dayjs(currentContract.createdAt).format('YYYY-MM-DD HH:mm:ss')}
                       </Descriptions.Item>
                     </Descriptions>
 

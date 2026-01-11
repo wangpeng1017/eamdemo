@@ -106,7 +106,7 @@ export default function TestTaskPage() {
     },
     {
       title: '计划日期', dataIndex: 'plannedDate', width: 120,
-      render: (t: string) => t ? dayjs(t).format('YYYY-MM-DD') : '-'
+      render: (t: string) => t ? dayjs(t).format('YYYY-MM-DD HH:mm:ss') : '-'
     },
     {
       title: '操作', width: 150,

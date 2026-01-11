@@ -94,7 +94,7 @@ export default function InvoicePage() {
     { title: '发票号', dataIndex: 'invoiceNo', width: 150 },
     { title: '金额', dataIndex: 'amount', width: 120, render: (v) => `¥${v}` },
     { title: '发票类型', dataIndex: 'type', width: 120 },
-    { title: '开票日期', dataIndex: 'issuedDate', width: 120, render: (t: string) => t ? dayjs(t).format('YYYY-MM-DD') : '-' },
+    { title: '开票日期', dataIndex: 'issuedDate', width: 120, render: (t: string) => t ? dayjs(t).format('YYYY-MM-DD HH:mm:ss') : '-' },
     {
       title: '状态', dataIndex: 'status', width: 100,
       render: (s: string) => <Tag color={statusMap[s]?.color}>{statusMap[s]?.text}</Tag>

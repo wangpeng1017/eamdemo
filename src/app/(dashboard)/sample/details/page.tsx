@@ -108,7 +108,7 @@ export default function SampleDetailsPage() {
       title: "收样日期",
       dataIndex: "receiptDate",
       width: 120,
-      render: (d) => d ? dayjs(d).format("YYYY-MM-DD") : "-",
+      render: (d) => d ? dayjs(d).format("YYYY-MM-DD HH:mm:ss") : "-",
     },
     {
       title: "操作",
@@ -148,8 +148,8 @@ export default function SampleDetailsPage() {
                 </Tag>
               </div>
               <div className="text-xs text-gray-400 mt-1">
-                借出: {dayjs(req.requisitionDate).format("YYYY-MM-DD")}
-                {req.returnDate && ` | 归还: ${dayjs(req.returnDate).format("YYYY-MM-DD")}`}
+                借出: {dayjs(req.requisitionDate).format("YYYY-MM-DD HH:mm:ss")}
+                {req.returnDate && ` | 归还: ${dayjs(req.returnDate).format("YYYY-MM-DD HH:mm:ss")}`}
               </div>
             </div>
           ),
@@ -224,7 +224,7 @@ export default function SampleDetailsPage() {
                     {statusMap[selectedSample.status]?.text}
                   </Tag>
                 </div>
-                <div><span className="text-gray-500">收样日期:</span> {selectedSample.receiptDate ? dayjs(selectedSample.receiptDate).format("YYYY-MM-DD") : "-"}</div>
+                <div><span className="text-gray-500">收样日期:</span> {selectedSample.receiptDate ? dayjs(selectedSample.receiptDate).format("YYYY-MM-DD HH:mm:ss") : "-"}</div>
               </div>
             </div>
 

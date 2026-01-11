@@ -97,7 +97,7 @@ export default function TestReportPage() {
     },
     {
       title: '发布日期', dataIndex: 'issuedDate', width: 120,
-      render: (t: string) => t ? dayjs(t).format('YYYY-MM-DD') : '-'
+      render: (t: string) => t ? dayjs(t).format('YYYY-MM-DD HH:mm:ss') : '-'
     },
     {
       title: '操作', width: 150,

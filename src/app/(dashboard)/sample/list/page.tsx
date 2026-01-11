@@ -103,7 +103,7 @@ export default function SampleListPage() {
     },
     {
       title: '接收日期', dataIndex: 'receivedDate', width: 120,
-      render: (t: string) => t ? dayjs(t).format('YYYY-MM-DD') : '-'
+      render: (t: string) => t ? dayjs(t).format('YYYY-MM-DD HH:mm:ss') : '-'
     },
     {
       title: '创建时间', dataIndex: 'createdAt', width: 170,

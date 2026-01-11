@@ -111,7 +111,7 @@ export default function StockTransactionPage() {
   const handleAdd = (type: 'in' | 'out') => {
     setTransactionType(type)
     form.resetFields()
-    form.setFieldsValue({ type, transactionDate: dayjs().format('YYYY-MM-DD') })
+    form.setFieldsValue({ type, transactionDate: dayjs().format('YYYY-MM-DD HH:mm:ss') })
     setModalOpen(true)
   }
 

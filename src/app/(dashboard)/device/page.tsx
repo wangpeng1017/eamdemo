@@ -108,7 +108,7 @@ export default function DevicePage() {
     },
     {
       title: '下次校准', dataIndex: 'nextCalibration', width: 120,
-      render: (t: string) => t ? dayjs(t).format('YYYY-MM-DD') : '-'
+      render: (t: string) => t ? dayjs(t).format('YYYY-MM-DD HH:mm:ss') : '-'
     },
     {
       title: '创建时间', dataIndex: 'createdAt', width: 170,

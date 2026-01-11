@@ -96,7 +96,7 @@ export default function MyTasksPage() {
       title: "截止日期",
       dataIndex: "dueDate",
       width: 120,
-      render: (d) => d ? dayjs(d).format("YYYY-MM-DD") : "-",
+      render: (d) => d ? dayjs(d).format("YYYY-MM-DD HH:mm:ss") : "-",
     },
     {
       title: "操作",

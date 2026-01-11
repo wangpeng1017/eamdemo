@@ -968,7 +968,7 @@ export default function QuotationPage() {
                       <Descriptions.Item label="客户邮箱">{currentQuotation.client?.email || '-'}</Descriptions.Item>
                       <Descriptions.Item label="客户地址">{currentQuotation.client?.address || '-'}</Descriptions.Item>
                       <Descriptions.Item label="报价日期">
-                        {dayjs(currentQuotation.quotationDate).format('YYYY-MM-DD')}
+                        {dayjs(currentQuotation.quotationDate).format('YYYY-MM-DD HH:mm:ss')}
                       </Descriptions.Item>
                       <Descriptions.Item label="有效期">{currentQuotation.validDays}天</Descriptions.Item>
                       <Descriptions.Item label="报价合计">¥{Number(currentQuotation.totalAmount || 0).toFixed(2)}</Descriptions.Item>

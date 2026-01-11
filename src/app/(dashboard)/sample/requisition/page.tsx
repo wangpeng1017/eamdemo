@@ -140,19 +140,19 @@ export default function SampleRequisitionPage() {
       title: "借用日期",
       dataIndex: "requisitionDate",
       width: 120,
-      render: (d) => dayjs(d).format("YYYY-MM-DD"),
+      render: (d) => dayjs(d).format("YYYY-MM-DD HH:mm:ss"),
     },
     {
       title: "应还日期",
       dataIndex: "expectedReturnDate",
       width: 120,
-      render: (d) => d ? dayjs(d).format("YYYY-MM-DD") : "-",
+      render: (d) => d ? dayjs(d).format("YYYY-MM-DD HH:mm:ss") : "-",
     },
     {
       title: "归还日期",
       dataIndex: "returnDate",
       width: 120,
-      render: (d) => d ? dayjs(d).format("YYYY-MM-DD") : "-",
+      render: (d) => d ? dayjs(d).format("YYYY-MM-DD HH:mm:ss") : "-",
     },
     {
       title: "状态",

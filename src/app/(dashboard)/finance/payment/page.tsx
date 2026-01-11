@@ -126,7 +126,7 @@ export default function PaymentPage() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         ...values,
-        paymentDate: values.paymentDate.format('YYYY-MM-DD'),
+        paymentDate: values.paymentDate.format('YYYY-MM-DD HH:mm:ss'),
       }),
     })
     const json = await res.json()
@@ -153,7 +153,7 @@ export default function PaymentPage() {
     },
     {
       title: '收款日期', dataIndex: 'paymentDate', width: 120,
-      render: (t: string) => dayjs(t).format('YYYY-MM-DD'),
+      render: (t: string) => dayjs(t).format('YYYY-MM-DD HH:mm:ss'),
     },
     { title: '收款方式', dataIndex: 'paymentMethod', width: 100 },
     { title: '经手人', dataIndex: 'handlerName', width: 80 },
@@ -313,7 +313,7 @@ export default function PaymentPage() {
             <p><strong>应收单号：</strong>{currentPayment.receivable.receivableNo}</p>
             <p><strong>客户名称：</strong>{currentPayment.receivable.clientName}</p>
             <p><strong>收款金额：</strong>¥{Number(currentPayment.amount).toLocaleString()}</p>
-            <p><strong>收款日期：</strong>{dayjs(currentPayment.paymentDate).format('YYYY-MM-DD')}</p>
+            <p><strong>收款日期：</strong>{dayjs(currentPayment.paymentDate).format('YYYY-MM-DD HH:mm:ss')}</p>
             <p><strong>收款方式：</strong>{currentPayment.paymentMethod}</p>
             <p><strong>经手人：</strong>{currentPayment.handlerName || '-'}</p>
             <p><strong>开户行：</strong>{currentPayment.bankName || '-'}</p>

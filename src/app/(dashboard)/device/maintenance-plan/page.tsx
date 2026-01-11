@@ -234,9 +234,9 @@ export default function MaintenancePlanPage() {
         const date = dayjs(t)
         const isOverdue = date.isBefore(dayjs(), 'day')
         return isOverdue ? (
-          <Tag color="error" icon={<ClockCircleOutlined />}>{date.format('YYYY-MM-DD')}</Tag>
+          <Tag color="error" icon={<ClockCircleOutlined />}>{date.format('YYYY-MM-DD HH:mm:ss')}</Tag>
         ) : (
-          <Tag color="blue">{date.format('YYYY-MM-DD')}</Tag>
+          <Tag color="blue">{date.format('YYYY-MM-DD HH:mm:ss')}</Tag>
         )
       },
     },

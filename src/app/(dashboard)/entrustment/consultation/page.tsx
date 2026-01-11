@@ -762,7 +762,7 @@ function Descriptions({ title, data }: { title: string; data: Consultation }) {
     { label: '预估数量', value: data.estimatedQuantity },
     { label: '检测项目', value: data.testItems?.join(', ') },
     { label: '检测目的', value: data.testPurpose },
-    { label: '期望交付日期', value: data.expectedDeadline ? dayjs(data.expectedDeadline).format('YYYY-MM-DD') : '-' },
+    { label: '期望交付日期', value: data.expectedDeadline ? dayjs(data.expectedDeadline).format('YYYY-MM-DD HH:mm:ss') : '-' },
     { label: '预算范围', value: data.budgetRange },
     { label: '预估报价', value: data.estimatedPrice ? `¥${data.estimatedPrice}` : '-' },
     { label: '可行性评估', value: <StatusTag type="feasibility" status={data.feasibility} /> },

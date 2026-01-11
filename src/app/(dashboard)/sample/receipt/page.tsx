@@ -93,7 +93,7 @@ export default function SampleReceiptPage() {
       title: "收样日期",
       dataIndex: "receiptDate",
       width: 120,
-      render: (d: string) => d ? dayjs(d).format("YYYY-MM-DD") : "-",
+      render: (d: string) => d ? dayjs(d).format("YYYY-MM-DD HH:mm:ss") : "-",
     },
     {
       title: "创建时间",

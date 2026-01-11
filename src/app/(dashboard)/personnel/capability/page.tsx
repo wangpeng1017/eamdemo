@@ -133,7 +133,7 @@ export default function PersonnelCapabilityPage() {
         const status = getExpiryStatus(date)
         return (
           <span style={{ color: status.color === 'error' ? '#ff4d4f' : status.color === 'warning' ? '#faad14' : undefined }}>
-            {dayjs(date).format('YYYY-MM-DD')} {status.text}
+            {dayjs(date).format('YYYY-MM-DD HH:mm:ss')} {status.text}
           </span>
         )
       }

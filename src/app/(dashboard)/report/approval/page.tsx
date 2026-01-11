@@ -202,7 +202,7 @@ export default function ReportApprovalPage() {
     },
     {
       title: '提交时间', dataIndex: 'createdAt', width: 120,
-      render: (t: string) => dayjs(t).format('YYYY-MM-DD'),
+      render: (t: string) => dayjs(t).format('YYYY-MM-DD HH:mm:ss'),
     },
     {
       title: '操作', width: 200, fixed: 'right',
@@ -244,7 +244,7 @@ export default function ReportApprovalPage() {
     },
     {
       title: '创建时间', dataIndex: 'createdAt', width: 120,
-      render: (t: string) => dayjs(t).format('YYYY-MM-DD'),
+      render: (t: string) => dayjs(t).format('YYYY-MM-DD HH:mm:ss'),
     },
     {
       title: '操作', width: 200, fixed: 'right',

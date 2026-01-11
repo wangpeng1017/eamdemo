@@ -147,8 +147,8 @@ export default function ReportGeneratePage() {
           })) || [],
           conclusion: taskData.conclusion || 'pending',
           testDate: taskData.updatedAt
-            ? dayjs(taskData.updatedAt).format('YYYY-MM-DD')
-            : dayjs().format('YYYY-MM-DD'),
+            ? dayjs(taskData.updatedAt).format('YYYY-MM-DD HH:mm:ss')
+            : dayjs().format('YYYY-MM-DD HH:mm:ss'),
           tester: taskData.assignedTo?.name || 'N/A',
           auditor: 'Pending',
           approver: 'Pending',

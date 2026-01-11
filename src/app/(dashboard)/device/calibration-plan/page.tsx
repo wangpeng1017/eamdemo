@@ -190,7 +190,7 @@ export default function CalibrationPlanPage() {
       title: '检定日期',
       dataIndex: 'calibrationDate',
       width: 120,
-      render: (t: string) => dayjs(t).format('YYYY-MM-DD'),
+      render: (t: string) => dayjs(t).format('YYYY-MM-DD HH:mm:ss'),
     },
     {
       title: '检定结果',
@@ -208,7 +208,7 @@ export default function CalibrationPlanPage() {
       title: '下次检定',
       dataIndex: 'nextDate',
       width: 120,
-      render: (t: string) => dayjs(t).format('YYYY-MM-DD'),
+      render: (t: string) => dayjs(t).format('YYYY-MM-DD HH:mm:ss'),
     },
     { title: '检定人', dataIndex: 'operator', width: 100 },
     { title: '备注', dataIndex: 'remark', ellipsis: true },
@@ -235,7 +235,7 @@ export default function CalibrationPlanPage() {
       title: '上次检定',
       dataIndex: 'lastCalibrationDate',
       width: 110,
-      render: (t: string) => t ? dayjs(t).format('YYYY-MM-DD') : '-',
+      render: (t: string) => t ? dayjs(t).format('YYYY-MM-DD HH:mm:ss') : '-',
     },
     {
       title: '下次检定',
@@ -246,9 +246,9 @@ export default function CalibrationPlanPage() {
         const date = dayjs(t)
         const isOverdue = date.isBefore(dayjs(), 'day')
         return isOverdue ? (
-          <Tag color="error" icon={<ExclamationCircleOutlined />}>{date.format('YYYY-MM-DD')}</Tag>
+          <Tag color="error" icon={<ExclamationCircleOutlined />}>{date.format('YYYY-MM-DD HH:mm:ss')}</Tag>
         ) : (
-          <Tag color="blue">{date.format('YYYY-MM-DD')}</Tag>
+          <Tag color="blue">{date.format('YYYY-MM-DD HH:mm:ss')}</Tag>
         )
       },
     },
@@ -441,7 +441,7 @@ export default function CalibrationPlanPage() {
                 {CYCLE_TYPE_OPTIONS.find(o => o.value === currentPlan.cycleType)?.label}
               </Descriptions.Item>
               <Descriptions.Item label="下次检定">
-                {currentPlan.nextCalibrationDate ? dayjs(currentPlan.nextCalibrationDate).format('YYYY-MM-DD') : '-'}
+                {currentPlan.nextCalibrationDate ? dayjs(currentPlan.nextCalibrationDate).format('YYYY-MM-DD HH:mm:ss') : '-'}
               </Descriptions.Item>
             </Descriptions>
 

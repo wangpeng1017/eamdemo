@@ -129,7 +129,7 @@ export default function CapabilityReviewPage() {
     },
     {
       title: '考核日期', dataIndex: 'examDate', width: 120,
-      render: (d: string) => dayjs(d).format('YYYY-MM-DD')
+      render: (d: string) => dayjs(d).format('YYYY-MM-DD HH:mm:ss')
     },
     {
       title: '考核结果', dataIndex: 'examResult', width: 100,

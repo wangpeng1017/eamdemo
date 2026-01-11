@@ -99,8 +99,8 @@ export default function OutsourceOrderPage() {
     { title: '外包单号', dataIndex: 'orderNo', width: 150 },
     { title: '供应商', render: (_, r) => r.supplier?.name || r.supplierName || '-' },
     { title: '金额', dataIndex: 'amount', width: 120, render: (v) => v ? `¥${v}` : '-' },
-    { title: '期望完成', dataIndex: 'expectedDate', width: 120, render: (t: string) => t ? dayjs(t).format('YYYY-MM-DD') : '-' },
-    { title: '实际完成', dataIndex: 'completedDate', width: 120, render: (t: string) => t ? dayjs(t).format('YYYY-MM-DD') : '-' },
+    { title: '期望完成', dataIndex: 'expectedDate', width: 120, render: (t: string) => t ? dayjs(t).format('YYYY-MM-DD HH:mm:ss') : '-' },
+    { title: '实际完成', dataIndex: 'completedDate', width: 120, render: (t: string) => t ? dayjs(t).format('YYYY-MM-DD HH:mm:ss') : '-' },
     {
       title: '状态', dataIndex: 'status', width: 100,
       render: (s: string) => <Tag color={statusMap[s]?.color}>{statusMap[s]?.text}</Tag>

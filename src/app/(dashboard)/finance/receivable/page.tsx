@@ -96,7 +96,7 @@ export default function ReceivablePage() {
     { title: '应收金额', dataIndex: 'amount', width: 120, render: (v) => `¥${v}` },
     { title: '已收金额', dataIndex: 'receivedAmount', width: 120, render: (v) => `¥${v}` },
     { title: '未收金额', width: 120, render: (_, r) => `¥${Number(r.amount) - Number(r.receivedAmount)}` },
-    { title: '到期日', dataIndex: 'dueDate', width: 120, render: (t: string) => t ? dayjs(t).format('YYYY-MM-DD') : '-' },
+    { title: '到期日', dataIndex: 'dueDate', width: 120, render: (t: string) => t ? dayjs(t).format('YYYY-MM-DD HH:mm:ss') : '-' },
     {
       title: '状态', dataIndex: 'status', width: 100,
       render: (s: string) => <Tag color={statusMap[s]?.color}>{statusMap[s]?.text}</Tag>

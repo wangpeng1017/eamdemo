@@ -117,7 +117,7 @@ export default function ClientReportPage() {
     setEditingId(record.id)
     form.setFieldsValue({
       ...record,
-      receivedDate: record.receivedDate ? dayjs(record.receivedDate).format('YYYY-MM-DD') : null,
+      receivedDate: record.receivedDate ? dayjs(record.receivedDate).format('YYYY-MM-DD HH:mm:ss') : null,
     })
     setModalOpen(true)
   }
@@ -294,7 +294,7 @@ export default function ClientReportPage() {
     { title: '编制人', dataIndex: 'preparer', width: 80 },
     {
       title: '创建时间', dataIndex: 'createdAt', width: 120,
-      render: (t: string) => dayjs(t).format('YYYY-MM-DD'),
+      render: (t: string) => dayjs(t).format('YYYY-MM-DD HH:mm:ss'),
     },
     {
       title: '操作', width: 280, fixed: 'right',

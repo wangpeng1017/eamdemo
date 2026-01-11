@@ -124,7 +124,7 @@ export default function DeviceMaintenancePage() {
       title: '维护日期',
       dataIndex: 'maintenanceDate',
       width: 120,
-      render: (d) => dayjs(d).format('YYYY-MM-DD'),
+      render: (d) => dayjs(d).format('YYYY-MM-DD HH:mm:ss'),
     },
     { title: '维护人', dataIndex: 'maintainer', width: 100 },
     { title: '费用', dataIndex: 'cost', width: 100, render: (v) => v ? `¥${v}` : '-' },
