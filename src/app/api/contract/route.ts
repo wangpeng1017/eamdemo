@@ -43,14 +43,44 @@ export const GET = withErrorHandler(async (request: NextRequest) => {
 
 export const POST = withErrorHandler(async (request: NextRequest) => {
   const data = await request.json()
+
+  // 生成合同编号
   const today = new Date().toISOString().slice(0, 10).replace(/-/g, '')
   const count = await prisma.contract.count({
     where: { contractNo: { startsWith: `HT${today}` } }
   })
   const contractNo = `HT${today}${String(count + 1).padStart(4, '0')}`
 
+  // 查询报价单获取客户ID
+  let clientId = null
+  if (data.quotationId) {
+    const quotation = await prisma.quotation.findUnique({
+      where: { id: data.quotationId },
+      select: { clientId: true }
+    })
+    clientId = quotation?.clientId
+  }
+
+  // 构建合同创建数据
+  const createData: any = {
+    contractNo,
+    contractName: data.contractName,
+    quotationId: data.quotationId,
+    clientId: clientId,
+    partyACompany: data.clientName,
+    partyAContact: data.clientContact,
+    contractAmount: data.amount ? parseFloat(data.amount) : null,
+    sampleName: data.sampleName,
+    signDate: data.signDate ? new Date(data.signDate) : null,
+    effectiveDate: data.startDate ? new Date(data.startDate) : null,
+    expiryDate: data.endDate ? new Date(data.endDate) : null,
+    termsPaymentTerms: data.paymentTerms,
+    termsDeliveryTerms: data.deliveryTerms,
+    status: 'draft',
+  }
+
   const contract = await prisma.contract.create({
-    data: { ...data, contractNo }
+    data: createData
   })
 
   // 回写报价单：更新 contractNo
@@ -63,3 +93,4 @@ export const POST = withErrorHandler(async (request: NextRequest) => {
 
   return success(contract)
 })
+
