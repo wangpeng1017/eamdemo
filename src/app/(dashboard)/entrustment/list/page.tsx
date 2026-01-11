@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Table, Button, Space, Modal, Form, Input, InputNumber, DatePicker, Select, message, Drawer, Row, Col, Divider, Popconfirm, Tag, Dropdown, Radio } from 'antd'
+import { Table, Button, Space, Modal, Form, Input, InputNumber, DatePicker, Select, message, Row, Col, Divider, Popconfirm, Tag, Dropdown, Radio } from 'antd'
 import { PlusOutlined, EditOutlined, DeleteOutlined, MinusCircleOutlined, TeamOutlined, ShareAltOutlined, DownOutlined } from '@ant-design/icons'
 import type { MenuProps } from 'antd'
 import { StatusTag } from '@/components/StatusTag'
@@ -709,19 +709,17 @@ export default function EntrustmentListPage() {
         }}
       />
 
-      {/* 新建/编辑委托单抽屉 */}
-      <Drawer
+      {/* 新建/编辑委托单弹窗 */}
+      <Modal
         title={editingId ? '编辑委托单' : '新建委托单'}
-        placement="right"
-        width={700}
+        width={800}
         open={modalOpen}
-        onClose={() => setModalOpen(false)}
-        extra={
-          <Space>
-            <Button onClick={() => setModalOpen(false)}>取消</Button>
-            <Button type="primary" onClick={handleSubmit}>保存</Button>
-          </Space>
-        }
+        onCancel={() => setModalOpen(false)}
+        footer={[
+          <Button key="cancel" onClick={() => setModalOpen(false)}>取消</Button>,
+          <Button key="submit" type="primary" onClick={handleSubmit}>保存</Button>,
+        ]}
+        styles={{ body: { maxHeight: '70vh', overflowY: 'auto' } }}
       >
         <Form form={form} layout="vertical">
           <Divider orientation="left" orientationMargin="0">基本信息</Divider>
@@ -897,7 +895,7 @@ export default function EntrustmentListPage() {
             )}
           </Form.List>
         </Form>
-      </Drawer>
+      </Modal>
 
       {/* 分配弹窗 */}
       <Modal
