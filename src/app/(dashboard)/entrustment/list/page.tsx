@@ -79,18 +79,18 @@ interface Contract {
   partyACompany: string | null
 }
 
-// 检测参数选项
+// 检测项目选项(含对应方法/标准)
 const TEST_ITEM_OPTIONS = [
-  { value: '拉伸强度', label: '拉伸强度' },
-  { value: '断面收缩率', label: '断面收缩率' },
-  { value: '断后伸长率', label: '断后伸长率' },
-  { value: '硬度测试', label: '硬度测试' },
-  { value: '金相分析', label: '金相分析' },
-  { value: '化学成分分析', label: '化学成分分析' },
-  { value: '盐雾试验', label: '盐雾试验' },
-  { value: '冲击试验', label: '冲击试验' },
-  { value: '弯曲试验', label: '弯曲试验' },
-  { value: '抗压强度', label: '抗压强度' },
+  { value: '拉伸强度', label: '拉伸强度', method: 'GB/T 228.1-2021' },
+  { value: '断面收缩率', label: '断面收缩率', method: 'GB/T 228.1-2021' },
+  { value: '断后伸长率', label: '断后伸长率', method: 'GB/T 228.1-2021' },
+  { value: '硬度测试', label: '硬度测试', method: 'GB/T 231.1-2018' },
+  { value: '金相分析', label: '金相分析', method: 'GB/T 13298-2015' },
+  { value: '化学成分分析', label: '化学成分分析', method: 'GB/T 223' },
+  { value: '盐雾试验', label: '盐雾试验', method: 'GB/T 10125-2021' },
+  { value: '冲击试验', label: '冲击试验', method: 'GB/T 229-2020' },
+  { value: '弯曲试验', label: '弯曲试验', method: 'GB/T 232-2010' },
+  { value: '抗压强度', label: '抗压强度', method: 'GB/T 7314-2017' },
 ]
 
 export default function EntrustmentListPage() {
@@ -844,6 +844,15 @@ export default function EntrustmentListPage() {
                             placeholder="选择检测项目"
                             optionFilterProp="label"
                             options={TEST_ITEM_OPTIONS}
+                            onChange={(val, option) => {
+                              // 自动填充对应的方法/标准
+                              const method = (option as any)?.method || ''
+                              const projects = form.getFieldValue('projects') || []
+                              if (projects[name]) {
+                                projects[name].method = method
+                                form.setFieldsValue({ projects: [...projects] })
+                              }
+                            }}
                           />
                         </Form.Item>
                       </Col>
