@@ -48,7 +48,7 @@ export default function ClientPage() {
   const handleAdd = () => {
     setEditingId(null)
     form.resetFields()
-    form.setFieldsValue({ status: 'approved' })
+    // 新增时不设置状态,由后端默认为pending,通过审批流程控制
     setModalOpen(true)
   }
 
@@ -164,13 +164,16 @@ export default function ClientPage() {
               <Input placeholder="如: 1307023009022100123" />
             </Form.Item>
           </div>
-          <Form.Item name="status" label="状态" initialValue="approved">
-            <Select options={[
-              { value: 'approved', label: '已批准' },
-              { value: 'pending', label: '待审批' },
-              { value: 'rejected', label: '已拒绝' },
-            ]} />
-          </Form.Item>
+          {/* 状态字段仅在编辑时显示,新增时状态由审批流程控制 */}
+          {editingId && (
+            <Form.Item name="status" label="状态">
+              <Select options={[
+                { value: 'approved', label: '已批准' },
+                { value: 'pending', label: '待审批' },
+                { value: 'rejected', label: '已拒绝' },
+              ]} />
+            </Form.Item>
+          )}
         </Form>
       </Modal>
     </div>
