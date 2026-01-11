@@ -28,11 +28,6 @@ const { Header, Sider, Content } = Layout
 const menuItems = [
   { key: '/', icon: <DashboardOutlined />, label: <Link href="/">工作台</Link> },
   {
-    key: '/approval',
-    icon: <CheckCircleOutlined />,
-    label: <Link href="/approval">审批中心</Link>,
-  },
-  {
     key: '/entrustment',
     icon: <FileTextOutlined />,
     label: '业务管理',
