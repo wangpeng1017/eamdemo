@@ -1,34 +1,47 @@
 'use client'
 
 import { useState, useEffect } from "react"
-import { Table, Button, Space, Tag, Modal, Form, Input, DatePicker, Select, message, Card, Statistic } from "antd"
-import { PlayCircleOutlined, CheckCircleOutlined, ClockCircleOutlined } from "@ant-design/icons"
+import { Table, Button, Space, Tag, Modal, Form, Select, message, Card, Statistic } from "antd"
+import { PlayCircleOutlined, CheckCircleOutlined, ClockCircleOutlined, SwapOutlined, EditOutlined } from "@ant-design/icons"
 import type { ColumnsType } from "antd/es/table"
 import dayjs from "dayjs"
+import { useRouter } from "next/navigation"
 
 interface Task {
   id: string
   taskNo: string
   sampleName: string | null
+  entrustmentId: string | null
   status: string
   progress: number
   dueDate: string | null
   sample?: { sampleNo: string; name: string }
 }
 
+interface User {
+  id: string
+  name: string
+}
+
 const statusMap: Record<string, { text: string; color: string }> = {
   pending: { text: "待开始", color: "default" },
   in_progress: { text: "进行中", color: "processing" },
+  pending_review: { text: "待审核", color: "warning" },
   completed: { text: "已完成", color: "success" },
 }
 
 export default function MyTasksPage() {
+  const router = useRouter()
   const [data, setData] = useState([])
   const [loading, setLoading] = useState(false)
   const [total, setTotal] = useState(0)
   const [page, setPage] = useState(1)
   const [statusFilter, setStatusFilter] = useState<string | undefined>()
   const [stats, setStats] = useState<Record<string, number>>({})
+  const [users, setUsers] = useState<User[]>([])
+  const [transferModalOpen, setTransferModalOpen] = useState(false)
+  const [currentTask, setCurrentTask] = useState<Task | null>(null)
+  const [transferForm] = Form.useForm()
 
   const fetchData = async (p = page) => {
     setLoading(true)
@@ -43,30 +56,88 @@ export default function MyTasksPage() {
       setData(json.data.list || [])
       setTotal(json.data.total || 0)
     } else {
-      if (json.success && json.data) {
-      setData(json.data.list || [])
-      setTotal(json.data.total || 0)
-    } else {
       setData(json.list || [])
       setTotal(json.total || 0)
-    }
     }
     setStats(json.stats || {})
     setLoading(false)
   }
 
-  useEffect(() => { fetchData() }, [page, statusFilter])
+  const fetchUsers = async () => {
+    try {
+      const res = await fetch('/api/system/user?pageSize=1000')
+      const json = await res.json()
+      setUsers(json.data?.list || json.list || [])
+    } catch (e) {
+      console.error('获取用户列表失败:', e)
+    }
+  }
+
+  useEffect(() => {
+    fetchData()
+    fetchUsers()
+  }, [page, statusFilter])
 
   const handleStart = async (id: string) => {
-    // TODO: 实现开始任务 API
-    message.success("任务已开始")
-    fetchData()
+    const res = await fetch(`/api/task/${id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'start' })
+    })
+    if (res.ok) {
+      message.success("任务已开始")
+      fetchData()
+    } else {
+      const data = await res.json()
+      message.error(data.error || "操作失败")
+    }
   }
 
   const handleComplete = async (id: string) => {
-    // TODO: 实现完成任务 API
-    message.success("任务已完成")
-    fetchData()
+    const res = await fetch(`/api/task/${id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'complete' })
+    })
+    if (res.ok) {
+      message.success("任务已完成")
+      fetchData()
+    } else {
+      const data = await res.json()
+      message.error(data.error || "操作失败")
+    }
+  }
+
+  const openTransferModal = (task: Task) => {
+    setCurrentTask(task)
+    transferForm.resetFields()
+    setTransferModalOpen(true)
+  }
+
+  const handleTransfer = async () => {
+    if (!currentTask) return
+    const values = await transferForm.validateFields()
+    const res = await fetch(`/api/task/${currentTask.id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        action: 'transfer',
+        assignedToId: values.assignedToId,
+        transferReason: values.reason || ''
+      })
+    })
+    if (res.ok) {
+      message.success("任务已转交")
+      setTransferModalOpen(false)
+      fetchData()
+    } else {
+      const data = await res.json()
+      message.error(data.error || "转交失败")
+    }
+  }
+
+  const handleDataEntry = (task: Task) => {
+    router.push(`/task/data/${task.id}`)
   }
 
   const columns: ColumnsType<Task> = [
@@ -95,12 +166,12 @@ export default function MyTasksPage() {
     {
       title: "截止日期",
       dataIndex: "dueDate",
-      width: 120,
+      width: 160,
       render: (d) => d ? dayjs(d).format("YYYY-MM-DD HH:mm:ss") : "-",
     },
     {
       title: "操作",
-      width: 200,
+      width: 280,
       render: (_, record) => (
         <Space size="small">
           {record.status === "pending" && (
@@ -109,11 +180,20 @@ export default function MyTasksPage() {
             </Button>
           )}
           {record.status === "in_progress" && (
-            <Button type="primary" size="small" icon={<CheckCircleOutlined />} onClick={() => handleComplete(record.id)}>
-              完成
+            <>
+              <Button type="primary" size="small" icon={<EditOutlined />} onClick={() => handleDataEntry(record)}>
+                录入
+              </Button>
+              <Button size="small" icon={<CheckCircleOutlined />} onClick={() => handleComplete(record.id)}>
+                完成
+              </Button>
+            </>
+          )}
+          {record.status !== "completed" && (
+            <Button size="small" icon={<SwapOutlined />} onClick={() => openTransferModal(record)}>
+              转交
             </Button>
           )}
-          <Button size="small">录入数据</Button>
         </Space>
       ),
     },
@@ -162,6 +242,35 @@ export default function MyTasksPage() {
           onChange: (p) => setPage(p),
         }}
       />
+
+      {/* 转交任务弹窗 */}
+      <Modal
+        title="转交任务"
+        open={transferModalOpen}
+        onOk={handleTransfer}
+        onCancel={() => setTransferModalOpen(false)}
+        width={400}
+      >
+        <Form form={transferForm} layout="vertical">
+          <Form.Item name="assignedToId" label="转交给" rules={[{ required: true, message: '请选择接收人' }]}>
+            <Select
+              showSearch
+              placeholder="选择接收人"
+              optionFilterProp="label"
+              options={users.map(u => ({ value: u.id, label: u.name }))}
+            />
+          </Form.Item>
+          <Form.Item name="reason" label="转交原因">
+            <Select placeholder="选择或输入原因" allowClear>
+              <Select.Option value="工作调整">工作调整</Select.Option>
+              <Select.Option value="设备故障">设备故障</Select.Option>
+              <Select.Option value="技术支援">技术支援</Select.Option>
+              <Select.Option value="其他">其他</Select.Option>
+            </Select>
+          </Form.Item>
+        </Form>
+      </Modal>
     </div>
   )
 }
+

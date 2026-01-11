@@ -41,10 +41,11 @@ export async function POST(
       return NextResponse.json({ error: '提交时必须填写检测结论' }, { status: 400 })
     }
 
-    // 更新任务状态为完成
-    updateData.status = 'completed'
-    updateData.progress = 100
-    updateData.completedAt = new Date()
+    // 提交后状态改为待审核，需要主管审核
+    updateData.status = 'pending_review'
+    updateData.progress = 90
+    updateData.submittedAt = new Date()
+    updateData.submittedBy = session.user.name || session.user.id
   } else if (action === 'save') {
     // 保存时自动设置进行中状态
     if (task.status === 'pending') {
@@ -59,35 +60,104 @@ export async function POST(
     data: updateData,
   })
 
-  // 如果是提交操作，触发级联状态更新
-  if (action === 'submit' && task.projectId) {
-    // 1. 更新关联的 EntrustmentProject 状态为 completed
-    await prisma.entrustmentProject.update({
-      where: { id: task.projectId },
-      data: { status: 'completed' }
-    })
-
-    // 2. 检查所有项目是否完成，更新 Entrustment 状态
-    if (task.entrustmentId) {
-      const allProjects = await prisma.entrustmentProject.findMany({
-        where: { entrustmentId: task.entrustmentId },
-        select: { status: true }
-      })
-
-      const allCompleted = allProjects.every(p => p.status === 'completed')
-
-      if (allCompleted && allProjects.length > 0) {
-        await prisma.entrustment.update({
-          where: { id: task.entrustmentId },
-          data: { status: 'completed' }
-        })
-      }
-    }
-  }
-
   return NextResponse.json({
     success: true,
     data: updatedTask,
-    message: action === 'submit' ? '检测数据已提交，任务完成' : '数据保存成功'
+    message: action === 'submit' ? '检测数据已提交，等待主管审核' : '数据保存成功'
   })
 }
+
+// 审核数据（主管用）
+export async function PATCH(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  const session = await auth()
+  if (!session?.user) {
+    return NextResponse.json({ error: '未登录' }, { status: 401 })
+  }
+
+  const body = await request.json()
+  const { id } = await params
+  const { action, reviewComment } = body
+
+  // 获取任务信息
+  const task = await prisma.testTask.findUnique({
+    where: { id },
+    select: { id: true, status: true, projectId: true, entrustmentId: true, remark: true }
+  })
+
+  if (!task) {
+    return NextResponse.json({ error: '任务不存在' }, { status: 404 })
+  }
+
+  if (task.status !== 'pending_review') {
+    return NextResponse.json({ error: '只有待审核状态的任务才能审核' }, { status: 400 })
+  }
+
+  if (action === 'approve') {
+    // 审核通过，任务完成
+    await prisma.testTask.update({
+      where: { id },
+      data: {
+        status: 'completed',
+        progress: 100,
+        actualDate: new Date(),
+        remark: task.remark
+          ? `${task.remark}\n[审核通过] ${new Date().toLocaleString()} by ${session.user.name}: ${reviewComment || ''}`
+          : `[审核通过] ${new Date().toLocaleString()} by ${session.user.name}: ${reviewComment || ''}`
+      }
+    })
+
+    // 级联更新项目和委托单状态
+    if (task.projectId) {
+      await prisma.entrustmentProject.update({
+        where: { id: task.projectId },
+        data: { status: 'completed' }
+      })
+
+      if (task.entrustmentId) {
+        const allProjects = await prisma.entrustmentProject.findMany({
+          where: { entrustmentId: task.entrustmentId },
+          select: { status: true }
+        })
+
+        const allCompleted = allProjects.every(p => p.status === 'completed')
+
+        if (allCompleted && allProjects.length > 0) {
+          await prisma.entrustment.update({
+            where: { id: task.entrustmentId },
+            data: { status: 'completed' }
+          })
+        }
+      }
+    }
+
+    return NextResponse.json({
+      success: true,
+      message: '审核通过，任务已完成'
+    })
+
+  } else if (action === 'reject') {
+    // 审核驳回，退回修改
+    await prisma.testTask.update({
+      where: { id },
+      data: {
+        status: 'in_progress',
+        progress: 50,
+        remark: task.remark
+          ? `${task.remark}\n[审核驳回] ${new Date().toLocaleString()} by ${session.user.name}: ${reviewComment || '请修改后重新提交'}`
+          : `[审核驳回] ${new Date().toLocaleString()} by ${session.user.name}: ${reviewComment || '请修改后重新提交'}`
+      }
+    })
+
+    return NextResponse.json({
+      success: true,
+      message: '已驳回，请检测人员修改后重新提交'
+    })
+
+  } else {
+    return NextResponse.json({ error: '无效的操作' }, { status: 400 })
+  }
+}
+

@@ -76,8 +76,50 @@ export const PUT = withErrorHandler(async (request: NextRequest, context?: { par
     })
   }
 
+  // 如果指定了内部检测人员，自动创建/更新检测任务
+  if (data.assignTo && data.status === 'assigned') {
+    const user = await prisma.user.findFirst({
+      where: { name: data.assignTo }
+    })
+
+    if (user) {
+      // 检查任务是否存在
+      const existingTask = await prisma.testTask.findFirst({
+        where: { projectId: projectId }
+      })
+
+      const taskNo = existingTask?.taskNo || `T${new Date().toISOString().slice(0, 10).replace(/-/g, '')}${Math.floor(Math.random() * 1000).toString().padStart(3, '0')}`
+
+      const taskData = {
+        taskNo,
+        entrustmentId: entrustmentId,
+        projectId: projectId,
+        sampleName: project.name, // 项目名称
+        parameters: project.testItems, // 检测参数
+        testMethod: project.method, // 检测方法
+        deviceId: data.deviceId || null,
+        assignedToId: user.id,
+        isOutsourced: false,
+        status: 'pending',
+        plannedDate: new Date(),
+        dueDate: data.deadline ? new Date(data.deadline) : undefined,
+      }
+
+      if (existingTask) {
+        await prisma.testTask.update({
+          where: { id: existingTask.id },
+          data: taskData
+        })
+      } else {
+        await prisma.testTask.create({
+          data: taskData
+        })
+      }
+    }
+  }
+
   // 如果指定了外包检测人员，自动创建/更新检测任务
-  if (data.subcontractAssignee) {
+  if (data.subcontractAssignee && data.status === 'subcontracted') {
     const user = await prisma.user.findFirst({
       where: { name: data.subcontractAssignee }
     })
@@ -88,12 +130,16 @@ export const PUT = withErrorHandler(async (request: NextRequest, context?: { par
         where: { projectId: projectId }
       })
 
+      const taskNo = existingTask?.taskNo || `T${new Date().toISOString().slice(0, 10).replace(/-/g, '')}${Math.floor(Math.random() * 1000).toString().padStart(3, '0')}`
+
       const taskData = {
-        taskNo: existingTask?.taskNo || `T${new Date().toISOString().slice(0, 10).replace(/-/g, '')}${Math.floor(Math.random() * 1000).toString().padStart(3, '0')}`,
+        taskNo,
         entrustmentId: entrustmentId,
         projectId: projectId,
-        sampleId: null, // 关联样品ID如果需要可以查找
-        sampleName: project.testItems, //以此作为简要描述
+        sampleName: project.name,
+        parameters: project.testItems,
+        testMethod: project.method,
+        deviceId: data.deviceId || null,
         assignedToId: user.id,
         isOutsourced: true,
         status: 'pending',

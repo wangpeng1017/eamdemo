@@ -19,8 +19,9 @@ interface Task {
 const statusMap: Record<string, { text: string; color: string }> = {
   pending: { text: "待开始", color: "default" },
   in_progress: { text: "进行中", color: "processing" },
+  pending_review: { text: "待审核", color: "warning" },
   completed: { text: "已完成", color: "success" },
-  transferred: { text: "已转交", color: "warning" },
+  transferred: { text: "已转交", color: "cyan" },
 }
 
 export default function AllTasksPage() {
@@ -47,12 +48,12 @@ export default function AllTasksPage() {
       setTotal(json.data.total || 0)
     } else {
       if (json.success && json.data) {
-      setData(json.data.list || [])
-      setTotal(json.data.total || 0)
-    } else {
-      setData(json.list || [])
-      setTotal(json.total || 0)
-    }
+        setData(json.data.list || [])
+        setTotal(json.data.total || 0)
+      } else {
+        setData(json.list || [])
+        setTotal(json.total || 0)
+      }
     }
     setLoading(false)
   }
