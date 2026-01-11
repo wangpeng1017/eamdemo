@@ -47,7 +47,14 @@ export class ApprovalEngine {
     })
 
     if (existing) {
-      throw new Error(`该业务已在审批中,状态: ${existing.status}`)
+      // 如果已存在且状态为 pending，允许重新提交（先删除旧的）
+      if (existing.status === 'pending') {
+        // 删除旧的审批实例及相关记录
+        await prisma.approvalRecord.deleteMany({ where: { instanceId: existing.id } })
+        await prisma.approvalInstance.delete({ where: { id: existing.id } })
+      } else {
+        throw new Error(`该业务审批已结束,状态: ${existing.status}`)
+      }
     }
 
     // 4. 创建审批实例
@@ -64,14 +71,33 @@ export class ApprovalEngine {
       },
     })
 
-    // 5. 记录提交日志
-    await prisma.approvalLog.create({
-      data: {
-        bizType,
-        bizId,
-        action: 'submit',
-        operatorId: submitterId,
-      },
+    // 5. 异步记录提交日志 (Fire-and-forget)
+    // 不阻塞主流程，即使日志记录失败也可以继续
+    Promise.resolve().then(async () => {
+      try {
+        // 尝试验证 operatorId
+        let validOperatorId: string | undefined = undefined
+        if (submitterId) {
+          const user = await prisma.user.findUnique({ where: { id: submitterId } })
+          if (user) validOperatorId = submitterId
+        }
+
+        if (validOperatorId) {
+          await prisma.approvalLog.create({
+            data: {
+              bizType,
+              bizId,
+              action: 'submit',
+              operatorId: validOperatorId,
+            },
+          })
+        } else {
+          console.warn(`[ApprovalEngine] Skipping log: Invalid operatorId '${submitterId}' for biz ${bizType}:${bizId}`)
+        }
+      } catch (logError) {
+        console.error('[ApprovalEngine] Failed to create approval log asynchronously:', logError)
+        // 这里可以接入 Sentry 或其他监控系统
+      }
     })
 
     // 6. 更新业务表状态(冗余字段)
@@ -169,15 +195,28 @@ export class ApprovalEngine {
       },
     })
 
-    // 6. 记录审批日志
-    await prisma.approvalLog.create({
-      data: {
-        bizType: instance.bizType,
-        bizId: instance.bizId,
-        action,
-        comment,
-        operatorId: approverId,
-      },
+    // 6. 异步记录审批日志 (Fire-and-forget)
+    Promise.resolve().then(async () => {
+      try {
+        if (approverId) {
+          const user = await prisma.user.findUnique({ where: { id: approverId } })
+          if (user) {
+            await prisma.approvalLog.create({
+              data: {
+                bizType: instance.bizType,
+                bizId: instance.bizId,
+                action,
+                comment,
+                operatorId: approverId,
+              },
+            })
+          } else {
+            console.warn(`[ApprovalEngine] Skipping log: Invalid approverId '${approverId}'`)
+          }
+        }
+      } catch (logError) {
+        console.error('[ApprovalEngine] Failed to create approval log asynchronously:', logError)
+      }
     })
 
     // 7. 更新业务表状态
@@ -216,6 +255,27 @@ export class ApprovalEngine {
       data: { status: 'cancelled' },
     })
 
+    // 异步记录日志
+    Promise.resolve().then(async () => {
+      try {
+        if (operatorId) {
+          const user = await prisma.user.findUnique({ where: { id: operatorId } })
+          if (user) {
+            await prisma.approvalLog.create({
+              data: {
+                bizType: instance.bizType,
+                bizId: instance.bizId,
+                action: 'cancel',
+                operatorId: operatorId,
+              },
+            })
+          }
+        }
+      } catch (logError) {
+        console.error('[ApprovalEngine] Failed to create cancel log asynchronously:', logError)
+      }
+    })
+
     // 更新业务表
     await this.updateBizStatus({
       bizType: instance.bizType,
@@ -237,9 +297,16 @@ export class ApprovalEngine {
   /**
    * 解析审批节点
    */
-  parseNodes(flow: { nodes: string }): ApprovalNode[] {
+  parseNodes(flow: { nodes: string | object }): ApprovalNode[] {
     try {
-      return JSON.parse(flow.nodes)
+      // Handle both string (needs parsing) and already-parsed array
+      if (typeof flow.nodes === 'string') {
+        return JSON.parse(flow.nodes)
+      }
+      if (Array.isArray(flow.nodes)) {
+        return flow.nodes
+      }
+      return []
     } catch {
       return []
     }

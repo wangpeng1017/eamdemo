@@ -1,6 +1,8 @@
 import { prisma } from '@/lib/prisma'
 import { NextRequest } from 'next/server'
 import { withErrorHandler, success } from '@/lib/api-handler'
+import { auth } from '@/lib/auth'
+import { getDataFilter } from '@/lib/data-permission'
 
 // 获取报价列表
 export const GET = withErrorHandler(async (request: NextRequest) => {
@@ -26,7 +28,12 @@ export const GET = withErrorHandler(async (request: NextRequest) => {
     where.createdAt = {}
     if (startDate) where.createdAt.gte = new Date(startDate)
     if (endDate) where.createdAt.lte = new Date(endDate)
+    if (endDate) where.createdAt.lte = new Date(endDate)
   }
+
+  // 注入数据权限过滤
+  const permissionFilter = await getDataFilter()
+  Object.assign(where, permissionFilter)
 
   const [list, total] = await Promise.all([
     prisma.quotation.findMany({
@@ -62,6 +69,7 @@ export const GET = withErrorHandler(async (request: NextRequest) => {
 
 // 创建报价
 export const POST = withErrorHandler(async (request: NextRequest) => {
+  const session = await auth()
   const data = await request.json()
 
   const today = new Date().toISOString().slice(0, 10).replace(/-/g, '')
@@ -92,6 +100,7 @@ export const POST = withErrorHandler(async (request: NextRequest) => {
       discountTotal,
       status: data.status || 'draft',
       clientStatus: data.clientResponse || 'pending',
+      createdById: session?.user?.id,
       items: {
         create: items.map((item: any) => ({
           serviceItem: item.serviceItem,

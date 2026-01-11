@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import { Card, Table, Tree, Button, Modal, Form, Input, Select, message, Space, Tag, Popconfirm, Row, Col } from 'antd'
-import { PlusOutlined, EditOutlined, DeleteOutlined, SaveOutlined, ReloadOutlined } from '@ant-design/icons'
+import { PlusOutlined, EditOutlined, DeleteOutlined, SaveOutlined, ReloadOutlined, CheckCircleOutlined, StopOutlined } from '@ant-design/icons'
 import type { ColumnsType } from 'antd/es/table'
 import type { DataNode } from 'antd/es/tree'
 
@@ -217,6 +217,26 @@ export default function PermissionPage() {
     },
   ]
 
+  const handleToggleStatus = async (record: Permission) => {
+    const newStatus = record.status === 1 ? 0 : 1
+    try {
+      const res = await fetch(`/api/permission/${record.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: newStatus }),
+      })
+      const data = await res.json()
+      if (data.success) {
+        message.success(newStatus === 1 ? '已启用' : '已禁用')
+        loadPermissions()
+      } else {
+        message.error(data.message || '操作失败')
+      }
+    } catch {
+      message.error('网络错误')
+    }
+  }
+
   const permissionColumns: ColumnsType<Permission> = [
     { title: '权限名称', dataIndex: 'name' },
     { title: '权限编码', dataIndex: 'code' },
@@ -238,10 +258,19 @@ export default function PermissionPage() {
     },
     {
       title: '操作',
-      width: 150,
+      width: 200,
       render: (_, record) => (
         <Space>
           <Button size="small" icon={<EditOutlined />} onClick={() => handleEdit(record)} />
+          {record.status === 1 ? (
+            <Popconfirm title="确认禁用?" onConfirm={() => handleToggleStatus(record)}>
+              <Button size="small" icon={<StopOutlined />} danger>禁用</Button>
+            </Popconfirm>
+          ) : (
+            <Popconfirm title="确认启用?" onConfirm={() => handleToggleStatus(record)}>
+              <Button size="small" icon={<CheckCircleOutlined />} style={{ color: '#52c41a', borderColor: '#52c41a' }}>启用</Button>
+            </Popconfirm>
+          )}
           <Popconfirm title="确认删除?" onConfirm={() => handleDelete(record.id)}>
             <Button size="small" danger icon={<DeleteOutlined />} />
           </Popconfirm>
@@ -322,8 +351,8 @@ export default function PermissionPage() {
           <Form.Item name="name" label="权限名称" rules={[{ required: true }]}>
             <Input />
           </Form.Item>
-          <Form.Item name="code" label="权限编码" rules={[{ required: true }]}>
-            <Input placeholder="如: system:user:add" />
+          <Form.Item name="code" label="权限编码">
+            <Input placeholder="可选，系统自动生成" />
           </Form.Item>
           <Form.Item name="type" label="类型" rules={[{ required: true }]}>
             <Select options={typeOptions} />

@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Table, Button, Space, Modal, Form, Input, message, Popconfirm } from 'antd'
+import { Table, Button, Space, Modal, Form, Input, message, Popconfirm, Select, Tag } from 'antd'
 import { PlusOutlined, EditOutlined, DeleteOutlined } from '@ant-design/icons'
 import type { ColumnsType } from 'antd/es/table'
 
@@ -10,6 +10,7 @@ interface Role {
   name: string
   code: string
   description: string | null
+  dataScope: string
   _count: { users: number }
 }
 
@@ -79,6 +80,16 @@ export default function RolePage() {
   const columns: ColumnsType<Role> = [
     { title: '角色名称', dataIndex: 'name', width: 150 },
     { title: '角色编码', dataIndex: 'code', width: 150 },
+    {
+      title: '数据权限',
+      dataIndex: 'dataScope',
+      width: 120,
+      render: (val: string) => {
+        const map: Record<string, string> = { all: '全部', dept: '本部门', self: '仅本人' }
+        const color: Record<string, string> = { all: 'red', dept: 'blue', self: 'default' }
+        return <Tag color={color[val] || 'default'}>{map[val] || val}</Tag>
+      }
+    },
     { title: '描述', dataIndex: 'description' },
     { title: '用户数', dataIndex: ['_count', 'users'], width: 100 },
     {
@@ -123,6 +134,13 @@ export default function RolePage() {
           </Form.Item>
           <Form.Item name="description" label="描述">
             <Input.TextArea rows={3} placeholder="角色职责说明（可选）" />
+          </Form.Item>
+          <Form.Item name="dataScope" label="数据权限" initialValue="self" rules={[{ required: true, message: '请选择数据权限' }]}>
+            <Select>
+              <Select.Option value="all">全部数据</Select.Option>
+              <Select.Option value="dept">本部门数据</Select.Option>
+              <Select.Option value="self">仅本人数据</Select.Option>
+            </Select>
           </Form.Item>
         </Form>
       </Modal>

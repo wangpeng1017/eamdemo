@@ -49,12 +49,12 @@ export const GET = withErrorHandler(async (request: NextRequest) => {
 export const POST = withErrorHandler(async (request: NextRequest) => {
   const data = await request.json()
 
-  validateRequired(data, ['name', 'code', 'type'])
+  validateRequired(data, ['name', 'type'])
 
   const permission = await prisma.permission.create({
     data: {
       name: data.name,
-      code: data.code,
+      code: data.code || `PERM_${Date.now()}`,
       type: parseInt(data.type),
       parentId: data.parentId || null,
       sort: data.sort || 0,

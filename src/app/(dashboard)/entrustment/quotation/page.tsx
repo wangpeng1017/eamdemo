@@ -415,7 +415,7 @@ export default function QuotationPage() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         action: 'submit',
-        approver: session.user.name || session.user.email || '未知用户',
+        approver: session.user.id,
         submitterName: session.user.name || session.user.email || '未知用户',
         comment: ''
       }),

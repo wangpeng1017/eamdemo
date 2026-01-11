@@ -5,6 +5,8 @@ import {
   success,
   validateRequired,
 } from '@/lib/api-handler'
+import { auth } from '@/lib/auth'
+import { getDataFilter } from '@/lib/data-permission'
 import { generateNo, NumberPrefixes } from '@/lib/generate-no'
 
 // 获取委托单列表（含筛选和关联数据）
@@ -46,7 +48,12 @@ export const GET = withErrorHandler(async (request: NextRequest) => {
     where.createdAt = {}
     if (startDate && startDate.trim()) (where.createdAt as Record<string, Date>).gte = new Date(startDate)
     if (endDate && endDate.trim()) (where.createdAt as Record<string, Date>).lte = new Date(endDate)
+    if (endDate && endDate.trim()) (where.createdAt as Record<string, Date>).lte = new Date(endDate)
   }
+
+  // 注入数据权限过滤
+  const permissionFilter = await getDataFilter()
+  Object.assign(where, permissionFilter)
 
   const [list, total] = await Promise.all([
     prisma.entrustment.findMany({
@@ -125,6 +132,7 @@ export const GET = withErrorHandler(async (request: NextRequest) => {
 
 // 创建委托单
 export const POST = withErrorHandler(async (request: NextRequest) => {
+  const session = await auth()
   const data = await request.json()
 
   // 验证必填字段
@@ -143,6 +151,7 @@ export const POST = withErrorHandler(async (request: NextRequest) => {
       entrustmentNo,
       status: entrustmentData.status || 'pending',
       sampleDate: entrustmentData.sampleDate ? new Date(entrustmentData.sampleDate) : new Date(),
+      createdById: session?.user?.id,
     },
   })
 

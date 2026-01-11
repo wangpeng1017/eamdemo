@@ -6,9 +6,36 @@ export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url)
   const page = parseInt(searchParams.get('page') || '1')
   const pageSize = parseInt(searchParams.get('pageSize') || '10')
+  const deptId = searchParams.get('deptId')
+
+  let whereClause: any = {}
+
+  // 如果指定了部门，递归查询该部门及所有子部门的用户
+  if (deptId && deptId !== 'undefined' && deptId !== 'null') {
+    // 1. 获取所有部门关系
+    const allDepts = await prisma.dept.findMany({
+      select: { id: true, parentId: true }
+    })
+
+    // 2. 递归查找所有子部门ID
+    const findAllDescendants = (parentId: string): string[] => {
+      const children = allDepts.filter(d => d.parentId === parentId)
+      let ids = children.map(c => c.id)
+      for (const child of children) {
+        ids = [...ids, ...findAllDescendants(child.id)]
+      }
+      return ids
+    }
+
+    const descendantIds = findAllDescendants(deptId)
+    const allDeptIds = [deptId, ...descendantIds]
+
+    whereClause.deptId = { in: allDeptIds }
+  }
 
   const [list, total] = await Promise.all([
     prisma.user.findMany({
+      where: whereClause,
       orderBy: { createdAt: 'desc' },
       skip: (page - 1) * pageSize,
       take: pageSize,
@@ -18,7 +45,7 @@ export async function GET(request: NextRequest) {
         roles: { include: { role: true } }
       }
     }),
-    prisma.user.count(),
+    prisma.user.count({ where: whereClause }),
   ])
 
   return NextResponse.json({ list, total, page, pageSize })

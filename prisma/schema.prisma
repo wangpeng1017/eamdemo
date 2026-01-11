@@ -35,6 +35,9 @@ model User {
   approvalLogs        ApprovalLog[]
   todos               Todo[]
   createdSamples      Sample[]      @relation("SampleCreatedBy")
+  createdClients      Client[]      @relation("CreatedClient")
+  createdQuotations   Quotation[]   @relation("CreatedQuotation")
+  createdContracts    Contract[]    @relation("CreatedContract")
   capabilities        PersonnelCapability[]
   capabilityReviews   CapabilityReview[]
 
@@ -62,6 +65,7 @@ model Role {
   name        String           @db.VarChar(50)
   code        String           @unique @db.VarChar(50)
   description String?          @db.VarChar(200)
+  dataScope   String           @default("self") // all=全部, dept=本部门, self=仅本人
   status      Int              @default(1)
   permissions RolePermission[]
   users       UserRole[]
@@ -124,7 +128,9 @@ model Client {
   bankAccount    String?  @db.VarChar(50) // 银行账号
   remark         String?  @db.Text
   status         String   @default("approved") // draft/pending/approved/rejected
-  creator        String?  @db.VarChar(50)
+  creator        String?  @db.VarChar(50) // 旧字段，保留
+  createdById    String?
+  createdBy      User?    @relation("CreatedClient", fields: [createdById], references: [id])
 
   // 新增：审批相关字段
   approvalStatus   String?   @default("pending") // pending/approved/rejected/cancelled
@@ -247,6 +253,10 @@ model Quotation {
   // 新增：审批相关字段
   approvalStatus   String?   @default("pending") // pending/approved/rejected/cancelled
   approvalStep     Int?      @default(0) // 当前审批步骤
+  
+  createdById    String?
+  createdBy      User?    @relation("CreatedQuotation", fields: [createdById], references: [id])
+  
   approvalInstanceId String?  @unique
   approvalInstance ApprovalInstance? @relation(fields: [approvalInstanceId], references: [id])
 
@@ -316,7 +326,11 @@ model Contract {
 
   attachments String?  @db.Text // JSON 附件列表
   createdAt   DateTime @default(now())
+
   updatedAt   DateTime @updatedAt
+
+  createdById String?
+  createdBy   User?   @relation("CreatedContract", fields: [createdById], references: [id])
 
   entrustments Entrustment[]
 
@@ -885,8 +899,8 @@ model ApprovalLog {
   bizId      String   @db.VarChar(100) // 业务ID
   action     String   @db.VarChar(50) // 操作
   comment    String?  @db.Text
-  operatorId String
-  operator   User     @relation(fields: [operatorId], references: [id])
+  operatorId String?
+  operator   User?    @relation(fields: [operatorId], references: [id])
   createdAt  DateTime @default(now())
 
   @@map("sys_approval_log")

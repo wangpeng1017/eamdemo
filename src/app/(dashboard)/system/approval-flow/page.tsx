@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import { Card, Table, Button, Modal, Form, Input, Select, message, Space, Tag, Popconfirm } from 'antd'
-import { PlusOutlined, EditOutlined, DeleteOutlined, ArrowRightOutlined, ReloadOutlined } from '@ant-design/icons'
+import { PlusOutlined, EditOutlined, DeleteOutlined, ArrowRightOutlined, ReloadOutlined, StopOutlined, CheckCircleOutlined } from '@ant-design/icons'
 import type { ColumnsType } from 'antd/es/table'
 
 interface ApprovalNode {
@@ -214,6 +214,26 @@ export default function ApprovalFlowPage() {
     }
   }
 
+  const handleToggleStatus = async (record: ApprovalFlow) => {
+    const newStatus = !record.status
+    try {
+      const res = await fetch(`/api/approval-flow/${record.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: newStatus }),
+      })
+      const data = await res.json()
+      if (data.success) {
+        message.success(newStatus ? '已启用' : '已禁用')
+        loadData()
+      } else {
+        message.error(data.message || '操作失败')
+      }
+    } catch {
+      message.error('网络错误')
+    }
+  }
+
   const columns: ColumnsType<ApprovalFlow> = [
     { title: '流程名称', dataIndex: 'name', width: 150 },
     { title: '流程编码', dataIndex: 'code', width: 180 },
@@ -252,11 +272,20 @@ export default function ApprovalFlowPage() {
     },
     {
       title: '操作',
-      width: 200,
+      width: 250,
       render: (_, record) => (
         <Space>
           <Button size="small" onClick={() => handleAddNode(record.id)}>添加节点</Button>
           <Button size="small" icon={<EditOutlined />} onClick={() => handleEdit(record)} />
+          {record.status ? (
+            <Popconfirm title="确认禁用?" onConfirm={() => handleToggleStatus(record)}>
+              <Button size="small" icon={<StopOutlined />} danger>禁用</Button>
+            </Popconfirm>
+          ) : (
+            <Popconfirm title="确认启用?" onConfirm={() => handleToggleStatus(record)}>
+              <Button size="small" icon={<CheckCircleOutlined />} style={{ color: '#52c41a', borderColor: '#52c41a' }}>启用</Button>
+            </Popconfirm>
+          )}
           <Popconfirm title="确认删除?" onConfirm={() => handleDelete(record.id)}>
             <Button size="small" danger icon={<DeleteOutlined />} />
           </Popconfirm>
@@ -340,8 +369,8 @@ export default function ApprovalFlowPage() {
           <Form.Item name="name" label="流程名称" rules={[{ required: true }]}>
             <Input />
           </Form.Item>
-          <Form.Item name="code" label="流程编码" rules={[{ required: true }]}>
-            <Input placeholder="如: QUOTATION_APPROVAL" />
+          <Form.Item name="code" label="流程编码">
+            <Input placeholder="可选，系统自动生成" />
           </Form.Item>
           <Form.Item name="businessType" label="业务类型" rules={[{ required: true }]}>
             <Select options={businessTypes} />

@@ -30,12 +30,12 @@ export const GET = withErrorHandler(async (request: NextRequest) => {
 export const POST = withErrorHandler(async (request: NextRequest) => {
   const data = await request.json()
 
-  validateRequired(data, ['name', 'code', 'businessType'])
+  validateRequired(data, ['name', 'businessType'])
 
   const flow = await prisma.approvalFlow.create({
     data: {
       name: data.name,
-      code: data.code,
+      code: data.code || `FLOW_${Date.now()}`,
       businessType: data.businessType,
       description: data.description || null,
       nodes: data.nodes ? JSON.stringify(data.nodes) : '[]',

@@ -1,6 +1,8 @@
 import { prisma } from '@/lib/prisma'
 import { NextRequest } from 'next/server'
 import { withErrorHandler, success } from '@/lib/api-handler'
+import { auth } from '@/lib/auth'
+import { getDataFilter } from '@/lib/data-permission'
 
 export const GET = withErrorHandler(async (request: NextRequest) => {
   const { searchParams } = new URL(request.url)
@@ -25,7 +27,12 @@ export const GET = withErrorHandler(async (request: NextRequest) => {
     where.createdAt = {}
     if (startDate) where.createdAt.gte = new Date(startDate)
     if (endDate) where.createdAt.lte = new Date(endDate)
+    if (endDate) where.createdAt.lte = new Date(endDate)
   }
+
+  // 注入数据权限过滤
+  const permissionFilter = await getDataFilter()
+  Object.assign(where, permissionFilter)
 
   const [rawList, total] = await Promise.all([
     prisma.contract.findMany({
@@ -67,6 +74,7 @@ export const GET = withErrorHandler(async (request: NextRequest) => {
 })
 
 export const POST = withErrorHandler(async (request: NextRequest) => {
+  const session = await auth()
   const data = await request.json()
 
   // 生成合同编号
@@ -88,6 +96,7 @@ export const POST = withErrorHandler(async (request: NextRequest) => {
 
   // 构建合同创建数据
   const createData: any = {
+    createdById: session?.user?.id,
     contractNo,
     contractName: data.contractName,
     quotationId: data.quotationId,

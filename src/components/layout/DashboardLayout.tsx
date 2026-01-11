@@ -47,7 +47,6 @@ const menuItems = [
       { key: '/sample/receipt', label: <Link href="/sample/receipt">收样登记</Link> },
       { key: '/sample/details', label: <Link href="/sample/details">样品明细</Link> },
       { key: '/sample/my', label: <Link href="/sample/my">我的样品</Link> },
-      { key: '/sample/requisition', label: <Link href="/sample/requisition">样品借还</Link> },
     ],
   },
   {
@@ -111,6 +110,7 @@ const menuItems = [
       { key: '/system/role', label: <Link href="/system/role">角色管理</Link> },
       { key: '/system/dept', label: <Link href="/system/dept">部门管理</Link> },
       { key: '/system/approval-flow', label: <Link href="/system/approval-flow">审批流程</Link> },
+      { key: '/system/permission', label: <Link href="/system/permission">权限配置</Link> },
     ],
   },
   {
@@ -121,15 +121,8 @@ const menuItems = [
       { key: '/basic-data/test-templates', label: <Link href="/basic-data/test-templates">检测项目</Link> },
       { key: '/basic-data/inspection-standards', label: <Link href="/basic-data/inspection-standards">检查标准/依据</Link> },
       { key: '/basic-data/report-categories', label: <Link href="/basic-data/report-categories">报告分类</Link> },
-    ],
-  },
-  {
-    key: '/personnel',
-    icon: <TeamOutlined />,
-    label: '人员管理',
-    children: [
-      { key: '/personnel/capability', label: <Link href="/personnel/capability">人员资质</Link> },
-      { key: '/personnel/review', label: <Link href="/personnel/review">能力评审</Link> },
+      { key: '/basic-data/personnel-capability', label: <Link href="/basic-data/personnel-capability">人员资质</Link> },
+      { key: '/basic-data/capability-review', label: <Link href="/basic-data/capability-review">能力评审</Link> },
     ],
   },
 ]
