@@ -255,52 +255,102 @@ export default function DashboardPage() {
             ) : (
               <List
                 dataSource={approvals.slice(0, 5)}
-                renderItem={(item) => (
-                  <List.Item
-                    actions={[
-                      <Button
-                        key="approve"
-                        type="primary"
-                        size="small"
-                        icon={<CheckOutlined />}
-                        onClick={() => handleApprove(item.id, 'approve')}
-                      >
-                        通过
-                      </Button>,
-                      <Button
-                        key="reject"
-                        size="small"
-                        danger
-                        icon={<CloseOutlined />}
-                        onClick={() => handleApprove(item.id, 'reject')}
-                      >
-                        驳回
-                      </Button>,
-                    ]}
-                  >
-                    <List.Item.Meta
-                      title={
-                        <Space>
-                          {getBizTypeTag(item.bizType)}
-                          <Text strong>
-                            {item.quotation?.quotationNo ||
-                              item.contract?.contractNo ||
-                              item.client?.name ||
-                              item.bizId.substring(0, 8)}
-                          </Text>
-                        </Space>
-                      }
-                      description={
-                        <Space>
-                          <Text type="secondary">
-                            {item.submitterName} 提交
-                          </Text>
-                          <Tag color="processing">{getStepText(item.currentStep)}</Tag>
-                        </Space>
-                      }
-                    />
-                  </List.Item>
-                )}
+                renderItem={(item) => {
+                  // 根据业务类型生成详情链接
+                  const getDetailPath = () => {
+                    switch (item.bizType) {
+                      case 'quotation':
+                        return `/entrustment/quotation`
+                      case 'contract':
+                        return `/entrustment/contract`
+                      case 'client':
+                        return `/entrustment/client`
+                      default:
+                        return null
+                    }
+                  }
+                  const detailPath = getDetailPath()
+
+                  return (
+                    <List.Item
+                      actions={[
+                        <Button
+                          key="approve"
+                          type="primary"
+                          size="small"
+                          icon={<CheckOutlined />}
+                          onClick={async (e) => {
+                            e.stopPropagation()
+                            if (!session?.user?.id) {
+                              message.error('请先登录')
+                              return
+                            }
+                            await handleApprove(item.id, 'approve')
+                          }}
+                        >
+                          通过
+                        </Button>,
+                        <Button
+                          key="reject"
+                          size="small"
+                          danger
+                          icon={<CloseOutlined />}
+                          onClick={async (e) => {
+                            e.stopPropagation()
+                            if (!session?.user?.id) {
+                              message.error('请先登录')
+                              return
+                            }
+                            await handleApprove(item.id, 'reject')
+                          }}
+                        >
+                          驳回
+                        </Button>,
+                      ]}
+                    >
+                      <List.Item.Meta
+                        title={
+                          <Space>
+                            {getBizTypeTag(item.bizType)}
+                            {detailPath ? (
+                              <Link href={detailPath} style={{ color: '#1890ff' }}>
+                                {item.quotation?.quotationNo ||
+                                  item.contract?.contractNo ||
+                                  item.client?.name ||
+                                  item.bizId.substring(0, 8)}
+                              </Link>
+                            ) : (
+                              <Text strong>
+                                {item.quotation?.quotationNo ||
+                                  item.contract?.contractNo ||
+                                  item.client?.name ||
+                                  item.bizId.substring(0, 8)}
+                              </Text>
+                            )}
+                          </Space>
+                        }
+                        description={
+                          <Space size="small" wrap>
+                            <Text type="secondary">
+                              {item.submitterName} 提交
+                            </Text>
+                            <Tag color="processing">{getStepText(item.currentStep)}</Tag>
+                            {item.submittedAt && (
+                              <Text type="secondary" style={{ fontSize: 12 }}>
+                                {new Date(item.submittedAt).toLocaleString('zh-CN', {
+                                  month: '2-digit',
+                                  day: '2-digit',
+                                  hour: '2-digit',
+                                  minute: '2-digit',
+                                })}
+                              </Text>
+                            )}
+                          </Space>
+                        }
+                      />
+                    </List.Item>
+                  )
+                }}
               />
             )}
           </Card>
