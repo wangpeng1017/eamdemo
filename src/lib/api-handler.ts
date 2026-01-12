@@ -1,4 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { auth } from '@/lib/auth'
+import { logger } from '@/lib/logger'
+
+// 扩展 Session 用户类型
+export interface AuthUser {
+  id: string
+  name?: string | null
+  email?: string | null
+  roles?: string[]
+  permissions?: string[]
+}
 
 // Prisma 错误类型检查辅助函数
 function isPrismaKnownRequestError(err: unknown): err is { code: string; meta?: { target?: unknown; field_name?: unknown } } {
@@ -101,8 +112,16 @@ export function withErrorHandler<T>(
     request: NextRequest,
     context?: { params: Promise<Record<string, string>> }
   ): Promise<NextResponse> => {
+    const startTime = Date.now()
+    const method = request.method
+    const path = new URL(request.url).pathname
+
     try {
       const result = await handler(request, context)
+
+      // 记录成功请求
+      const duration = Date.now() - startTime
+      logger.apiResponse(method, path, 200, duration)
 
       // 如果处理器返回的已经是 NextResponse，直接返回
       if (result instanceof NextResponse) {
@@ -112,18 +131,24 @@ export function withErrorHandler<T>(
       // 否则包装成标准响应
       return success(result)
     } catch (err) {
-      console.error('[API Error]', err)
+      const duration = Date.now() - startTime
 
       // 处理自定义 API 错误
       if (err instanceof ApiError) {
+        logger.apiResponse(method, path, err.statusCode, duration)
+        if (err.statusCode >= 500) {
+          logger.error(`API Error: ${err.message}`, { error: err, data: { code: err.code } })
+        }
         return error(err.code, err.message, err.statusCode, err.details)
       }
 
       // 处理 Prisma 错误
       if (isPrismaKnownRequestError(err)) {
+        logger.apiResponse(method, path, err.code === 'P2025' ? 404 : 500, duration)
+        logger.error(`Database Error: ${err.code}`, { error: err as unknown as Error })
+
         switch (err.code) {
           case 'P2002':
-            // 唯一约束冲突
             return error(
               ErrorCodes.CONFLICT,
               '数据已存在，请检查唯一字段',
@@ -131,10 +156,8 @@ export function withErrorHandler<T>(
               { field: err.meta?.target }
             )
           case 'P2025':
-            // 记录不存在
             return error(ErrorCodes.NOT_FOUND, '记录不存在', 404)
           case 'P2003':
-            // 外键约束失败
             return error(
               ErrorCodes.BAD_REQUEST,
               '关联数据不存在',
@@ -152,6 +175,7 @@ export function withErrorHandler<T>(
       }
 
       if (isPrismaValidationError(err)) {
+        logger.apiResponse(method, path, 400, duration)
         return error(
           ErrorCodes.VALIDATION_ERROR,
           '数据验证失败',
@@ -160,6 +184,9 @@ export function withErrorHandler<T>(
       }
 
       // 处理其他错误
+      logger.apiResponse(method, path, 500, duration)
+      logger.error('Unhandled API Error', { error: err as Error })
+
       const message = err instanceof Error ? err.message : '服务器内部错误'
       return error(ErrorCodes.INTERNAL_ERROR, message, 500)
     }
@@ -231,4 +258,71 @@ export function unauthorized(message: string = '未登录或登录已过期'): n
  */
 export function forbidden(message: string = '无权限执行此操作'): never {
   throw new ApiError(ErrorCodes.FORBIDDEN, message, 403)
+}
+
+/**
+ * 需要认证的 API 处理器包装函数
+ * 自动验证用户登录状态，并将用户信息注入到 handler
+ */
+export function withAuth<T>(
+  handler: (
+    request: NextRequest,
+    user: AuthUser,
+    context?: { params: Promise<Record<string, string>> }
+  ) => Promise<T>
+): (request: NextRequest, context?: { params: Promise<Record<string, string>> }) => Promise<NextResponse> {
+  return withErrorHandler(async (request, context) => {
+    const session = await auth()
+
+    if (!session?.user?.id) {
+      logger.security('unauthorized')
+      unauthorized('未登录或登录已过期')
+    }
+
+    const user: AuthUser = {
+      id: session.user.id,
+      name: session.user.name,
+      email: session.user.email,
+      roles: session.user.roles || [],
+      permissions: session.user.permissions || [],
+    }
+
+    return handler(request, user, context)
+  })
+}
+
+/**
+ * 需要特定角色的 API 处理器包装函数
+ */
+export function withRole<T>(
+  roles: string[],
+  handler: (
+    request: NextRequest,
+    user: AuthUser,
+    context?: { params: Promise<Record<string, string>> }
+  ) => Promise<T>
+): (request: NextRequest, context?: { params: Promise<Record<string, string>> }) => Promise<NextResponse> {
+  return withAuth(async (request, user, context) => {
+    const userRoles = user.roles || []
+    const hasRole = roles.some(role => userRoles.includes(role))
+
+    if (!hasRole) {
+      forbidden(`需要以下角色之一: ${roles.join(', ')}`)
+    }
+
+    return handler(request, user, context)
+  })
+}
+
+/**
+ * 需要管理员权限的 API 处理器包装函数
+ */
+export function withAdmin<T>(
+  handler: (
+    request: NextRequest,
+    user: AuthUser,
+    context?: { params: Promise<Record<string, string>> }
+  ) => Promise<T>
+): (request: NextRequest, context?: { params: Promise<Record<string, string>> }) => Promise<NextResponse> {
+  return withRole(['admin'], handler)
 }

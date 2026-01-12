@@ -1,7 +1,9 @@
 import { prisma } from '@/lib/prisma'
-import { NextRequest, NextResponse } from 'next/server'
+import { NextRequest } from 'next/server'
+import { withAuth, success } from '@/lib/api-handler'
 
-export async function GET(request: NextRequest) {
+// 获取检测报告列表 - 需要登录
+export const GET = withAuth(async (request: NextRequest, user) => {
   const { searchParams } = new URL(request.url)
   const page = parseInt(searchParams.get('page') || '1')
   const pageSize = parseInt(searchParams.get('pageSize') || '10')
@@ -16,10 +18,11 @@ export async function GET(request: NextRequest) {
     prisma.testReport.count(),
   ])
 
-  return NextResponse.json({ list, total, page, pageSize })
-}
+  return success({ list, total, page, pageSize })
+})
 
-export async function POST(request: NextRequest) {
+// 创建检测报告 - 需要登录
+export const POST = withAuth(async (request: NextRequest, user) => {
   const data = await request.json()
   const today = new Date().toISOString().slice(0, 10).replace(/-/g, '')
   const count = await prisma.testReport.count({
@@ -30,5 +33,5 @@ export async function POST(request: NextRequest) {
   const report = await prisma.testReport.create({
     data: { ...data, reportNo }
   })
-  return NextResponse.json(report)
-}
+  return success(report)
+})

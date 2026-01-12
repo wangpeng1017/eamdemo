@@ -1,6 +1,6 @@
 import { prisma } from '@/lib/prisma'
 import { NextRequest } from 'next/server'
-import { withErrorHandler, success, validateRequired } from '@/lib/api-handler'
+import { withAuth, success, validateRequired } from '@/lib/api-handler'
 
 type PermissionWithChildren = {
   id: string
@@ -15,8 +15,8 @@ type PermissionWithChildren = {
   children?: PermissionWithChildren[]
 }
 
-// 获取权限列表
-export const GET = withErrorHandler(async (request: NextRequest) => {
+// 获取权限列表 - 需要登录
+export const GET = withAuth(async (request: NextRequest, user) => {
   const { searchParams } = new URL(request.url)
   const tree = searchParams.get('tree') === 'true'
   const type = searchParams.get('type')
@@ -45,8 +45,8 @@ export const GET = withErrorHandler(async (request: NextRequest) => {
   return success({ list: permissions, total: permissions.length })
 })
 
-// 创建权限
-export const POST = withErrorHandler(async (request: NextRequest) => {
+// 创建权限 - 需要登录
+export const POST = withAuth(async (request: NextRequest, user) => {
   const data = await request.json()
 
   validateRequired(data, ['name', 'type'])

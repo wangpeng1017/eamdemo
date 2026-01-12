@@ -1,7 +1,9 @@
 import { prisma } from '@/lib/prisma'
-import { NextRequest, NextResponse } from 'next/server'
+import { NextRequest } from 'next/server'
+import { withAuth, success } from '@/lib/api-handler'
 
-export async function GET(request: NextRequest) {
+// 获取应收账款列表 - 需要登录
+export const GET = withAuth(async (request: NextRequest, user) => {
   const { searchParams } = new URL(request.url)
   const page = parseInt(searchParams.get('page') || '1')
   const pageSize = parseInt(searchParams.get('pageSize') || '10')
@@ -15,11 +17,12 @@ export async function GET(request: NextRequest) {
     prisma.financeReceivable.count(),
   ])
 
-  return NextResponse.json({ list, total, page, pageSize })
-}
+  return success({ list, total, page, pageSize })
+})
 
-export async function POST(request: NextRequest) {
+// 创建应收账款 - 需要登录
+export const POST = withAuth(async (request: NextRequest, user) => {
   const data = await request.json()
   const receivable = await prisma.financeReceivable.create({ data })
-  return NextResponse.json(receivable)
-}
+  return success(receivable)
+})

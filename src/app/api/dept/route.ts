@@ -1,7 +1,9 @@
 import { prisma } from '@/lib/prisma'
-import { NextRequest, NextResponse } from 'next/server'
+import { NextRequest } from 'next/server'
+import { withAuth, success, badRequest } from '@/lib/api-handler'
 
-export async function GET(request: NextRequest) {
+// 获取部门列表 - 需要登录
+export const GET = withAuth(async (request: NextRequest, user) => {
   const { searchParams } = new URL(request.url)
   const isTree = searchParams.get('tree') === 'true'
 
@@ -11,7 +13,7 @@ export async function GET(request: NextRequest) {
   })
 
   if (isTree) {
-    const buildTree = (parentId: string | null = null): any[] => {
+    const buildTree = (parentId: string | null = null): unknown[] => {
       return list
         .filter(item => item.parentId === parentId)
         .map(item => ({
@@ -23,37 +25,30 @@ export async function GET(request: NextRequest) {
         }))
     }
     const tree = buildTree(null)
-    return NextResponse.json({ success: true, data: tree })
+    return success(tree)
   }
 
-  return NextResponse.json({ success: true, list }) // Keep 'list' for backward compatibility or return standard structure
-}
+  return success({ list })
+})
 
-export async function POST(request: NextRequest) {
+// 创建部门 - 需要登录
+export const POST = withAuth(async (request: NextRequest, user) => {
   const data = await request.json()
   const dept = await prisma.dept.create({ data })
-  return NextResponse.json(dept)
-}
+  return success(dept)
+})
 
-export async function PUT(request: NextRequest) {
+// 更新部门 - 需要登录
+export const PUT = withAuth(async (request: NextRequest, user) => {
   const data = await request.json()
   const { id, ...updateData } = data
-  if (!id) return NextResponse.json({ error: 'ID is required' }, { status: 400 })
+  if (!id) {
+    badRequest('ID is required')
+  }
 
   const dept = await prisma.dept.update({
     where: { id },
     data: updateData
   })
-  return NextResponse.json(dept)
-}
-
-export async function DELETE(request: NextRequest) {
-  const { searchParams } = new URL(request.url)
-  // support typical delete if passed by id in param or body?
-  // The previous implementation used dynamic route [id] for delete. 
-  // Wait, the previous file didn't populate DELETE/PUT in this file?
-  // The previous file content shown in view_file was ONLY GET and POST. 
-  // And there was a file `src/app/api/dept/[id]/route.ts`?
-  // Let me check if [id] route exists.
-  return NextResponse.json({ message: 'Use dynamic route for delete' })
-}
+  return success(dept)
+})

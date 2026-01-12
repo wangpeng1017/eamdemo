@@ -1,10 +1,11 @@
 import { prisma } from '@/lib/prisma'
 import { NextRequest } from 'next/server'
-import { withErrorHandler, success, notFound } from '@/lib/api-handler'
+import { withAuth, success, notFound, badRequest } from '@/lib/api-handler'
 
-// 获取单个易耗品
-export const GET = withErrorHandler(async (
+// 获取单个易耗品 - 需要登录
+export const GET = withAuth(async (
   request: NextRequest,
+  user,
   context?: { params: Promise<Record<string, string>> }
 ) => {
   const { id } = await context!.params
@@ -25,9 +26,10 @@ export const GET = withErrorHandler(async (
   })
 })
 
-// 更新易耗品
-export const PUT = withErrorHandler(async (
+// 更新易耗品 - 需要登录
+export const PUT = withAuth(async (
   request: NextRequest,
+  user,
   context?: { params: Promise<Record<string, string>> }
 ) => {
   const { id } = await context!.params
@@ -62,9 +64,10 @@ export const PUT = withErrorHandler(async (
   })
 })
 
-// 删除易耗品
-export const DELETE = withErrorHandler(async (
+// 删除易耗品 - 需要登录，检查关联数据
+export const DELETE = withAuth(async (
   request: NextRequest,
+  user,
   context?: { params: Promise<Record<string, string>> }
 ) => {
   const { id } = await context!.params
@@ -72,6 +75,14 @@ export const DELETE = withErrorHandler(async (
   const existing = await prisma.consumable.findUnique({ where: { id } })
   if (!existing) {
     notFound('易耗品不存在')
+  }
+
+  // 检查是否有关联的出入库记录
+  const transactionCount = await prisma.consumableTransaction.count({
+    where: { consumableId: id }
+  })
+  if (transactionCount > 0) {
+    badRequest(`无法删除：该易耗品有 ${transactionCount} 条出入库记录`)
   }
 
   await prisma.consumable.delete({ where: { id } })

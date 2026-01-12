@@ -1,30 +1,51 @@
 import { prisma } from '@/lib/prisma'
-import { NextRequest, NextResponse } from 'next/server'
+import { NextRequest } from 'next/server'
+import { withAuth, success, notFound, badRequest } from '@/lib/api-handler'
 
-export async function GET(
+// 获取设备详情 - 需要登录
+export const GET = withAuth(async (
   request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
-  const { id } = await params
+  user,
+  context?: { params: Promise<Record<string, string>> }
+) => {
+  const { id } = await context!.params
   const device = await prisma.device.findUnique({ where: { id } })
-  return NextResponse.json(device)
-}
 
-export async function PUT(
+  if (!device) {
+    notFound('设备不存在')
+  }
+
+  return success(device)
+})
+
+// 更新设备 - 需要登录
+export const PUT = withAuth(async (
   request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
-  const { id } = await params
+  user,
+  context?: { params: Promise<Record<string, string>> }
+) => {
+  const { id } = await context!.params
   const data = await request.json()
   const device = await prisma.device.update({ where: { id }, data })
-  return NextResponse.json(device)
-}
+  return success(device)
+})
 
-export async function DELETE(
+// 删除设备 - 需要登录，检查关联数据
+export const DELETE = withAuth(async (
   request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
-  const { id } = await params
+  user,
+  context?: { params: Promise<Record<string, string>> }
+) => {
+  const { id } = await context!.params
+
+  // 检查是否有关联的检测任务
+  const taskCount = await prisma.testTask.count({
+    where: { deviceId: id }
+  })
+  if (taskCount > 0) {
+    badRequest(`无法删除：该设备有 ${taskCount} 个关联检测任务`)
+  }
+
   await prisma.device.delete({ where: { id } })
-  return NextResponse.json({ success: true })
-}
+  return success({ success: true })
+})

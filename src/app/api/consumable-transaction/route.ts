@@ -1,14 +1,14 @@
 import { prisma } from '@/lib/prisma'
 import { NextRequest } from 'next/server'
-import { withErrorHandler, success, validateRequired, badRequest } from '@/lib/api-handler'
+import { withAuth, success, badRequest } from '@/lib/api-handler'
 import { generateNo } from '@/lib/generate-no'
 import { Prisma } from '@prisma/client'
+import { validate, validatePagination, createConsumableTransactionSchema } from '@/lib/validation'
 
-// 获取出入库记录列表
-export const GET = withErrorHandler(async (request: NextRequest) => {
+// 获取出入库记录列表 - 需要登录
+export const GET = withAuth(async (request: NextRequest, user) => {
   const { searchParams } = new URL(request.url)
-  const page = parseInt(searchParams.get('page') || '1')
-  const pageSize = parseInt(searchParams.get('pageSize') || '10')
+  const { page, pageSize } = validatePagination(searchParams)
   const type = searchParams.get('type')
   const consumableId = searchParams.get('consumableId')
   const keyword = searchParams.get('keyword')
@@ -69,15 +69,16 @@ export const GET = withErrorHandler(async (request: NextRequest) => {
   })
 })
 
-// 创建出入库记录
-export const POST = withErrorHandler(async (request: NextRequest) => {
+// 创建出入库记录 - 需要登录
+export const POST = withAuth(async (request: NextRequest, user) => {
   const data = await request.json()
 
-  validateRequired(data, ['type', 'consumableId', 'quantity', 'reason', 'operator'])
+  // 使用 Zod 验证输入
+  const validated = validate(createConsumableTransactionSchema, data)
 
   // 获取易耗品信息
   const consumable = await prisma.consumable.findUnique({
-    where: { id: data.consumableId },
+    where: { id: validated.consumableId },
   })
 
   if (!consumable) {
@@ -87,17 +88,17 @@ export const POST = withErrorHandler(async (request: NextRequest) => {
   const currentStock = Number(consumable!.stockQuantity)
 
   // 检查出库数量
-  if (data.type === 'out' && data.quantity > currentStock) {
+  if (validated.type === 'out' && validated.quantity > currentStock) {
     badRequest(`库存不足，当前库存: ${currentStock}`)
   }
 
   // 生成单据编号
-  const prefix = data.type === 'in' ? 'RK' : 'CK'
+  const prefix = validated.type === 'in' ? 'RK' : 'CK'
   const transactionNo = await generateNo(prefix, 4)
 
   // 使用默认单价（如果没有提供）
-  const unitPrice = data.unitPrice || 0
-  const totalAmount = data.quantity * unitPrice
+  const unitPrice = validated.unitPrice || 0
+  const totalAmount = validated.quantity * unitPrice
 
   // 使用事务创建记录并更新库存
   const result = await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
@@ -105,24 +106,24 @@ export const POST = withErrorHandler(async (request: NextRequest) => {
     const transaction = await tx.consumableTransaction.create({
       data: {
         transactionNo,
-        type: data.type,
-        consumableId: data.consumableId,
-        quantity: data.quantity,
+        type: validated.type,
+        consumableId: validated.consumableId,
+        quantity: validated.quantity,
         unitPrice,
         totalAmount,
-        reason: data.reason,
-        relatedOrder: data.relatedOrder || null,
-        operator: data.operator,
-        transactionDate: data.transactionDate ? new Date(data.transactionDate) : new Date(),
-        remark: data.remark || null,
+        reason: validated.reason,
+        relatedOrder: validated.relatedOrder || null,
+        operator: validated.operator,
+        transactionDate: validated.transactionDate ? new Date(validated.transactionDate) : new Date(),
+        remark: validated.remark || null,
       },
       include: { consumable: true },
     })
 
     // 更新库存
-    const newStock = data.type === 'in'
-      ? currentStock + data.quantity
-      : currentStock - data.quantity
+    const newStock = validated.type === 'in'
+      ? currentStock + validated.quantity
+      : currentStock - validated.quantity
 
     // 计算新状态
     let status = 1 // 正常
@@ -133,7 +134,7 @@ export const POST = withErrorHandler(async (request: NextRequest) => {
     }
 
     await tx.consumable.update({
-      where: { id: data.consumableId },
+      where: { id: validated.consumableId },
       data: { stockQuantity: newStock, status },
     })
 

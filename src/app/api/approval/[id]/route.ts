@@ -7,15 +7,16 @@
 import { NextRequest } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { approvalEngine } from '@/lib/approval/engine'
-import { withErrorHandler, success, notFound, badRequest } from '@/lib/api-handler'
+import { withAuth, success, notFound, badRequest } from '@/lib/api-handler'
 
 /**
  * 获取审批详情
  * GET /api/approval/:id
  */
-export const GET = withErrorHandler(
+export const GET = withAuth(
   async (
     request: NextRequest,
+    user,
     context?: { params: Promise<Record<string, string>> }
   ) => {
     const { id } = await context!.params
@@ -46,32 +47,32 @@ export const GET = withErrorHandler(
  *
  * @body {
  *   action: 'approve' | 'reject'
- *   approverId: string
- *   approverName: string
  *   comment?: string
  * }
  */
-export const PATCH = withErrorHandler(
+export const PATCH = withAuth(
   async (
     request: NextRequest,
+    user,
     context?: { params: Promise<Record<string, string>> }
   ) => {
     const { id } = await context!.params
     const data = await request.json()
 
-    if (!data.action || !data.approverId || !data.approverName) {
-      badRequest('缺少必填字段')
+    if (!data.action) {
+      badRequest('缺少 action 字段')
     }
 
     if (data.action !== 'approve' && data.action !== 'reject') {
       badRequest('无效的审批动作')
     }
 
+    // 使用当前登录用户的信息进行审批
     await approvalEngine.approve({
       instanceId: id,
       action: data.action,
-      approverId: data.approverId,
-      approverName: data.approverName,
+      approverId: user.id,
+      approverName: user.name || '未知用户',
       comment: data.comment,
     })
 
@@ -81,24 +82,20 @@ export const PATCH = withErrorHandler(
 
 /**
  * 撤回审批
- * DELETE /api/approval/:id?operatorId=xxx
+ * DELETE /api/approval/:id
  */
-export const DELETE = withErrorHandler(
+export const DELETE = withAuth(
   async (
     request: NextRequest,
+    user,
     context?: { params: Promise<Record<string, string>> }
   ) => {
     const { id } = await context!.params
-    const { searchParams } = new URL(request.url)
-    const operatorId = searchParams.get('operatorId')
 
-    if (!operatorId) {
-      badRequest('缺少 operatorId 参数')
-    }
-
+    // 使用当前登录用户的 ID 进行撤回
     await approvalEngine.cancel({
       instanceId: id,
-      operatorId,
+      operatorId: user.id,
     })
 
     return success({ success: true })

@@ -1,10 +1,10 @@
 import { prisma } from '@/lib/prisma'
 import { NextRequest } from 'next/server'
-import { withErrorHandler, success, validateRequired } from '@/lib/api-handler'
+import { withAuth, success, validateRequired } from '@/lib/api-handler'
 import { generateNo, NumberPrefixes } from '@/lib/generate-no'
 
-// 获取委外订单列表
-export const GET = withErrorHandler(async (request: NextRequest) => {
+// 获取委外订单列表 - 需要登录
+export const GET = withAuth(async (request: NextRequest, user) => {
   const { searchParams } = new URL(request.url)
   const page = parseInt(searchParams.get('page') || '1')
   const pageSize = parseInt(searchParams.get('pageSize') || '10')
@@ -65,8 +65,8 @@ export const GET = withErrorHandler(async (request: NextRequest) => {
   })
 })
 
-// 创建委外订单
-export const POST = withErrorHandler(async (request: NextRequest) => {
+// 创建委外订单 - 需要登录
+export const POST = withAuth(async (request: NextRequest, user) => {
   const data = await request.json()
 
   validateRequired(data, ['supplierId'])

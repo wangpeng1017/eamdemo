@@ -55,10 +55,11 @@ export const GET = withErrorHandler(async (request: NextRequest) => {
 
   // 客户委托排行 Top 10
   const topClients = await prisma.entrustment.groupBy({
-    by: ['clientName'],
+    by: ['clientId'],
     _count: { id: true },
     orderBy: { _count: { id: 'desc' } },
     take: 10,
+    where: { clientId: { not: null } },
   })
 
   // 样品状态分布

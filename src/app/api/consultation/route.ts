@@ -4,10 +4,10 @@
 
 import { prisma } from '@/lib/prisma'
 import { NextRequest } from 'next/server'
-import { withErrorHandler, success } from '@/lib/api-handler'
+import { withAuth, success } from '@/lib/api-handler'
 
-// 获取咨询列表
-export const GET = withErrorHandler(async (request: NextRequest) => {
+// 获取咨询列表 - 需要登录
+export const GET = withAuth(async (request: NextRequest, user) => {
   const { searchParams } = new URL(request.url)
   const page = parseInt(searchParams.get('page') || '1')
   const pageSize = parseInt(searchParams.get('pageSize') || '10')
@@ -56,8 +56,8 @@ export const GET = withErrorHandler(async (request: NextRequest) => {
   return success({ list: parsedList, total, page, pageSize })
 })
 
-// 创建咨询
-export const POST = withErrorHandler(async (request: NextRequest) => {
+// 创建咨询 - 需要登录
+export const POST = withAuth(async (request: NextRequest, user) => {
   const data = await request.json()
 
   const today = new Date().toISOString().slice(0, 10).replace(/-/g, '')
@@ -72,7 +72,9 @@ export const POST = withErrorHandler(async (request: NextRequest) => {
     createData.estimatedQuantity = parseInt(data.estimatedQuantity, 10) || 0
   }
 
-  const consultation = await prisma.consultation.create({ data: createData })
+  const consultation = await prisma.consultation.create({
+    data: createData as Parameters<typeof prisma.consultation.create>[0]['data']
+  })
 
   return success({
     ...consultation,

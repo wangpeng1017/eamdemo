@@ -145,11 +145,11 @@ export class ApprovalEngine {
       throw new Error('当前审批节点配置错误')
     }
 
-    // 3. 检查审批权限（简化版，实际需结合用户角色系统）
-    // const canApprove = await this.checkApprovalPermission(instance, approverId)
-    // if (!canApprove) {
-    //   throw new Error('您没有审批权限')
-    // }
+    // 3. 检查审批权限
+    const canApprove = await this.checkApprovalPermission(currentNode, approverId)
+    if (!canApprove) {
+      throw new Error('您没有审批权限')
+    }
 
     // 4. 创建审批记录
     await prisma.approvalRecord.create({
@@ -377,17 +377,56 @@ export class ApprovalEngine {
   }
 
   /**
-   * 检查审批权限（简化版，实际需结合用户角色系统）
+   * 检查审批权限
+   * 根据当前审批节点配置和用户角色判断是否有权限审批
    */
   async checkApprovalPermission(
-    instance: ApprovalInstance,
+    currentNode: ApprovalNode,
     userId: string
   ): Promise<boolean> {
-    // TODO: 根据用户角色/部门判断权限
-    // 1. 获取当前审批节点
-    // 2. 获取用户角色
-    // 3. 判断是否匹配
-    return true
+    // 获取用户及其角色信息
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      include: {
+        roles: {
+          include: {
+            role: true
+          }
+        }
+      }
+    })
+
+    if (!user) {
+      return false
+    }
+
+    // 获取用户的角色代码列表
+    const userRoleCodes = user.roles.map((ur: { role: { code: string } }) => ur.role.code)
+
+    // 根据节点类型检查权限
+    switch (currentNode.type) {
+      case 'role':
+        // 角色审批：检查用户是否拥有指定角色
+        return userRoleCodes.includes(currentNode.targetId)
+
+      case 'user':
+        // 指定用户审批：检查是否是指定用户
+        return userId === currentNode.targetId
+
+      case 'department':
+        // 部门负责人审批：检查用户是否是指定部门的负责人
+        // 简化实现：检查用户是否属于该部门且有管理角色
+        if (user.deptId === currentNode.targetId) {
+          // 检查是否有管理角色（如 admin, manager 等）
+          const managerRoles = ['admin', 'manager', 'dept_manager', 'sales_manager', 'lab_director']
+          return userRoleCodes.some(code => managerRoles.includes(code))
+        }
+        return false
+
+      default:
+        // 未知类型，默认拒绝
+        return false
+    }
   }
 }
 

@@ -39,7 +39,7 @@ export const GET = withErrorHandler(async (request: NextRequest) => {
             id: `project-${p.id}`,
             type: 'entrustment',
             title: `检测项目 ${p.name} 待分配`,
-            description: p.entrustment?.client?.name || p.entrustment?.clientName || '未知客户',
+            description: p.entrustment?.client?.name || '未知客户',
             priority: 'medium',
             link: '/entrustment/list',
         })

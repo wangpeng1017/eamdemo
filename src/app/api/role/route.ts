@@ -1,7 +1,9 @@
 import { prisma } from '@/lib/prisma'
-import { NextRequest, NextResponse } from 'next/server'
+import { NextRequest } from 'next/server'
+import { withAuth, success } from '@/lib/api-handler'
 
-export async function GET(request: NextRequest) {
+// 获取角色列表 - 需要登录
+export const GET = withAuth(async (request: NextRequest, user) => {
   const { searchParams } = new URL(request.url)
   const page = parseInt(searchParams.get('page') || '1')
   const pageSize = parseInt(searchParams.get('pageSize') || '10')
@@ -16,11 +18,12 @@ export async function GET(request: NextRequest) {
     prisma.role.count(),
   ])
 
-  return NextResponse.json({ list, total, page, pageSize })
-}
+  return success({ list, total, page, pageSize })
+})
 
-export async function POST(request: NextRequest) {
+// 创建角色 - 需要登录
+export const POST = withAuth(async (request: NextRequest, user) => {
   const data = await request.json()
   const role = await prisma.role.create({ data })
-  return NextResponse.json(role)
-}
+  return success(role)
+})

@@ -1,14 +1,16 @@
 import { prisma } from '@/lib/prisma'
-import { NextRequest, NextResponse } from 'next/server'
+import { NextRequest } from 'next/server'
 import bcrypt from 'bcryptjs'
+import { withAuth, success, badRequest } from '@/lib/api-handler'
+import { validate, validatePagination, createUserSchema } from '@/lib/validation'
 
-export async function GET(request: NextRequest) {
+// 获取用户列表 - 需要登录
+export const GET = withAuth(async (request: NextRequest, user) => {
   const { searchParams } = new URL(request.url)
-  const page = parseInt(searchParams.get('page') || '1')
-  const pageSize = parseInt(searchParams.get('pageSize') || '10')
+  const { page, pageSize } = validatePagination(searchParams)
   const deptId = searchParams.get('deptId')
 
-  let whereClause: any = {}
+  const whereClause: Record<string, unknown> = {}
 
   // 如果指定了部门，递归查询该部门及所有子部门的用户
   if (deptId && deptId !== 'undefined' && deptId !== 'null') {
@@ -48,22 +50,39 @@ export async function GET(request: NextRequest) {
     prisma.user.count({ where: whereClause }),
   ])
 
-  return NextResponse.json({ list, total, page, pageSize })
-}
+  return success({ list, total, page, pageSize })
+})
 
-export async function POST(request: NextRequest) {
+// 创建用户 - 需要登录（管理员操作）
+export const POST = withAuth(async (request: NextRequest, user) => {
   const data = await request.json()
-  const hashedPassword = await bcrypt.hash(data.password || '123456', 10)
 
-  const user = await prisma.user.create({
+  // 使用 Zod 验证输入
+  const validated = validate(createUserSchema, data)
+
+  // 检查用户名是否已存在
+  const existing = await prisma.user.findUnique({
+    where: { username: validated.username }
+  })
+  if (existing) {
+    badRequest('用户名已存在')
+  }
+
+  // 密码必须由用户提供或使用随机密码
+  const password = validated.password || Math.random().toString(36).slice(-10)
+  const hashedPassword = await bcrypt.hash(password, 10)
+
+  const newUser = await prisma.user.create({
     data: {
-      username: data.username,
+      username: validated.username,
       password: hashedPassword,
-      name: data.name,
-      phone: data.phone,
-      email: data.email,
-      status: data.status ?? 1,
+      name: validated.name,
+      phone: validated.phone,
+      email: validated.email,
+      deptId: validated.deptId,
+      status: validated.status,
     }
   })
-  return NextResponse.json(user)
-}
+
+  return success(newUser)
+})

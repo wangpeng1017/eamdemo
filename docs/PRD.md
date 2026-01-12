@@ -1,8 +1,8 @@
 # LIMS 实验室信息管理系统 - 产品需求文档 (PRD)
 
-> **版本**: 1.4
-> **最后更新**: 2026-01-08
-> **本次更新**: 委托合同和委托单功能增强
+> **版本**: 1.8
+> **最后更新**: 2026-01-12
+> **本次更新**: 报告管理迭代与任务流程简化
 > **文档类型**: 详细需求规格说明书
 > **技术栈变更**: 已迁移至 Next.js 全栈方案
 > **审批流系统**: 统一可配置审批流系统 v1.1
@@ -134,9 +134,8 @@ LIMS（Laboratory Information Management System）是一套面向检测实验室
 
 ```
 [待开始] → [进行中] → [已完成]
-              ↘
-          [已转交]
 ```
+> **注**：任务流程已简化，取消"进度"字段。点击"提交"直接完成任务，系统自动流转。
 
 #### 2.2.6 报告审批流程
 
@@ -564,10 +563,9 @@ LIMS（Laboratory Information Management System）是一套面向检测实验室
 | 委托单号 | entrustmentId | string | 关联委托单 |
 | 样品名称 | sampleName | string | 检测样品 |
 | 检测参数 | parameters | string[] | 检测项目列表 |
-| 状态 | status | enum | 待开始/进行中/已完成/已转交 |
+| 状态 | status | enum | pending/in_progress/completed |
 | 执行人 | assignedTo | string | 分配的检测人员 |
 | 截止日期 | dueDate | date | 完成截止日期 |
-| 进度 | progress | number | 完成进度百分比 |
 | 是否外包 | isOutsourced | boolean | 是否委外任务（分包时自动创建） |
 
 **分配表单字段**：
@@ -583,8 +581,10 @@ LIMS（Laboratory Information Management System）是一套面向检测实验室
 
 | 按钮 | 触发条件 | 操作逻辑 |
 |------|----------|----------|
-| 分配 | 任务未分配或待开始 | 打开分配弹窗 |
-| 查看详情 | 任意状态 | 打开任务详情抽屉 |
+| 录入数据 | status = "in_progress" | 跳转数据录入页面 |
+| 查看数据 | status = "completed" | 查看只读数据页面 |
+| 分配 | 任务未分配 | 打开分配弹窗 |
+
 
 **统计信息**：
 - 未分配任务数
@@ -600,10 +600,9 @@ LIMS（Laboratory Information Management System）是一套面向检测实验室
 **页面路径**：`/task/my`
 
 **操作按钮**：
-- 开始任务：状态从"待开始"改为"进行中"
-- 完成任务：状态改为"已完成"
-- 转交任务：转交给其他人员
-- 录入数据：跳转到数据录入页面
+- **录入数据**：跳转到数据录入页面（进行中任务）
+- **查看数据**：查看已完成任务的数据
+- **转交任务**：将任务转交给其他人员
 
 ---
 
@@ -619,110 +618,74 @@ LIMS（Laboratory Information Management System）是一套面向检测实验室
 - 基于 Fortune-sheet 的表格编辑组件
 - 支持从检测模板加载
 - 支持公式计算
-- 自动保存功能
+- **自动保存**：点击保存草稿暂存数据
+- **提交直接完成**：提交后任务状态直接变为"已完成"，数据锁定只读
 
 ---
 
 ### 3.5 报告管理模块
 
-#### 3.5.1 检测报告 (TestReports)
+#### 3.5.1 任务报告 (TaskReports)
 
-**功能描述**：管理任务级检测报告。
+**功能描述**：管理基于单个检测任务的原始检测报告。
 
-**页面路径**：`/test/report`
+**页面路径**：
+- 报告生成：`/report/task-generate`
+- 报告详情：`/report/task/[id]`
+
+**核心流程**：
+1. **生成**：从"已完成"的任务中选择生成报告
+2. **预览**：实时预览报告内容，包含检测数据表格和结论
+3. **导出**：支持 Excel/PDF 导出
 
 **报告字段**：
 
 | 字段名 | 字段标识 | 类型 | 说明 |
 |--------|----------|------|------|
 | 报告编号 | reportNo | string | 格式：RPT-YYYYMMDD-XXX |
-| 委托单号 | entrustmentId | string | 关联委托单 |
-| 项目名称 | projectName | string | 检测项目 |
-| 客户名称 | clientName | string | 委托单位 |
-| 样品编号 | sampleNo | string | 样品编号 |
+| 任务编号 | taskNo | string | 关联任务 |
 | 样品名称 | sampleName | string | 样品名称 |
-| 任务编号 | taskNo | string | 检测任务号 |
-| 检测参数 | testParameters | string[] | 检测参数列表 |
-| 检测结果 | testResults | object[] | 结果数据 |
-| 检测标准 | standardName | string | 依据标准 |
+| 检测结论 | overallConclusion | string | 合格/不合格 |
+| 检测数据 | testResults | json | 完整检测数据快照 |
 | 检测人 | tester | string | 检测人员 |
-| 审核人 | reviewer | string | 审核人员 |
-| 批准人 | approver | string | 批准人员 |
-| 状态 | status | enum | 草稿/待审核/已审核/已批准/已发布 |
+| 状态 | status | enum | 草稿/已发布 |
 
 ---
 
 #### 3.5.2 客户报告 (ClientReports)
 
-**功能描述**：管理面向客户的综合检测报告。
+**功能描述**：管理面向客户的正式综合报告，支持合并多个任务报告。
 
-**页面路径**：`/report/client`
+**页面路径**：
+- 报告生成：`/report/client-generate`
+- 报告详情：`/report/client/[id]`
+
+**功能流程**：
+1. **选择委托单**：选择需要出具报告的委托单
+2. **选择任务**：勾选该委托单下已完成的任务（支持多选合并）
+3. **填写封面**：补充报告标题、备注等信息
+4. **生成报告**：系统自动聚合所有任务的检测数据
 
 **报告字段**：
 
 | 字段名 | 字段标识 | 类型 | 说明 |
 |--------|----------|------|------|
-| 报告编号 | reportNo | string | 如 ALTC-TC-JR-002-2/II |
+| 报告编号 | reportNo | string | 客户报告编号 |
 | 委托单号 | entrustmentId | string | 关联委托单 |
-| 项目名称 | projectName | string | 项目名称 |
 | 客户名称 | clientName | string | 委托单位 |
-| 客户地址 | clientAddress | string | 单位地址 |
-| 样品名称 | sampleName | string | 样品名称 |
-| 样品编号 | sampleNo | string | 样品编号 |
-| 型号规格 | specification | string | 规格型号 |
-| 样品数量 | sampleQuantity | string | 数量 |
-| 接样日期 | receivedDate | date | 接样日期 |
-| 关联任务报告 | taskReportNos | string[] | 任务报告编号列表 |
-| 检测项目 | testItems | string[] | 检测项目汇总 |
-| 检测依据 | testStandards | string[] | 标准汇总 |
-| 总体结论 | overallConclusion | text | 综合结论 |
-| 编制人 | preparer | string | 报告编制人 |
-| 审核人 | reviewer | string | 审核人 |
-| 批准人 | approver | string | 批准人 |
-| 状态 | status | enum | 草稿/待审核/待批准/已批准/已发布 |
+| 包含任务 | taskReports | list | 关联的任务报告列表 |
+| 总体结论 | conclusion | text | 综合结论 |
+| 状态 | status | enum | 草稿/已发布 |
 
 ---
 
-#### 3.5.3 报告审批 (ReportApproval)
+#### 3.5.3 报告模板管理
 
-**功能描述**：审核和批准报告。
+**页面路径**：
+- 任务报告模板：`/report/task-template`
+- 客户报告模板：`/report/client-template`
 
-**页面路径**：`/report/approval`
-
-**审批流程**：
-1. **审核**：技术负责人审核报告内容准确性
-2. **批准**：实验室主任批准报告发布
-
-**审批记录字段**：
-
-| 字段名 | 字段标识 | 类型 | 说明 |
-|--------|----------|------|------|
-| 报告编号 | reportNo | string | 报告编号 |
-| 审核人 | reviewerName | string | 审核人姓名 |
-| 审核类型 | reviewType | enum | 审核/批准 |
-| 审核结果 | reviewResult | enum | 通过/驳回 |
-| 批注意见 | comments | text | 审核意见 |
-| 审核日期 | reviewDate | datetime | 审核时间 |
-
----
-
-#### 3.5.4 报告模板管理
-
-**功能描述**：管理报告模板文件。
-
-**页面路径**：`/report/template`
-
-**模板字段**：
-
-| 字段名 | 字段标识 | 类型 | 说明 |
-|--------|----------|------|------|
-| 模板名称 | name | string | 模板名称 |
-| 模板代码 | code | string | 模板标识 |
-| 分类 | category | string | 模板分类 |
-| 文件路径 | fileUrl | string | 模板文件 |
-| 上传日期 | uploadDate | date | 上传时间 |
-| 上传人 | uploader | string | 上传者 |
-| 状态 | status | enum | active/inactive |
+**功能描述**：分类管理不同层级的报告模板。
 
 ---
 
@@ -1504,6 +1467,32 @@ client/src/
 - ✅ 新增快速部署脚本 `deploy-fast.sh` (本地构建+上传架构)
 - ✅ 数据库新增 `EntrustmentProject.subcontractAssignee` 字段
 - ✅ 修复所有状态标签的国际化显示 (English -> 中文)
+
+---
+
+### v1.8 - 2026-01-12
+
+**报告管理迭代**：
+- ✅ **重构报告模块**：拆分为"任务报告"和"客户报告"双层结构
+  - 任务报告：针对单一检测任务，记录原始数据
+  - 客户报告：支持多任务合并，生成最终对外报告
+- ✅ **新增页面**：
+  - `/report/task-generate` & `/report/task-template`
+  - `/report/client-generate` & `/report/client-template`
+- ✅ **报告预览**：支持实时预览检测数据表格
+- ✅ **导出**：实现 Excel 格式报告导出
+
+**任务流程简化**：
+- ✅ **状态简化**：去除 pending_review 状态，简化为 in_progress -> completed
+- ✅ **字段精简**：移除不常用的 progress 进度字段
+- ✅ **交互优化**：
+  - 移除"开始"、"完成"按钮，提交即完成
+  - 移除冗余的"审核"按钮，简化操作路径
+
+**其他修复**：
+- ✅ 修复工作台 KPI 统计中的状态过滤问题
+- ✅ 修复数据保存弹窗未显示的问题
+- ✅ 优化 DataSheet 数据同步机制
 
 ---
 

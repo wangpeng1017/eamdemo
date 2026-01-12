@@ -1,15 +1,15 @@
 import { prisma } from '@/lib/prisma'
 import { NextRequest } from 'next/server'
 import {
-  withErrorHandler,
+  withAuth,
   success,
   validateRequired,
   badRequest,
 } from '@/lib/api-handler'
 import { Prisma } from '@prisma/client'
 
-// 获取收款记录列表
-export const GET = withErrorHandler(async (request: NextRequest) => {
+// 获取收款记录列表 - 需要登录
+export const GET = withAuth(async (request: NextRequest, user) => {
   const { searchParams } = new URL(request.url)
   const page = parseInt(searchParams.get('page') || '1')
   const pageSize = parseInt(searchParams.get('pageSize') || '10')
@@ -71,8 +71,8 @@ export const GET = withErrorHandler(async (request: NextRequest) => {
   })
 })
 
-// 创建收款记录
-export const POST = withErrorHandler(async (request: NextRequest) => {
+// 创建收款记录 - 需要登录
+export const POST = withAuth(async (request: NextRequest, user) => {
   const data = await request.json()
 
   validateRequired(data, ['receivableId', 'amount', 'paymentDate', 'paymentMethod'])

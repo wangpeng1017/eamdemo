@@ -1,8 +1,9 @@
 import { prisma } from '@/lib/prisma'
 import { NextRequest } from 'next/server'
-import { withErrorHandler, success } from '@/lib/api-handler'
+import { withAuth, success } from '@/lib/api-handler'
 
-export const GET = withErrorHandler(async (request: NextRequest) => {
+// 获取报告分类列表 - 需要登录
+export const GET = withAuth(async (request: NextRequest, user) => {
   const { searchParams } = new URL(request.url)
   const page = parseInt(searchParams.get('page') || '1')
   const pageSize = parseInt(searchParams.get('pageSize') || '10')
@@ -25,7 +26,8 @@ export const GET = withErrorHandler(async (request: NextRequest) => {
   return success({ list: parsedList, total, page, pageSize })
 })
 
-export const POST = withErrorHandler(async (request: NextRequest) => {
+// 创建报告分类 - 需要登录
+export const POST = withAuth(async (request: NextRequest, user) => {
   const data = await request.json()
 
   const category = await prisma.reportCategory.create({

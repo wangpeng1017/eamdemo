@@ -1,14 +1,15 @@
 import { prisma } from '@/lib/prisma'
 import { NextRequest } from 'next/server'
 import {
-  withErrorHandler,
+  withAuth,
   success,
   validateRequired,
 } from '@/lib/api-handler'
 import { generateNo, NumberPrefixes } from '@/lib/generate-no'
+import { getDataFilter } from '@/lib/data-permission'
 
-// 获取样品列表（含筛选和关联数据）
-export const GET = withErrorHandler(async (request: NextRequest) => {
+// 获取样品列表（含筛选和关联数据）- 需要登录
+export const GET = withAuth(async (request: NextRequest, user) => {
   const { searchParams } = new URL(request.url)
   const page = parseInt(searchParams.get('page') || '1')
   const pageSize = parseInt(searchParams.get('pageSize') || '10')
@@ -21,6 +22,10 @@ export const GET = withErrorHandler(async (request: NextRequest) => {
 
   // 构建筛选条件
   const where: Record<string, unknown> = {}
+
+  // 注入数据权限过滤
+  const permissionFilter = await getDataFilter()
+  Object.assign(where, permissionFilter)
 
   if (status) {
     where.status = status
@@ -114,8 +119,8 @@ export const GET = withErrorHandler(async (request: NextRequest) => {
   })
 })
 
-// 创建样品
-export const POST = withErrorHandler(async (request: NextRequest) => {
+// 创建样品 - 需要登录
+export const POST = withAuth(async (request: NextRequest, user) => {
   const data = await request.json()
 
   // 验证必填字段
@@ -130,6 +135,7 @@ export const POST = withErrorHandler(async (request: NextRequest) => {
       sampleNo,
       status: data.status || 'received',
       receiptDate: data.receiptDate ? new Date(data.receiptDate) : new Date(),
+      createdById: user.id,
     },
     include: {
       entrustment: true,
