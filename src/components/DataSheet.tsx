@@ -11,46 +11,59 @@ interface DataSheetProps {
   height?: number | string
 }
 
-export default function DataSheet({ data, onChange, readonly = false, height = 600 }: DataSheetProps) {
-  const [sheetData, setSheetData] = useState(data || getDefaultData())
+export default function DataSheet({ data, onChange, readonly = false, height = 500 }: DataSheetProps) {
+  const [sheetData, setSheetData] = useState<any[]>(() => data || getDefaultData())
   const workbookRef = useRef<WorkbookInstance>(null)
 
   function getDefaultData() {
     return [
       {
         name: "Sheet1",
+        row: 30,  // 设置行数
+        column: 15,  // 设置列数
         celldata: [
-          { r: 0, c: 0, v: { v: "检测项目", ct: { fa: "General", t: "g" } } },
-          { r: 0, c: 1, v: { v: "检测方法", ct: { fa: "General", t: "g" } } },
-          { r: 0, c: 2, v: { v: "技术要求", ct: { fa: "General", t: "g" } } },
-          { r: 0, c: 3, v: { v: "实测值", ct: { fa: "General", t: "g" } } },
-          { r: 0, c: 4, v: { v: "单项判定", ct: { fa: "General", t: "g" } } },
-          { r: 0, c: 5, v: { v: "备注", ct: { fa: "General", t: "g" } } },
+          { r: 0, c: 0, v: { v: "检测项目", ct: { fa: "General", t: "g" }, bl: 1 } },
+          { r: 0, c: 1, v: { v: "检测方法", ct: { fa: "General", t: "g" }, bl: 1 } },
+          { r: 0, c: 2, v: { v: "技术要求", ct: { fa: "General", t: "g" }, bl: 1 } },
+          { r: 0, c: 3, v: { v: "实测值", ct: { fa: "General", t: "g" }, bl: 1 } },
+          { r: 0, c: 4, v: { v: "单项判定", ct: { fa: "General", t: "g" }, bl: 1 } },
+          { r: 0, c: 5, v: { v: "备注", ct: { fa: "General", t: "g" }, bl: 1 } },
         ],
+        config: {
+          columnlen: {
+            0: 150,
+            1: 150,
+            2: 150,
+            3: 100,
+            4: 100,
+            5: 100,
+          }
+        }
       },
     ]
   }
 
   useEffect(() => {
-    if (data) {
+    if (data && data.length > 0) {
       setSheetData(data)
     }
   }, [data])
 
-  const handleChange = (data: any) => {
-    setSheetData(data)
-    onChange?.(data)
+  const handleChange = (changedData: any) => {
+    setSheetData(changedData)
+    onChange?.(changedData)
   }
 
   return (
-    <div className="border border-gray-200 rounded">
+    <div className="border border-gray-200 rounded" style={{ height: typeof height === 'number' ? `${height}px` : height }}>
       <Workbook
         ref={workbookRef}
         data={sheetData}
         onChange={handleChange}
-        // @ts-ignore - readonly is supported by the component
-        readOnly={readonly}
-        style={{ height: height }}
+        allowEdit={!readonly}
+        showToolbar={true}
+        showFormulaBar={true}
+        showSheetTabs={true}
       />
     </div>
   )

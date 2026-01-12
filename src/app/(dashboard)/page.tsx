@@ -66,6 +66,11 @@ export default function DashboardPage() {
   const [tasks, setTasks] = useState<TaskItem[]>([])
   const [loading, setLoading] = useState(true)
 
+  // 通过弹窗状态
+  const [approveModalOpen, setApproveModalOpen] = useState(false)
+  const [approveItemId, setApproveItemId] = useState('')
+  const [approveLoading, setApproveLoading] = useState(false)
+
   // 驳回弹窗状态
   const [rejectModalOpen, setRejectModalOpen] = useState(false)
   const [rejectItemId, setRejectItemId] = useState('')
@@ -290,14 +295,8 @@ export default function DashboardPage() {
                               message.error('请先登录')
                               return
                             }
-
-                            Modal.confirm({
-                              title: '确认审批通过？',
-                              content: '确认后将进入下一环节或完成审批。',
-                              onOk: async () => {
-                                await handleApprove(item.id, 'approve')
-                              }
-                            })
+                            setApproveItemId(item.id)
+                            setApproveModalOpen(true)
                           }}
                         >
                           通过
@@ -426,6 +425,27 @@ export default function DashboardPage() {
           </Card>
         </Col>
       </Row>
+
+      {/* 通过确认弹窗 */}
+      <Modal
+        title="确认审批通过"
+        open={approveModalOpen}
+        confirmLoading={approveLoading}
+        onOk={async () => {
+          setApproveLoading(true)
+          try {
+            await handleApprove(approveItemId, 'approve')
+            setApproveModalOpen(false)
+          } finally {
+            setApproveLoading(false)
+          }
+        }}
+        onCancel={() => setApproveModalOpen(false)}
+        okText="确认通过"
+        cancelText="取消"
+      >
+        <p>确认后将进入下一环节或完成审批。</p>
+      </Modal>
 
       <Modal
         title="驳回审批"

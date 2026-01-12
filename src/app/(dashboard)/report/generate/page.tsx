@@ -17,6 +17,7 @@ interface Task {
   sample?: { sampleNo: string; name: string }
   testItems: string[]
   assignedTo?: { name: string }
+  testData?: { parameter: string; value: string | null; standard: string | null; result: string | null; remark: string | null }[]
 }
 
 interface ReportTemplate {
@@ -62,12 +63,12 @@ export default function ReportGeneratePage() {
       const res = await fetch('/api/task/all?' + params)
       const json = await res.json()
       if (json.success && json.data) {
-      setData(json.data.list || [])
-      setTotal(json.data.total || 0)
-    } else {
-      setData(json.list || [])
-      setTotal(json.total || 0)
-    }
+        setData(json.data.list || [])
+        setTotal(json.data.total || 0)
+      } else {
+        setData(json.list || [])
+        setTotal(json.total || 0)
+      }
     } catch (error) {
       message.error('获取数据失败')
     } finally {
@@ -331,8 +332,28 @@ export default function ReportGeneratePage() {
                 )) || '-'}
               </Descriptions.Item>
             </Descriptions>
-            <div className="mt-4 p-4 border border-gray-200 rounded bg-gray-50 min-h-[200px]">
-              <p className="text-gray-400 text-center">报告内容预览区域...</p>
+            <div className="mt-4">
+              <h3 className="font-bold mb-2">检测数据</h3>
+              {selectedTask.testData && selectedTask.testData.length > 0 ? (
+                <Table
+                  size="small"
+                  bordered
+                  pagination={false}
+                  dataSource={selectedTask.testData}
+                  rowKey={(r, i) => `${r.parameter}-${i}`}
+                  columns={[
+                    { title: '检测项目', dataIndex: 'parameter', width: 120 },
+                    { title: '技术要求', dataIndex: 'standard', width: 120 },
+                    { title: '实测值', dataIndex: 'value', width: 100 },
+                    { title: '单项判定', dataIndex: 'result', width: 80 },
+                    { title: '备注', dataIndex: 'remark' },
+                  ]}
+                />
+              ) : (
+                <div className="p-4 border border-gray-200 rounded bg-gray-50 text-gray-400 text-center">
+                  暂无检测数据
+                </div>
+              )}
             </div>
           </div>
         )}

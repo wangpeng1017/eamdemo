@@ -158,7 +158,7 @@ export default function ReportTemplatePage() {
   return (
     <div className="p-6">
       <Card
-        title="报告模板管理"
+        title="任务报告模板管理"
         extra={
           <Button type="primary" icon={<PlusOutlined />} onClick={handleAdd}>
             新增模板

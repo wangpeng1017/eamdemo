@@ -39,6 +39,9 @@ export default function DataEntryPage() {
   const [submitModalOpen, setSubmitModalOpen] = useState(false)
   const [form] = Form.useForm()
 
+  // 判断是否只读模式（只有已完成状态才只读）
+  const isReadOnly = task?.status === 'completed'
+
   // 获取任务详情
   const fetchTask = async () => {
     setLoading(true)
@@ -46,11 +49,28 @@ export default function DataEntryPage() {
       const res = await fetch(`/api/task/${taskId}`)
       if (!res.ok) throw new Error("获取任务失败")
       const json = await res.json()
-      setTask(json)
 
-      // 如果已有测试数据，加载到表格
-      if (json.testData) {
-        setSheetData(json.testData)
+      // 处理 API 返回的数据结构：{success: true, data: {...}} 或直接返回数据
+      const taskData = json.data || json
+      setTask(taskData)
+
+      // 优先从 sheetData 加载数据（Fortune-sheet 格式）
+      if (taskData.sheetData) {
+        try {
+          const parsed = typeof taskData.sheetData === 'string'
+            ? JSON.parse(taskData.sheetData)
+            : taskData.sheetData
+
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            setSheetData(parsed)
+          }
+        } catch (e) {
+          console.error("解析 sheetData 失败", e)
+        }
+      }
+      // 兼容旧逻辑：如果 testData 是数组且非空（虽然目前 testData 是关联字段，不太可能有此结构）
+      else if (taskData.testData && Array.isArray(taskData.testData) && taskData.testData.length > 0) {
+        setSheetData(taskData.testData)
       }
     } catch (error) {
       message.error("获取任务失败")
@@ -76,12 +96,16 @@ export default function DataEntryPage() {
         }),
       })
       if (res.ok) {
-        message.success("保存成功")
+        message.success({
+          content: '✅ 数据已保存',
+          duration: 2,
+          key: 'save-draft'
+        })
       } else {
-        message.error("保存失败")
+        message.error({ content: '保存失败', key: 'save-draft' })
       }
     } catch (error) {
-      message.error("保存失败")
+      message.error({ content: '保存失败', key: 'save-draft' })
     } finally {
       setSaving(false)
     }
@@ -98,7 +122,7 @@ export default function DataEntryPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           sheetData,
-          status: 'completed',
+          action: 'submit',
           summary: values.summary,
           conclusion: values.conclusion,
         }),
@@ -134,22 +158,26 @@ export default function DataEntryPage() {
             数据录入 - {task.taskNo}
           </h1>
         </div>
+        {/* 顶部操作按钮 */}
         <Space>
-          <Button
-            icon={<SaveOutlined />}
-            loading={saving}
-            onClick={handleSave}
-          >
-            保存草稿
-          </Button>
-          <Button
-            type="primary"
-            icon={<CheckOutlined />}
-            onClick={() => setSubmitModalOpen(true)}
-            disabled={task.status === "completed"}
-          >
-            提交完成
-          </Button>
+          {!isReadOnly && (
+            <>
+              <Button
+                icon={<SaveOutlined />}
+                loading={saving}
+                onClick={handleSave}
+              >
+                保存草稿
+              </Button>
+              <Button
+                type="primary"
+                icon={<CheckOutlined />}
+                onClick={() => setSubmitModalOpen(true)}
+              >
+                提交
+              </Button>
+            </>
+          )}
         </Space>
       </div>
 
@@ -174,10 +202,29 @@ export default function DataEntryPage() {
       </Card>
 
       {/* 数据录入表格 */}
-      <Card title="检测数据录入">
+      <Card
+        title="检测数据录入"
+        extra={
+          isReadOnly && (
+            <Tag color="blue">
+              {task?.status === 'pending_review' ? '待审核' : '已完成'}
+            </Tag>
+          )
+        }
+      >
+        {isReadOnly && (
+          <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded">
+            <p className="text-blue-700">
+              {task?.status === 'pending_review'
+                ? '📋 数据已提交，等待主管审核'
+                : '✅ 任务已完成，数据为只读状态'}
+            </p>
+          </div>
+        )}
         <DataSheet
           data={sheetData}
           onChange={setSheetData}
+          readonly={isReadOnly}
           height={500}
         />
       </Card>

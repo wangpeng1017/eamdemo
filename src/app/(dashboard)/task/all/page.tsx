@@ -94,12 +94,7 @@ export default function AllTasksPage() {
       width: 120,
       render: (d) => d ? dayjs(d).format("YYYY-MM-DD HH:mm:ss") : "-",
     },
-    {
-      title: "进度",
-      dataIndex: "progress",
-      width: 100,
-      render: (v: number) => `${v}%`,
-    },
+
     {
       title: "操作",
       width: 150,
@@ -108,9 +103,16 @@ export default function AllTasksPage() {
           <Button type="link" size="small" onClick={() => handleAssign(record)} disabled={record.status === "completed"}>
             分配
           </Button>
-          <Button type="link" size="small">
-            详情
-          </Button>
+          {record.status === "in_progress" && (
+            <Button type="link" size="small" onClick={() => window.location.href = `/task/data/${record.id}`}>
+              录入数据
+            </Button>
+          )}
+          {record.status === "completed" && (
+            <Button type="link" size="small" onClick={() => window.location.href = `/task/data/${record.id}`}>
+              查看数据
+            </Button>
+          )}
         </Space>
       ),
     },

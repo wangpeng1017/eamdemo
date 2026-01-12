@@ -17,7 +17,7 @@ export const GET = withErrorHandler(async (request: NextRequest) => {
         completedThisMonth,
     ] = await Promise.all([
         prisma.entrustment.count({ where: { status: 'pending' } }),
-        prisma.sample.count({ where: { status: '检测中' } }),
+        prisma.sample.count({ where: { status: 'testing' } }),
         prisma.testReport.count({ where: { status: { in: ['draft', 'reviewing'] } } }),
         prisma.testReport.count({
             where: {
@@ -49,7 +49,7 @@ export const GET = withErrorHandler(async (request: NextRequest) => {
     // 我的任务统计
     let myTasks = 0
     if (userId) {
-        const taskWhere: any = { status: { in: ['pending', '进行中'] } }
+        const taskWhere: any = { status: { in: ['pending', 'in_progress'] } }
         if (!userRoles.includes('admin') && !userRoles.includes('lab_director')) {
             taskWhere.assignedToId = userId
         }

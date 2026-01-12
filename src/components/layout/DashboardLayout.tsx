@@ -63,8 +63,10 @@ const menuItems = [
     icon: <FileTextOutlined />,
     label: '报告管理',
     children: [
-      { key: '/report/template', label: <Link href="/report/template">报告模板</Link> },
-      { key: '/report/generate', label: <Link href="/report/generate">报告生成</Link> },
+      { key: '/report/task-template', label: <Link href="/report/task-template">任务报告模板</Link> },
+      { key: '/report/task-generate', label: <Link href="/report/task-generate">任务报告生成</Link> },
+      { key: '/report/client-template', label: <Link href="/report/client-template">客户报告模板</Link> },
+      { key: '/report/client-generate', label: <Link href="/report/client-generate">客户报告生成</Link> },
     ],
   },
   {

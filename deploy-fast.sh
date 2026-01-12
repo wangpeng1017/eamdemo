@@ -39,6 +39,7 @@ cd ..
 echo ""
 echo "[3/5] 上传到服务器..."
 sshpass -p "$SERVER_PASS" scp -o StrictHostKeyChecking=no -o ServerAliveInterval=60 .next/standalone.tar.gz "$SERVER:$REMOTE_DIR/"
+sshpass -p "$SERVER_PASS" scp -o StrictHostKeyChecking=no -o ServerAliveInterval=60 update-db-schema.js "$SERVER:$REMOTE_DIR/"
 
 # 4. 服务器解压并配置
 echo ""
@@ -49,7 +50,9 @@ sshpass -p "$SERVER_PASS" ssh -o StrictHostKeyChecking=no -o ServerAliveInterval
   cp -r .next/static .next/standalone/.next/ && \
   cp -r public .next/standalone/ 2>/dev/null || true && \
   cp .env .next/standalone/ 2>/dev/null || true && \
-  rm standalone.tar.gz"
+  rm standalone.tar.gz && \
+  cd .next/standalone && \
+  node ../../update-db-schema.js"
 
 # 5. 重启服务（使用 PORT 环境变量）
 echo ""

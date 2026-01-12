@@ -43,7 +43,8 @@ export async function GET(request: NextRequest) {
             name: true,
             username: true,
           }
-        }
+        },
+        testData: true  // 添加检测数据
       },
       orderBy: { createdAt: 'desc' },
       skip: (page - 1) * pageSize,

@@ -65,7 +65,7 @@ export default function MyTasksPage() {
 
   const fetchUsers = async () => {
     try {
-      const res = await fetch('/api/system/user?pageSize=1000')
+      const res = await fetch('/api/user?pageSize=1000')
       const json = await res.json()
       setUsers(json.data?.list || json.list || [])
     } catch (e) {
@@ -150,19 +150,7 @@ export default function MyTasksPage() {
       width: 100,
       render: (s: string) => <Tag color={statusMap[s]?.color}>{statusMap[s]?.text}</Tag>
     },
-    {
-      title: "进度",
-      dataIndex: "progress",
-      width: 120,
-      render: (v: number) => (
-        <div className="flex items-center gap-2">
-          <div className="w-20 bg-gray-200 rounded-full h-2">
-            <div className="bg-blue-500 h-2 rounded-full" style={{ width: `${v}%` }}></div>
-          </div>
-          <span className="text-xs">{v}%</span>
-        </div>
-      ),
-    },
+
     {
       title: "截止日期",
       dataIndex: "dueDate",
@@ -171,23 +159,18 @@ export default function MyTasksPage() {
     },
     {
       title: "操作",
-      width: 280,
+      width: 180,
       render: (_, record) => (
         <Space size="small">
-          {record.status === "pending" && (
-            <Button type="primary" size="small" icon={<PlayCircleOutlined />} onClick={() => handleStart(record.id)}>
-              开始
+          {record.status === "in_progress" && (
+            <Button type="primary" size="small" icon={<EditOutlined />} onClick={() => handleDataEntry(record)}>
+              录入数据
             </Button>
           )}
-          {record.status === "in_progress" && (
-            <>
-              <Button type="primary" size="small" icon={<EditOutlined />} onClick={() => handleDataEntry(record)}>
-                录入
-              </Button>
-              <Button size="small" icon={<CheckCircleOutlined />} onClick={() => handleComplete(record.id)}>
-                完成
-              </Button>
-            </>
+          {record.status === "completed" && (
+            <Button size="small" icon={<EditOutlined />} onClick={() => handleDataEntry(record)}>
+              查看数据
+            </Button>
           )}
           {record.status !== "completed" && (
             <Button size="small" icon={<SwapOutlined />} onClick={() => openTransferModal(record)}>

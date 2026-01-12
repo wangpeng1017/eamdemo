@@ -58,7 +58,13 @@ export const GET = withErrorHandler(async (
     notFound('任务不存在')
   }
 
-  return success(task)
+  // 添加字段转换：将 parameters JSON 字符串解析为 testItems 数组
+  const response = {
+    ...task,
+    testItems: task.parameters ? JSON.parse(task.parameters) : [],
+  }
+
+  return success(response)
 })
 
 // 更新任务

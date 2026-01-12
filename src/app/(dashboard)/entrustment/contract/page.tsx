@@ -217,13 +217,30 @@ export default function ContractPage() {
     })
   }
 
-  const handleGenerateEntrustment = () => {
+  const handleGenerateEntrustment = async () => {
     if (selectedRowKeys.length !== 1) {
       message.warning('请选择一条合同记录')
       return
     }
     const contract = data.find(c => c.id === selectedRowKeys[0])
     if (!contract) return
+
+    // 获取报价单检测项目
+    let testProjects: { name: string; method: string }[] = []
+    if (contract.quotationId) {
+      try {
+        const res = await fetch(`/api/quotation/${contract.quotationId}`)
+        const json = await res.json()
+        if (json.success && json.data?.items) {
+          testProjects = json.data.items.map((item: { serviceItem: string; methodStandard: string }) => ({
+            name: item.serviceItem,
+            method: item.methodStandard,
+          }))
+        }
+      } catch (e) {
+        console.error('获取报价单失败:', e)
+      }
+    }
 
     const params = new URLSearchParams({
       contractNo: contract.contractNo,
@@ -232,6 +249,11 @@ export default function ContractPage() {
       contactPhone: contract.clientPhone || '',
       clientAddress: contract.clientAddress || '',
     })
+
+    // 如果有检测项目，通过 URL 参数传递
+    if (testProjects.length > 0) {
+      params.set('projects', JSON.stringify(testProjects))
+    }
 
     router.push(`/entrustment/list?${params.toString()}`)
     setSelectedRowKeys([])

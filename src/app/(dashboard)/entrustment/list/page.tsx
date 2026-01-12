@@ -179,6 +179,24 @@ export default function EntrustmentListPage() {
     const contactPerson = searchParams.get('contactPerson')
     const contactPhone = searchParams.get('contactPhone')
     const clientAddress = searchParams.get('clientAddress')
+    const projectsParam = searchParams.get('projects')
+
+    // 解析检测项目
+    let projects: { name?: string; method?: string; testItems?: string[] }[] = [{}]
+    if (projectsParam) {
+      try {
+        const parsed = JSON.parse(projectsParam)
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          projects = parsed.map((p: { name?: string; method?: string }) => ({
+            name: p.name || '',
+            method: p.method || '',
+            testItems: [],
+          }))
+        }
+      } catch (e) {
+        console.error('解析检测项目失败:', e)
+      }
+    }
 
     if (contractNo || clientName) {
       // 自动填充并打开新建抽屉
@@ -191,7 +209,7 @@ export default function EntrustmentListPage() {
         contactPhone,
         clientAddress,
         isSampleReturn: false,
-        projects: [{}],
+        projects,
       })
       setModalOpen(true)
 

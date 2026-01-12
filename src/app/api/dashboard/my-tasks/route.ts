@@ -24,7 +24,7 @@ export const GET = withErrorHandler(async (request: NextRequest) => {
 
     // 构建查询条件
     let where: any = {
-        status: { in: ['pending', '进行中'] }, // 只查询未完成的任务
+        status: { in: ['pending', 'in_progress'] }, // 只查询未完成的任务
     }
 
     // 非管理员只能看到分配给自己的任务

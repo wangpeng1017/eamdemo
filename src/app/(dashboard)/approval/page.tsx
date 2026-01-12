@@ -5,6 +5,7 @@ import { Table, Card, Tabs, Tag, Button, Space, Tooltip, message, Modal, Input }
 import { CheckCircleOutlined, CloseOutlined, EyeOutlined } from '@ant-design/icons'
 import type { ColumnsType } from 'antd/es/table'
 import { useSession } from 'next-auth/react'
+import { useRouter } from 'next/navigation'
 
 interface ApprovalInstance {
   id: string
@@ -36,12 +37,18 @@ interface ApprovalInstance {
 
 export default function ApprovalPage() {
   const { data: session } = useSession()
+  const router = useRouter()
   const [loading, setLoading] = useState(false)
   const [pendingApprovals, setPendingApprovals] = useState<ApprovalInstance[]>([])
   const [myApprovals, setMyApprovals] = useState<ApprovalInstance[]>([])
   const [approvedByMe, setApprovedByMe] = useState<ApprovalInstance[]>([])
   const [rejectedByMe, setRejectedByMe] = useState<ApprovalInstance[]>([])
   const [activeTab, setActiveTab] = useState('pending')
+
+  // 通过弹窗状态
+  const [approveModalOpen, setApproveModalOpen] = useState(false)
+  const [approveItemId, setApproveItemId] = useState('')
+  const [approveLoading, setApproveLoading] = useState(false)
 
   // 驳回弹窗状态
   const [rejectModalOpen, setRejectModalOpen] = useState(false)
@@ -218,13 +225,8 @@ export default function ApprovalPage() {
                   size="small"
                   icon={<CheckCircleOutlined />}
                   onClick={() => {
-                    Modal.confirm({
-                      title: '确认审批通过？',
-                      content: '确认后将进入下一环节或完成审批。',
-                      onOk: async () => {
-                        await handleApprove(record.id, 'approve')
-                      }
-                    })
+                    setApproveItemId(record.id)
+                    setApproveModalOpen(true)
                   }}
                 >
                   通过
@@ -250,6 +252,13 @@ export default function ApprovalPage() {
             <Button
               size="small"
               icon={<EyeOutlined />}
+              onClick={() => {
+                const path = record.bizType === 'quotation' ? '/entrustment/quotation'
+                  : record.bizType === 'contract' ? '/entrustment/contract'
+                    : record.bizType === 'client' ? '/entrustment/client'
+                      : null
+                if (path) router.push(path)
+              }}
             >
               详情
             </Button>
@@ -340,6 +349,27 @@ export default function ApprovalPage() {
       <Card title="审批中心" bordered={false}>
         <Tabs activeKey={activeTab} onChange={setActiveTab} items={tabItems} />
       </Card>
+
+      {/* 通过确认弹窗 */}
+      <Modal
+        title="确认审批通过"
+        open={approveModalOpen}
+        confirmLoading={approveLoading}
+        onOk={async () => {
+          setApproveLoading(true)
+          try {
+            await handleApprove(approveItemId, 'approve')
+            setApproveModalOpen(false)
+          } finally {
+            setApproveLoading(false)
+          }
+        }}
+        onCancel={() => setApproveModalOpen(false)}
+        okText="确认通过"
+        cancelText="取消"
+      >
+        <p>确认后将进入下一环节或完成审批。</p>
+      </Modal>
 
       <Modal
         title="驳回审批"

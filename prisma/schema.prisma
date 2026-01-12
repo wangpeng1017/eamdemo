@@ -476,6 +476,13 @@ model TestTask {
   progress      Int       @default(0) // 进度百分比
   isOutsourced  Boolean   @default(false) // 是否委外
   status        String    @default("pending") // 待开始/进行中/已完成/已转交
+  
+  sheetData     String?   @db.LongText // Fortune-sheet完整数据
+  submittedAt   DateTime? // 提交时间
+  submittedBy   String?   @db.VarChar(50) // 提交人
+  summary       String?   @db.Text // 检测摘要
+  conclusion    String?   @db.VarChar(50) // 检测结论
+
   remark        String?   @db.Text
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt

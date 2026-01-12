@@ -115,7 +115,7 @@ export default function TestReportPage() {
   }
 
   const handleView = (id: string) => {
-    router.push(`/test/report/${id}`)
+    router.push(`/report/task/${id}`)
   }
 
   const columns: ColumnsType<TestReport> = [
@@ -158,7 +158,7 @@ export default function TestReportPage() {
   return (
     <div className="p-6">
       <div className="mb-4">
-        <h1 className="text-2xl font-bold mb-4">检测报告管理</h1>
+        <h1 className="text-2xl font-bold mb-4">任务报告管理</h1>
 
         <Row gutter={16} className="mb-4">
           <Col span={6}>

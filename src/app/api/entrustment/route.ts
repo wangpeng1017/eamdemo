@@ -138,8 +138,8 @@ export const POST = withErrorHandler(async (request: NextRequest) => {
   // 验证必填字段
   validateRequired(data, ['clientName', 'sampleName'])
 
-  // 分离检测项目数据
-  const { projects, ...entrustmentData } = data
+  // 分离检测项目数据和非 schema 字段
+  const { projects, clientName, ...entrustmentData } = data
 
   // 生成委托单号
   const entrustmentNo = await generateNo(NumberPrefixes.ENTRUSTMENT, 4)
