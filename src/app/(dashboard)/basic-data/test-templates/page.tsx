@@ -1,10 +1,13 @@
+
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Table, Button, Space, Modal, Form, Input, Select, Tag, message } from 'antd'
+import { Table, Button, Space, Modal, Select, Tag, message } from 'antd'
 import { PlusOutlined, EditOutlined, DeleteOutlined, EyeOutlined } from '@ant-design/icons'
 import type { ColumnsType } from 'antd/es/table'
 import dayjs from 'dayjs'
+import TemplateEditor from '@/components/TemplateEditor'
+import type { TemplateSchema } from '@/lib/template-converter'
 
 interface TestTemplate {
   id: string
@@ -16,7 +19,7 @@ interface TestTemplate {
   status: string
   author: string
   createdAt: string
-  schema?: string | null  // JSON 表单结构
+  schema?: string | null
 }
 
 const categoryOptions = [
@@ -41,13 +44,15 @@ export default function TestTemplatesPage() {
   const [modalOpen, setModalOpen] = useState(false)
   const [previewOpen, setPreviewOpen] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
+  const [editingRecord, setEditingRecord] = useState<TestTemplate | null>(null)
   const [previewData, setPreviewData] = useState<any>(null)
-  const [form] = Form.useForm()
+  const [selectedCategory, setSelectedCategory] = useState<string>()
 
   const fetchData = async (p = page) => {
     setLoading(true)
     try {
-      const res = await fetch(`/api/test-template?page=${p}&pageSize=10`)
+      const categoryParam = selectedCategory ? `&category=${selectedCategory}` : ''
+      const res = await fetch(`/api/test-template?page=${p}&pageSize=10${categoryParam}`)
       const json = await res.json()
       setData(json.list || [])
       setTotal(json.total || 0)
@@ -57,20 +62,17 @@ export default function TestTemplatesPage() {
     setLoading(false)
   }
 
-  useEffect(() => { fetchData() }, [page])
+  useEffect(() => { fetchData() }, [page, selectedCategory])
 
   const handleAdd = () => {
     setEditingId(null)
-    form.resetFields()
+    setEditingRecord(null)
     setModalOpen(true)
   }
 
   const handleEdit = (record: TestTemplate) => {
     setEditingId(record.id)
-    form.setFieldsValue({
-      ...record,
-      schema: JSON.stringify(JSON.parse(record.schema || '{}'), null, 2),
-    })
+    setEditingRecord(record)
     setModalOpen(true)
   }
 
@@ -82,32 +84,60 @@ export default function TestTemplatesPage() {
   }
 
   const handleDelete = async (id: string) => {
-    await fetch(`/api/test-template/${id}`, { method: 'DELETE' })
-    message.success('删除成功')
-    fetchData()
+    Modal.confirm({
+      title: '确认删除',
+      content: '确定要删除这个检测模版吗？',
+      onOk: async () => {
+        await fetch(`/api/test-template/${id}`, { method: 'DELETE' })
+        message.success('删除成功')
+        fetchData()
+      }
+    })
   }
 
-  const handleSubmit = async () => {
-    const values = await form.validateFields()
-    let schemaObj = {}
+  const handleSave = async (schema: TemplateSchema) => {
     try {
-      schemaObj = JSON.parse(values.schema || '{}')
-    } catch {
-      message.error('Schema JSON 格式错误')
-      return
-    }
+      const data = {
+        name: schema.title,
+        category: selectedCategory || '其他',
+        method: schema.header.methodBasis || '',
+        schema: JSON.stringify(schema),
+        status: 'active',
+      }
 
-    const data = { ...values, schema: schemaObj }
-    const url = editingId ? `/api/test-template/${editingId}` : '/api/test-template'
-    const method = editingId ? 'PUT' : 'POST'
-    await fetch(url, {
-      method,
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(data)
-    })
-    message.success(editingId ? '更新成功' : '创建成功')
-    setModalOpen(false)
-    fetchData()
+      const url = editingId ? `/api/test-template/${editingId}` : '/api/test-template'
+      const method = editingId ? 'PUT' : 'POST'
+
+      const res = await fetch(url, {
+        method,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data)
+      })
+
+      if (!res.ok) {
+        const json = await res.json()
+        throw new Error(json.message || '保存失败')
+      }
+
+      message.success(editingId ? '更新成功' : '创建成功')
+      setModalOpen(false)
+      fetchData()
+    } catch (e: any) {
+      message.error(e.message || '保存失败')
+      throw e
+    }
+  }
+
+  const getInitialSchema = (): TemplateSchema | undefined => {
+    if (!editingRecord?.schema) return undefined
+
+    try {
+      return typeof editingRecord.schema === 'string'
+        ? JSON.parse(editingRecord.schema)
+        : editingRecord.schema
+    } catch {
+      return undefined
+    }
   }
 
   const columns: ColumnsType<TestTemplate> = [
@@ -142,24 +172,19 @@ export default function TestTemplatesPage() {
   return (
     <div>
       <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'space-between' }}>
-        <h2 style={{ margin: 0 }}>检测项目管理</h2>
+        <h2 style={{ margin: 0 }}>检测模版管理</h2>
         <Space>
           <Select
             placeholder="分类筛选"
             allowClear
             style={{ width: 150 }}
+            value={selectedCategory}
             onChange={(v) => {
-              fetch(`/api/test-template?page=1&pageSize=10${v ? `&category=${v}` : ''}`)
-                .then(res => res.json())
-                .then(json => {
-                  setData(json.list || [])
-                  setTotal(json.total || 0)
-                  setPage(1)
-                })
+              setSelectedCategory(v || undefined)
             }}
             options={categoryOptions}
           />
-          <Button type="primary" icon={<PlusOutlined />} onClick={handleAdd}>新增项目</Button>
+          <Button type="primary" icon={<PlusOutlined />} onClick={handleAdd}>新增模版</Button>
         </Space>
       </div>
       <Table
@@ -171,56 +196,26 @@ export default function TestTemplatesPage() {
         pagination={{ current: page, total, onChange: setPage }}
       />
 
-      {/* 新增/编辑弹窗 */}
+      {/* 可视化编辑器弹窗 */}
       <Modal
-        title={editingId ? '编辑检测项目' : '新增检测项目'}
+        title={editingId ? '编辑检测模版' : '新增检测模版'}
         open={modalOpen}
-        onOk={handleSubmit}
         onCancel={() => setModalOpen(false)}
-        width={700}
+        width="95%"
+        style={{ top: 20 }}
+        footer={null}
+        destroyOnClose
       >
-        <Form form={form} layout="vertical">
-          <Form.Item name="name" label="项目名称" rules={[{ required: true }]}>
-            <Input placeholder="如：复合材料拉伸性能检测(GB/T)" />
-          </Form.Item>
-          <Form.Item name="category" label="分类" rules={[{ required: true }]}>
-            <Select options={categoryOptions} placeholder="请选择分类" />
-          </Form.Item>
-          <Form.Item name="method" label="检测方法/标准" rules={[{ required: true }]}>
-            <Input placeholder="如：GB/T 3354-2014" />
-          </Form.Item>
-          <Form.Item name="unit" label="默认单位">
-            <Input placeholder="如：MPa" />
-          </Form.Item>
-          <Form.Item name="schema" label="表单结构 (JSON)" rules={[{ required: true }]}>
-            <Input.TextArea
-              rows={10}
-              placeholder={`{
-  "title": "试验记录",
-  "header": { "methodBasis": "GB/T 3354-2014" },
-  "columns": [
-    { "title": "样品序号", "dataIndex": "index" },
-    { "title": "拉伸强度 MPa", "dataIndex": "tensileStrength" }
-  ],
-  "statistics": ["平均值", "标准差"],
-  "environment": true
-}`}
-            />
-          </Form.Item>
-          {editingId && (
-            <Form.Item name="status" label="状态">
-              <Select>
-                <Select.Option value="active">启用</Select.Option>
-                <Select.Option value="archived">归档</Select.Option>
-              </Select>
-            </Form.Item>
-          )}
-        </Form>
+        <TemplateEditor
+          initialValue={getInitialSchema()}
+          onSave={handleSave}
+          onCancel={() => setModalOpen(false)}
+        />
       </Modal>
 
       {/* 预览弹窗 */}
       <Modal
-        title="项目预览"
+        title="模版预览"
         open={previewOpen}
         onCancel={() => setPreviewOpen(false)}
         footer={null}
@@ -228,8 +223,16 @@ export default function TestTemplatesPage() {
       >
         {previewData && (
           <div>
-            <h3>{previewData.schema.title || previewData.name}</h3>
-            <pre style={{ background: '#f5f5f5', padding: 16, borderRadius: 4, overflow: 'auto' }}>
+            <h3>{previewData.name}</h3>
+            <p>检测方法: {previewData.method}</p>
+            <p>分类: <Tag>{previewData.category}</Tag></p>
+            <pre style={{
+              background: '#f5f5f5',
+              padding: 16,
+              borderRadius: 4,
+              overflow: 'auto',
+              maxHeight: 500
+            }}>
               {JSON.stringify(previewData.schema, null, 2)}
             </pre>
           </div>

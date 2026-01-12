@@ -15,6 +15,7 @@ interface InspectionStandard {
   devices: string[]
   parameters: string[]
   personnel: string[]
+  defaultTemplateId?: string
   createdAt: string
 }
 
@@ -27,6 +28,7 @@ export default function InspectionStandardsPage() {
   const [data, setData] = useState<InspectionStandard[]>([])
   const [devices, setDevices] = useState<any[]>([])
   const [users, setUsers] = useState<any[]>([])
+  const [templates, setTemplates] = useState<any[]>([])
   const [loading, setLoading] = useState(false)
   const [total, setTotal] = useState(0)
   const [page, setPage] = useState(1)
@@ -59,7 +61,13 @@ export default function InspectionStandardsPage() {
     setUsers(json.list || [])
   }
 
-  useEffect(() => { fetchData(); fetchDevices(); fetchUsers() }, [page])
+  const fetchTemplates = async () => {
+    const res = await fetch('/api/test-template?pageSize=100')
+    const json = await res.json()
+    setTemplates(json.list || [])
+  }
+
+  useEffect(() => { fetchData(); fetchDevices(); fetchUsers(); fetchTemplates() }, [page])
 
   const handleAdd = () => {
     setEditingId(null)
@@ -119,6 +127,14 @@ export default function InspectionStandardsPage() {
     {
       title: '可检测人员', dataIndex: 'personnel', width: 100,
       render: (p) => `${p.length} 人`
+    },
+    {
+      title: '默认模版', dataIndex: 'defaultTemplateId', width: 120,
+      render: (id: string) => {
+        if (!id) return '-'
+        const template = templates.find(t => t.code === id)
+        return template ? template.name : id
+      }
     },
     {
       title: '创建时间', dataIndex: 'createdAt', width: 170,
@@ -199,6 +215,20 @@ export default function InspectionStandardsPage() {
                 mode="multiple"
                 placeholder="选择有该标准资质的人员"
                 options={users.map((u: any) => ({ value: u.id, label: u.name }))}
+                filterOption={(input, option) =>
+                  (option?.label ?? '').toLowerCase().includes(input.toLowerCase())
+                }
+              />
+            </Form.Item>
+          </Card>
+
+          <Card title="默认检测模版" size="small" style={{ marginBottom: 16 }}>
+            <Form.Item name="defaultTemplateId" label="" style={{ marginBottom: 0 }}>
+              <Select
+                allowClear
+                showSearch
+                placeholder="选择该标准的默认检测模版"
+                options={templates.map((t: any) => ({ value: t.code, label: `${t.code} - ${t.name}` }))}
                 filterOption={(input, option) =>
                   (option?.label ?? '').toLowerCase().includes(input.toLowerCase())
                 }

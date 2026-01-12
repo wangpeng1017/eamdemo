@@ -1,9 +1,37 @@
+
 import { prisma } from '@/lib/prisma'
 import { NextRequest } from 'next/server'
 import { withErrorHandler, success, notFound } from '@/lib/api-handler'
+import { convertSchemaToPreviewData } from '@/lib/template-converter'
 
 interface RouteParams {
   params: Promise<{ id: string; projectId: string }>
+}
+
+/**
+ * 根据模版 ID 生成初始 sheetData
+ */
+async function generateSheetDataFromTemplate(testTemplateId: string | null | undefined) {
+  if (!testTemplateId) return null
+
+  try {
+    const template = await prisma.testTemplate.findUnique({
+      where: { code: testTemplateId }
+    })
+
+    if (!template?.schema) return null
+
+    const schema = typeof template.schema === 'string'
+      ? JSON.parse(template.schema)
+      : template.schema
+
+    // 使用转换函数生成 Fortune-sheet 格式数据
+    const sheetData = convertSchemaToPreviewData(schema)
+    return JSON.stringify(sheetData)
+  } catch (e) {
+    console.error('生成模版数据失败:', e)
+    return null
+  }
 }
 
 // 更新检测项目（分配/分包）
@@ -39,6 +67,7 @@ export const PUT = withErrorHandler(async (request: NextRequest, context?: { par
       deviceId: data.deviceId || null,
       deadline: data.deadline ? new Date(data.deadline) : null,
       assignDate: data.status === 'assigned' || data.status === 'subcontracted' ? new Date() : undefined,
+      testTemplateId: data.testTemplateId || null, // 保存关联的模版ID
     }
   })
 
@@ -90,6 +119,9 @@ export const PUT = withErrorHandler(async (request: NextRequest, context?: { par
 
       const taskNo = existingTask?.taskNo || `T${new Date().toISOString().slice(0, 10).replace(/-/g, '')}${Math.floor(Math.random() * 1000).toString().padStart(3, '0')}`
 
+      // 生成初始 sheetData（如果关联了模版）
+      const sheetData = await generateSheetDataFromTemplate(data.testTemplateId || updatedProject.testTemplateId)
+
       const taskData = {
         taskNo,
         entrustmentId: entrustmentId,
@@ -103,6 +135,7 @@ export const PUT = withErrorHandler(async (request: NextRequest, context?: { par
         status: 'pending',
         plannedDate: new Date(),
         dueDate: data.deadline ? new Date(data.deadline) : undefined,
+        ...(sheetData && { sheetData }), // 如果有模版数据，则添加
       }
 
       if (existingTask) {
@@ -132,6 +165,9 @@ export const PUT = withErrorHandler(async (request: NextRequest, context?: { par
 
       const taskNo = existingTask?.taskNo || `T${new Date().toISOString().slice(0, 10).replace(/-/g, '')}${Math.floor(Math.random() * 1000).toString().padStart(3, '0')}`
 
+      // 生成初始 sheetData（如果关联了模版）
+      const sheetData = await generateSheetDataFromTemplate(data.testTemplateId || updatedProject.testTemplateId)
+
       const taskData = {
         taskNo,
         entrustmentId: entrustmentId,
@@ -145,6 +181,7 @@ export const PUT = withErrorHandler(async (request: NextRequest, context?: { par
         status: 'pending',
         plannedDate: new Date(),
         dueDate: data.deadline ? new Date(data.deadline) : undefined,
+        ...(sheetData && { sheetData }),
       }
 
       if (existingTask) {

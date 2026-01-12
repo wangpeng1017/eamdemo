@@ -125,6 +125,7 @@ export default function EntrustmentListPage() {
   const [suppliers, setSuppliers] = useState<Supplier[]>([])
   const [clients, setClients] = useState<Client[]>([])
   const [contracts, setContracts] = useState<Contract[]>([])
+  const [testTemplates, setTestTemplates] = useState<any[]>([]) // 新增：检测模版列表
 
   // 展开行控制
   const [expandedRowKeys, setExpandedRowKeys] = useState<string[]>([])
@@ -146,25 +147,28 @@ export default function EntrustmentListPage() {
 
   // 获取下拉选项数据
   const fetchOptions = async () => {
-    const [usersRes, devicesRes, suppliersRes, clientsRes, contractsRes] = await Promise.all([
+    const [usersRes, devicesRes, suppliersRes, clientsRes, contractsRes, templatesRes] = await Promise.all([
       fetch('/api/user?pageSize=100'),
       fetch('/api/device/list?pageSize=100'),
       fetch('/api/supplier?pageSize=100'),
       fetch('/api/client?pageSize=100'),
       fetch('/api/contract?pageSize=100'),
+      fetch('/api/test-template?pageSize=100'), // 新增：加载检测模版
     ])
-    const [usersJson, devicesJson, suppliersJson, clientsJson, contractsJson] = await Promise.all([
+    const [usersJson, devicesJson, suppliersJson, clientsJson, contractsJson, templatesJson] = await Promise.all([
       usersRes.json(),
       devicesRes.json(),
       suppliersRes.json(),
       clientsRes.json(),
       contractsRes.json(),
+      templatesRes.json(),
     ])
     setUsers(usersJson.list || [])
     setDevices(devicesJson.list || [])
     setSuppliers(suppliersJson.list || [])
     setClients(clientsJson.list || [])
     setContracts(contractsJson.list || [])
+    setTestTemplates(templatesJson.list || []) // 新增：保存检测模版
   }
 
   useEffect(() => {
@@ -870,12 +874,28 @@ export default function EntrustmentListPage() {
                             placeholder="选择检测项目"
                             optionFilterProp="label"
                             options={TEST_ITEM_OPTIONS}
-                            onChange={(val, option) => {
+                            onChange={async (val, option) => {
                               // 自动填充对应的方法/标准
                               const method = (option as any)?.method || ''
                               const projects = form.getFieldValue('projects') || []
                               if (projects[name]) {
                                 projects[name].method = method
+
+                                // 自动查找并关联模版
+                                if (method) {
+                                  try {
+                                    const templateRes = await fetch(`/api/test-template/by-method?method=${encodeURIComponent(method)}`)
+                                    const templateJson = await templateRes.json()
+                                    if (templateJson.success && templateJson.data.list.length > 0) {
+                                      const matchedTemplate = templateJson.data.list[0]
+                                      projects[name].testTemplateId = matchedTemplate.code
+                                      message.success(`✅ 已自动关联模版：${matchedTemplate.name}`)
+                                    }
+                                  } catch (e) {
+                                    console.error('查找模版失败:', e)
+                                  }
+                                }
+
                                 form.setFieldsValue({ projects: [...projects] })
                               }
                             }}
@@ -889,6 +909,24 @@ export default function EntrustmentListPage() {
                           label="方法/标准"
                         >
                           <Input placeholder="如: GB/T 228.1-2021" />
+                        </Form.Item>
+                      </Col>
+                      <Col span={12}>
+                        <Form.Item
+                          {...restField}
+                          name={[name, 'testTemplateId']}
+                          label="检测模版"
+                        >
+                          <Select
+                            placeholder="可留空自动匹配"
+                            allowClear
+                            showSearch
+                            optionFilterProp="label"
+                            options={testTemplates.map((t: any) => ({
+                              value: t.code,
+                              label: `${t.code} - ${t.name}`
+                            }))}
+                          />
                         </Form.Item>
                       </Col>
                     </Row>
