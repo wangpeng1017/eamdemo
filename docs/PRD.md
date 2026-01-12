@@ -1,8 +1,8 @@
 # LIMS 实验室信息管理系统 - 产品需求文档 (PRD)
 
-> **版本**: 1.8
+> **版本**: 1.9
 > **最后更新**: 2026-01-12
-> **本次更新**: 报告管理迭代与任务流程简化
+> **本次更新**: 安全加固与代码质量优化
 > **文档类型**: 详细需求规格说明书
 > **技术栈变更**: 已迁移至 Next.js 全栈方案
 > **审批流系统**: 统一可配置审批流系统 v1.1
@@ -26,6 +26,7 @@ LIMS（Laboratory Information Management System）是一套面向检测实验室
 | **数据库** | MySQL 8.0 |
 | **认证** | NextAuth.js v5 (Auth.js) |
 | **表单验证** | 自定义 API Handler + Zod |
+| **安全模块** | 身份认证 + 输入验证 + 状态机 + 乐观锁 + 速率限制 |
 | **日期处理** | Day.js |
 | **文件存储** | MinIO / 阿里云 OSS |
 | **报告生成** | EasyExcel + LibreOffice |
@@ -1467,6 +1468,24 @@ client/src/
 - ✅ 新增快速部署脚本 `deploy-fast.sh` (本地构建+上传架构)
 - ✅ 数据库新增 `EntrustmentProject.subcontractAssignee` 字段
 - ✅ 修复所有状态标签的国际化显示 (English -> 中文)
+
+---
+
+### v1.9 - 2026-01-12
+
+**安全加固**：
+- ✅ **API 身份认证**：所有 API 添加 `withAuth`/`withRole`/`withAdmin` 中间件
+- ✅ **输入验证**：使用 Zod 实现类型安全验证 (`src/lib/validation.ts`)
+- ✅ **状态流转验证**：状态机防止非法跳转 (`src/lib/status-flow.ts`)
+- ✅ **并发控制**：乐观锁防止更新冲突 (`src/lib/optimistic-lock.ts`)
+- ✅ **速率限制**：外部接口限流保护 (`src/lib/rate-limit.ts`)
+- ✅ **结构化日志**：API/操作/安全事件日志 (`src/lib/logger.ts`)
+- ✅ **删除调试 API**：移除 `/api/debug-data`、`/api/init-test-users`
+
+**代码改进**：
+- ✅ 启用审批权限验证
+- ✅ 添加删除级联检查（客户、供应商、角色、部门）
+- ✅ 统一 API 错误处理和响应格式
 
 ---
 
