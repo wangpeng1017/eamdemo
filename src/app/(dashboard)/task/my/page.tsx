@@ -159,20 +159,35 @@ export default function MyTasksPage() {
     },
     {
       title: "操作",
-      width: 180,
+      width: 200,
       render: (_, record) => (
         <Space size="small">
+          {/* 待开始状态：显示"开始"按钮 */}
+          {record.status === "pending" && (
+            <Button type="primary" size="small" icon={<PlayCircleOutlined />} onClick={() => handleStart(record.id)}>
+              开始
+            </Button>
+          )}
+          {/* 进行中状态：显示"录入数据"按钮 */}
           {record.status === "in_progress" && (
             <Button type="primary" size="small" icon={<EditOutlined />} onClick={() => handleDataEntry(record)}>
               录入数据
             </Button>
           )}
+          {/* 待审核状态：显示"查看数据"按钮 */}
+          {record.status === "pending_review" && (
+            <Button size="small" icon={<EditOutlined />} onClick={() => handleDataEntry(record)}>
+              查看数据
+            </Button>
+          )}
+          {/* 已完成状态：显示"查看数据"按钮 */}
           {record.status === "completed" && (
             <Button size="small" icon={<EditOutlined />} onClick={() => handleDataEntry(record)}>
               查看数据
             </Button>
           )}
-          {record.status !== "completed" && (
+          {/* 非完成状态：显示"转交"按钮 */}
+          {record.status !== "completed" && record.status !== "pending_review" && (
             <Button size="small" icon={<SwapOutlined />} onClick={() => openTransferModal(record)}>
               转交
             </Button>
@@ -186,7 +201,7 @@ export default function MyTasksPage() {
     <div className="p-4">
       <div className="grid grid-cols-4 gap-4 mb-4">
         <Card>
-          <Statistic title="全部任务" value={stats.pending ? stats.pending + stats.in_progress + stats.completed : 0} prefix={<ClockCircleOutlined />} />
+          <Statistic title="全部任务" value={(stats.pending || 0) + (stats.in_progress || 0) + (stats.pending_review || 0) + (stats.completed || 0)} prefix={<ClockCircleOutlined />} />
         </Card>
         <Card>
           <Statistic title="待开始" value={stats.pending || 0} valueStyle={{ color: "#cf1322" }} />
@@ -209,6 +224,7 @@ export default function MyTasksPage() {
         >
           <Select.Option value="pending">待开始</Select.Option>
           <Select.Option value="in_progress">进行中</Select.Option>
+          <Select.Option value="pending_review">待审核</Select.Option>
           <Select.Option value="completed">已完成</Select.Option>
         </Select>
       </div>
