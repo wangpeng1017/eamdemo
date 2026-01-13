@@ -38,13 +38,10 @@ interface Consultation {
   sampleMaterial?: string | null
   estimatedQuantity?: string | null
   testItems?: string[]
-  testPurpose?: string | null
   expectedDeadline?: string | null
-  clientRequirements?: string | null
   budgetRange?: string | null
   feasibility?: string | null
   feasibilityNote?: string | null
-  estimatedPrice?: number | null
   follower?: string | null
   status: string
   createdAt: string
@@ -232,7 +229,6 @@ export default function ConsultationPage() {
       email: consultation.client?.email,
       address: consultation.client?.address,
       sampleName: consultation.sampleName,
-      clientRemark: consultation.clientRequirements,
     })
     setGenerateQuoteModalOpen(true)
   }
@@ -530,10 +526,6 @@ export default function ConsultationPage() {
             />
           </Form.Item>
 
-          <Form.Item name="testPurpose" label="检测目的">
-            <Input.TextArea rows={2} placeholder="请输入检测目的" />
-          </Form.Item>
-
           <Divider orientationMargin="0">其他信息</Divider>
 
           <Row gutter={16}>
@@ -555,11 +547,6 @@ export default function ConsultationPage() {
                 <Input placeholder="例如：5000-10000元" />
               </Form.Item>
             </Col>
-            <Col span={12}>
-              <Form.Item name="estimatedPrice" label="预估报价">
-                <InputNumber style={{ width: '100%' }} min={0} precision={2} placeholder="请输入预估报价" />
-              </Form.Item>
-            </Col>
           </Row>
 
           <Row gutter={16}>
@@ -572,10 +559,6 @@ export default function ConsultationPage() {
 
           <Form.Item name="feasibilityNote" label="可行性说明">
             <Input.TextArea rows={2} placeholder="请输入可行性说明" />
-          </Form.Item>
-
-          <Form.Item name="clientRequirements" label="客户要求">
-            <Input.TextArea rows={3} placeholder="请输入客户的特殊要求" />
           </Form.Item>
 
           {editingId && (
@@ -761,13 +744,10 @@ function Descriptions({ title, data }: { title: string; data: Consultation }) {
     { label: '样品材质', value: data.sampleMaterial },
     { label: '预估数量', value: data.estimatedQuantity },
     { label: '检测项目', value: data.testItems?.join(', ') },
-    { label: '检测目的', value: data.testPurpose },
     { label: '期望交付日期', value: data.expectedDeadline ? dayjs(data.expectedDeadline).format('YYYY-MM-DD HH:mm:ss') : '-' },
     { label: '预算范围', value: data.budgetRange },
-    { label: '预估报价', value: data.estimatedPrice ? `¥${data.estimatedPrice}` : '-' },
     { label: '可行性评估', value: <StatusTag type="feasibility" status={data.feasibility} /> },
     { label: '可行性说明', value: data.feasibilityNote },
-    { label: '客户要求', value: data.clientRequirements },
     { label: '跟进人', value: data.follower },
     { label: '状态', value: <StatusTag type="consultation" status={data.status} /> },
     { label: '创建时间', value: dayjs(data.createdAt).format('YYYY-MM-DD HH:mm:ss') },
@@ -776,8 +756,8 @@ function Descriptions({ title, data }: { title: string; data: Consultation }) {
   const relevantItems = title === '基本信息'
     ? items.slice(0, 7)
     : title === '样品信息'
-      ? items.slice(7, 13)
-      : items.slice(13)
+      ? items.slice(7, 11)
+      : items.slice(11)
 
   return (
     <div>

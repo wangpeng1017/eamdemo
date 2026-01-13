@@ -177,15 +177,12 @@ model Consultation {
   sampleMaterial     String?   @db.VarChar(100) // 材质信息
   estimatedQuantity  Int? // 预估样品数量
   testItems          String?   @db.Text // JSON 数组 检测项目列表
-  testPurpose        String?   @db.VarChar(50) // quality_inspection/product_certification/rd_testing/other
   expectedDeadline   DateTime? // 期望完成时间
-  clientRequirements String?   @db.Text // 特殊要求
   budgetRange        String?   @db.VarChar(50) // 预算范围
   status             String    @default("following") // following/quoted/rejected/closed
   follower           String?   @db.VarChar(50) // 跟进人
   feasibility        String?   @db.VarChar(20) // feasible/difficult/infeasible
   feasibilityNote    String?   @db.Text // 可行性说明
-  estimatedPrice     Decimal?  @db.Decimal(10, 2) // 预估价格
   quotationId        String?
   quotationNo        String?   @db.VarChar(50)
   createdAt          DateTime  @default(now())
