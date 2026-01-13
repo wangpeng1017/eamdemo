@@ -71,9 +71,14 @@ export default function TestTaskPage() {
   }
 
   const handleDelete = async (id: string) => {
-    await fetch(`/api/test-task/${id}`, { method: 'DELETE' })
-    message.success('删除成功')
-    fetchData()
+    const res = await fetch(`/api/test-task/${id}`, { method: 'DELETE' })
+    const json = await res.json()
+    if (res.ok && json.success) {
+      message.success('删除成功')
+      fetchData()
+    } else {
+      message.error(json.error?.message || '删除失败')
+    }
   }
 
   const handleSubmit = async () => {

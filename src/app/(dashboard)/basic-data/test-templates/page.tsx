@@ -93,9 +93,14 @@ export default function TestTemplatesPage() {
       title: '确认删除',
       content: '确定要删除这个检测模版吗？',
       onOk: async () => {
-        await fetch(`/api/test-template/${id}`, { method: 'DELETE' })
-        message.success('删除成功')
-        fetchData()
+        const res = await fetch(`/api/test-template/${id}`, { method: 'DELETE' })
+        const json = await res.json()
+        if (res.ok && json.success) {
+          message.success('删除成功')
+          fetchData()
+        } else {
+          message.error(json.error?.message || '删除失败')
+        }
       }
     })
   }

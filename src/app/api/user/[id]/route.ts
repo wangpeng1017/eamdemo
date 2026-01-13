@@ -118,6 +118,15 @@ export const DELETE = withAuth(async (
 
     return success({ success: true, message: '用户已删除' })
   } catch (error: any) {
+    // 详细日志
+    console.error('删除用户错误:', {
+      userId: id,
+      errorCode: error.code,
+      errorType: error.constructor?.name,
+      message: error.message,
+      meta: error.meta,
+    })
+
     // 如果是 Prisma 已知错误
     if (error.code === 'P2025') {
       notFound('用户不存在')

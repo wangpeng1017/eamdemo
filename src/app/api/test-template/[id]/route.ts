@@ -1,5 +1,6 @@
 import { prisma } from '@/lib/prisma'
 import { NextRequest, NextResponse } from 'next/server'
+import { withAuth, success } from '@/lib/api-handler'
 
 export async function GET(
   request: NextRequest,
@@ -23,10 +24,11 @@ export async function GET(
   return NextResponse.json(parsed)
 }
 
-export async function PUT(
+export const PUT = withAuth(async (
   request: NextRequest,
+  user,
   { params }: { params: Promise<{ id: string }> }
-) {
+) => {
   const { id } = await params
   const data = await request.json()
 
@@ -38,17 +40,18 @@ export async function PUT(
     }
   })
 
-  return NextResponse.json(template)
-}
+  return success(template)
+})
 
-export async function DELETE(
+export const DELETE = withAuth(async (
   request: NextRequest,
+  user,
   { params }: { params: Promise<{ id: string }> }
-) {
+) => {
   const { id } = await params
   await prisma.testTemplate.delete({
     where: { id }
   })
 
-  return NextResponse.json({ success: true })
-}
+  return success({ deleted: true })
+})
