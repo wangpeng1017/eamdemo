@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { Table, Button, Space, Tag, Modal, Form, Input, Select, message, Popconfirm } from 'antd'
-import { PlusOutlined, EditOutlined, DeleteOutlined } from '@ant-design/icons'
+import { PlusOutlined, EditOutlined, DeleteOutlined, ExclamationCircleOutlined } from '@ant-design/icons'
 import type { ColumnsType } from 'antd/es/table'
 import dayjs from 'dayjs'
 
@@ -18,6 +18,15 @@ interface Client {
   remark: string | null
   status: string
   createdAt: string
+}
+
+interface ClientRelations {
+  clientName: string
+  entrustmentCount: number
+  quotationCount: number
+  contractCount: number
+  canDelete: boolean
+  message: string
 }
 
 export default function ClientPage() {
@@ -58,15 +67,86 @@ export default function ClientPage() {
     setModalOpen(true)
   }
 
-  const handleDelete = async (id: string) => {
-    const res = await fetch(`/api/client/${id}`, { method: 'DELETE' })
-    const json = await res.json()
-    if (res.ok && json.success) {
-      message.success('删除成功')
-      fetchData()
-    } else {
-      message.error(json.error?.message || '删除失败')
+  // 获取委托单位的关联数据
+  const checkClientRelations = async (id: string, name: string) => {
+    try {
+      const res = await fetch(`/api/client/${id}/relations`)
+      const json = await res.json()
+      if (json.success && json.data) {
+        const relations = json.data as ClientRelations
+        showDeleteConfirm(id, name, relations)
+      }
+    } catch (error) {
+      console.error('获取关联数据失败:', error)
+      message.error('获取关联数据失败，请重试')
     }
+  }
+
+  // 显示删除确认对话框
+  const showDeleteConfirm = (id: string, name: string, relations: ClientRelations) => {
+    if (!relations.canDelete) {
+      // 有关联数据，显示详细信息
+      Modal.confirm({
+        title: '无法删除委托单位',
+        icon: <ExclamationCircleOutlined style={{ color: '#ff4d4f' }} />,
+        content: (
+          <div>
+            <p style={{ marginBottom: 16, fontSize: 16 }}>
+              <strong>{name}</strong> {relations.message}
+            </p>
+            <div style={{ background: '#f5f5f5', padding: 12, borderRadius: 4 }}>
+              <div style={{ marginBottom: 8, fontWeight: 500 }}>关联数据详情：</div>
+              <ul style={{ margin: 0, paddingLeft: 20, lineHeight: 2 }}>
+                {relations.entrustmentCount > 0 && (
+                  <li>委托单：<strong style={{ color: '#1890ff' }}>{relations.entrustmentCount}</strong> 个</li>
+                )}
+                {relations.quotationCount > 0 && (
+                  <li>报价单：<strong style={{ color: '#1890ff' }}>{relations.quotationCount}</strong> 个</li>
+                )}
+                {relations.contractCount > 0 && (
+                  <li>合同：<strong style={{ color: '#1890ff' }}>{relations.contractCount}</strong> 个</li>
+                )}
+              </ul>
+            </div>
+            <p style={{ marginTop: 16, color: '#ff4d4f', fontSize: 13 }}>
+              请先删除或取消关联这些数据后，再删除该委托单位。
+            </p>
+          </div>
+        ),
+        okText: '知道了',
+        okType: 'danger',
+        cancelButtonProps: { style: { display: 'none' } },
+      })
+    } else {
+      // 无关联数据，显示删除确认
+      Modal.confirm({
+        title: '确认删除委托单位',
+        icon: <ExclamationCircleOutlined />,
+        content: (
+          <div>
+            <p>确定要删除委托单位 <strong>{name}</strong> 吗？</p>
+            <p style={{ color: '#999', fontSize: 13 }}>此操作不可恢复</p>
+          </div>
+        ),
+        okText: '确认删除',
+        okType: 'danger',
+        cancelText: '取消',
+        onOk: async () => {
+          const res = await fetch(`/api/client/${id}`, { method: 'DELETE' })
+          const json = await res.json()
+          if (res.ok && json.success) {
+            message.success('删除成功')
+            fetchData()
+          } else {
+            message.error(json.error?.message || '删除失败')
+          }
+        },
+      })
+    }
+  }
+
+  const handleDelete = async (id: string, name: string) => {
+    await checkClientRelations(id, name)
   }
 
   const handleSubmit = async () => {
@@ -113,9 +193,12 @@ export default function ClientPage() {
       render: (_, record) => (
         <Space>
           <Button size="small" icon={<EditOutlined />} onClick={() => handleEdit(record)} />
-          <Popconfirm title="确认删除?" onConfirm={() => handleDelete(record.id)}>
-            <Button size="small" danger icon={<DeleteOutlined />} />
-          </Popconfirm>
+          <Button
+            size="small"
+            danger
+            icon={<DeleteOutlined />}
+            onClick={() => handleDelete(record.id, record.name)}
+          />
         </Space>
       )
     }
