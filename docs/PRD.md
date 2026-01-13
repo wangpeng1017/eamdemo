@@ -1,8 +1,8 @@
 # LIMS 实验室信息管理系统 - 产品需求文档 (PRD)
 
-> **版本**: 2.0
-> **最后更新**: 2026-01-12
-> **本次更新**: 可视化模版编辑器与模版自动关联功能
+> **版本**: 2.1
+> **最后更新**: 2026-01-13
+> **本次更新**: 修复委托单-任务-数据录入流程 Bug，恢复审核流程
 > **文档类型**: 详细需求规格说明书
 > **技术栈变更**: 已迁移至 Next.js 全栈方案
 > **审批流系统**: 统一可配置审批流系统 v1.1
@@ -134,9 +134,19 @@ LIMS（Laboratory Information Management System）是一套面向检测实验室
 #### 2.2.5 任务状态流转
 
 ```
-[待开始] → [进行中] → [已完成]
+[pending - 待开始] → [in_progress - 进行中] → [pending_review - 待审核] → [completed - 已完成]
+                              ↘                        ↙
+                           [transferred - 已转交]
 ```
-> **注**：任务流程已简化，取消"进度"字段。点击"提交"直接完成任务，系统自动流转。
+
+**状态说明**：
+| 状态 | 说明 | 可执行操作 |
+|------|------|-----------|
+| pending | 任务已创建，等待检测人员开始 | 开始、转交 |
+| in_progress | 检测人员正在录入数据 | 录入数据、转交 |
+| pending_review | 数据已提交，等待主管审核 | 查看数据 |
+| completed | 审核通过，任务完成 | 查看数据 |
+| transferred | 任务已转交给其他人员 | - |
 
 #### 2.2.6 报告审批流程
 
@@ -600,10 +610,29 @@ LIMS（Laboratory Information Management System）是一套面向检测实验室
 
 **页面路径**：`/task/my`
 
+**统计卡片**：
+- 全部任务数
+- 待开始数
+- 进行中数
+- 已完成数
+
 **操作按钮**：
-- **录入数据**：跳转到数据录入页面（进行中任务）
-- **查看数据**：查看已完成任务的数据
-- **转交任务**：将任务转交给其他人员
+
+| 按钮 | 触发条件 | 操作逻辑 |
+|------|----------|----------|
+| 开始 | status = "pending" | 任务状态改为 in_progress，跳转数据录入页 |
+| 录入数据 | status = "in_progress" | 跳转到数据录入页面 `/task/data/[id]` |
+| 查看数据 | status = "pending_review" 或 "completed" | 查看只读数据页面 |
+| 转交 | status != "completed" 且 != "pending_review" | 打开转交弹窗，选择接收人 |
+
+**转交任务弹窗字段**：
+| 字段名 | 字段标识 | 类型 | 必填 | 说明 |
+|--------|----------|------|------|------|
+| 转交给 | assignedToId | string | 是 | 选择接收人员 |
+| 转交原因 | reason | enum | 否 | 工作调整/设备故障/技术支援/其他 |
+
+**筛选条件**：
+- 状态筛选：待开始/进行中/待审核/已完成
 
 ---
 
@@ -1395,6 +1424,42 @@ client/src/
 
 ## 七、变更历史
 
+### v2.1 - 2026-01-13
+
+**Bug 修复**：
+- ✅ **任务状态流转修复**：
+  - 恢复 `pending_review`（待审核）状态
+  - 统一状态定义为英文：pending/in_progress/pending_review/completed/transferred
+  - 修复 `statusFlow.ts` 中状态定义中英文不一致的问题
+- ✅ **我的任务页面修复**：
+  - `pending` 状态添加"开始"按钮
+  - `pending_review` 状态添加"查看数据"按钮
+  - 修复全部任务统计显示 NaN 的问题
+  - 添加"待审核"状态到筛选器
+- ✅ **审核功能修复**：
+  - 提交数据后进入 `pending_review` 状态（而非直接 completed）
+  - 审核通过后才变为 `completed`
+- ✅ **用户分配优化**：
+  - 优先使用 `assignToId` 查找用户，兼容名称查找
+  - 避免重名用户导致的分配错误
+- ✅ **数据完整性保护**：
+  - 样品更新改为智能模式：更新现有、创建新增、删除前检查关联任务
+  - 委托单删除前检查关联的任务和样品
+  - 任务编号统一使用 `generateNo()` 函数，避免高并发重复
+- ✅ **API 权限控制**：
+  - `task/all` API 添加 `withAuth` 权限验证
+
+**代码文件变更**：
+- `src/lib/statusFlow.ts` - 统一任务状态定义
+- `src/app/api/task/[id]/data/route.ts` - 修复审核流程
+- `src/app/api/entrustment/[id]/projects/[projectId]/route.ts` - 优化用户分配
+- `src/app/api/entrustment/[id]/route.ts` - 保护数据完整性
+- `src/app/api/entrustment/route.ts` - 移除重复代码
+- `src/app/api/task/all/route.ts` - 添加权限控制
+- `src/app/(dashboard)/task/my/page.tsx` - 修复操作按钮
+
+---
+
 ### v2.0 - 2026-01-12
 
 **可视化模版编辑器**：
@@ -1411,7 +1476,7 @@ client/src/
   - 新增 `/api/test-template/by-method` API - 根据检测方法匹配模版
   - 数据录入页面自动根据检测方法加载对应模版
   - 支持模版与检测标准的智能匹配
-- ✅ **预置检测模版**：
+- ✅ **预置检测项目**：
   - 拉伸性能试验 (GB/T 3354-2014)
   - 金属材料拉伸试验 (GB/T 228.1-2021)
   - 布氏硬度试验 (GB/T 231.1-2018)
