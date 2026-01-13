@@ -90,7 +90,7 @@ export const DELETE = withAuth(async (
     await prisma.todo.deleteMany({ where: { userId: id } })
 
     // 4. 删除审批记录
-    await prisma.approvalLog.deleteMany({ where: { userId: id } })
+    await prisma.approvalLog.deleteMany({ where: { operatorId: id } })
 
     // 5. 删除委托合同（创建的）
     await prisma.contract.deleteMany({ where: { createdBy: id } })
