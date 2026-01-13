@@ -2,7 +2,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Table, Button, Space, Modal, Select, Tag, message } from 'antd'
+import { Table, Button, Space, Modal, Select, Tag, message, Popconfirm } from 'antd'
 import { PlusOutlined, EditOutlined, DeleteOutlined, EyeOutlined } from '@ant-design/icons'
 import type { ColumnsType } from 'antd/es/table'
 import dayjs from 'dayjs'
@@ -89,20 +89,18 @@ export default function TestTemplatesPage() {
   }
 
   const handleDelete = async (id: string) => {
-    Modal.confirm({
-      title: '确认删除',
-      content: '确定要删除这个检测模版吗？',
-      onOk: async () => {
-        const res = await fetch(`/api/test-template/${id}`, { method: 'DELETE' })
-        const json = await res.json()
-        if (res.ok && json.success) {
-          message.success('删除成功')
-          fetchData()
-        } else {
-          message.error(json.error?.message || '删除失败')
-        }
+    try {
+      const res = await fetch(`/api/test-template/${id}`, { method: 'DELETE' })
+      const json = await res.json()
+      if (res.ok && json.success) {
+        message.success('删除成功')
+        fetchData()
+      } else {
+        message.error(json.error?.message || '删除失败')
       }
-    })
+    } catch (e) {
+      message.error('删除失败，请重试')
+    }
   }
 
   const handleSave = async (schema: TemplateSchema) => {
@@ -173,7 +171,15 @@ export default function TestTemplatesPage() {
         <Space size="small">
           <Button size="small" icon={<EyeOutlined />} onClick={() => handlePreview(record)}>预览</Button>
           <Button size="small" icon={<EditOutlined />} onClick={() => handleEdit(record)}>编辑</Button>
-          <Button size="small" danger icon={<DeleteOutlined />} onClick={() => handleDelete(record.id)} />
+          <Popconfirm
+            title="确认删除"
+            description="确定要删除这个检测模版吗？"
+            onConfirm={() => handleDelete(record.id)}
+            okText="确认"
+            cancelText="取消"
+          >
+            <Button size="small" danger icon={<DeleteOutlined />} />
+          </Popconfirm>
         </Space>
       )
     }
