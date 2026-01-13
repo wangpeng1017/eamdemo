@@ -54,8 +54,13 @@ export default function TestTemplatesPage() {
       const categoryParam = selectedCategory ? `&category=${selectedCategory}` : ''
       const res = await fetch(`/api/test-template?page=${p}&pageSize=10${categoryParam}`)
       const json = await res.json()
-      setData(json.list || [])
-      setTotal(json.total || 0)
+      if (json.success && json.data) {
+        setData(json.data.list || [])
+        setTotal(json.data.total || 0)
+      } else {
+        setData(json.list || [])
+        setTotal(json.total || 0)
+      }
     } catch (e) {
       message.error('加载数据失败')
     }
