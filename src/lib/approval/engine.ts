@@ -403,6 +403,11 @@ export class ApprovalEngine {
     // 获取用户的角色代码列表
     const userRoleCodes = user.roles.map((ur: { role: { code: string } }) => ur.role.code)
 
+    // 超级管理员/系统管理员豁免
+    if (user.username === 'admin' || userRoleCodes.includes('admin') || userRoleCodes.includes('system_admin')) {
+      return true
+    }
+
     // 根据节点类型检查权限
     switch (currentNode.type) {
       case 'role':

@@ -2,12 +2,20 @@
 
 import { useState, useEffect } from 'react'
 import { Table, Button, Space, Modal, Form, Input, InputNumber, Select, DatePicker, message, Drawer, Tag, Row, Col, Divider, Popconfirm, Tabs, Descriptions } from 'antd'
-import { PlusOutlined, EditOutlined, DeleteOutlined, EyeOutlined, FileTextOutlined, DownloadOutlined, FileAddOutlined } from '@ant-design/icons'
+import { PlusOutlined, EditOutlined, DeleteOutlined, EyeOutlined, FileTextOutlined, DownloadOutlined, FileAddOutlined, FilePdfOutlined } from '@ant-design/icons'
 import { StatusTag } from '@/components/StatusTag'
 import type { ColumnsType } from 'antd/es/table'
 import dayjs from 'dayjs'
 import { useRouter } from 'next/navigation'
 import { exportContractPDF } from '@/lib/exportContractPDF'
+
+interface ContractSample {
+  name: string
+  model?: string
+  material?: string
+  quantity: number
+  remark?: string
+}
 
 interface Contract {
   id: string
@@ -19,6 +27,10 @@ interface Contract {
   clientPhone?: string | null
   clientAddress?: string | null
   amount: number | null
+  sampleName?: string | null
+  sampleModel?: string | null
+  sampleMaterial?: string | null
+  sampleQuantity?: number | null
   prepaymentAmount?: number | null
   prepaymentRatio?: number | null
   signDate: string | null
@@ -35,6 +47,18 @@ interface Contract {
   remark?: string | null
   status: string
   createdAt: string
+  items?: ContractItem[]
+  contractSamples?: ContractSample[]
+}
+
+interface ContractItem {
+  id?: string
+  serviceItem: string
+  methodStandard: string
+  quantity: number
+  unitPrice: number
+  totalPrice: number
+  sort?: number
 }
 
 interface Client {
@@ -70,6 +94,131 @@ export default function ContractPage() {
   const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([])
   const [clients, setClients] = useState<Client[]>([])
   const [clientsLoading, setClientsLoading] = useState(false)
+
+  const [contractItems, setContractItems] = useState<ContractItem[]>([])
+  const [testTemplates, setTestTemplates] = useState<any[]>([])
+  const [samples, setSamples] = useState<ContractSample[]>([])
+
+  const handleAddSample = () => {
+    setSamples([...samples, { name: '', quantity: 1 }])
+  }
+
+  const handleUpdateSample = (index: number, field: keyof ContractSample, value: any) => {
+    const newSamples = [...samples]
+    newSamples[index] = { ...newSamples[index], [field]: value }
+    setSamples(newSamples)
+  }
+
+  const handleRemoveSample = (index: number) => {
+    setSamples(samples.filter((_, i) => i !== index))
+  }
+
+  const sampleColumns: ColumnsType<ContractSample> = [
+    {
+      title: '样品名称',
+      dataIndex: 'name',
+      render: (val, record, index) => (
+        <Input
+          value={val}
+          onChange={e => handleUpdateSample(index, 'name', e.target.value)}
+          placeholder="样品名称"
+        />
+      )
+    },
+    {
+      title: '规格型号',
+      dataIndex: 'model',
+      render: (val, record, index) => (
+        <Input
+          value={val}
+          onChange={e => handleUpdateSample(index, 'model', e.target.value)}
+          placeholder="规格型号"
+        />
+      )
+    },
+    {
+      title: '材质',
+      dataIndex: 'material',
+      render: (val, record, index) => (
+        <Input
+          value={val}
+          onChange={e => handleUpdateSample(index, 'material', e.target.value)}
+          placeholder="材质"
+        />
+      )
+    },
+    {
+      title: '数量',
+      dataIndex: 'quantity',
+      width: 100,
+      render: (val, record, index) => (
+        <InputNumber
+          min={1}
+          value={val}
+          onChange={v => handleUpdateSample(index, 'quantity', v || 1)}
+        />
+      )
+    },
+    {
+      title: '操作',
+      width: 60,
+      render: (_, __, index) => (
+        <Button
+          type="text"
+          danger
+          icon={<DeleteOutlined />}
+          onClick={() => handleRemoveSample(index)}
+        />
+      )
+    }
+  ]
+
+  const updateItem = (index: number, field: string, value: any) => {
+    const newItems = [...contractItems]
+    const item = { ...newItems[index] }
+    // @ts-ignore
+    item[field] = value
+    item.totalPrice = (item.quantity || 1) * (item.unitPrice || 0)
+    newItems[index] = item
+    setContractItems(newItems)
+
+    // 自动计算合同总额
+    const total = newItems.reduce((sum, i) => sum + (i.totalPrice || 0), 0)
+    form.setFieldsValue({ amount: total })
+    // Recalculate prepayment amount
+    const ratio = form.getFieldValue('prepaymentRatio') || 0
+    form.setFieldsValue({
+      prepaymentAmount: total ? (total * ratio / 100) : 0
+    })
+  }
+
+  const removeItem = (index: number) => {
+    const newItems = contractItems.filter((_, i) => i !== index)
+    setContractItems(newItems)
+    const total = newItems.reduce((sum, i) => sum + (i.totalPrice || 0), 0)
+    form.setFieldsValue({ amount: total })
+    // Recalculate prepayment amount
+    const ratio = form.getFieldValue('prepaymentRatio') || 0
+    form.setFieldsValue({
+      prepaymentAmount: total ? (total * ratio / 100) : 0
+    })
+  }
+
+  const handleAddItem = () => {
+    setContractItems([...contractItems, { serviceItem: '', methodStandard: '', quantity: 1, unitPrice: 0, totalPrice: 0 }])
+  }
+
+  // 获取检测项目列表
+  const fetchTestTemplates = async () => {
+    try {
+      const res = await fetch('/api/test-template?pageSize=1000')
+      const json = await res.json()
+      const templates = (json.success && json.data?.list) || json.list || []
+      setTestTemplates(templates)
+    } catch (error) {
+      console.error('获取检测项目列表失败:', error)
+    }
+  }
 
   const fetchData = async (p = page, f = filters) => {
     setLoading(true)
@@ -109,7 +258,7 @@ export default function ContractPage() {
     }
   }
 
-  useEffect(() => { fetchData(); fetchClients() }, [page])
+  useEffect(() => { fetchData(); fetchClients(); fetchTestTemplates() }, [page])
 
   const handleAdd = () => {
     setEditingId(null)
@@ -118,6 +267,8 @@ export default function ContractPage() {
       signDate: dayjs(),
       prepaymentRatio: 30,
     })
+    setContractItems([]) // Reset items
+    setSamples([{ name: '', quantity: 1 }])
     setModalOpen(true)
   }
 
@@ -142,6 +293,36 @@ export default function ContractPage() {
       startDate: record.startDate ? dayjs(record.startDate) : null,
       endDate: record.endDate ? dayjs(record.endDate) : null,
     }
+    // 回填明细
+    setContractItems((record.items || []).map(item => ({
+      ...item,
+      quantity: Number(item.quantity),
+      unitPrice: Number(item.unitPrice),
+      totalPrice: Number(item.totalPrice),
+    })))
+
+    // 回填样品
+    let initSamples: ContractSample[] = []
+    if (record.contractSamples && record.contractSamples.length > 0) {
+      initSamples = record.contractSamples.map(s => ({
+        name: s.name,
+        model: s.model || undefined,
+        material: s.material || undefined,
+        quantity: s.quantity || 1,
+        remark: s.remark || undefined
+      }))
+    } else if (record.sampleName) {
+      // 兼容旧数据
+      const qty = record.sampleQuantity ? Number(record.sampleQuantity) : 1
+      initSamples = [{
+        name: record.sampleName,
+        model: record.sampleModel || undefined,
+        material: record.sampleMaterial || undefined,
+        quantity: isNaN(qty) ? 1 : qty
+      }]
+    }
+    setSamples(initSamples)
+
     form.setFieldsValue(formData)
     setModalOpen(true)
   }
@@ -169,6 +350,8 @@ export default function ContractPage() {
       signDate: values.signDate?.toISOString(),
       startDate: values.startDate?.toISOString(),
       endDate: values.endDate?.toISOString(),
+      items: contractItems,
+      samples: samples,
     }
     const url = editingId ? `/api/contract/${editingId}` : '/api/contract'
     const method = editingId ? 'PUT' : 'POST'
@@ -193,7 +376,7 @@ export default function ContractPage() {
     setViewDrawerOpen(false)
   }
 
-  const handleDownloadPDF = async () => {
+  const handleGeneratePDF = () => {
     if (selectedRowKeys.length !== 1) {
       message.warning('请选择一条合同记录')
       return
@@ -201,26 +384,9 @@ export default function ContractPage() {
     const contract = data.find(c => c.id === selectedRowKeys[0])
     if (!contract) return
 
-    await exportContractPDF({
-      contractNo: contract.contractNo,
-      partyACompany: contract.clientName,
-      partyAContact: contract.clientContact ?? null,
-      partyATel: contract.clientPhone ?? null,
-      partyAAddress: contract.clientAddress ?? null,
-      contractAmount: contract.amount,
-      prepaymentRatio: contract.prepaymentRatio ?? null,
-      prepaymentAmount: contract.prepaymentAmount ?? null,
-      signDate: contract.signDate,
-      startDate: contract.startDate,
-      endDate: contract.endDate,
-      termsPaymentTerms: contract.paymentTerms ?? null,
-      termsDeliveryTerms: contract.deliveryTerms ?? null,
-      termsQualityTerms: contract.qualityTerms ?? null,
-      termsConfidentialityTerms: contract.confidentialityTerms ?? null,
-      termsLiabilityTerms: contract.breachTerms ?? null,
-      termsDisputeResolution: contract.disputeTerms ?? null,
-    })
+    window.open(`/api/contract/${contract.id}/pdf`, '_blank')
   }
+
 
   const handleGenerateEntrustment = async () => {
     if (selectedRowKeys.length !== 1) {
@@ -258,6 +424,19 @@ export default function ContractPage() {
     // 如果有检测项目，通过 URL 参数传递
     if (testProjects.length > 0) {
       params.set('projects', JSON.stringify(testProjects))
+    }
+
+    // Pass samples via URL
+    if (contract.contractSamples && contract.contractSamples.length > 0) {
+      params.set('samples', JSON.stringify(contract.contractSamples))
+    } else if (contract.sampleName) {
+      // Fallback for single sample
+      params.set('samples', JSON.stringify([{
+        name: contract.sampleName,
+        model: contract.sampleModel,
+        material: contract.sampleMaterial,
+        quantity: contract.sampleQuantity || 1
+      }]))
     }
 
     router.push(`/entrustment/list?${params.toString()}`)
@@ -298,9 +477,9 @@ export default function ContractPage() {
       render: (v) => v ? `${v}%` : '-',
     },
     {
-      title: '签订日期',
-      dataIndex: 'signDate',
-      width: 110,
+      title: '创建时间',
+      dataIndex: 'createdAt',
+      width: 160,
       render: (t: string) => t ? dayjs(t).format('YYYY-MM-DD HH:mm:ss') : '-',
     },
     {
@@ -340,8 +519,8 @@ export default function ContractPage() {
       <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'space-between' }}>
         <h2 style={{ margin: 0 }}>合同管理</h2>
         <Space>
-          <Button icon={<DownloadOutlined />} disabled={selectedRowKeys.length !== 1} onClick={handleDownloadPDF}>
-            下载PDF
+          <Button icon={<FilePdfOutlined />} disabled={selectedRowKeys.length !== 1} onClick={handleGeneratePDF}>
+            生成PDF
           </Button>
           <Button icon={<FileAddOutlined />} disabled={selectedRowKeys.length !== 1} onClick={handleGenerateEntrustment}>
             生成委托单
@@ -433,6 +612,82 @@ export default function ContractPage() {
             </Col>
           </Row>
 
+
+
+          <Divider orientationMargin="0">
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <span>报价明细</span>
+              <Button type="dashed" size="small" onClick={handleAddItem} icon={<PlusOutlined />}>添加项目</Button>
+            </div>
+          </Divider>
+
+          <Table
+            dataSource={contractItems}
+            rowKey={(record, index) => index!.toString()}
+            pagination={false}
+            size="small"
+            columns={[
+              {
+                title: '检测项目',
+                dataIndex: 'serviceItem',
+                render: (text, record, index) => (
+                  <Select
+                    showSearch
+                    optionFilterProp="label"
+                    style={{ width: '100%' }}
+                    value={text}
+                    onChange={(val, option) => {
+                      updateItem(index, 'serviceItem', val)
+                      const method = (option as any)?.method
+                      if (method) updateItem(index, 'methodStandard', method)
+                    }}
+                    options={testTemplates.map(t => ({
+                      value: t.name,
+                      label: t.name,
+                      method: t.schema ? (JSON.parse(typeof t.schema === 'string' ? t.schema : JSON.stringify(t.schema)).header?.methodBasis || t.method) : t.method
+                    }))}
+                  />
+                )
+              },
+              {
+                title: '方法/标准',
+                dataIndex: 'methodStandard',
+                render: (text, record, index) => (
+                  <Input value={text} onChange={e => updateItem(index, 'methodStandard', e.target.value)} />
+                )
+              },
+              {
+                title: '数量',
+                dataIndex: 'quantity',
+                width: 80,
+                render: (val, record, index) => (
+                  <InputNumber min={1} value={val} onChange={v => updateItem(index, 'quantity', v)} />
+                )
+              },
+              {
+                title: '单价',
+                dataIndex: 'unitPrice',
+                width: 100,
+                render: (val, record, index) => (
+                  <InputNumber min={0} value={val} prefix="¥" onChange={v => updateItem(index, 'unitPrice', v)} />
+                )
+              },
+              {
+                title: '总价',
+                dataIndex: 'totalPrice',
+                width: 100,
+                render: (val) => `¥${Number(val || 0).toFixed(2)}`
+              },
+              {
+                title: '操作',
+                width: 60,
+                render: (_, record, index) => (
+                  <Button danger type="text" icon={<DeleteOutlined />} onClick={() => removeItem(index)} />
+                )
+              }
+            ]}
+          />
+
           <Divider orientationMargin="0">合同基本信息</Divider>
 
           <Row gutter={16}>
@@ -506,6 +761,24 @@ export default function ContractPage() {
             </Form.Item>
           )}
 
+          <Divider orientationMargin="0">
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <span>样品信息</span>
+              <Button type="dashed" size="small" onClick={handleAddSample} icon={<PlusOutlined />}>添加样品</Button>
+            </div>
+          </Divider>
+
+          <Table
+            rowKey={(r, i) => i || 0}
+            columns={sampleColumns}
+            dataSource={samples}
+            pagination={false}
+            size="small"
+            bordered
+            locale={{ emptyText: '暂无样品' }}
+            style={{ marginBottom: 16 }}
+          />
+
           <Divider orientationMargin="0">合同条款</Divider>
 
           <Form.Item name="paymentTerms" label="付款条款">
@@ -520,32 +793,6 @@ export default function ContractPage() {
               rows={2}
               placeholder="例如：检测完成后5个工作日内出具检测报告，报告以电子版和纸质版形式交付"
             />
-          </Form.Item>
-
-          <Form.Item name="qualityTerms" label="质量条款">
-            <Input.TextArea rows={2} placeholder="例如：检测工作按照国家标准执行，保证检测数据真实、准确" />
-          </Form.Item>
-
-          <Form.Item name="confidentialityTerms" label="保密条款">
-            <Input.TextArea
-              rows={2}
-              placeholder="例如：双方对在合作过程中知悉的对方商业秘密和技术信息负有保密义务"
-            />
-          </Form.Item>
-
-          <Form.Item name="breachTerms" label="违约责任">
-            <Input.TextArea
-              rows={2}
-              placeholder="例如：任何一方违反本合同约定，应承担相应的违约责任"
-            />
-          </Form.Item>
-
-          <Form.Item name="disputeTerms" label="争议解决">
-            <Input.TextArea rows={2} placeholder="例如：因本合同引起的争议，双方应友好协商解决；协商不成的，提交甲方所在地人民法院诉讼解决" />
-          </Form.Item>
-
-          <Form.Item name="otherTerms" label="其他条款">
-            <Input.TextArea rows={2} placeholder="其他需要约定的条款" />
           </Form.Item>
 
           <Form.Item name="remark" label="备注">
@@ -592,6 +839,8 @@ export default function ContractPage() {
                     <Descriptions column={2} bordered size="small">
                       <Descriptions.Item label="合同编号">{currentContract.contractNo}</Descriptions.Item>
                       <Descriptions.Item label="客户名称">{currentContract.clientName}</Descriptions.Item>
+                      <Descriptions.Item label="明细项数">共 {currentContract.items?.length || 0} 项</Descriptions.Item>
+                      <Descriptions.Item label="合计金额">¥{Number(currentContract.amount || 0).toLocaleString()}</Descriptions.Item>
                       <Descriptions.Item label="联系人">{currentContract.clientContact}</Descriptions.Item>
                       <Descriptions.Item label="联系电话">{currentContract.clientPhone}</Descriptions.Item>
                       <Descriptions.Item label="客户地址" span={2}>{currentContract.clientAddress || '-'}</Descriptions.Item>
@@ -602,6 +851,10 @@ export default function ContractPage() {
                       <Descriptions.Item label="预付款金额">
                         ¥{currentContract.prepaymentAmount?.toLocaleString()}
                       </Descriptions.Item>
+                      <Descriptions.Item label="样品名称">{currentContract.sampleName || '-'}</Descriptions.Item>
+                      <Descriptions.Item label="规格型号">{currentContract.sampleModel || '-'}</Descriptions.Item>
+                      <Descriptions.Item label="样品材质">{currentContract.sampleMaterial || '-'}</Descriptions.Item>
+                      <Descriptions.Item label="样品数量">{currentContract.sampleQuantity || '-'}</Descriptions.Item>
                       <Descriptions.Item label="签订日期">
                         {currentContract.signDate ? dayjs(currentContract.signDate).format('YYYY-MM-DD HH:mm:ss') : '-'}
                       </Descriptions.Item>
@@ -631,6 +884,25 @@ export default function ContractPage() {
                     )}
                   </div>
                 ),
+              },
+              {
+                key: 'items',
+                label: '报价明细',
+                children: (
+                  <Table
+                    dataSource={currentContract.items || []}
+                    rowKey="id"
+                    pagination={false}
+                    size="small"
+                    columns={[
+                      { title: '检测项目', dataIndex: 'serviceItem' },
+                      { title: '方法/标准', dataIndex: 'methodStandard' },
+                      { title: '数量', dataIndex: 'quantity', width: 80 },
+                      { title: '单价', dataIndex: 'unitPrice', width: 100, render: v => `¥${Number(v).toFixed(2)}` },
+                      { title: '总价', dataIndex: 'totalPrice', width: 100, render: v => `¥${Number(v).toFixed(2)}` },
+                    ]}
+                  />
+                )
               },
               {
                 key: 'terms',
@@ -690,6 +962,6 @@ export default function ContractPage() {
           />
         )}
       </Drawer>
-    </div>
+    </div >
   )
 }

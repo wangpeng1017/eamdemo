@@ -12,36 +12,8 @@ interface DataSheetProps {
 }
 
 export default function DataSheet({ data, onChange, readonly = false, height = 500 }: DataSheetProps) {
-  const [sheetData, setSheetData] = useState<any[]>(() => data || getDefaultData())
+  const [sheetData, setSheetData] = useState<any[]>(() => (data && data.length > 0) ? data : getDefaultData())
   const workbookRef = useRef<WorkbookInstance>(null)
-
-  function getDefaultData() {
-    return [
-      {
-        name: "Sheet1",
-        row: 30,  // 设置行数
-        column: 15,  // 设置列数
-        celldata: [
-          { r: 0, c: 0, v: { v: "检测项目", ct: { fa: "General", t: "g" }, bl: 1 } },
-          { r: 0, c: 1, v: { v: "检测方法", ct: { fa: "General", t: "g" }, bl: 1 } },
-          { r: 0, c: 2, v: { v: "技术要求", ct: { fa: "General", t: "g" }, bl: 1 } },
-          { r: 0, c: 3, v: { v: "实测值", ct: { fa: "General", t: "g" }, bl: 1 } },
-          { r: 0, c: 4, v: { v: "单项判定", ct: { fa: "General", t: "g" }, bl: 1 } },
-          { r: 0, c: 5, v: { v: "备注", ct: { fa: "General", t: "g" }, bl: 1 } },
-        ],
-        config: {
-          columnlen: {
-            0: 150,
-            1: 150,
-            2: 150,
-            3: 100,
-            4: 100,
-            5: 100,
-          }
-        }
-      },
-    ]
-  }
 
   useEffect(() => {
     if (data && data.length > 0) {
@@ -67,6 +39,34 @@ export default function DataSheet({ data, onChange, readonly = false, height = 5
       />
     </div>
   )
+}
+
+export function getDefaultData() {
+  return [
+    {
+      name: "Sheet1",
+      row: 30,  // 设置行数
+      column: 15,  // 设置列数
+      celldata: [
+        { r: 0, c: 0, v: { v: "检测项目", ct: { fa: "General", t: "g" }, bl: 1 } },
+        { r: 0, c: 1, v: { v: "检测方法", ct: { fa: "General", t: "g" }, bl: 1 } },
+        { r: 0, c: 2, v: { v: "技术要求", ct: { fa: "General", t: "g" }, bl: 1 } },
+        { r: 0, c: 3, v: { v: "实测值", ct: { fa: "General", t: "g" }, bl: 1 } },
+        { r: 0, c: 4, v: { v: "单项判定", ct: { fa: "General", t: "g" }, bl: 1 } },
+        { r: 0, c: 5, v: { v: "备注", ct: { fa: "General", t: "g" }, bl: 1 } },
+      ],
+      config: {
+        columnlen: {
+          0: 150,
+          1: 150,
+          2: 150,
+          3: 100,
+          4: 100,
+          5: 100,
+        }
+      }
+    },
+  ]
 }
 
 // 用于从 JSON 数据生成 sheet 数据的工具函数

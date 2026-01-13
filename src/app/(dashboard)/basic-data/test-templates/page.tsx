@@ -42,10 +42,8 @@ export default function TestTemplatesPage() {
   const [total, setTotal] = useState(0)
   const [page, setPage] = useState(1)
   const [modalOpen, setModalOpen] = useState(false)
-  const [previewOpen, setPreviewOpen] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
   const [editingRecord, setEditingRecord] = useState<TestTemplate | null>(null)
-  const [previewData, setPreviewData] = useState<any>(null)
   const [selectedCategory, setSelectedCategory] = useState<string>()
 
   const fetchData = async (p = page) => {
@@ -81,11 +79,23 @@ export default function TestTemplatesPage() {
     setModalOpen(true)
   }
 
-  const handlePreview = async (record: TestTemplate) => {
-    const res = await fetch(`/api/test-template/${record.id}`)
-    const json = await res.json()
-    setPreviewData(json)
-    setPreviewOpen(true)
+  const handleToggleStatus = async (id: string, currentStatus: string) => {
+    try {
+      const res = await fetch(`/api/test-template/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'toggle-status' })
+      })
+      const json = await res.json()
+      if (res.ok && json.success) {
+        message.success(currentStatus === 'active' ? '已禁用' : '已启用')
+        fetchData()
+      } else {
+        message.error(json.error?.message || '操作失败')
+      }
+    } catch (e) {
+      message.error('操作失败，请重试')
+    }
   }
 
   const handleDelete = async (id: string) => {
@@ -155,7 +165,7 @@ export default function TestTemplatesPage() {
       title: '分类', dataIndex: 'category', width: 100,
       render: (cat) => <Tag>{cat}</Tag>
     },
-    { title: '检测方法/标准', dataIndex: 'method', ellipsis: true },
+    { title: '检测标准', dataIndex: 'method', ellipsis: true },
     { title: '版本', dataIndex: 'version', width: 80 },
     {
       title: '状态', dataIndex: 'status', width: 80,
@@ -169,11 +179,16 @@ export default function TestTemplatesPage() {
       title: '操作', width: 180, fixed: 'right',
       render: (_, record) => (
         <Space size="small">
-          <Button size="small" icon={<EyeOutlined />} onClick={() => handlePreview(record)}>预览</Button>
           <Button size="small" icon={<EditOutlined />} onClick={() => handleEdit(record)}>编辑</Button>
+          <Button
+            size="small"
+            onClick={() => handleToggleStatus(record.id, record.status)}
+          >
+            {record.status === 'active' ? '禁用' : '启用'}
+          </Button>
           <Popconfirm
             title="确认删除"
-            description="确定要删除这个检测模版吗？"
+            description="确定要删除这个检测项目吗？"
             onConfirm={() => handleDelete(record.id)}
             okText="确认"
             cancelText="取消"
@@ -188,7 +203,7 @@ export default function TestTemplatesPage() {
   return (
     <div>
       <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'space-between' }}>
-        <h2 style={{ margin: 0 }}>检测模版管理</h2>
+        <h2 style={{ margin: 0 }}>检测项目管理</h2>
         <Space>
           <Select
             placeholder="分类筛选"
@@ -200,7 +215,7 @@ export default function TestTemplatesPage() {
             }}
             options={categoryOptions}
           />
-          <Button type="primary" icon={<PlusOutlined />} onClick={handleAdd}>新增模版</Button>
+          <Button type="primary" icon={<PlusOutlined />} onClick={handleAdd}>新增检测项目</Button>
         </Space>
       </div>
       <Table
@@ -214,7 +229,7 @@ export default function TestTemplatesPage() {
 
       {/* 可视化编辑器弹窗 */}
       <Modal
-        title={editingId ? '编辑检测模版' : '新增检测模版'}
+        title={editingId ? '编辑检测项目' : '新增检测项目'}
         open={modalOpen}
         onCancel={() => setModalOpen(false)}
         width="95%"
@@ -227,32 +242,6 @@ export default function TestTemplatesPage() {
           onSave={handleSave}
           onCancel={() => setModalOpen(false)}
         />
-      </Modal>
-
-      {/* 预览弹窗 */}
-      <Modal
-        title="模版预览"
-        open={previewOpen}
-        onCancel={() => setPreviewOpen(false)}
-        footer={null}
-        width={800}
-      >
-        {previewData && (
-          <div>
-            <h3>{previewData.name}</h3>
-            <p>检测方法: {previewData.method}</p>
-            <p>分类: <Tag>{previewData.category}</Tag></p>
-            <pre style={{
-              background: '#f5f5f5',
-              padding: 16,
-              borderRadius: 4,
-              overflow: 'auto',
-              maxHeight: 500
-            }}>
-              {JSON.stringify(previewData.schema, null, 2)}
-            </pre>
-          </div>
-        )}
       </Modal>
     </div>
   )

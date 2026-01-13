@@ -37,6 +37,7 @@ export default function ClientPage() {
   const [modalOpen, setModalOpen] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
   const [form] = Form.useForm()
+  const [modal, contextHolder] = Modal.useModal()
 
   const fetchData = async (p = page) => {
     setLoading(true)
@@ -69,24 +70,38 @@ export default function ClientPage() {
 
   // 获取委托单位的关联数据
   const checkClientRelations = async (id: string, name: string) => {
+    const hide = message.loading('正在检查关联数据...', 0)
+    console.log(`[Client] checking relations for ${id} (${name})`)
     try {
       const res = await fetch(`/api/client/${id}/relations`)
+      console.log(`[Client] api response status: ${res.status}`)
+
       const json = await res.json()
+      console.log(`[Client] api response json:`, json)
+
       if (json.success && json.data) {
         const relations = json.data as ClientRelations
         showDeleteConfirm(id, name, relations)
+      } else {
+        console.error('[Client] api failed:', json)
+        message.error(json.error?.message || '获取关联数据失败')
       }
     } catch (error) {
-      console.error('获取关联数据失败:', error)
-      message.error('获取关联数据失败，请重试')
+      console.error('[Client] check relations error:', error)
+      message.error('获取关联数据失败，请检查网络或重试')
+    } finally {
+      hide()
     }
   }
 
   // 显示删除确认对话框
   const showDeleteConfirm = (id: string, name: string, relations: ClientRelations) => {
+    console.log('[Client] showDeleteConfirm called', { id, name, relations })
+
     if (!relations.canDelete) {
+      console.log('[Client] Cannot delete, showing warning')
       // 有关联数据，显示详细信息
-      Modal.confirm({
+      modal.confirm({
         title: '无法删除委托单位',
         icon: <ExclamationCircleOutlined style={{ color: '#ff4d4f' }} />,
         content: (
@@ -118,8 +133,9 @@ export default function ClientPage() {
         cancelButtonProps: { style: { display: 'none' } },
       })
     } else {
+      console.log('[Client] Can delete, showing confirm')
       // 无关联数据，显示删除确认
-      Modal.confirm({
+      modal.confirm({
         title: '确认删除委托单位',
         icon: <ExclamationCircleOutlined />,
         content: (
@@ -132,6 +148,7 @@ export default function ClientPage() {
         okType: 'danger',
         cancelText: '取消',
         onOk: async () => {
+          console.log('[Client] Executing delete...')
           const res = await fetch(`/api/client/${id}`, { method: 'DELETE' })
           const json = await res.json()
           if (res.ok && json.success) {
@@ -206,6 +223,7 @@ export default function ClientPage() {
 
   return (
     <div>
+      {contextHolder}
       <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'space-between' }}>
         <h2 style={{ margin: 0 }}>委托单位管理</h2>
         <Button type="primary" icon={<PlusOutlined />} onClick={handleAdd}>新增单位</Button>

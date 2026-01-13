@@ -27,6 +27,14 @@ interface TestTemplate {
   method?: string
 }
 
+interface ConsultationSample {
+  name: string
+  model?: string
+  material?: string
+  quantity: number
+  remark?: string
+}
+
 interface Consultation {
   id: string
   consultationNo: string
@@ -45,6 +53,7 @@ interface Consultation {
   follower?: string | null
   status: string
   createdAt: string
+  consultationSamples?: ConsultationSample[]
 }
 
 const FEASIBILITY_OPTIONS = [
@@ -79,6 +88,7 @@ export default function ConsultationPage() {
   const [generateQuoteForm] = Form.useForm()
   const [closeReasonForm] = Form.useForm()
   const [quoteItems, setQuoteItems] = useState<any[]>([])
+  const [quoteSamples, setQuoteSamples] = useState<any[]>([])
 
   // 获取客户列表
   const fetchClients = async () => {
@@ -99,7 +109,11 @@ export default function ConsultationPage() {
     try {
       const res = await fetch('/api/test-template?pageSize=1000')
       const json = await res.json()
-      setTestTemplates(json.list || [])
+      if (json.success && json.data) {
+        setTestTemplates(json.data.list || [])
+      } else {
+        setTestTemplates(json.list || [])
+      }
     } catch (error) {
       console.error('获取检测项目列表失败:', error)
     }
@@ -132,12 +146,37 @@ export default function ConsultationPage() {
 
   const handleAdd = () => {
     setEditingId(null)
+    setSamples([{ name: '', quantity: 1 }])
     form.resetFields()
     setModalOpen(true)
   }
 
   const handleEdit = (record: Consultation) => {
     setEditingId(record.id)
+    // 兼容旧数据：如果有关联样品表则使用，否则使用旧字段
+    let initSamples: ConsultationSample[] = []
+    if (record.consultationSamples && record.consultationSamples.length > 0) {
+      initSamples = record.consultationSamples.map(s => ({
+        name: s.name,
+        model: s.model || undefined,
+        material: s.material || undefined,
+        quantity: s.quantity || 1,
+        remark: s.remark || undefined
+      }))
+    } else if (record.sampleName) {
+      initSamples = [{
+        name: record.sampleName,
+        model: record.sampleModel || undefined,
+        material: record.sampleMaterial || undefined,
+        // estimateQuantity is string in interface but mapped to int in API... 
+        // Need to check specific implementation. 
+        // Based on interface: estimatedQuantity?: string | null
+        quantity: parseInt(record.estimatedQuantity || '1') || 1
+      }]
+    }
+
+    setSamples(initSamples)
+
     const formData = {
       ...record,
       clientId: record.clientId || record.client?.id,
@@ -149,16 +188,46 @@ export default function ConsultationPage() {
   }
 
   const handleView = async (record: Consultation) => {
+    // view logic might need API call to get full details including samples if main list doesn't have it fully populated
+    // But list API now includes consultationSamples
     setCurrentConsultation(record)
     setViewDrawerOpen(true)
   }
 
-  const handleDelete = async (id: string) => {
-    Modal.confirm({
-      title: '确认删除',
-      content: '确定要删除这条咨询记录吗？',
+  const handleDelete = async (record: Consultation) => {
+    let title = '确认删除'
+    let content = '确定要删除这条咨询记录吗？'
+    let okType: 'danger' | 'primary' = 'primary'
+
+    console.log('Delete button clicked', record)
+    if (!record) {
+      console.error('Record is undefined')
+      return
+    }
+
+    console.log('Checking status:', record.status)
+    if (record.status === 'quoted') {
+      console.log('Status is quoted, attempt to show warning')
+      title = '无法删除'
+      content = '该咨询单已生成报价，请先处理相关报价单后再尝试删除，或将状态更改为"已关闭"。'
+      modal.warning({
+        title,
+        content,
+      })
+      return
+    }
+
+    if (record.status === 'closed') {
+      content = '该咨询单已关闭，确定要彻底删除吗？删除后无法恢复。'
+      okType = 'danger'
+    }
+
+    modal.confirm({
+      title,
+      content,
+      okType,
       onOk: async () => {
-        const res = await fetch(`/api/consultation/${id}`, { method: 'DELETE' })
+        const res = await fetch(`/api/consultation/${record.id}`, { method: 'DELETE' })
         const json = await res.json()
         if (res.ok && json.success) {
           message.success('删除成功')
@@ -175,6 +244,7 @@ export default function ConsultationPage() {
     const submitData = {
       ...values,
       expectedDeadline: values.expectedDeadline ? values.expectedDeadline.toISOString() : null,
+      samples, // 传递样品列表
     }
 
     if (editingId) {
@@ -213,6 +283,27 @@ export default function ConsultationPage() {
       return
     }
     const consultation = selectedRows[0]
+
+    // 初始化样品数据
+    let initSamples: any[] = []
+    if (consultation.consultationSamples && consultation.consultationSamples.length > 0) {
+      initSamples = consultation.consultationSamples.map(s => ({
+        name: s.name,
+        model: s.model,
+        material: s.material,
+        quantity: s.quantity,
+        remark: s.remark
+      }))
+    } else if (consultation.sampleName) {
+      initSamples = [{
+        name: consultation.sampleName,
+        model: consultation.sampleModel,
+        material: consultation.sampleMaterial,
+        quantity: parseInt(consultation.estimatedQuantity || '1') || 1
+      }]
+    }
+    setQuoteSamples(initSamples)
+
     const items = (consultation.testItems || []).map(item => {
       // 查找检测项目模板，获取检测标准
       const template = testTemplates.find(t => t.name === item)
@@ -233,7 +324,7 @@ export default function ConsultationPage() {
       phone: consultation.client?.phone,
       email: consultation.client?.email,
       address: consultation.client?.address,
-      sampleName: consultation.sampleName,
+      sampleName: consultation.sampleName, // 保留作为默认值，但主要使用 samples 数组
     })
     setGenerateQuoteModalOpen(true)
   }
@@ -250,7 +341,8 @@ export default function ConsultationPage() {
         consultationNo: values.consultationNo,
         clientId: values.clientId,
         clientContactPerson: values.contact,
-        sampleName: values.sampleName,
+        sampleName: values.sampleName, // 后端兼容
+        samples: quoteSamples, // 传递多行样品数据
         clientRemark: values.clientRemark,
         items: quoteItems.map((item: any) => ({
           serviceItem: item.name,
@@ -336,6 +428,21 @@ export default function ConsultationPage() {
     setQuoteItems(quoteItems.filter((_, i) => i !== index))
   }
 
+  // 报价单样品操作
+  const handleAddQuoteSample = () => {
+    setQuoteSamples([...quoteSamples, { name: '', quantity: 1 }])
+  }
+
+  const handleUpdateQuoteSample = (index: number, field: string, value: any) => {
+    const newSamples = [...quoteSamples]
+    newSamples[index] = { ...newSamples[index], [field]: value }
+    setQuoteSamples(newSamples)
+  }
+
+  const handleRemoveQuoteSample = (index: number) => {
+    setQuoteSamples(quoteSamples.filter((_, i) => i !== index))
+  }
+
   // 计算报价金额
   const totalAmount = quoteItems.reduce((sum, item) => sum + (item.quantity || 0) * (item.unitPrice || 0), 0)
   const taxAmount = totalAmount * 0.06
@@ -364,7 +471,13 @@ export default function ConsultationPage() {
       dataIndex: 'sampleName',
       width: 120,
       ellipsis: true,
-      render: (v) => v || '-'
+      render: (v, record) => {
+        if (v) return v
+        if (record.consultationSamples && record.consultationSamples.length > 0) {
+          return record.consultationSamples[0].name + (record.consultationSamples.length > 1 ? ` 等${record.consultationSamples.length}个` : '')
+        }
+        return '-'
+      }
     },
     {
       title: '检测项目',
@@ -385,6 +498,12 @@ export default function ConsultationPage() {
       render: (s: string) => <StatusTag type="consultation" status={s} />
     },
     {
+      title: '创建时间',
+      dataIndex: 'createdAt',
+      width: 160,
+      render: (t: string) => dayjs(t).format('YYYY-MM-DD HH:mm:ss')
+    },
+    {
       title: '操作',
       width: 150,
       fixed: 'right',
@@ -392,7 +511,7 @@ export default function ConsultationPage() {
         <Space size="small">
           <Button size="small" icon={<EyeOutlined />} onClick={() => handleView(record)}>查看</Button>
           <Button size="small" icon={<EditOutlined />} onClick={() => handleEdit(record)} />
-          <Button size="small" danger icon={<DeleteOutlined />} onClick={() => handleDelete(record.id)} />
+          <Button size="small" danger icon={<DeleteOutlined />} onClick={() => handleDelete(record)} />
         </Space>
       )
     }
@@ -406,8 +525,92 @@ export default function ConsultationPage() {
     },
   }
 
+  // 引用 useModal
+  const [modal, contextHolder] = Modal.useModal()
+
+  // 样品信息
+  // interface needs to be at top level but for now define here or use existing
+  // The state was defined here
+  const [samples, setSamples] = useState<ConsultationSample[]>([])
+
+  const handleAddSample = () => {
+    setSamples([...samples, { name: '', quantity: 1 }])
+  }
+
+  const handleUpdateSample = (index: number, field: keyof ConsultationSample, value: any) => {
+    const newSamples = [...samples]
+    newSamples[index] = { ...newSamples[index], [field]: value }
+    setSamples(newSamples)
+  }
+
+  const handleRemoveSample = (index: number) => {
+    setSamples(samples.filter((_, i) => i !== index))
+  }
+
+  const sampleColumns: ColumnsType<ConsultationSample> = [
+    {
+      title: '样品名称',
+      dataIndex: 'name',
+      render: (val, record, index) => (
+        <Input
+          value={val}
+          onChange={e => handleUpdateSample(index, 'name', e.target.value)}
+          placeholder="样品名称"
+        />
+      )
+    },
+    {
+      title: '规格型号',
+      dataIndex: 'model',
+      render: (val, record, index) => (
+        <Input
+          value={val}
+          onChange={e => handleUpdateSample(index, 'model', e.target.value)}
+          placeholder="规格型号"
+        />
+      )
+    },
+    {
+      title: '材质',
+      dataIndex: 'material',
+      render: (val, record, index) => (
+        <Input
+          value={val}
+          onChange={e => handleUpdateSample(index, 'material', e.target.value)}
+          placeholder="材质"
+        />
+      )
+    },
+    {
+      title: '数量',
+      dataIndex: 'quantity',
+      width: 100,
+      render: (val, record, index) => (
+        <InputNumber
+          min={1}
+          value={val}
+          onChange={v => handleUpdateSample(index, 'quantity', v || 1)}
+        />
+      )
+    },
+    {
+      title: '操作',
+      width: 60,
+      render: (_, __, index) => (
+        <Button
+          type="text"
+          danger
+          icon={<DeleteOutlined />}
+          onClick={() => handleRemoveSample(index)}
+        />
+      )
+    }
+  ]
+
+
   return (
     <div>
+      {contextHolder}
       <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'space-between' }}>
         <h2 style={{ margin: 0 }}>委托咨询</h2>
         <Space>
@@ -493,33 +696,21 @@ export default function ConsultationPage() {
             </Col>
           </Row>
 
-          <Divider orientationMargin="0">样品信息</Divider>
-
-          <Row gutter={16}>
-            <Col span={12}>
-              <Form.Item name="sampleName" label="样品名称">
-                <Input placeholder="请输入样品名称" />
-              </Form.Item>
-            </Col>
-            <Col span={12}>
-              <Form.Item name="sampleModel" label="规格型号">
-                <Input placeholder="请输入规格型号" />
-              </Form.Item>
-            </Col>
-          </Row>
-
-          <Row gutter={16}>
-            <Col span={12}>
-              <Form.Item name="sampleMaterial" label="样品材质">
-                <Input placeholder="请输入样品材质" />
-              </Form.Item>
-            </Col>
-            <Col span={12}>
-              <Form.Item name="estimatedQuantity" label="预估数量">
-                <Input placeholder="请输入预估数量" />
-              </Form.Item>
-            </Col>
-          </Row>
+          <div style={{ marginBottom: 16 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
+              <span style={{ fontWeight: 500 }}>样品信息</span>
+              <Button type="dashed" onClick={handleAddSample} icon={<PlusOutlined />} size="small">添加样品</Button>
+            </div>
+            <Table
+              rowKey={(r, i) => i || 0}
+              columns={sampleColumns}
+              dataSource={samples}
+              pagination={false}
+              size="small"
+              bordered
+              locale={{ emptyText: '暂无样品' }}
+            />
+          </div>
 
           <Form.Item name="testItems" label="检测项目（多选）">
             <Select
@@ -566,16 +757,7 @@ export default function ConsultationPage() {
             <Input.TextArea rows={2} placeholder="请输入可行性说明" />
           </Form.Item>
 
-          {editingId && (
-            <Form.Item name="status" label="状态">
-              <Select>
-                <Select.Option value="following">跟进中</Select.Option>
-                <Select.Option value="quoted">已报价</Select.Option>
-                <Select.Option value="rejected">已拒绝</Select.Option>
-                <Select.Option value="closed">已关闭</Select.Option>
-              </Select>
-            </Form.Item>
-          )}
+          {/* 状态字段已移除，由系统自动管理 */}
         </Form>
       </Modal>
 
@@ -641,15 +823,65 @@ export default function ConsultationPage() {
             </Col>
           </Row>
 
-          <Divider>样品和检测项目</Divider>
-          <Form.Item name="sampleName" label="样品名称" rules={[{ required: true }]}>
+          <Divider>样品信息</Divider>
+          {/* 隐藏原来的单行 sampleName，改用表格，但为了兼容后端可能的必填校验，可以保留 hidden 字段 */}
+          <Form.Item name="sampleName" hidden>
             <Input />
           </Form.Item>
 
-          <div style={{ marginBottom: 8 }}>
-            <span style={{ fontWeight: 500 }}>检测项目</span>
-            <Button type="link" size="small" onClick={handleAddQuoteItem}>+ 添加项目</Button>
-          </div>
+          <Table
+            dataSource={quoteSamples}
+            rowKey={(r, i) => i || 0}
+            pagination={false}
+            size="small"
+            bordered
+            locale={{ emptyText: '暂无样品' }}
+            footer={() => (
+              <Button type="dashed" onClick={handleAddQuoteSample} block icon={<PlusOutlined />}>
+                添加样品
+              </Button>
+            )}
+            columns={[
+              {
+                title: '样品名称',
+                dataIndex: 'name',
+                render: (val, record, index) => (
+                  <Input value={val} onChange={e => handleUpdateQuoteSample(index, 'name', e.target.value)} placeholder="样品名称" />
+                )
+              },
+              {
+                title: '规格型号',
+                dataIndex: 'model',
+                render: (val, record, index) => (
+                  <Input value={val} onChange={e => handleUpdateQuoteSample(index, 'model', e.target.value)} placeholder="规格型号" />
+                )
+              },
+              {
+                title: '材质',
+                dataIndex: 'material',
+                render: (val, record, index) => (
+                  <Input value={val} onChange={e => handleUpdateQuoteSample(index, 'material', e.target.value)} placeholder="材质" />
+                )
+              },
+              {
+                title: '数量',
+                dataIndex: 'quantity',
+                width: 80,
+                render: (val, record, index) => (
+                  <InputNumber min={1} value={val} onChange={v => handleUpdateQuoteSample(index, 'quantity', v || 1)} />
+                )
+              },
+              {
+                title: '操作',
+                width: 60,
+                render: (_, __, index) => (
+                  <Button type="text" danger icon={<DeleteOutlined />} onClick={() => handleRemoveQuoteSample(index)} />
+                )
+              }
+            ]}
+          />
+
+          <Divider>检测项目</Divider>
           {quoteItems.map((item, index) => (
             <Row key={index} gutter={8} style={{ marginBottom: 8 }}>
               <Col span={6}>
@@ -760,21 +992,38 @@ function Descriptions({ title, data }: { title: string; data: Consultation }) {
 
   const relevantItems = title === '基本信息'
     ? items.slice(0, 7)
-    : title === '样品信息'
-      ? items.slice(7, 11)
-      : items.slice(11)
+    : title === '其他信息' // Skip Sample Info section for now
+      ? items.slice(11)
+      : []
 
   return (
     <div>
       <h4 style={{ marginBottom: 16 }}>{title}</h4>
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px 24px' }}>
-        {relevantItems.map((item, index) => (
-          <div key={index}>
-            <span style={{ color: '#666', fontSize: 12 }}>{item.label}：</span>
-            <span style={{ marginLeft: 8 }}>{item.value || '-'}</span>
-          </div>
-        ))}
-      </div>
+      {title === '样品信息' ? (
+        <Table
+          dataSource={data.consultationSamples || []}
+          rowKey="name" // simple key
+          pagination={false}
+          size="small"
+          bordered
+          columns={[
+            { title: '样品名称', dataIndex: 'name' },
+            { title: '规格型号', dataIndex: 'model' },
+            { title: '材质', dataIndex: 'material' },
+            { title: '数量', dataIndex: 'quantity' },
+            { title: '备注', dataIndex: 'remark' },
+          ]}
+        />
+      ) : (
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px 24px' }}>
+          {relevantItems.map((item, index) => (
+            <div key={index}>
+              <span style={{ color: '#666', fontSize: 12 }}>{item.label}：</span>
+              <span style={{ marginLeft: 8 }}>{item.value || '-'}</span>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   )
 }

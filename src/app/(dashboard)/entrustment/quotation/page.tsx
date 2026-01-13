@@ -40,6 +40,14 @@ interface QuotationApproval {
   timestamp: string
 }
 
+interface QuotationSample {
+  name: string
+  model?: string
+  material?: string
+  quantity: number
+  remark?: string
+}
+
 interface Quotation {
   id: string
   quotationNo: string
@@ -48,6 +56,9 @@ interface Quotation {
   client?: Client
   clientContactPerson?: string
   sampleName?: string | null
+  sampleModel?: string | null
+  sampleMaterial?: string | null
+  sampleQuantity?: number | null
   consultationId?: string | null
   quotationDate: string
   validDays: number
@@ -66,6 +77,7 @@ interface Quotation {
   createdAt: string
   items?: QuotationItem[]
   approvals?: QuotationApproval[]
+  quotationSamples?: QuotationSample[]
 }
 
 const STATUS_OPTIONS = [
@@ -89,6 +101,7 @@ interface TestTemplate {
   name: string
   method?: string
   unit?: string
+  schema?: any
 }
 
 
@@ -105,6 +118,7 @@ export default function QuotationPage() {
   const [editingId, setEditingId] = useState<string | null>(null)
   const [currentQuotation, setCurrentQuotation] = useState<Quotation | null>(null)
   const [items, setItems] = useState<QuotationItem[]>([])
+  const [samples, setSamples] = useState<QuotationSample[]>([])
   const [clients, setClients] = useState<Client[]>([])
   const [clientsLoading, setClientsLoading] = useState(false)
   const [testTemplates, setTestTemplates] = useState<TestTemplate[]>([])
@@ -121,6 +135,25 @@ export default function QuotationPage() {
   const [contractModalOpen, setContractModalOpen] = useState(false)
   const [feedbackForm] = Form.useForm()
   const [contractForm] = Form.useForm()
+
+
+
+  const [contractSamples, setContractSamples] = useState<any[]>([])
+
+  // 样品操作
+  const handleAddSample = () => {
+    setSamples([...samples, { name: '', quantity: 1 }])
+  }
+
+  const handleUpdateSample = (index: number, field: string, value: any) => {
+    const newSamples = [...samples]
+    newSamples[index] = { ...newSamples[index], [field]: value }
+    setSamples(newSamples)
+  }
+
+  const handleRemoveSample = (index: number) => {
+    setSamples(samples.filter((_, i) => i !== index))
+  }
 
   const updateItem = (index: number, field: string, value: any) => {
     const newItems = [...items]
@@ -246,6 +279,48 @@ export default function QuotationPage() {
     }
   }
 
+  const [contractItems, setContractItems] = useState<any[]>([])
+
+
+  const updateContractItem = (index: number, field: string, value: any) => {
+    const newItems = [...contractItems]
+    const item = { ...newItems[index] }
+    // @ts-ignore
+    item[field] = value
+    item.totalPrice = (item.quantity || 1) * (item.unitPrice || 0)
+    newItems[index] = item
+    setContractItems(newItems)
+
+    // 自动计算合同总额
+    const total = newItems.reduce((sum, i) => sum + (i.totalPrice || 0), 0)
+    contractForm.setFieldsValue({ amount: total })
+
+    // Recalculate prepayment amount
+    const ratio = contractForm.getFieldValue('prepaymentRatio') || 0
+    contractForm.setFieldsValue({
+      prepaymentAmount: total ? (total * ratio / 100) : 0
+    })
+  }
+
+  const removeContractItem = (index: number) => {
+    const newItems = contractItems.filter((_, i) => i !== index)
+    setContractItems(newItems)
+    const total = newItems.reduce((sum, i) => sum + (i.totalPrice || 0), 0)
+    contractForm.setFieldsValue({ amount: total })
+
+    // Recalculate prepayment amount
+    const ratio = contractForm.getFieldValue('prepaymentRatio') || 0
+    contractForm.setFieldsValue({
+      prepaymentAmount: total ? (total * ratio / 100) : 0
+    })
+  }
+
+  const handleAddContractItem = () => {
+    setContractItems([...contractItems, { serviceItem: '', methodStandard: '', quantity: 1, unitPrice: 0, totalPrice: 0 }])
+  }
+
+
+
   const fetchData = async (p = page, f = filters) => {
     setLoading(true)
     const params = new URLSearchParams({
@@ -276,9 +351,12 @@ export default function QuotationPage() {
     fetchTestTemplates()
   }, [page])
 
+  // ... inside component ...
+
   const handleAdd = () => {
     setEditingId(null)
     setItems([{ serviceItem: '', methodStandard: '', quantity: 1, unitPrice: 0, totalPrice: 0 }])
+    setSamples([{ name: '', quantity: 1 }])
     form.resetFields()
     form.setFieldsValue({
       quotationDate: dayjs(),
@@ -290,31 +368,47 @@ export default function QuotationPage() {
 
   const handleEdit = (record: Quotation) => {
     setEditingId(record.id)
-    setItems(record.items || [])
+    const safeItems = (record.items || []).map(item => ({
+      ...item,
+      quantity: Number(item.quantity) || 0,
+      unitPrice: Number(item.unitPrice) || 0,
+      totalPrice: Number(item.totalPrice) || 0,
+    }))
+    setItems(safeItems)
+
+    // 初始化样品
+    let initSamples: QuotationSample[] = []
+    if (record.quotationSamples && record.quotationSamples.length > 0) {
+      initSamples = record.quotationSamples.map(s => ({
+        name: s.name,
+        model: s.model || undefined,
+        material: s.material || undefined,
+        quantity: s.quantity || 1,
+        remark: s.remark || undefined
+      }))
+    } else if (record.sampleName) {
+      // 兼容旧数据
+      const qty = (record as any).sampleQuantity ? parseInt((record as any).sampleQuantity) : 1
+      initSamples = [{
+        name: record.sampleName,
+        model: (record as any).sampleModel,
+        material: (record as any).sampleMaterial,
+        quantity: isNaN(qty) ? 1 : qty
+      }]
+    }
+    setSamples(initSamples)
+
     const formData = {
       ...record,
       clientId: record.clientId || record.client?.id,
       quotationDate: dayjs(record.quotationDate),
+      discountAmount: Number((record as any).discountAmount) || 0,
     }
     form.setFieldsValue(formData)
     setModalOpen(true)
   }
 
-  const handleView = (record: Quotation) => {
-    setCurrentQuotation(record)
-    setViewDrawerOpen(true)
-  }
-
-  const handleDelete = async (id: string) => {
-    const res = await fetch(`/api/quotation/${id}`, { method: 'DELETE' })
-    const json = await res.json()
-    if (res.ok && json.success) {
-      message.success('删除成功')
-      fetchData()
-    } else {
-      message.error(json.error?.message || '删除失败')
-    }
-  }
+  // ... handleView, handleDelete ...
 
   const handleSubmit = async () => {
     const values = await form.validateFields()
@@ -322,6 +416,7 @@ export default function QuotationPage() {
       ...values,
       quotationDate: values.quotationDate.toISOString(),
       items,
+      samples, // 传递样品列表
       finalAmount: form.getFieldValue('finalAmount'),
     }
 
@@ -343,6 +438,24 @@ export default function QuotationPage() {
     setModalOpen(false)
     fetchData()
   }
+
+  const handleView = (record: Quotation) => {
+    setCurrentQuotation(record)
+    setViewDrawerOpen(true)
+  }
+
+  const handleDelete = async (id: string) => {
+    const res = await fetch(`/api/quotation/${id}`, { method: 'DELETE' })
+    const json = await res.json()
+    if (res.ok && json.success) {
+      message.success('删除成功')
+      fetchData()
+    } else {
+      message.error(json.error?.message || '删除失败')
+    }
+  }
+
+
 
   // 客户选择变化时自动填充联系人
   const handleClientChange = (clientId: string) => {
@@ -526,32 +639,87 @@ export default function QuotationPage() {
       quotationId: quotation.id,
       quotationNo: quotation.quotationNo,
       clientName: quotation.client?.name,
+      clientContact: quotation.clientContactPerson,
+      clientPhone: quotation.client?.phone,
+      clientAddress: quotation.client?.address,
       sampleName: quotation.sampleName,
       amount: quotation.finalAmount,
-      clientContact: quotation.clientContactPerson,
       contractName: `${quotation.sampleName || '检测'}委托合同`,
       signDate: dayjs(),
       startDate: dayjs(),
       endDate: dayjs().add(1, 'year'),
+      prepaymentRatio: 30,
+      prepaymentAmount: quotation.finalAmount ? (quotation.finalAmount * 30 / 100) : 0,
     })
+
+    // 初始化合同明细
+    setContractItems(quotation.items?.map(item => ({
+      serviceItem: item.serviceItem,
+      methodStandard: item.methodStandard,
+      quantity: item.quantity,
+      unitPrice: item.unitPrice,
+      totalPrice: item.totalPrice,
+    })) || [])
+
+    // 初始化合同样品
+    let initSamples: any[] = []
+    if (quotation.quotationSamples && quotation.quotationSamples.length > 0) {
+      initSamples = quotation.quotationSamples.map(s => ({
+        name: s.name,
+        model: s.model,
+        material: s.material,
+        quantity: s.quantity,
+        remark: s.remark
+      }))
+    } else if (quotation.sampleName) {
+      initSamples = [{
+        name: quotation.sampleName,
+        model: quotation.sampleModel,
+        material: quotation.sampleMaterial,
+        quantity: quotation.sampleQuantity || 1
+      }]
+    }
+    setContractSamples(initSamples)
+
     setContractModalOpen(true)
+  }
+
+  // 合同样品操作
+  const handleAddContractSample = () => {
+    setContractSamples([...contractSamples, { name: '', quantity: 1 }])
+  }
+
+  const handleUpdateContractSample = (index: number, field: string, value: any) => {
+    const newSamples = [...contractSamples]
+    newSamples[index] = { ...newSamples[index], [field]: value }
+    setContractSamples(newSamples)
+  }
+
+  const handleRemoveContractSample = (index: number) => {
+    setContractSamples(contractSamples.filter((_, i) => i !== index))
   }
 
   // 提交生成合同
   const handleContractSubmit = async () => {
     const values = await contractForm.validateFields()
     const contractData = {
+      clientId: selectedRows[0].clientId || selectedRows[0].client?.id, // 关键：添加 clientId
       quotationId: values.quotationId,
-      quotationNo: values.quotationNo,
       contractName: values.contractName,
       clientName: values.clientName,
       clientContact: values.clientContact,
+      clientPhone: values.clientPhone,
+      clientAddress: values.clientAddress,
       amount: values.amount,
+      prepaymentRatio: values.prepaymentRatio,
+      prepaymentAmount: values.prepaymentAmount,
       signDate: values.signDate?.toISOString(),
       startDate: values.startDate?.toISOString(),
       endDate: values.endDate?.toISOString(),
       paymentTerms: values.paymentTerms,
       deliveryTerms: values.deliveryTerms,
+      items: contractItems,
+      samples: contractSamples,
     }
     const res = await fetch('/api/contract', {
       method: 'POST',
@@ -559,20 +727,20 @@ export default function QuotationPage() {
       body: JSON.stringify(contractData),
     })
     const json = await res.json()
-    if (json.success || json.id) {
+    if (res.ok && (json.success || json.id)) {
       message.success(`合同创建成功`)
       setContractModalOpen(false)
       router.push('/entrustment/contract')
     } else {
-      message.error('创建合同失败')
+      message.error(json.error?.message || '创建合同失败')
     }
   }
 
   // 计算金额
-  const totalAmount = items.reduce((sum, item) => sum + item.totalPrice, 0)
+  const totalAmount = items.reduce((sum, item) => sum + (Number(item.totalPrice) || 0), 0)
   const taxAmount = totalAmount * 0.06
   const totalWithTax = totalAmount + taxAmount
-  const discountAmount = form.getFieldValue('discountAmount') || 0
+  const discountAmount = Number(form.getFieldValue('discountAmount')) || 0
   const finalAmount = totalWithTax - discountAmount
 
   const columns: ColumnsType<Quotation> = [
@@ -625,8 +793,8 @@ export default function QuotationPage() {
       render: (s: string) => <StatusTag type="quotation" status={s} />,
     },
     {
-      title: '报价日期',
-      dataIndex: 'quotationDate',
+      title: '创建日期',
+      dataIndex: 'createdAt',
       width: 160,
       render: (t: string) => dayjs(t).format('YYYY-MM-DD HH:mm:ss'),
     },
@@ -809,33 +977,60 @@ export default function QuotationPage() {
             </Col>
           </Row>
 
-          <Divider orientationMargin="0">任务信息</Divider>
+          <Divider orientationMargin="0">样品信息</Divider>
+          <Form.Item name="sampleName" hidden><Input /></Form.Item>
 
-          <Row gutter={16}>
-            <Col span={12}>
-              <Form.Item name="sampleName" label="样品名称">
-                <Input placeholder="请输入样品名称" />
-              </Form.Item>
-            </Col>
-            <Col span={12}>
-              <Form.Item name="sampleModel" label="规格型号">
-                <Input placeholder="请输入规格型号" />
-              </Form.Item>
-            </Col>
-          </Row>
-
-          <Row gutter={16}>
-            <Col span={12}>
-              <Form.Item name="sampleMaterial" label="样品材质">
-                <Input placeholder="请输入样品材质" />
-              </Form.Item>
-            </Col>
-            <Col span={12}>
-              <Form.Item name="sampleQuantity" label="预估数量">
-                <InputNumber min={0} style={{ width: '100%' }} placeholder="请输入数量" />
-              </Form.Item>
-            </Col>
-          </Row>
+          <Table
+            dataSource={samples}
+            rowKey={(r, i) => i || 0}
+            pagination={false}
+            size="small"
+            bordered
+            locale={{ emptyText: '暂无样品' }}
+            footer={() => (
+              <Button type="dashed" onClick={handleAddSample} block icon={<PlusOutlined />}>
+                添加样品
+              </Button>
+            )}
+            columns={[
+              {
+                title: '样品名称',
+                dataIndex: 'name',
+                render: (val, record, index) => (
+                  <Input value={val} onChange={e => handleUpdateSample(index, 'name', e.target.value)} placeholder="样品名称" />
+                )
+              },
+              {
+                title: '规格型号',
+                dataIndex: 'model',
+                render: (val, record, index) => (
+                  <Input value={val} onChange={e => handleUpdateSample(index, 'model', e.target.value)} placeholder="规格型号" />
+                )
+              },
+              {
+                title: '材质',
+                dataIndex: 'material',
+                render: (val, record, index) => (
+                  <Input value={val} onChange={e => handleUpdateSample(index, 'material', e.target.value)} placeholder="材质" />
+                )
+              },
+              {
+                title: '数量',
+                dataIndex: 'quantity',
+                width: 80,
+                render: (val, record, index) => (
+                  <InputNumber min={1} value={val} onChange={v => handleUpdateSample(index, 'quantity', v || 1)} />
+                )
+              },
+              {
+                title: '操作',
+                width: 60,
+                render: (_, __, index) => (
+                  <Button type="text" danger icon={<DeleteOutlined />} onClick={() => handleRemoveSample(index)} />
+                )
+              }
+            ]}
+          />
 
           <Divider orientationMargin="0">报价明细</Divider>
 
@@ -972,8 +1167,8 @@ export default function QuotationPage() {
                       <Descriptions.Item label="联系电话">{currentQuotation.client?.phone || '-'}</Descriptions.Item>
                       <Descriptions.Item label="客户邮箱">{currentQuotation.client?.email || '-'}</Descriptions.Item>
                       <Descriptions.Item label="客户地址">{currentQuotation.client?.address || '-'}</Descriptions.Item>
-                      <Descriptions.Item label="报价日期">
-                        {dayjs(currentQuotation.quotationDate).format('YYYY-MM-DD HH:mm:ss')}
+                      <Descriptions.Item label="创建日期">
+                        {dayjs(currentQuotation.createdAt).format('YYYY-MM-DD HH:mm:ss')}
                       </Descriptions.Item>
                       <Descriptions.Item label="有效期">{currentQuotation.validDays}天</Descriptions.Item>
                       <Descriptions.Item label="报价合计">¥{Number(currentQuotation.totalAmount || 0).toFixed(2)}</Descriptions.Item>
@@ -1122,7 +1317,7 @@ export default function QuotationPage() {
         open={contractModalOpen}
         onOk={handleContractSubmit}
         onCancel={() => setContractModalOpen(false)}
-        width={700}
+        width={900}
         okText="生成"
       >
         <Form form={contractForm} layout="vertical">
@@ -1132,27 +1327,160 @@ export default function QuotationPage() {
           <Form.Item name="quotationNo" hidden>
             <Input />
           </Form.Item>
-
-          {/* 自动带入的信息（只读展示） */}
-          <div style={{ background: '#f5f5f5', padding: 12, marginBottom: 16, borderRadius: 4 }}>
-            <Row gutter={16}>
-              <Col span={12}><span>客户：</span><strong>{contractForm.getFieldValue('clientName')}</strong></Col>
-              <Col span={12}><span>样品：</span><strong>{contractForm.getFieldValue('sampleName')}</strong></Col>
-            </Row>
-            <Row gutter={16} style={{ marginTop: 8 }}>
-              <Col span={12}><span>金额：</span><strong>¥{contractForm.getFieldValue('amount')}</strong></Col>
-              <Col span={12}><span>联系人：</span><strong>{contractForm.getFieldValue('clientContact')}</strong></Col>
-            </Row>
-          </div>
-
-          <Form.Item name="clientName" hidden><Input /></Form.Item>
-          <Form.Item name="sampleName" hidden><Input /></Form.Item>
-          <Form.Item name="amount" hidden><InputNumber /></Form.Item>
-          <Form.Item name="clientContact" hidden><Input /></Form.Item>
-
-          <Form.Item name="contractName" label="合同名称" rules={[{ required: true }]}>
+          <Form.Item name="clientName" hidden>
             <Input />
           </Form.Item>
+
+          <Row gutter={16}>
+            <Col span={12}>
+              <Form.Item name="contractName" label="合同名称" rules={[{ required: true }]}>
+                <Input />
+              </Form.Item>
+            </Col>
+            <Col span={12}>
+              <Form.Item name="clientContact" label="联系人" rules={[{ required: true }]}>
+                <Input />
+              </Form.Item>
+            </Col>
+          </Row>
+
+          <Row gutter={16}>
+            <Col span={12}>
+              <Form.Item name="clientPhone" label="联系电话" rules={[{ required: true }]}>
+                <Input />
+              </Form.Item>
+            </Col>
+            <Col span={12}>
+              <Form.Item name="clientAddress" label="客户地址">
+                <Input />
+              </Form.Item>
+            </Col>
+          </Row>
+
+          <Divider orientationMargin="0">
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <span>报价明细</span>
+              <Button type="dashed" size="small" onClick={handleAddContractItem} icon={<PlusOutlined />}>添加项目</Button>
+            </div>
+          </Divider>
+
+          <Table
+            dataSource={contractItems}
+            rowKey={(record, index) => index!.toString()}
+            pagination={false}
+            size="small"
+            columns={[
+              {
+                title: '检测项目',
+                dataIndex: 'serviceItem',
+                render: (text, record, index) => (
+                  <Select
+                    showSearch
+                    optionFilterProp="label"
+                    style={{ width: '100%' }}
+                    value={text}
+                    onChange={(val, option) => {
+                      updateContractItem(index, 'serviceItem', val)
+                      const method = (option as any)?.method
+                      if (method) updateContractItem(index, 'methodStandard', method)
+                    }}
+                    options={testTemplates.map(t => ({
+                      value: t.name,
+                      label: t.name,
+                      method: t.schema ? (JSON.parse(typeof t.schema === 'string' ? t.schema : JSON.stringify(t.schema)).header?.methodBasis || t.method) : t.method
+                    }))}
+                  />
+                )
+              },
+              {
+                title: '方法/标准',
+                dataIndex: 'methodStandard',
+                render: (text, record, index) => (
+                  <Input value={text} onChange={e => updateContractItem(index, 'methodStandard', e.target.value)} />
+                )
+              },
+              {
+                title: '数量',
+                dataIndex: 'quantity',
+                width: 80,
+                render: (val, record, index) => (
+                  <InputNumber min={1} value={val} onChange={v => updateContractItem(index, 'quantity', v)} />
+                )
+              },
+              {
+                title: '单价',
+                dataIndex: 'unitPrice',
+                width: 100,
+                render: (val, record, index) => (
+                  <InputNumber min={0} value={val} prefix="¥" onChange={v => updateContractItem(index, 'unitPrice', v)} />
+                )
+              },
+              {
+                title: '总价',
+                dataIndex: 'totalPrice',
+                width: 100,
+                render: (val) => `¥${Number(val || 0).toFixed(2)}`
+              },
+              {
+                title: '操作',
+                width: 60,
+                render: (_, record, index) => (
+                  <Button danger type="text" icon={<DeleteOutlined />} onClick={() => removeContractItem(index)} />
+                )
+              }
+            ]}
+          />
+
+          <Divider orientationMargin="0">合同基本信息</Divider>
+
+          <Row gutter={16}>
+            <Col span={8}>
+              <Form.Item name="amount" label="合同金额" rules={[{ required: true, message: '请输入合同金额' }]}>
+                <InputNumber
+                  style={{ width: '100%' }}
+                  min={0}
+                  precision={2}
+                  prefix="¥"
+                  placeholder="请输入合同金额"
+                  onChange={(val) => {
+                    const ratio = contractForm.getFieldValue('prepaymentRatio') || 0
+                    contractForm.setFieldsValue({
+                      prepaymentAmount: val ? (val * ratio / 100) : 0,
+                    })
+                  }}
+                />
+              </Form.Item>
+            </Col>
+            <Col span={8}>
+              <Form.Item name="prepaymentRatio" label="预付款比例（%）">
+                <InputNumber
+                  style={{ width: '100%' }}
+                  min={0}
+                  max={100}
+                  placeholder="30"
+                  onChange={(val) => {
+                    const amount = contractForm.getFieldValue('amount')
+                    if (amount) {
+                      contractForm.setFieldsValue({
+                        prepaymentAmount: amount * (val || 0) / 100,
+                      })
+                    }
+                  }}
+                />
+              </Form.Item>
+            </Col>
+            <Col span={8}>
+              <Form.Item name="prepaymentAmount" label="预付款金额">
+                <InputNumber
+                  style={{ width: '100%' }}
+                  min={0}
+                  precision={2}
+                  prefix="¥"
+                  placeholder="自动计算"
+                />
+              </Form.Item>
+            </Col>
+          </Row>
 
           <Row gutter={16}>
             <Col span={8}>
@@ -1161,24 +1489,82 @@ export default function QuotationPage() {
               </Form.Item>
             </Col>
             <Col span={8}>
-              <Form.Item name="startDate" label="生效日期" rules={[{ required: true }]}>
+              <Form.Item name="startDate" label="合同开始日期" rules={[{ required: true }]}>
                 <DatePicker style={{ width: '100%' }} />
               </Form.Item>
             </Col>
             <Col span={8}>
-              <Form.Item name="endDate" label="到期日期" rules={[{ required: true }]}>
+              <Form.Item name="endDate" label="合同结束日期" rules={[{ required: true }]}>
                 <DatePicker style={{ width: '100%' }} />
               </Form.Item>
             </Col>
           </Row>
 
-          <Divider>合同条款（可选）</Divider>
+          <Divider orientationMargin="0">样品信息</Divider>
+          <Form.Item name="sampleName" hidden><Input /></Form.Item>
+
+          <Table
+            dataSource={contractSamples}
+            rowKey={(r, i) => i || 0}
+            pagination={false}
+            size="small"
+            bordered
+            locale={{ emptyText: '暂无样品' }}
+            footer={() => (
+              <Button type="dashed" onClick={handleAddContractSample} block icon={<PlusOutlined />}>
+                添加样品
+              </Button>
+            )}
+            columns={[
+              {
+                title: '样品名称',
+                dataIndex: 'name',
+                render: (val, record, index) => (
+                  <Input value={val} onChange={e => handleUpdateContractSample(index, 'name', e.target.value)} placeholder="样品名称" />
+                )
+              },
+              {
+                title: '规格型号',
+                dataIndex: 'model',
+                render: (val, record, index) => (
+                  <Input value={val} onChange={e => handleUpdateContractSample(index, 'model', e.target.value)} placeholder="规格型号" />
+                )
+              },
+              {
+                title: '材质',
+                dataIndex: 'material',
+                render: (val, record, index) => (
+                  <Input value={val} onChange={e => handleUpdateContractSample(index, 'material', e.target.value)} placeholder="材质" />
+                )
+              },
+              {
+                title: '数量',
+                dataIndex: 'quantity',
+                width: 80,
+                render: (val, record, index) => (
+                  <InputNumber min={1} value={val} onChange={v => handleUpdateContractSample(index, 'quantity', v || 1)} />
+                )
+              },
+              {
+                title: '操作',
+                width: 60,
+                render: (_, __, index) => (
+                  <Button type="text" danger icon={<DeleteOutlined />} onClick={() => handleRemoveContractSample(index)} />
+                )
+              }
+            ]}
+          />
+
+          <Divider orientationMargin="0">合同条款（可选）</Divider>
+
           <Form.Item name="paymentTerms" label="付款条款">
             <Input.TextArea rows={2} placeholder="留空使用默认条款" />
           </Form.Item>
           <Form.Item name="deliveryTerms" label="交付条款">
             <Input.TextArea rows={2} placeholder="留空使用默认条款" />
           </Form.Item>
+
+
         </Form>
       </Modal>
     </div>

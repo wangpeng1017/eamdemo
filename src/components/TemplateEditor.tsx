@@ -1,8 +1,5 @@
-
-'use client'
-
 import { useState, useEffect, useMemo } from 'react'
-import { Button, Card, Form, Input, Switch, InputNumber, Space, message, Modal, Dropdown, Menu } from 'antd'
+import { Button, Card, Form, Input, Switch, InputNumber, Space, message, Modal, Dropdown, Menu, Select } from 'antd'
 import { PlusOutlined, DeleteOutlined, SettingOutlined } from '@ant-design/icons'
 import DataSheet from './DataSheet'
 import ColumnPropertyForm from './ColumnPropertyForm'
@@ -20,12 +17,32 @@ interface TemplateEditorProps {
   onCancel: () => void
 }
 
+interface InspectionStandard {
+  id: string
+  standardNo: string
+  name: string
+  validity: string
+}
+
 export default function TemplateEditor({ initialValue, onSave, onCancel }: TemplateEditorProps) {
   const [form] = Form.useForm()
-  const [sheetData, setSheetData] = useState<any[]>(null)
+  const [sheetData, setSheetData] = useState<any[]>([])
   const [schema, setSchema] = useState<TemplateSchema>(initialValue || getDefaultSchema())
   const [selectedColumn, setSelectedColumn] = useState<number | null>(null)
   const [showColumnModal, setShowColumnModal] = useState(false)
+  const [inspectionStandards, setInspectionStandards] = useState<InspectionStandard[]>([])
+
+  // 加载检测标准数据
+  useEffect(() => {
+    fetch('/api/inspection-standard?pageSize=1000&validity=valid')
+      .then(res => res.json())
+      .then(data => {
+        setInspectionStandards(data.list || [])
+      })
+      .catch(() => {
+        message.error('加载检测标准失败')
+      })
+  }, [])
 
   // 初始化表格数据
   useEffect(() => {
@@ -243,11 +260,21 @@ export default function TemplateEditor({ initialValue, onSave, onCancel }: Templ
                 />
               </Form.Item>
 
-              <Form.Item label="检测方法" name="method">
-                <Input
-                  placeholder="如: GB/T 3354-2014"
-                  onChange={(e) => updateSchema({
-                    header: { ...schema.header, methodBasis: e.target.value }
+              <Form.Item label="检测标准" name="method">
+                <Select
+                  placeholder="请选择检测标准"
+                  showSearch
+                  allowClear
+                  optionFilterProp="children"
+                  filterOption={(input, option) =>
+                    (option?.label ?? '').toLowerCase().includes(input.toLowerCase())
+                  }
+                  options={inspectionStandards.map(std => ({
+                    value: std.standardNo,
+                    label: `${std.standardNo} - ${std.name}`
+                  }))}
+                  onChange={(value) => updateSchema({
+                    header: { ...schema.header, methodBasis: value || '' }
                   })}
                 />
               </Form.Item>
@@ -358,9 +385,8 @@ export default function TemplateEditor({ initialValue, onSave, onCancel }: Templ
                   {schema.columns.map((col, idx) => (
                     <div
                       key={col.dataIndex}
-                      className={`flex items-center justify-between p-2 rounded cursor-pointer border ${
-                        selectedColumn === idx ? 'border-blue-500 bg-blue-50' : 'border-gray-200'
-                      }`}
+                      className={`flex items-center justify-between p-2 rounded cursor-pointer border ${selectedColumn === idx ? 'border-blue-500 bg-blue-50' : 'border-gray-200'
+                        }`}
                       onClick={() => setSelectedColumn(idx)}
                     >
                       <span className="text-sm">{col.title}</span>

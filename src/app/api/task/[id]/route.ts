@@ -51,12 +51,42 @@ export const GET = withErrorHandler(async (
           status: true,
         },
       },
+      entrustmentProject: {
+        select: {
+          name: true,
+          testItems: true,
+          entrustment: {
+            select: {
+              id: true,
+              entrustmentNo: true,
+              sampleName: true,
+              samples: {
+                select: {
+                  id: true,
+                  name: true,
+                  sampleNo: true,
+                }
+              }
+            }
+          }
+        }
+      },
     },
   })
+
+  // DEBUG LOG
+  if (task) {
+    console.log(`[GET /api/task/${id}] Retrieved task sheetData length:`, task.sheetData?.length)
+    console.log(`[GET /api/task/${id}] Retrieved task sheetData (first 100 char):`, task.sheetData?.substring(0, 100))
+  }
 
   if (!task) {
     notFound('任务不存在')
   }
+
+  // DEBUG LOG
+  console.log(`[GET /api/task/${id}] Retrieved task sheetData length:`, task.sheetData?.length)
+  console.log(`[GET /api/task/${id}] Retrieved task sheetData (first 100 char):`, task.sheetData?.substring(0, 100))
 
   // 添加字段转换：将 parameters JSON 字符串解析为 testItems 数组
   const response = {

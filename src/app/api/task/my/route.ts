@@ -43,7 +43,12 @@ export async function GET(request: NextRequest) {
               deviceNo: true,
               name: true,
             }
-          }
+          },
+          entrustmentProject: {
+            select: {
+              name: true,
+            }
+          },
         },
         orderBy: { createdAt: 'desc' },
         skip: (page - 1) * pageSize,

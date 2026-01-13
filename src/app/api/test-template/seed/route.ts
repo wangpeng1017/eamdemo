@@ -1,6 +1,6 @@
 /**
  * @file seed/route.ts
- * @desc 预置检测模版数据种子 API
+ * @desc 预置检测项目数据种子 API
  * @usage POST /api/test-template/seed
  */
 

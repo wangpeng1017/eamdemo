@@ -16,6 +16,8 @@ interface Task {
   progress: number
   dueDate: string | null
   sample?: { sampleNo: string; name: string }
+  createdAt: string
+  entrustmentProject?: { name: string }
 }
 
 interface User {
@@ -142,8 +144,9 @@ export default function MyTasksPage() {
 
   const columns: ColumnsType<Task> = [
     { title: "任务编号", dataIndex: "taskNo", width: 130 },
-    { title: "样品名称", dataIndex: "sampleName", width: 150 },
+    { title: "样品名称", render: (_, r) => r.sample?.name || "-", width: 150 },
     { title: "样品编号", render: (_, r) => r.sample?.sampleNo || "-", width: 120 },
+    { title: "检测项目", render: (_, r) => r.entrustmentProject?.name || "-", width: 150 },
     {
       title: "状态",
       dataIndex: "status",
@@ -154,6 +157,12 @@ export default function MyTasksPage() {
     {
       title: "截止日期",
       dataIndex: "dueDate",
+      width: 160,
+      render: (d) => d ? dayjs(d).format("YYYY-MM-DD HH:mm:ss") : "-",
+    },
+    {
+      title: "任务分配时间",
+      dataIndex: "createdAt",
       width: 160,
       render: (d) => d ? dayjs(d).format("YYYY-MM-DD HH:mm:ss") : "-",
     },

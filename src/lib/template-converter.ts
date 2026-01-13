@@ -338,7 +338,7 @@ function getFormulaDisplay(type: string, colIndex: number, startRow: number, end
  */
 export function getDefaultSchema(): TemplateSchema {
   return {
-    title: '新建检测模版',
+    title: '新建检测项目',
     header: {},
     columns: [
       { title: '样品序号', dataIndex: 'sampleNo', width: 120, dataType: 'string' },

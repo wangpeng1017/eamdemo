@@ -189,25 +189,8 @@ model Consultation {
   updatedAt          DateTime  @updatedAt
 
   followUps ConsultationFollowUp[]
-  consultationSamples ConsultationSample[]
 
   @@map("biz_consultation")
-}
-
-model ConsultationSample {
-  id             String       @id @default(cuid())
-  consultationId String
-  consultation   Consultation @relation(fields: [consultationId], references: [id], onDelete: Cascade)
-  name           String       @db.VarChar(200)
-  model          String?      @db.VarChar(100)
-  material       String?      @db.VarChar(100)
-  quantity       Int          @default(1)
-  remark         String?      @db.Text
-  createdAt      DateTime     @default(now())
-  updatedAt      DateTime     @updatedAt
-
-  @@map("biz_consultation_sample")
-  @@index([consultationId])
 }
 
 // 报价明细项
@@ -223,23 +206,6 @@ model QuotationItem {
   sort           Int       @default(0)
 
   @@map("biz_quotation_item")
-}
-
-// 报价样品
-model QuotationSample {
-  id          String    @id @default(cuid())
-  quotationId String
-  quotation   Quotation @relation(fields: [quotationId], references: [id], onDelete: Cascade)
-  name        String    @db.VarChar(200)
-  model       String?   @db.VarChar(100)
-  material    String?   @db.VarChar(100)
-  quantity    Int       @default(1)
-  remark      String?   @db.Text
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
-
-  @@map("biz_quotation_sample")
-  @@index([quotationId])
 }
 
 // 报价审批记录
@@ -294,10 +260,9 @@ model Quotation {
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
 
-  items            QuotationItem[]
-  quotationSamples QuotationSample[]
-  approvals        QuotationApproval[]
-  contracts        Contract[]
+  items     QuotationItem[]
+  approvals QuotationApproval[]
+  contracts Contract[]
 
   @@index([clientId])
   @@index([status])
@@ -318,7 +283,7 @@ model Contract {
   // 甲方信息
   partyACompany     String? @db.VarChar(200)
   partyAContact     String? @db.VarChar(50)
-  partyATel         String? @db.VarChar(50)
+  partyATel         String? @db.VarChar(20)
   partyAAddress     String? @db.VarChar(500)
   partyATaxId       String? @db.VarChar(50)
   partyABankName    String? @db.VarChar(200)
@@ -327,7 +292,7 @@ model Contract {
   // 乙方信息
   partyBCompany String? @default("江苏国轻检测技术有限公司") @db.VarChar(200)
   partyBContact String? @db.VarChar(50)
-  partyBTel     String? @db.VarChar(50)
+  partyBTel     String? @db.VarChar(20)
   partyBAddress String? @db.VarChar(500)
 
   contractAmount Decimal? @db.Decimal(12, 2)
@@ -367,31 +332,15 @@ model Contract {
   createdById String?
   createdBy   User?   @relation("CreatedContract", fields: [createdById], references: [id])
 
-  entrustments    Entrustment[]
-  items           ContractItem[] // 报价明细
-  contractSamples ContractSample[] // 合同样品
+  entrustments Entrustment[]
+
+  items         ContractItem[] // 报价明细
 
   @@index([clientId])
   @@index([status])
   @@index([approvalStatus])
   @@index([createdAt])
   @@map("biz_contract")
-}
-
-model ContractSample {
-  id         String   @id @default(cuid())
-  contractId String
-  contract   Contract @relation(fields: [contractId], references: [id], onDelete: Cascade)
-  name       String   @db.VarChar(200)
-  model      String?  @db.VarChar(100)
-  material   String?  @db.VarChar(100)
-  quantity   Int      @default(1)
-  remark     String?  @db.Text
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
-
-  @@map("biz_contract_sample")
-  @@index([contractId])
 }
 
 // 合同报价明细项
@@ -428,8 +377,6 @@ model EntrustmentProject {
   deadline         DateTime? // 完成截止日期
   createdAt        DateTime    @default(now())
   updatedAt        DateTime    @updatedAt
-  
-  testTasks        TestTask[] 
 
   @@map("biz_entrustment_project")
   @@index([testTemplateId])
@@ -502,7 +449,6 @@ model Sample {
   name              String       @db.VarChar(200) // 样品名称
   type              String?      @db.VarChar(50) // 样品类型
   specification     String?      @db.VarChar(200) // 规格型号
-  material          String?      @db.VarChar(100) // 材质信息 (Added)
   quantity          String?      @db.VarChar(50) // 数量
   totalQuantity     String?      @db.VarChar(50) // 样品总量
   unit              String?      @db.VarChar(20) // 个/件/批/kg/g/L/mL/m/m²/m³
@@ -534,7 +480,6 @@ model TestTask {
   taskNo        String    @unique @db.VarChar(50) // T+年月日+序号
   entrustmentId String?   @db.VarChar(50)
   projectId     String?   @db.VarChar(50) // 关联委托单检测项目ID
-  entrustmentProject EntrustmentProject? @relation(fields: [projectId], references: [id])
   sampleId      String?
   sample        Sample?   @relation(fields: [sampleId], references: [id])
   sampleName    String?   @db.VarChar(200) // 冗余样品名称

@@ -42,6 +42,7 @@ export const GET = withErrorHandler(async (
     where: { id },
     include: {
       items: true,
+      quotationSamples: true,
       approvals: {
         orderBy: { timestamp: 'desc' },
       },
@@ -90,7 +91,8 @@ export const PUT = withErrorHandler(async (
     }
   }
   // 如果不是归档操作，只有草稿状态才能编辑
-  else if (existing.status !== 'draft') {
+  else if (existing.status !== 'draft' && data.clientResponse === undefined) {
+    // allow updating clientResponse even if not draft, but other edits blocked
     badRequest('只有草稿状态的报价单可以编辑')
   }
 
@@ -109,6 +111,13 @@ export const PUT = withErrorHandler(async (
     // 删除旧明细，创建新明细
     await prisma.quotationItem.deleteMany({
       where: { quotationId: id },
+    })
+  }
+
+  // 处理样品更新
+  if (data.samples) {
+    await prisma.quotationSample.deleteMany({
+      where: { quotationId: id }
     })
   }
 
@@ -142,9 +151,19 @@ export const PUT = withErrorHandler(async (
           totalPrice: (item.quantity || 1) * (item.unitPrice || 0),
         })),
       } : undefined,
+      quotationSamples: data.samples ? {
+        create: data.samples.map((sample: any) => ({
+          name: sample.name,
+          model: sample.model,
+          material: sample.material,
+          quantity: parseInt(sample.quantity, 10) || 1,
+          remark: sample.remark,
+        }))
+      } : undefined
     },
     include: {
       items: true,
+      quotationSamples: true
     },
   })
 

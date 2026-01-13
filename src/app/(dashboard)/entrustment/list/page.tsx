@@ -11,8 +11,17 @@ import { exportToExcel } from '@/hooks/useExport'
 import { useRouter, useSearchParams } from 'next/navigation'
 
 // 类型定义
+interface EntrustmentSample {
+  name: string
+  model?: string
+  material?: string
+  quantity: number
+  remark?: string
+}
+
 interface EntrustmentProject {
   id: string
+  // ... existing EntrustmentProject ...
   name: string
   testItems: string[] | null
   method: string | null
@@ -42,6 +51,7 @@ interface Entrustment {
   status: string
   createdAt: string
   projects: EntrustmentProject[]
+  samples?: { id: string; name: string; type?: string; specification?: string; material?: string; quantity: string }[] // Add samples from include
   client?: {
     phone?: string
   }
@@ -77,21 +87,15 @@ interface Contract {
   contractNo: string
   contractName: string | null
   partyACompany: string | null
+  clientId?: string
+  clientContact?: string
+  salesPerson?: string
+  sampleName?: string
+  sampleModel?: string
+  sampleMaterial?: string
+  sampleQuantity?: number
+  contractSamples?: { name: string; model?: string; material?: string; quantity: number; remark?: string }[]
 }
-
-// 检测项目选项(含对应方法/标准)
-const TEST_ITEM_OPTIONS = [
-  { value: '拉伸强度', label: '拉伸强度', method: 'GB/T 228.1-2021' },
-  { value: '断面收缩率', label: '断面收缩率', method: 'GB/T 228.1-2021' },
-  { value: '断后伸长率', label: '断后伸长率', method: 'GB/T 228.1-2021' },
-  { value: '硬度测试', label: '硬度测试', method: 'GB/T 231.1-2018' },
-  { value: '金相分析', label: '金相分析', method: 'GB/T 13298-2015' },
-  { value: '化学成分分析', label: '化学成分分析', method: 'GB/T 223' },
-  { value: '盐雾试验', label: '盐雾试验', method: 'GB/T 10125-2021' },
-  { value: '冲击试验', label: '冲击试验', method: 'GB/T 229-2020' },
-  { value: '弯曲试验', label: '弯曲试验', method: 'GB/T 232-2010' },
-  { value: '抗压强度', label: '抗压强度', method: 'GB/T 7314-2017' },
-]
 
 export default function EntrustmentListPage() {
   const router = useRouter()
@@ -103,6 +107,82 @@ export default function EntrustmentListPage() {
   const [modalOpen, setModalOpen] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
   const [form] = Form.useForm()
+
+  const [samples, setSamples] = useState<EntrustmentSample[]>([])
+
+  const handleAddSample = () => {
+    setSamples([...samples, { name: '', quantity: 1 }])
+  }
+
+  const handleUpdateSample = (index: number, field: keyof EntrustmentSample, value: any) => {
+    const newSamples = [...samples]
+    newSamples[index] = { ...newSamples[index], [field]: value }
+    setSamples(newSamples)
+  }
+
+  const handleRemoveSample = (index: number) => {
+    setSamples(samples.filter((_, i) => i !== index))
+  }
+
+  const sampleColumns: ColumnsType<EntrustmentSample> = [
+    {
+      title: '样品名称',
+      dataIndex: 'name',
+      render: (val, record, index) => (
+        <Input
+          value={val}
+          onChange={e => handleUpdateSample(index, 'name', e.target.value)}
+          placeholder="样品名称"
+        />
+      )
+    },
+    {
+      title: '规格型号',
+      dataIndex: 'model',
+      render: (val, record, index) => (
+        <Input
+          value={val}
+          onChange={e => handleUpdateSample(index, 'model', e.target.value)}
+          placeholder="规格型号"
+        />
+      )
+    },
+    {
+      title: '材质',
+      dataIndex: 'material',
+      render: (val, record, index) => (
+        <Input
+          value={val}
+          onChange={e => handleUpdateSample(index, 'material', e.target.value)}
+          placeholder="材质"
+        />
+      )
+    },
+    {
+      title: '数量',
+      dataIndex: 'quantity',
+      width: 100,
+      render: (val, record, index) => (
+        <InputNumber
+          min={1}
+          value={val}
+          onChange={v => handleUpdateSample(index, 'quantity', v || 1)}
+        />
+      )
+    },
+    {
+      title: '操作',
+      width: 60,
+      render: (_, __, index) => (
+        <Button
+          type="text"
+          danger
+          icon={<DeleteOutlined />}
+          onClick={() => handleRemoveSample(index)}
+        />
+      )
+    }
+  ]
 
   // 行选择
   const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([])
@@ -125,7 +205,7 @@ export default function EntrustmentListPage() {
   const [suppliers, setSuppliers] = useState<Supplier[]>([])
   const [clients, setClients] = useState<Client[]>([])
   const [contracts, setContracts] = useState<Contract[]>([])
-  const [testTemplates, setTestTemplates] = useState<any[]>([]) // 新增：检测模版列表
+  const [testTemplates, setTestTemplates] = useState<any[]>([]) // 新增：检测项目列表
 
   // 展开行控制
   const [expandedRowKeys, setExpandedRowKeys] = useState<string[]>([])
@@ -148,12 +228,12 @@ export default function EntrustmentListPage() {
   // 获取下拉选项数据
   const fetchOptions = async () => {
     const [usersRes, devicesRes, suppliersRes, clientsRes, contractsRes, templatesRes] = await Promise.all([
-      fetch('/api/user?pageSize=100'),
-      fetch('/api/device/list?pageSize=100'),
-      fetch('/api/supplier?pageSize=100'),
-      fetch('/api/client?pageSize=100'),
-      fetch('/api/contract?pageSize=100'),
-      fetch('/api/test-template?pageSize=100'), // 新增：加载检测模版
+      fetch('/api/user?pageSize=1000'),
+      fetch('/api/device/list?pageSize=1000'),
+      fetch('/api/supplier?pageSize=1000'),
+      fetch('/api/client?pageSize=1000'),
+      fetch('/api/contract?pageSize=1000'),
+      fetch('/api/test-template?pageSize=1000'), // 新增：加载检测项目
     ])
     const [usersJson, devicesJson, suppliersJson, clientsJson, contractsJson, templatesJson] = await Promise.all([
       usersRes.json(),
@@ -163,12 +243,65 @@ export default function EntrustmentListPage() {
       contractsRes.json(),
       templatesRes.json(),
     ])
-    setUsers(usersJson.list || [])
-    setDevices(devicesJson.list || [])
-    setSuppliers(suppliersJson.list || [])
-    setClients(clientsJson.list || [])
-    setContracts(contractsJson.list || [])
-    setTestTemplates(templatesJson.list || []) // 新增：保存检测模版
+
+    // 修复数据解析路径：json.data.list
+    const getUsers = (json: any) => (json.success && json.data?.list) || json.list || []
+
+    setUsers(getUsers(usersJson))
+    setDevices(getUsers(devicesJson))
+    setSuppliers(getUsers(suppliersJson))
+    setClients(getUsers(clientsJson))
+    setContracts(getUsers(contractsJson))
+    setTestTemplates(getUsers(templatesJson))
+  }
+
+  // 合同选择联动
+  const handleContractChange = (contractId: string) => {
+    // contractId 可能是 ID (从 Select 选中) 或 No (从 URL 参数)
+    // 这里的 contracts 是所有加载的合同列表
+    // 优先尝试按 ID 查找，如果找不到尝试按 No 查找
+    const contract = contracts.find(c => c.id === contractId) || contracts.find(c => c.contractNo === contractId)
+
+    if (contract) {
+      // 尝试根据合同所关联的客户ID找到客户信息
+      const client = clients.find(c => c.name === contract.partyACompany) || clients.find(c => c.id === contract.clientId)
+
+      form.setFieldsValue({
+        clientName: contract.partyACompany || client?.name,
+        clientId: contract.clientId || client?.id,
+        contactPerson: contract.clientContact || client?.contact,
+        // 自动填充跟进人 (使用合同创建人作为跟进人)
+        follower: contract.salesPerson || undefined,
+
+        // 自动填充样品信息
+        sampleName: contract.sampleName,
+        sampleModel: contract.sampleModel,
+        sampleMaterial: contract.sampleMaterial,
+        sampleQuantity: contract.sampleQuantity,
+      })
+
+      // 自动填充样品列表
+      if ((contract as any).contractSamples && (contract as any).contractSamples.length > 0) {
+        setSamples((contract as any).contractSamples.map((s: any) => ({
+          name: s.name,
+          model: s.model,
+          material: s.material,
+          quantity: s.quantity,
+          remark: s.remark
+        })))
+      } else if (contract.sampleName) {
+        setSamples([{
+          name: contract.sampleName,
+          model: contract.sampleModel || undefined,
+          material: contract.sampleMaterial || undefined,
+          quantity: contract.sampleQuantity || 1
+        }])
+      }
+
+      if (contract.salesPerson) {
+        message.success(`已自动关联跟进人: ${contract.salesPerson}`)
+      }
+    }
   }
 
   useEffect(() => {
@@ -215,6 +348,26 @@ export default function EntrustmentListPage() {
         isSampleReturn: false,
         projects,
       })
+
+      // 解析样品信息
+      const samplesParam = searchParams.get('samples')
+      if (samplesParam) {
+        try {
+          const parsedSamples = JSON.parse(samplesParam)
+          if (Array.isArray(parsedSamples) && parsedSamples.length > 0) {
+            setSamples(parsedSamples.map((s: any) => ({
+              name: s.name,
+              model: s.model,
+              material: s.material,
+              quantity: s.quantity,
+              remark: s.remark
+            })))
+          }
+        } catch (e) {
+          console.error('解析样品信息失败:', e)
+        }
+      }
+
       setModalOpen(true)
 
       // 清除 URL 参数
@@ -225,6 +378,7 @@ export default function EntrustmentListPage() {
   // 新增委托单
   const handleAdd = () => {
     setEditingId(null)
+    setSamples([{ name: '', quantity: 1 }])
     form.resetFields()
     form.setFieldsValue({ isSampleReturn: false, projects: [{}] })
     setModalOpen(true)
@@ -242,6 +396,26 @@ export default function EntrustmentListPage() {
         deadline: p.deadline ? dayjs(p.deadline) : undefined,
       })) : [{}],
     }
+
+    // 回填样品
+    if (record.samples && record.samples.length > 0) {
+      setSamples(record.samples.map(s => ({
+        name: s.name,
+        model: s.specification, // Sample model has specification
+        material: s.material,
+        quantity: s.quantity ? parseInt(s.quantity) : 1,
+      })))
+    } else if (record.sampleName) {
+      setSamples([{
+        name: record.sampleName,
+        model: record.sampleModel || undefined,
+        material: record.sampleMaterial || undefined,
+        quantity: record.sampleQuantity || 1
+      }])
+    } else {
+      setSamples([{ name: '', quantity: 1 }])
+    }
+
     form.setFieldsValue(formData)
     setModalOpen(true)
   }
@@ -271,6 +445,7 @@ export default function EntrustmentListPage() {
           testItems: p.testItems || [],
           deadline: p.deadline?.toISOString() || null,
         })) || [],
+        samples: samples,
       }
 
       const url = editingId ? `/api/entrustment/${editingId}` : '/api/entrustment'
@@ -624,7 +799,7 @@ export default function EntrustmentListPage() {
     },
     { title: '样品名称', dataIndex: 'sampleName', ellipsis: true },
     {
-      title: '订单时间',
+      title: '创建时间',
       dataIndex: 'createdAt',
       width: 160,
       render: (t: string) => t ? dayjs(t).format('YYYY-MM-DD HH:mm:ss') : '-'
@@ -768,10 +943,18 @@ export default function EntrustmentListPage() {
             <Col span={12}>
               <Form.Item name="contractNo" label="合同编号">
                 <Select
-                  allowClear
-                  placeholder="选择关联合同"
-                  options={contracts.map(c => ({ value: c.contractNo, label: `${c.contractNo} - ${c.partyACompany || c.contractName}` }))}
-                />
+                  showSearch
+                  optionFilterProp="children"
+                  onChange={(value) => {
+                    // value 可能是 ID 或 No，这取决于 Select.Option 的 value
+                    // 下面 map 中 value 是 c.id
+                    handleContractChange(value)
+                  }}
+                >
+                  {contracts.map(c => (
+                    <Select.Option key={c.id} value={c.id}>{c.contractNo} - {c.contractName}</Select.Option>
+                  ))}
+                </Select>
               </Form.Item>
             </Col>
           </Row>
@@ -823,33 +1006,23 @@ export default function EntrustmentListPage() {
             </Col>
           </Row>
 
-          <Divider orientation="left" orientationMargin="0">样品信息</Divider>
+          <Divider orientation="left" orientationMargin="0">
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <span>样品信息</span>
+              <Button type="dashed" size="small" onClick={handleAddSample} icon={<PlusOutlined />}>添加样品</Button>
+            </div>
+          </Divider>
 
-          <Row gutter={16}>
-            <Col span={12}>
-              <Form.Item name="sampleName" label="样品名称" rules={[{ required: true, message: '请输入样品名称' }]}>
-                <Input placeholder="请输入样品名称" />
-              </Form.Item>
-            </Col>
-            <Col span={12}>
-              <Form.Item name="sampleModel" label="规格型号">
-                <Input placeholder="请输入规格型号" />
-              </Form.Item>
-            </Col>
-          </Row>
-
-          <Row gutter={16}>
-            <Col span={12}>
-              <Form.Item name="sampleMaterial" label="材质牌号">
-                <Input placeholder="请输入材质牌号" />
-              </Form.Item>
-            </Col>
-            <Col span={12}>
-              <Form.Item name="sampleQuantity" label="样品数量">
-                <InputNumber style={{ width: '100%' }} min={1} placeholder="请输入数量" />
-              </Form.Item>
-            </Col>
-          </Row>
+          <Table
+            rowKey={(r, i) => i || 0}
+            columns={sampleColumns}
+            dataSource={samples}
+            pagination={false}
+            size="small"
+            bordered
+            locale={{ emptyText: '暂无样品' }}
+            style={{ marginBottom: 16 }}
+          />
 
           <Form.Item name="isSampleReturn" label="是否退样">
             <Radio.Group>
@@ -878,7 +1051,11 @@ export default function EntrustmentListPage() {
                             allowClear
                             placeholder="选择检测项目"
                             optionFilterProp="label"
-                            options={TEST_ITEM_OPTIONS}
+                            options={testTemplates.map((t: any) => ({
+                              value: t.name,
+                              label: t.name,
+                              method: t.schema ? (JSON.parse(typeof t.schema === 'string' ? t.schema : JSON.stringify(t.schema)).header?.methodBasis || t.method) : t.method
+                            }))}
                             onChange={async (val, option) => {
                               // 自动填充对应的方法/标准
                               const method = (option as any)?.method || ''
@@ -916,24 +1093,14 @@ export default function EntrustmentListPage() {
                           <Input placeholder="如: GB/T 228.1-2021" />
                         </Form.Item>
                       </Col>
-                      <Col span={12}>
-                        <Form.Item
-                          {...restField}
-                          name={[name, 'testTemplateId']}
-                          label="检测模版"
-                        >
-                          <Select
-                            placeholder="可留空自动匹配"
-                            allowClear
-                            showSearch
-                            optionFilterProp="label"
-                            options={testTemplates.map((t: any) => ({
-                              value: t.code,
-                              label: `${t.code} - ${t.name}`
-                            }))}
-                          />
-                        </Form.Item>
-                      </Col>
+                      <Form.Item
+                        {...restField}
+                        name={[name, 'testTemplateId']}
+                        hidden
+                        style={{ margin: 0 }}
+                      >
+                        <Input />
+                      </Form.Item>
                     </Row>
                     {fields.length > 1 && (
                       <Button

@@ -335,7 +335,7 @@ export const POST = withErrorHandler(async (request: NextRequest) => {
   }
 
   return success({
-    message: '复合材料检测模版创建/更新完成',
+    message: '复合材料检测项目创建/更新完成',
     results
   })
 })

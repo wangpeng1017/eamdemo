@@ -4,7 +4,7 @@ import { useState, useEffect } from "react"
 import { useParams, useRouter } from "next/navigation"
 import { Card, Button, Form, Select, Input, message, Space, Modal, Descriptions, Tag } from "antd"
 import { SaveOutlined, CheckOutlined, ArrowLeftOutlined } from "@ant-design/icons"
-import DataSheet, { generateSheetData, extractSheetData } from "@/components/DataSheet"
+import DataSheet, { generateSheetData, extractSheetData, getDefaultData } from "@/components/DataSheet"
 
 interface Task {
   id: string
@@ -15,6 +15,17 @@ interface Task {
   testItems: string[]
   status: string
   testData?: any
+  sheetData?: string | any
+  entrustmentProject?: {
+    name: string;
+    testItems: string;
+    entrustment?: {
+      id: string;
+      entrustmentNo: string;
+      sampleName: string;
+      samples?: { id: string; name: string; sampleNo: string }[]
+    }
+  }
 }
 
 interface TestRecord {
@@ -54,25 +65,39 @@ export default function DataEntryPage() {
       const taskData = json.data || json
       setTask(taskData)
 
+      console.log("[DataEntry] taskData.sheetData raw:", taskData.sheetData)
+
       // 优先从 sheetData 加载数据（Fortune-sheet 格式）
       if (taskData.sheetData) {
         try {
+          // 如果已经是对象（API可能已经解析?），直接用
           const parsed = typeof taskData.sheetData === 'string'
             ? JSON.parse(taskData.sheetData)
             : taskData.sheetData
 
+          console.log("[DataEntry] parsed sheetData:", parsed)
+
           if (Array.isArray(parsed) && parsed.length > 0) {
             setSheetData(parsed)
+          } else {
+            console.log("[DataEntry] parsed sheetData is empty or not array, init default")
+            setSheetData(getDefaultData())
           }
         } catch (e) {
           console.error("解析 sheetData 失败", e)
+          setSheetData(getDefaultData())
         }
       }
-      // 兼容旧逻辑：如果 testData 是数组且非空（虽然目前 testData 是关联字段，不太可能有此结构）
+      // 兼容旧逻辑：如果 testData 是数组且非空
       else if (taskData.testData && Array.isArray(taskData.testData) && taskData.testData.length > 0) {
+        console.log("[DataEntry] Using legacy testData")
         setSheetData(taskData.testData)
+      } else {
+        console.log("[DataEntry] No valid sheetData or testData found, initializing default")
+        setSheetData(getDefaultData())
       }
     } catch (error) {
+      console.error(error)
       message.error("获取任务失败")
     } finally {
       setLoading(false)
@@ -87,11 +112,14 @@ export default function DataEntryPage() {
   const handleSave = async () => {
     setSaving(true)
     try {
+      // 确保不保存空数据，如果为空则保存默认结构
+      const startData = sheetData && sheetData.length > 0 ? sheetData : getDefaultData()
+
       const res = await fetch(`/api/task/${taskId}/data`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          sheetData,
+          sheetData: startData,
           status: 'in_progress',
         }),
       })
@@ -117,11 +145,14 @@ export default function DataEntryPage() {
       await form.validateFields()
       const values = form.getFieldsValue()
 
+      // 确保不提交空数据
+      const startData = sheetData && sheetData.length > 0 ? sheetData : getDefaultData()
+
       const res = await fetch(`/api/task/${taskId}/data`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          sheetData,
+          sheetData: startData,
           action: 'submit',
           summary: values.summary,
           conclusion: values.conclusion,
@@ -186,10 +217,13 @@ export default function DataEntryPage() {
         <Descriptions column={4} size="small">
           <Descriptions.Item label="任务编号">{task.taskNo}</Descriptions.Item>
           <Descriptions.Item label="样品编号">{task.sample?.sampleNo || "-"}</Descriptions.Item>
-          <Descriptions.Item label="样品名称">{task.sample?.name || task.sampleName || "-"}</Descriptions.Item>
+          <Descriptions.Item label="样品名称">
+            {/* 优先取 entrustment.sampleName (委托单通用样品名)，其次取 task.sample.name (具体样品名) */}
+            {task.entrustmentProject?.entrustment?.sampleName || task.sample?.name || task.sampleName || "-"}
+          </Descriptions.Item>
           <Descriptions.Item label="设备">{task.device?.name || "-"}</Descriptions.Item>
           <Descriptions.Item label="检测项目" span={2}>
-            {task.testItems?.map((item, i) => (
+            {task.entrustmentProject?.name || task.testItems?.map((item, i) => (
               <Tag key={i}>{item}</Tag>
             )) || "-"}
           </Descriptions.Item>

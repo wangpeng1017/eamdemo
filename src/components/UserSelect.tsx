@@ -24,9 +24,13 @@ export default function UserSelect({ value, onChange, ...props }: UserSelectProp
         const fetchUsers = async () => {
             setLoading(true)
             try {
-                const res = await fetch('/api/user?status=1&pageSize=1000')
+                const res = await fetch('/api/user?pageSize=1000')
                 const json = await res.json()
-                setUsers(json.list || [])
+                if (json.success && json.data) {
+                    setUsers(json.data.list || [])
+                } else {
+                    setUsers(json.list || [])
+                }
             } catch (error) {
                 console.error('获取用户列表失败:', error)
             } finally {

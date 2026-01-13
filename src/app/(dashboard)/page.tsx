@@ -16,6 +16,7 @@ import {
 import { useRouter } from 'next/navigation'
 import { useSession } from 'next-auth/react'
 import Link from 'next/link'
+import dayjs from "dayjs"
 
 const { Text } = Typography
 
@@ -49,6 +50,7 @@ interface TaskItem {
   dueDate: string
   sample?: { sampleNo: string; name: string }
   assignedTo?: { id: string; name: string }
+  createdAt: string
 }
 
 export default function DashboardPage() {
@@ -409,9 +411,14 @@ export default function DashboardPage() {
                           <Text type="secondary">
                             样品: {item.sample?.name || item.sampleName || '-'}
                           </Text>
+                          {item.createdAt && (
+                            <Text type="secondary" style={{ fontSize: 12 }}>
+                              创建时间: {dayjs(item.createdAt).format("YYYY-MM-DD HH:mm:ss")}
+                            </Text>
+                          )}
                           {item.dueDate && (
                             <Text type="secondary" style={{ fontSize: 12 }}>
-                              截止: {new Date(item.dueDate).toLocaleDateString()}
+                              截止时间: {dayjs(item.dueDate).format("YYYY-MM-DD HH:mm:ss")}
                             </Text>
                           )}
                         </Space>

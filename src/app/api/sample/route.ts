@@ -143,5 +143,19 @@ export const POST = withAuth(async (request: NextRequest, user) => {
     },
   })
 
+  // 自动关联任务：如果有基于此委托单创建的、且尚未关联样品的任务，自动关联此样品
+  if (data.entrustmentId) {
+    await prisma.testTask.updateMany({
+      where: {
+        entrustmentId: data.entrustmentId,
+        sampleId: null,
+      },
+      data: {
+        sampleId: sample.id,
+        sampleName: sample.name, // 同时更新冗余字段，虽然前端主要用关联字段，但为了兼容性
+      },
+    })
+  }
+
   return success(sample)
 })

@@ -31,7 +31,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
 
         // 使用手机号作为登录账号
         const user = await prisma.user.findUnique({
-          where: { phone: credentials.phone as string },
+          where: { username: credentials.phone as string },
           include: {
             roles: {
               include: {

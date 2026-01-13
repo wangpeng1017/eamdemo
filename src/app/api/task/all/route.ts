@@ -45,7 +45,12 @@ export const GET = withAuth(async (request: NextRequest, user: AuthUser) => {
             username: true,
           }
         },
-        testData: true  // 添加检测数据
+        testData: true,  // 添加检测数据
+        entrustmentProject: {
+          select: {
+            name: true,
+          }
+        }
       },
       orderBy: { createdAt: 'desc' },
       skip: (page - 1) * pageSize,

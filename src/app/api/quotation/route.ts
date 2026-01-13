@@ -43,6 +43,7 @@ export const GET = withErrorHandler(async (request: NextRequest) => {
       take: pageSize,
       include: {
         items: true,
+        quotationSamples: true,
         approvals: { orderBy: { timestamp: 'desc' } },
         client: true,
       },
@@ -83,35 +84,55 @@ export const POST = withErrorHandler(async (request: NextRequest) => {
   const taxTotal = subtotal * 1.06
   const discountTotal = data.finalAmount || taxTotal
 
-  const quotation = await prisma.quotation.create({
-    data: {
-      quotationNo,
-      clientId: data.clientId,
-      clientContactPerson: data.clientContactPerson,
-      consultationNo: data.consultationNo || data.consultationId,
-      sampleName: data.sampleName,
-      sampleModel: data.sampleModel,
-      sampleMaterial: data.sampleMaterial,
-      sampleQuantity: data.sampleQuantity,
-      follower: data.follower,
-      clientRemark: data.paymentTerms,
-      subtotal,
-      taxTotal,
-      discountTotal,
-      status: data.status || 'draft',
-      clientStatus: data.clientResponse || 'pending',
-      createdById: session?.user?.id,
-      items: {
-        create: items.map((item: any) => ({
-          serviceItem: item.serviceItem,
-          methodStandard: item.methodStandard,
-          quantity: item.quantity || 1,
-          unitPrice: item.unitPrice || 0,
-          totalPrice: (item.quantity || 1) * (item.unitPrice || 0),
-        })),
-      },
+  // 构造创建数据
+  const createData: any = {
+    quotationNo,
+    clientId: data.clientId,
+    clientContactPerson: data.clientContactPerson,
+    consultationNo: data.consultationNo || data.consultationId,
+    // 兼容旧字段，取第一个样品或手动输入
+    sampleName: data.sampleName || (data.samples?.[0]?.name),
+    sampleModel: data.sampleModel || (data.samples?.[0]?.model),
+    sampleMaterial: data.sampleMaterial || (data.samples?.[0]?.material),
+    sampleQuantity: data.sampleQuantity ? Number(data.sampleQuantity) : (data.samples?.[0]?.quantity ? Number(data.samples[0].quantity) : null),
+    follower: data.follower,
+    clientRemark: data.paymentTerms,
+    subtotal,
+    taxTotal,
+    discountTotal,
+    status: data.status || 'draft',
+    clientStatus: data.clientResponse || 'pending',
+    createdById: session?.user?.id,
+    items: {
+      create: items.map((item: any) => ({
+        serviceItem: item.serviceItem,
+        methodStandard: item.methodStandard,
+        quantity: item.quantity || 1,
+        unitPrice: item.unitPrice || 0,
+        totalPrice: (item.quantity || 1) * (item.unitPrice || 0),
+      })),
     },
-    include: { items: true },
+  }
+
+  // 处理样品列表
+  if (Array.isArray(data.samples) && data.samples.length > 0) {
+    createData.quotationSamples = {
+      create: data.samples.map((sample: any) => ({
+        name: sample.name,
+        model: sample.model,
+        material: sample.material,
+        quantity: parseInt(sample.quantity, 10) || 1,
+        remark: sample.remark,
+      })),
+    }
+  }
+
+  const quotation = await prisma.quotation.create({
+    data: createData,
+    include: {
+      items: true,
+      quotationSamples: true
+    }
   })
 
   // 回写咨询单

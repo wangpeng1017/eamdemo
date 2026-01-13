@@ -40,7 +40,15 @@ export const GET = withErrorHandler(async (request: NextRequest) => {
       orderBy: { createdAt: 'desc' },
       skip: (page - 1) * pageSize,
       take: pageSize,
-      include: { client: true, quotation: true },
+      include: {
+        client: true,
+        quotation: true,
+        createdBy: true,
+        contractSamples: true,
+        items: {
+          orderBy: { sort: 'asc' }
+        }
+      },
     }),
     prisma.contract.count({ where }),
   ])
@@ -61,6 +69,17 @@ export const GET = withErrorHandler(async (request: NextRequest) => {
     quotationNo: contract.quotation?.quotationNo || null,
     startDate: contract.effectiveDate,
     endDate: contract.expiryDate,
+
+    // 样品信息
+    sampleName: contract.sampleName,
+    sampleModel: contract.sampleModel,
+    sampleMaterial: contract.sampleMaterial,
+    sampleQuantity: contract.sampleQuantity,
+    contractSamples: contract.contractSamples || [],
+
+    // 跟进人 (默认为合同创建人)
+    salesPerson: contract.createdBy?.name || null,
+
     // 合同条款字段映射
     paymentTerms: contract.termsPaymentTerms,
     deliveryTerms: contract.termsDeliveryTerms,
@@ -68,6 +87,7 @@ export const GET = withErrorHandler(async (request: NextRequest) => {
     confidentialityTerms: contract.termsConfidentialityTerms,
     breachTerms: contract.termsLiabilityTerms,
     disputeTerms: contract.termsDisputeResolution,
+    items: contract.items || [],
   }))
 
   return success({ list, total, page, pageSize })
@@ -76,6 +96,7 @@ export const GET = withErrorHandler(async (request: NextRequest) => {
 export const POST = withErrorHandler(async (request: NextRequest) => {
   const session = await auth()
   const data = await request.json()
+  console.log('[Contract Create] Received Payload:', JSON.stringify(data, null, 2))
 
   // 生成合同编号
   const today = new Date().toISOString().slice(0, 10).replace(/-/g, '')
@@ -84,9 +105,9 @@ export const POST = withErrorHandler(async (request: NextRequest) => {
   })
   const contractNo = `HT${today}${String(count + 1).padStart(4, '0')}`
 
-  // 查询报价单获取客户ID
-  let clientId = null
-  if (data.quotationId) {
+  // 查询报价单获取客户ID (如果未提供)
+  let clientId = data.clientId
+  if (!clientId && data.quotationId) {
     const quotation = await prisma.quotation.findUnique({
       where: { id: data.quotationId },
       select: { clientId: true }
@@ -96,35 +117,84 @@ export const POST = withErrorHandler(async (request: NextRequest) => {
 
   // 构建合同创建数据
   const createData: any = {
-    createdById: session?.user?.id,
+    createdBy: session?.user?.id ? { connect: { id: session.user.id } } : undefined,
     contractNo,
     contractName: data.contractName,
-    quotationId: data.quotationId,
-    clientId: clientId,
+    quotation: data.quotationId ? { connect: { id: data.quotationId } } : undefined,
+    // quotationNo removed as it does not exist in Contract schema
+    client: clientId ? { connect: { id: clientId } } : undefined,
     partyACompany: data.clientName,
     partyAContact: data.clientContact,
-    contractAmount: data.amount ? parseFloat(data.amount) : null,
-    sampleName: data.sampleName,
+    partyATel: data.clientPhone,
+    partyAAddress: data.clientAddress,
+    contractAmount: data.amount != null ? Number(data.amount) : null,
+    hasAdvancePayment: data.prepaymentAmount != null && data.prepaymentAmount > 0,
+    advancePaymentAmount: data.prepaymentAmount != null ? Number(data.prepaymentAmount) : null,
+
+    // 样品信息 (兼容旧字段)
+    sampleName: data.sampleName || (data.samples?.[0]?.name),
+    sampleModel: data.sampleModel || (data.samples?.[0]?.model),
+    sampleMaterial: data.sampleMaterial || (data.samples?.[0]?.material),
+    sampleQuantity: data.sampleQuantity != null ? parseInt(data.sampleQuantity) : (data.samples?.[0]?.quantity != null ? Number(data.samples[0].quantity) : null),
+
     signDate: data.signDate ? new Date(data.signDate) : null,
     effectiveDate: data.startDate ? new Date(data.startDate) : null,
     expiryDate: data.endDate ? new Date(data.endDate) : null,
-    termsPaymentTerms: data.paymentTerms,
-    termsDeliveryTerms: data.deliveryTerms,
+    termsPaymentTerms: data.paymentTerms || null,
+    termsDeliveryTerms: data.deliveryTerms || null,
+    termsQualityTerms: data.qualityTerms || null,
+    termsConfidentialityTerms: data.confidentialityTerms || null,
+    termsLiabilityTerms: data.breachTerms || null,
+    termsDisputeResolution: data.disputeTerms || null,
+    termsOtherTerms: data.otherTerms || null,
     status: 'draft',
+    items: {
+      create: data.items?.map((item: any, index: number) => ({
+        serviceItem: item.serviceItem,
+        methodStandard: item.methodStandard,
+        quantity: Number(item.quantity) || 1,
+        unitPrice: Number(item.unitPrice) || 0,
+        totalPrice: Number(item.totalPrice) || 0,
+        sort: index
+      })) || []
+    }
   }
 
-  const contract = await prisma.contract.create({
-    data: createData
-  })
+  // 处理样品列表
+  if (Array.isArray(data.samples) && data.samples.length > 0) {
+    createData.contractSamples = {
+      create: data.samples.map((sample: any) => ({
+        name: sample.name,
+        model: sample.model,
+        material: sample.material,
+        quantity: parseInt(sample.quantity, 10) || 1,
+        remark: sample.remark,
+      })),
+    }
+  }
 
-  // 回写报价单：更新 contractNo
-  if (data.quotationId) {
-    await prisma.quotation.update({
-      where: { id: data.quotationId },
-      data: { contractNo },
+  console.log('[Contract Create] Prisma Data:', JSON.stringify(createData, null, 2))
+
+  try {
+    const contract = await prisma.contract.create({
+      data: createData,
+      include: {
+        items: true,
+        contractSamples: true,
+      }
     })
+
+    // 回写报价单：更新 contractNo
+    if (data.quotationId) {
+      await prisma.quotation.update({
+        where: { id: data.quotationId },
+        data: { contractNo },
+      })
+    }
+
+    return success(contract)
+  } catch (error) {
+    console.error('[Contract Create] Error:', error)
+    throw error // Re-throw to be handled by withErrorHandler
   }
-
-  return success(contract)
 })
-
