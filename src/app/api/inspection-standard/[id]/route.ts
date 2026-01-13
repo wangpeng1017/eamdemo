@@ -14,15 +14,7 @@ export async function GET(
     return NextResponse.json({ error: '记录不存在' }, { status: 404 })
   }
 
-  // 解析 JSON 字段
-  const parsed = {
-    ...standard,
-    devices: standard.devices ? JSON.parse(standard.devices) : [],
-    parameters: standard.parameters ? JSON.parse(standard.parameters) : [],
-    personnel: standard.personnel ? JSON.parse(standard.personnel) : [],
-  }
-
-  return NextResponse.json(parsed)
+  return NextResponse.json(standard)
 }
 
 export async function PUT(
@@ -34,12 +26,7 @@ export async function PUT(
 
   const standard = await prisma.inspectionStandard.update({
     where: { id },
-    data: {
-      ...data,
-      devices: data.devices ? JSON.stringify(data.devices) : null,
-      parameters: data.parameters ? JSON.stringify(data.parameters) : null,
-      personnel: data.personnel ? JSON.stringify(data.personnel) : null,
-    }
+    data,
   })
 
   return NextResponse.json(standard)

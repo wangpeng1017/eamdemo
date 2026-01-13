@@ -22,15 +22,7 @@ export const GET = withAuth(async (request: NextRequest, user) => {
     prisma.inspectionStandard.count({ where }),
   ])
 
-  // 解析 JSON 字段
-  const parsedList = list.map((item: { devices: string | null; parameters: string | null; personnel: string | null }) => ({
-    ...item,
-    devices: item.devices ? JSON.parse(item.devices as string) : [],
-    parameters: item.parameters ? JSON.parse(item.parameters as string) : [],
-    personnel: item.personnel ? JSON.parse(item.personnel as string) : [],
-  }))
-
-  return success({ list: parsedList, total, page, pageSize })
+  return success({ list, total, page, pageSize })
 })
 
 // 创建检测标准 - 需要登录
@@ -38,12 +30,7 @@ export const POST = withAuth(async (request: NextRequest, user) => {
   const data = await request.json()
 
   const standard = await prisma.inspectionStandard.create({
-    data: {
-      ...data,
-      devices: data.devices ? JSON.stringify(data.devices) : null,
-      parameters: data.parameters ? JSON.stringify(data.parameters) : null,
-      personnel: data.personnel ? JSON.stringify(data.personnel) : null,
-    }
+    data,
   })
 
   return success(standard)

@@ -1113,32 +1113,23 @@ model TestTemplate {
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
 
-  // 被检测标准引用
-  standardsUsingThis InspectionStandard[] @relation("StandardTemplate")
-
   @@map("biz_test_template")
   @@index([method])
 }
 
 // 检查标准/依据
 model InspectionStandard {
-  id                String   @id @default(cuid())
-  standardNo        String   @unique @db.VarChar(100) // 标准编号
-  name              String   @db.VarChar(500)         // 标准名称
-  description       String?  @db.Text                 // 描述
-  validity          String   @default("valid")        // valid/invalid
-  devices           String?  @db.Text                 // JSON 关联设备ID列表
-  parameters        String?  @db.Text                 // JSON 检测参数列表
-  personnel         String?  @db.Text                 // JSON 可检测人员ID列表
-  defaultTemplateId String?  @db.VarChar(50)          // 关联默认检测模版
-  defaultTemplate   TestTemplate? @relation("StandardTemplate", fields: [defaultTemplateId], references: [code])
-  createdAt         DateTime @default(now())
-  updatedAt         DateTime @updatedAt
+  id         String   @id @default(cuid())
+  standardNo String   @unique @db.VarChar(100) // 标准编号
+  name       String   @db.VarChar(500)         // 标准名称
+  description String?  @db.Text                 // 描述/备注
+  validity   String   @default("valid")        // valid/invalid
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
 
   capabilities PersonnelCapability[]
 
   @@map("biz_inspection_standard")
-  @@index([defaultTemplateId])
 }
 
 // 样品报告分类
