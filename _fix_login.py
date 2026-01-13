@@ -1,4 +1,5 @@
-'use client'
+# -*- coding: utf-8 -*-
+content = ''''use client'
 
 import { useState } from 'react'
 import { Form, Input, Button, Card, message, Space, Divider } from 'antd'
@@ -115,3 +116,8 @@ export default function LoginPage() {
     </div>
   )
 }
+'''
+
+with open('/Users/wangpeng/Downloads/limsnext/src/app/login/page.tsx', 'w', encoding='utf-8') as f:
+    f.write(content)
+print('OK')

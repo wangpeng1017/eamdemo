@@ -21,16 +21,17 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
   providers: [
     Credentials({
       credentials: {
-        username: { label: "用户名", type: "text" },
+        phone: { label: "手机号", type: "text" },
         password: { label: "密码", type: "password" }
       },
       async authorize(credentials) {
-        if (!credentials?.username || !credentials?.password) {
+        if (!credentials?.phone || !credentials?.password) {
           return null
         }
 
+        // 使用手机号作为登录账号
         const user = await prisma.user.findUnique({
-          where: { username: credentials.username as string },
+          where: { phone: credentials.phone as string },
           include: {
             roles: {
               include: {
