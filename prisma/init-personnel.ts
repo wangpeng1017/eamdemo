@@ -8,16 +8,16 @@ async function main() {
 
   // 1. 创建部门
   const departments = [
-    { name: '试验中心' },
-    { name: '业务部' },
-    { name: '质量部' },
-    { name: '检测部' },
+    { name: '试验中心', code: 'TEST_CENTER' },
+    { name: '业务部', code: 'BUSINESS_DEPT' },
+    { name: '质量部', code: 'QUALITY_DEPT' },
+    { name: '检测部', code: 'INSPECTION_DEPT' },
   ]
 
   console.log('创建部门...')
   for (const dept of departments) {
     await prisma.dept.upsert({
-      where: { name: dept.name },
+      where: { code: dept.code },
       update: {},
       create: dept,
     })
@@ -51,7 +51,7 @@ async function main() {
     const hashedPassword = await bcrypt.hash(password, 10)
 
     // 检查用户是否已存在（通过手机号）
-    const existingUser = await prisma.user.findUnique({
+    const existingUser = await prisma.user.findFirst({
       where: { phone: person.phone },
     })
 
