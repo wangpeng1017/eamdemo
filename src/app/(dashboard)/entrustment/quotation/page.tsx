@@ -1104,8 +1104,8 @@ export default function QuotationPage() {
               </Form.Item>
             </Col>
             <Col span={12}>
-              <Form.Item name="follower" label="跟进人">
-                <Input placeholder="请输入跟进人" />
+              <Form.Item name="follower" label="跟单人">
+                <UserSelect placeholder="请选择跟单人" />
               </Form.Item>
             </Col>
           </Row>

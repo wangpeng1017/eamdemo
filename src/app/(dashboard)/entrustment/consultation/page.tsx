@@ -731,8 +731,8 @@ export default function ConsultationPage() {
               </Form.Item>
             </Col>
             <Col span={8}>
-              <Form.Item name="follower" label="跟进人">
-                <UserSelect placeholder="请选择跟进人" />
+              <Form.Item name="follower" label="跟单人">
+                <UserSelect placeholder="请选择跟单人" />
               </Form.Item>
             </Col>
           </Row>
@@ -985,7 +985,7 @@ function Descriptions({ title, data }: { title: string; data: Consultation }) {
     { label: '预算范围', value: data.budgetRange },
     { label: '可行性评估', value: <StatusTag type="feasibility" status={data.feasibility} /> },
     { label: '可行性说明', value: data.feasibilityNote },
-    { label: '跟进人', value: data.follower },
+    { label: '跟单人', value: data.follower },
     { label: '状态', value: <StatusTag type="consultation" status={data.status} /> },
     { label: '创建时间', value: dayjs(data.createdAt).format('YYYY-MM-DD HH:mm:ss') },
   ]

@@ -13,12 +13,11 @@ export const GET = async (request: NextRequest) => {
     return success({ list: [] })
   }
 
-  // 模糊匹配检测方法
+  // 模糊匹配检测方法（MySQL 默认不区分大小写）
   const templates = await prisma.testTemplate.findMany({
     where: {
       method: {
-        contains: method,
-        mode: 'insensitive' // 不区分大小写
+        contains: method
       },
       status: 'active'
     },

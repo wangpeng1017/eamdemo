@@ -146,7 +146,7 @@ export const POST = withErrorHandler(async (request: NextRequest) => {
     termsConfidentialityTerms: data.confidentialityTerms || null,
     termsLiabilityTerms: data.breachTerms || null,
     termsDisputeResolution: data.disputeTerms || null,
-    termsOtherTerms: data.otherTerms || null,
+    // termsOtherTerms 字段在 schema 中不存在，已移除
     status: 'draft',
     items: {
       create: data.items?.map((item: any, index: number) => ({

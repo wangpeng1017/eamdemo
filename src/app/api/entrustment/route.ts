@@ -134,33 +134,52 @@ export const POST = withErrorHandler(async (request: NextRequest) => {
   const session = await auth()
   const data = await request.json()
 
-  // 验证必填字段
-  validateRequired(data, ['clientName', 'sampleName'])
+  // 详细日志
+  console.log('[Entrustment Create] Received data:', JSON.stringify(data, null, 2))
 
-  // 分离检测项目数据和非 schema 字段
-  const { projects, clientName, ...entrustmentData } = data
+  // 验证必填字段 - 只验证 clientName
+  if (!data.clientName) {
+    console.log('[Entrustment Create] Missing clientName')
+    throw new Error('缺少必填字段: clientName')
+  }
 
   // 生成委托单号
   const entrustmentNo = await generateNo(NumberPrefixes.ENTRUSTMENT, 4)
+  console.log('[Entrustment Create] Generated entrustmentNo:', entrustmentNo)
+
+  // 获取样品名称（可选）
+  const sampleName = data.sampleName || (data.samples?.[0]?.name) || null
+
+  // 只提取 schema 中存在的字段
+  const createData: any = {
+    entrustmentNo,
+    contractNo: data.contractNo || null,
+    clientId: data.clientId || null,
+    contactPerson: data.contactPerson || null,
+    sampleDate: data.sampleDate ? new Date(data.sampleDate) : new Date(),
+    follower: data.follower || null,
+    sampleName: sampleName,
+    sampleModel: data.sampleModel || (data.samples?.[0]?.model) || null,
+    sampleMaterial: data.sampleMaterial || (data.samples?.[0]?.material) || null,
+    sampleQuantity: data.sampleQuantity ? Number(data.sampleQuantity) : (data.samples?.[0]?.quantity ? Number(data.samples[0].quantity) : null),
+    isSampleReturn: data.isSampleReturn || false,
+    sourceType: data.sourceType || null,
+    status: data.status || 'pending',
+    remark: data.remark || null,
+    createdById: session?.user?.id,
+  }
+
+  console.log('[Entrustment Create] createData:', JSON.stringify(createData, null, 2))
 
   // 创建委托单
   const entrustment = await prisma.entrustment.create({
-    data: {
-      ...entrustmentData,
-      // 兼容 flat fields (若前端传递了 samples 但未传递 flat fields)
-      sampleName: entrustmentData.sampleName || (data.samples?.[0]?.name),
-      sampleModel: entrustmentData.sampleModel || (data.samples?.[0]?.model),
-      sampleMaterial: entrustmentData.sampleMaterial || (data.samples?.[0]?.material),
-      sampleQuantity: entrustmentData.sampleQuantity ? Number(entrustmentData.sampleQuantity) : (data.samples?.[0]?.quantity),
-
-      entrustmentNo,
-      status: entrustmentData.status || 'pending',
-      sampleDate: entrustmentData.sampleDate ? new Date(entrustmentData.sampleDate) : new Date(),
-      createdById: session?.user?.id,
-    },
+    data: createData,
   })
 
+  console.log('[Entrustment Create] Created entrustment:', entrustment.id)
+
   // 创建检测项目
+  const projects = data.projects
   if (projects && Array.isArray(projects) && projects.length > 0) {
     const validProjects = projects.filter((p: { name?: string }) => p.name)
     if (validProjects.length > 0) {
@@ -174,6 +193,7 @@ export const POST = withErrorHandler(async (request: NextRequest) => {
           status: 'pending',
         }))
       })
+      console.log('[Entrustment Create] Created projects:', validProjects.length)
     }
   }
 
@@ -186,17 +206,16 @@ export const POST = withErrorHandler(async (request: NextRequest) => {
           sampleNo,
           entrustmentId: entrustment.id,
           name: sample.name,
-          type: sample.model, // model -> type/specification mapping? Entrustment has sampleModel. Sample has specification. 
-          // Previous mapping in Entrustment: sampleModel. Sample model: specification.
-          // Let's use specification for model.
+          type: sample.model,
           specification: sample.model,
           material: sample.material,
-          quantity: String(sample.quantity || 1), // Sample quantity is string?
-          status: 'received', // Default status
+          quantity: String(sample.quantity || 1),
+          status: 'received',
           createdById: session?.user?.id,
         }
       })
     }
+    console.log('[Entrustment Create] Created samples:', data.samples.length)
   }
 
   // 返回完整数据
@@ -210,5 +229,6 @@ export const POST = withErrorHandler(async (request: NextRequest) => {
     },
   })
 
+  console.log('[Entrustment Create] Success!')
   return success(result)
 })

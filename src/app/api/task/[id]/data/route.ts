@@ -68,6 +68,15 @@ export async function POST(
   const { id } = await params
   const { sheetData, action = 'save', summary, conclusion } = body
 
+  console.log('[Task Data POST] taskId:', id)
+  console.log('[Task Data POST] action:', action)
+  console.log('[Task Data POST] sheetData type:', typeof sheetData)
+  console.log('[Task Data POST] sheetData isArray:', Array.isArray(sheetData))
+  if (sheetData && sheetData[0]) {
+    console.log('[Task Data POST] sheetData[0].celldata length:', sheetData[0].celldata?.length)
+    console.log('[Task Data POST] sheetData[0].celldata (first 3):', JSON.stringify(sheetData[0].celldata?.slice(0, 3)))
+  }
+
   // 获取任务信息
   const task = await prisma.testTask.findUnique({
     where: { id },
@@ -79,8 +88,12 @@ export async function POST(
   }
 
   // 构建更新数据
+  const sheetDataString = typeof sheetData === 'object' ? JSON.stringify(sheetData) : sheetData
+  console.log('[Task Data POST] sheetDataString length:', sheetDataString?.length)
+  console.log('[Task Data POST] sheetDataString (first 300 chars):', sheetDataString?.substring(0, 300))
+
   const updateData: any = {
-    sheetData: typeof sheetData === 'object' ? JSON.stringify(sheetData) : sheetData,
+    sheetData: sheetDataString,
   }
 
   if (summary) updateData.summary = summary // 注意：schema 中还没有 summary 和 conclusion 字段，需要确认
@@ -88,8 +101,10 @@ export async function POST(
 
   // 根据 action 处理
   if (action === 'submit') {
-    // 提交后进入待审核状态
-    updateData.status = 'pending_review'
+    // 提交后直接完成任务（无需审核）
+    updateData.status = 'completed'
+    updateData.progress = 100
+    updateData.actualDate = new Date()
     updateData.submittedAt = new Date()
     updateData.submittedBy = session.user.name || session.user.id
   } else if (action === 'save') {
@@ -142,7 +157,7 @@ export async function POST(
   return NextResponse.json({
     success: true,
     data: updatedTask,
-    message: action === 'submit' ? '检测数据已提交，等待审核' : '数据保存成功'
+    message: action === 'submit' ? '检测数据已提交，任务已完成' : '数据保存成功'
   })
 }
 

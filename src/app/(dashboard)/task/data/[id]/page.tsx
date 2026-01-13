@@ -4,7 +4,7 @@ import { useState, useEffect } from "react"
 import { useParams, useRouter } from "next/navigation"
 import { Card, Button, Form, Select, Input, message, Space, Modal, Descriptions, Tag } from "antd"
 import { SaveOutlined, CheckOutlined, ArrowLeftOutlined } from "@ant-design/icons"
-import DataSheet, { generateSheetData, extractSheetData, getDefaultData } from "@/components/DataSheet"
+import DataSheet, { generateSheetData, extractSheetData, getDefaultData, convertDataToCelldata } from "@/components/DataSheet"
 
 interface Task {
   id: string
@@ -56,8 +56,10 @@ export default function DataEntryPage() {
   // 获取任务详情
   const fetchTask = async () => {
     setLoading(true)
+    console.log("[DataEntry Fetch] Starting fetch for taskId:", taskId)
     try {
       const res = await fetch(`/api/task/${taskId}`)
+      console.log("[DataEntry Fetch] Response status:", res.status)
       if (!res.ok) throw new Error("获取任务失败")
       const json = await res.json()
 
@@ -65,39 +67,57 @@ export default function DataEntryPage() {
       const taskData = json.data || json
       setTask(taskData)
 
-      console.log("[DataEntry] taskData.sheetData raw:", taskData.sheetData)
+      console.log("[DataEntry Fetch] taskData.sheetData raw type:", typeof taskData.sheetData)
+      console.log("[DataEntry Fetch] taskData.sheetData raw length:", taskData.sheetData?.length)
 
       // 优先从 sheetData 加载数据（Fortune-sheet 格式）
       if (taskData.sheetData) {
         try {
-          // 如果已经是对象（API可能已经解析?），直接用
           const parsed = typeof taskData.sheetData === 'string'
             ? JSON.parse(taskData.sheetData)
             : taskData.sheetData
 
-          console.log("[DataEntry] parsed sheetData:", parsed)
+          console.log("[DataEntry Fetch] parsed sheetData isArray:", Array.isArray(parsed))
+          console.log("[DataEntry Fetch] parsed sheetData length:", parsed?.length)
 
           if (Array.isArray(parsed) && parsed.length > 0) {
-            setSheetData(parsed)
+            // 检查数据格式：Fortune-sheet 可能使用 celldata 或 data 格式
+            const sheet = parsed[0]
+            console.log("[DataEntry Fetch] sheet.celldata:", sheet.celldata?.length)
+            console.log("[DataEntry Fetch] sheet.data:", sheet.data?.length)
+
+            // 如果有 data 但没有 celldata，说明是编辑后保存的格式，需要转换
+            // Fortune-sheet 初始化时需要 celldata 格式才能正确渲染
+            if (sheet.data && sheet.data.length > 0) {
+              console.log("[DataEntry Fetch] Using data format (edited format), converting to celldata")
+              const converted = convertDataToCelldata(parsed)
+              setSheetData(converted)
+            } else if (sheet.celldata && sheet.celldata.length > 0) {
+              console.log("[DataEntry Fetch] Using celldata format (initial format)")
+              setSheetData(parsed)
+            } else {
+              console.log("[DataEntry Fetch] No valid data in sheet, using default")
+              setSheetData(getDefaultData())
+            }
           } else {
-            console.log("[DataEntry] parsed sheetData is empty or not array, init default")
+            console.log("[DataEntry Fetch] parsed sheetData is empty or not array, init default")
             setSheetData(getDefaultData())
           }
         } catch (e) {
-          console.error("解析 sheetData 失败", e)
+          console.error("[DataEntry Fetch] 解析 sheetData 失败", e)
           setSheetData(getDefaultData())
         }
       }
       // 兼容旧逻辑：如果 testData 是数组且非空
       else if (taskData.testData && Array.isArray(taskData.testData) && taskData.testData.length > 0) {
-        console.log("[DataEntry] Using legacy testData")
+        console.log("[DataEntry Fetch] Using legacy testData")
         setSheetData(taskData.testData)
       } else {
-        console.log("[DataEntry] No valid sheetData or testData found, initializing default")
+        console.log("[DataEntry Fetch] No valid sheetData or testData found, initializing default")
         setSheetData(getDefaultData())
       }
     } catch (error) {
-      console.error(error)
+      console.error("[DataEntry Fetch] Error:", error)
       message.error("获取任务失败")
     } finally {
       setLoading(false)
@@ -112,17 +132,31 @@ export default function DataEntryPage() {
   const handleSave = async () => {
     setSaving(true)
     try {
+      // 详细日志
+      console.log("[DataEntry Save] Current sheetData state:", sheetData)
+      console.log("[DataEntry Save] sheetData type:", typeof sheetData)
+      console.log("[DataEntry Save] sheetData length:", sheetData?.length)
+      if (sheetData && sheetData[0]) {
+        console.log("[DataEntry Save] sheetData[0].celldata:", sheetData[0].celldata)
+        console.log("[DataEntry Save] sheetData[0].celldata length:", sheetData[0].celldata?.length)
+      }
+
       // 确保不保存空数据，如果为空则保存默认结构
-      const startData = sheetData && sheetData.length > 0 ? sheetData : getDefaultData()
+      const dataToSave = sheetData && sheetData.length > 0 ? sheetData : getDefaultData()
+      console.log("[DataEntry Save] dataToSave:", JSON.stringify(dataToSave).substring(0, 500))
 
       const res = await fetch(`/api/task/${taskId}/data`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          sheetData: startData,
+          sheetData: dataToSave,
           status: 'in_progress',
         }),
       })
+
+      const responseJson = await res.json()
+      console.log("[DataEntry Save] Response:", responseJson)
+
       if (res.ok) {
         message.success({
           content: '✅ 数据已保存',
@@ -130,9 +164,11 @@ export default function DataEntryPage() {
           key: 'save-draft'
         })
       } else {
+        console.error("[DataEntry Save] Save failed:", responseJson)
         message.error({ content: '保存失败', key: 'save-draft' })
       }
     } catch (error) {
+      console.error("[DataEntry Save] Error:", error)
       message.error({ content: '保存失败', key: 'save-draft' })
     } finally {
       setSaving(false)
@@ -160,7 +196,7 @@ export default function DataEntryPage() {
       })
 
       if (res.ok) {
-        message.success("提交成功")
+        message.success("提交成功，任务已完成")
         setSubmitModalOpen(false)
         router.push("/task/my")
       } else {
@@ -292,7 +328,7 @@ export default function DataEntryPage() {
           </Form.Item>
         </Form>
         <div className="text-gray-500 text-sm">
-          提交后任务将标记为已完成，无法再修改数据。
+          提交后任务将标记为已完成。
         </div>
       </Modal>
     </div>

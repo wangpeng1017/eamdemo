@@ -811,9 +811,6 @@ export default function ContractPage() {
         footer={
           <div style={{ display: 'flex', justifyContent: 'space-between' }}>
             <Space>
-              {currentContract?.status === 'draft' && (
-                <Button type="primary" onClick={() => handleStatusChange('signed')}>标记为已签订</Button>
-              )}
               {currentContract?.status === 'signed' && (
                 <Button type="primary" onClick={() => handleStatusChange('executing')}>开始执行</Button>
               )}
@@ -851,18 +848,14 @@ export default function ContractPage() {
                       <Descriptions.Item label="预付款金额">
                         ¥{currentContract.prepaymentAmount?.toLocaleString()}
                       </Descriptions.Item>
-                      <Descriptions.Item label="样品名称">{currentContract.sampleName || '-'}</Descriptions.Item>
-                      <Descriptions.Item label="规格型号">{currentContract.sampleModel || '-'}</Descriptions.Item>
-                      <Descriptions.Item label="样品材质">{currentContract.sampleMaterial || '-'}</Descriptions.Item>
-                      <Descriptions.Item label="样品数量">{currentContract.sampleQuantity || '-'}</Descriptions.Item>
                       <Descriptions.Item label="签订日期">
-                        {currentContract.signDate ? dayjs(currentContract.signDate).format('YYYY-MM-DD HH:mm:ss') : '-'}
+                        {currentContract.signDate ? dayjs(currentContract.signDate).format('YYYY-MM-DD') : '-'}
                       </Descriptions.Item>
                       <Descriptions.Item label="合同开始日期">
-                        {currentContract.startDate ? dayjs(currentContract.startDate).format('YYYY-MM-DD HH:mm:ss') : '-'}
+                        {currentContract.startDate ? dayjs(currentContract.startDate).format('YYYY-MM-DD') : '-'}
                       </Descriptions.Item>
                       <Descriptions.Item label="合同结束日期">
-                        {currentContract.endDate ? dayjs(currentContract.endDate).format('YYYY-MM-DD HH:mm:ss') : '-'}
+                        {currentContract.endDate ? dayjs(currentContract.endDate).format('YYYY-MM-DD') : '-'}
                       </Descriptions.Item>
                       <Descriptions.Item label="状态">
                         <StatusTag type="contract" status={currentContract.status} />
@@ -884,6 +877,37 @@ export default function ContractPage() {
                     )}
                   </div>
                 ),
+              },
+              {
+                key: 'samples',
+                label: '样品信息',
+                children: (
+                  <Table
+                    dataSource={
+                      currentContract.contractSamples && currentContract.contractSamples.length > 0
+                        ? currentContract.contractSamples
+                        : currentContract.sampleName
+                          ? [{
+                            name: currentContract.sampleName,
+                            model: currentContract.sampleModel,
+                            material: currentContract.sampleMaterial,
+                            quantity: currentContract.sampleQuantity || 1
+                          }]
+                          : []
+                    }
+                    rowKey={(record, index) => index?.toString() || '0'}
+                    pagination={false}
+                    size="small"
+                    locale={{ emptyText: '暂无样品信息' }}
+                    columns={[
+                      { title: '样品名称', dataIndex: 'name', key: 'name' },
+                      { title: '规格型号', dataIndex: 'model', key: 'model', render: v => v || '-' },
+                      { title: '材质', dataIndex: 'material', key: 'material', render: v => v || '-' },
+                      { title: '数量', dataIndex: 'quantity', key: 'quantity', width: 80 },
+                      { title: '备注', dataIndex: 'remark', key: 'remark', render: v => v || '-' },
+                    ]}
+                  />
+                )
               },
               {
                 key: 'items',

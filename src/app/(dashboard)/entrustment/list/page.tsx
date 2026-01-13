@@ -1,9 +1,8 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Table, Button, Space, Modal, Form, Input, InputNumber, DatePicker, Select, message, Row, Col, Divider, Popconfirm, Tag, Dropdown, Radio } from 'antd'
-import { PlusOutlined, EditOutlined, DeleteOutlined, MinusCircleOutlined, TeamOutlined, ShareAltOutlined, DownOutlined } from '@ant-design/icons'
-import type { MenuProps } from 'antd'
+import { Table, Button, Space, Modal, Form, Input, InputNumber, DatePicker, Select, message, Row, Col, Divider, Popconfirm, Tag, Radio } from 'antd'
+import { PlusOutlined, EditOutlined, DeleteOutlined, MinusCircleOutlined, TeamOutlined, ShareAltOutlined } from '@ant-design/icons'
 import { StatusTag } from '@/components/StatusTag'
 import type { ColumnsType } from 'antd/es/table'
 import dayjs from 'dayjs'
@@ -195,10 +194,6 @@ export default function EntrustmentListPage() {
   const [assignForm] = Form.useForm()
   const [subcontractForm] = Form.useForm()
 
-  // 批量分配弹窗
-  const [batchAssignModalOpen, setBatchAssignModalOpen] = useState(false)
-  const [batchAssignForm] = Form.useForm()
-
   // 下拉选项数据
   const [users, setUsers] = useState<User[]>([])
   const [devices, setDevices] = useState<Device[]>([])
@@ -270,8 +265,10 @@ export default function EntrustmentListPage() {
         clientName: contract.partyACompany || client?.name,
         clientId: contract.clientId || client?.id,
         contactPerson: contract.clientContact || client?.contact,
-        // 自动填充跟进人 (使用合同创建人作为跟进人)
+        // 自动填充跟单人 (使用合同创建人作为跟单人)
         follower: contract.salesPerson || undefined,
+        // 自动填充送样时间为当前日期
+        sampleDate: dayjs(),
 
         // 自动填充样品信息
         sampleName: contract.sampleName,
@@ -299,7 +296,7 @@ export default function EntrustmentListPage() {
       }
 
       if (contract.salesPerson) {
-        message.success(`已自动关联跟进人: ${contract.salesPerson}`)
+        message.success(`已自动关联跟单人: ${contract.salesPerson}`)
       }
     }
   }
@@ -544,114 +541,9 @@ export default function EntrustmentListPage() {
     }
   }
 
-  // ===== 批量操作 =====
-
-  // 批量删除
-  const handleBatchDelete = async () => {
-    if (selectedRowKeys.length === 0) {
-      message.warning('请选择要删除的记录')
-      return
-    }
-
-    Modal.confirm({
-      title: '确认删除',
-      content: `确定要删除选中的 ${selectedRowKeys.length} 条记录吗？`,
-      okText: '确定',
-      cancelText: '取消',
-      onOk: async () => {
-        try {
-          await Promise.all(
-            selectedRowKeys.map((id) =>
-              fetch(`/api/entrustment/${id}`, { method: 'DELETE' })
-            )
-          )
-          message.success(`成功删除 ${selectedRowKeys.length} 条记录`)
-          setSelectedRowKeys([])
-          setSelectedRows([])
-          fetchData()
-        } catch (error) {
-          message.error('批量删除失败')
-        }
-      },
-    })
-  }
-
-  // 批量分配
-  const handleBatchAssign = () => {
-    if (selectedRowKeys.length === 0) {
-      message.warning('请选择要分配的委托单')
-      return
-    }
-    batchAssignForm.resetFields()
-    setBatchAssignModalOpen(true)
-  }
-
-  // 提交批量分配
-  const handleBatchAssignSubmit = async () => {
-    const values = await batchAssignForm.validateFields()
-
-    try {
-      let successCount = 0
-      for (const entrustment of selectedRows) {
-        for (const project of entrustment.projects || []) {
-          if (project.status === 'pending') {
-            const res = await fetch(
-              `/api/entrustment/${entrustment.id}/projects/${project.id}`,
-              {
-                method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                  assignTo: values.assignTo,
-                  deviceId: values.deviceId,
-                  deadline: values.deadline?.toISOString(),
-                  status: 'assigned',
-                }),
-              }
-            )
-            if (res.ok) successCount++
-          }
-        }
-      }
-
-      message.success(`成功分配 ${successCount} 个项目`)
-      setBatchAssignModalOpen(false)
-      setSelectedRowKeys([])
-      setSelectedRows([])
-      fetchData()
-    } catch (error) {
-      message.error('批量分配失败')
-    }
-  }
-
-  // 批量导出
-  const handleBatchExport = () => {
-    if (selectedRows.length === 0) {
-      message.warning('请选择要导出的记录')
-      return
-    }
-
-    // 展开数据，每个项目一行
-    const exportData = selectedRows.flatMap((entrustment) =>
-      (entrustment.projects || []).map((project) => ({
-        委托编号: entrustment.entrustmentNo,
-        委托单位: entrustment.clientName || '',
-        样品名称: entrustment.sampleName || '',
-        检测项目: project.name,
-        检测参数: (project.testItems || []).join(', '),
-        检测方法: project.method || '',
-        检测标准: project.standard || '',
-        分配人: project.assignTo || '',
-        状态: project.status,
-      }))
-    )
-
-    exportToExcel(exportData, `委托单导出-${dayjs().format('YYYY-MM-DD-HHmmss')}`)
-    setSelectedRowKeys([])
-    setSelectedRows([])
-  }
-
   // 生成外部链接
   const handleGenerateExternalLink = async (record: Entrustment) => {
+    console.log('[ExternalLink] Called with record:', record.id, record.entrustmentNo, record.status)
     try {
       message.loading({ content: '正在生成外部链接...', key: 'externalLink' })
 
@@ -659,7 +551,9 @@ export default function EntrustmentListPage() {
         method: 'POST',
       })
 
+      console.log('[ExternalLink] Response status:', res.status)
       const json = await res.json()
+      console.log('[ExternalLink] Response json:', json)
 
       if (json.success) {
         const link = json.data.link
@@ -867,26 +761,17 @@ export default function EntrustmentListPage() {
           <Button
             icon={<ShareAltOutlined />}
             disabled={selectedRowKeys.length !== 1 || selectedRows[0]?.status !== 'pending'}
-            onClick={() => selectedRows[0] && handleGenerateExternalLink(selectedRows[0])}
-            title={selectedRowKeys.length !== 1 ? '请选择一个委托单' : selectedRows[0]?.status !== 'pending' ? '仅待受理状态可生成外部链接' : ''}
+            onClick={() => {
+              console.log('[ExternalLink Button] Clicked, selectedRows:', selectedRows)
+              console.log('[ExternalLink Button] selectedRows[0]?.status:', selectedRows[0]?.status)
+              if (selectedRows[0]) {
+                handleGenerateExternalLink(selectedRows[0])
+              }
+            }}
+            title={selectedRowKeys.length !== 1 ? '请选择一个委托单' : selectedRows[0]?.status !== 'pending' ? `仅待受理状态可生成外部链接(当前:${selectedRows[0]?.status})` : ''}
           >
             生成外部链接
           </Button>
-          {selectedRowKeys.length > 0 && (
-            <>
-              <Dropdown menu={{
-                items: [
-                  { key: 'delete', label: '批量删除', danger: true, onClick: handleBatchDelete },
-                  { key: 'assign', label: '批量分配', onClick: handleBatchAssign },
-                  { key: 'export', label: '批量导出', onClick: handleBatchExport },
-                ] as MenuProps['items']
-              }}>
-                <Button icon={<DownOutlined />}>
-                  批量操作 ({selectedRowKeys.length})
-                </Button>
-              </Dropdown>
-            </>
-          )}
           <Button type="primary" icon={<PlusOutlined />} onClick={handleAdd}>新建委托</Button>
         </Space>
       </div>
@@ -994,11 +879,11 @@ export default function EntrustmentListPage() {
               </Form.Item>
             </Col>
             <Col span={12}>
-              <Form.Item name="follower" label="跟进人" rules={[{ required: true, message: '请输入跟进人' }]}>
+              <Form.Item name="follower" label="跟单人" rules={[{ required: true, message: '请选择跟单人' }]}>
                 <Select
                   showSearch
                   allowClear
-                  placeholder="选择跟进人"
+                  placeholder="选择跟单人"
                   optionFilterProp="label"
                   options={users.map(u => ({ value: u.name, label: u.name }))}
                 />
@@ -1179,36 +1064,6 @@ export default function EntrustmentListPage() {
               placeholder="选择检测人员"
               optionFilterProp="label"
               options={users.map(u => ({ value: u.name, label: u.name }))}
-            />
-          </Form.Item>
-          <Form.Item name="deadline" label="截止日期">
-            <DatePicker style={{ width: '100%' }} />
-          </Form.Item>
-        </Form>
-      </Modal>
-
-      {/* 批量分配模态框 */}
-      <Modal
-        title="批量分配"
-        open={batchAssignModalOpen}
-        onOk={handleBatchAssignSubmit}
-        onCancel={() => setBatchAssignModalOpen(false)}
-      >
-        <Form form={batchAssignForm} layout="vertical">
-          <Form.Item name="assignTo" label="分配给" rules={[{ required: true, message: '请选择检测人员' }]}>
-            <Select
-              showSearch
-              placeholder="选择检测人员"
-              optionFilterProp="label"
-              options={users.map(u => ({ value: u.name, label: u.name }))}
-            />
-          </Form.Item>
-          <Form.Item name="deviceId" label="设备">
-            <Select
-              allowClear
-              placeholder="选择设备"
-              optionFilterProp="label"
-              options={devices.map(d => ({ value: d.id, label: `${d.deviceNo} - ${d.name}` }))}
             />
           </Form.Item>
           <Form.Item name="deadline" label="截止日期">

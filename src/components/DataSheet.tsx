@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useRef, useEffect } from "react"
+import { useState, useRef, useEffect, useCallback } from "react"
 import { Workbook, WorkbookInstance } from "@fortune-sheet/react"
 import "@fortune-sheet/react/dist/index.css"
 
@@ -12,23 +12,63 @@ interface DataSheetProps {
 }
 
 export default function DataSheet({ data, onChange, readonly = false, height = 500 }: DataSheetProps) {
-  const [sheetData, setSheetData] = useState<any[]>(() => (data && data.length > 0) ? data : getDefaultData())
   const workbookRef = useRef<WorkbookInstance>(null)
 
-  useEffect(() => {
+  // 用于强制重新渲染的 key
+  const [sheetKey, setSheetKey] = useState(() => Date.now())
+
+  // 内部数据状态
+  const [sheetData, setSheetData] = useState<any[]>(() => {
+    console.log("[DataSheet Init] data prop:", data?.length, "items")
     if (data && data.length > 0) {
+      console.log("[DataSheet Init] Using provided data, celldata length:", data[0]?.celldata?.length)
+      return data
+    }
+    console.log("[DataSheet Init] Using default data")
+    return getDefaultData()
+  })
+
+  // 标记是否是内部编辑导致的变化
+  const isInternalEditRef = useRef(false)
+
+  // 当外部 data 变化时更新
+  useEffect(() => {
+    console.log("[DataSheet useEffect] data prop changed, isInternalEdit:", isInternalEditRef.current)
+    console.log("[DataSheet useEffect] data:", data?.length, "items")
+    if (data && data[0]) {
+      console.log("[DataSheet useEffect] data[0].celldata length:", data[0].celldata?.length)
+    }
+
+    // 如果是内部编辑导致的变化，跳过
+    if (isInternalEditRef.current) {
+      console.log("[DataSheet useEffect] Skipping - internal edit")
+      isInternalEditRef.current = false
+      return
+    }
+
+    // 只有当有新的有效数据时才更新
+    if (data && data.length > 0) {
+      console.log("[DataSheet useEffect] Updating sheetData and key")
       setSheetData(data)
+      // 更新 key 强制重新渲染 Workbook
+      setSheetKey(Date.now())
     }
   }, [data])
 
-  const handleChange = (changedData: any) => {
+  const handleChange = useCallback((changedData: any) => {
+    console.log("[DataSheet onChange] Called, celldata length:", changedData?.[0]?.celldata?.length)
+    // 标记为内部编辑
+    isInternalEditRef.current = true
     setSheetData(changedData)
     onChange?.(changedData)
-  }
+  }, [onChange])
+
+  console.log("[DataSheet Render] sheetKey:", sheetKey, "sheetData length:", sheetData?.length, "celldata:", sheetData?.[0]?.celldata?.length)
 
   return (
     <div className="border border-gray-200 rounded" style={{ height: typeof height === 'number' ? `${height}px` : height }}>
       <Workbook
+        key={sheetKey}
         ref={workbookRef}
         data={sheetData}
         onChange={handleChange}
@@ -42,19 +82,26 @@ export default function DataSheet({ data, onChange, readonly = false, height = 5
 }
 
 export function getDefaultData() {
+  // 使用 celldata 格式（稀疏数组）
+  // Fortune-sheet 在初始化时需要 celldata 格式才能正确渲染
+  const headers = ["检测项目", "检测方法", "技术要求", "实测值", "单项判定", "备注"]
+
+  // 创建 celldata 格式的表头
+  const celldata: any[] = []
+  headers.forEach((header, col) => {
+    celldata.push({
+      r: 0,
+      c: col,
+      v: { v: header, ct: { fa: "General", t: "g" }, bl: 1 }
+    })
+  })
+
   return [
     {
       name: "Sheet1",
-      row: 30,  // 设置行数
-      column: 15,  // 设置列数
-      celldata: [
-        { r: 0, c: 0, v: { v: "检测项目", ct: { fa: "General", t: "g" }, bl: 1 } },
-        { r: 0, c: 1, v: { v: "检测方法", ct: { fa: "General", t: "g" }, bl: 1 } },
-        { r: 0, c: 2, v: { v: "技术要求", ct: { fa: "General", t: "g" }, bl: 1 } },
-        { r: 0, c: 3, v: { v: "实测值", ct: { fa: "General", t: "g" }, bl: 1 } },
-        { r: 0, c: 4, v: { v: "单项判定", ct: { fa: "General", t: "g" }, bl: 1 } },
-        { r: 0, c: 5, v: { v: "备注", ct: { fa: "General", t: "g" }, bl: 1 } },
-      ],
+      row: 30,
+      column: 15,
+      celldata: celldata,
       config: {
         columnlen: {
           0: 150,
@@ -123,4 +170,56 @@ export function extractSheetData(sheetData: any) {
   }
 
   return rows
+}
+
+// 将 data 格式（二维数组）转换为 celldata 格式（稀疏数组）
+// Fortune-sheet 在初始化时需要 celldata 格式才能正确渲染
+export function convertDataToCelldata(sheetData: any[]): any[] {
+  if (!sheetData || sheetData.length === 0) return sheetData
+
+  const sheet = sheetData[0]
+
+  // 如果已经有 celldata，直接返回
+  if (sheet.celldata && sheet.celldata.length > 0) {
+    console.log("[convertDataToCelldata] Already has celldata, returning as-is")
+    return sheetData
+  }
+
+  // 如果没有 data，返回原数据
+  if (!sheet.data || sheet.data.length === 0) {
+    console.log("[convertDataToCelldata] No data to convert")
+    return sheetData
+  }
+
+  console.log("[convertDataToCelldata] Converting data format to celldata format")
+
+  // 将 data 格式转换为 celldata 格式
+  const celldata: any[] = []
+  const data = sheet.data
+
+  for (let r = 0; r < data.length; r++) {
+    const row = data[r]
+    if (!row) continue
+
+    for (let c = 0; c < row.length; c++) {
+      const cell = row[c]
+      // 只添加非空单元格
+      if (cell !== null && cell !== undefined) {
+        celldata.push({
+          r,
+          c,
+          v: cell
+        })
+      }
+    }
+  }
+
+  console.log("[convertDataToCelldata] Converted", celldata.length, "cells")
+
+  // 返回新的 sheet 数据，使用 celldata 格式
+  return [{
+    ...sheet,
+    celldata,
+    data: undefined  // 移除 data，使用 celldata
+  }]
 }
