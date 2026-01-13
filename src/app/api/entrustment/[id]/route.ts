@@ -1,5 +1,6 @@
 import { prisma } from '@/lib/prisma'
 import { NextRequest } from 'next/server'
+import { auth } from '@/lib/auth'
 import { withErrorHandler, success, notFound } from '@/lib/api-handler'
 
 interface RouteParams {
@@ -27,17 +28,18 @@ export const GET = withErrorHandler(async (request: NextRequest, context?: { par
   return success(entrustment)
 })
 
-// 更新委托单（含检测项目）
+// 更新委托单（含检测项目和样品）
 export const PUT = withErrorHandler(async (request: NextRequest, context?: { params: Promise<Record<string, string>> }) => {
   const { params } = context!
   const { id } = await params
   const data = await request.json()
+  const session = await auth() // Ensure we have session for createdById if needed
 
-  // 分离检测项目数据
-  const { projects, ...entrustmentData } = data
+  // 分离检测项目和样品数据
+  const { projects, samples, ...entrustmentData } = data
 
   // 更新委托单基本信息
-  const entrustment = await prisma.entrustment.update({
+  await prisma.entrustment.update({
     where: { id },
     data: {
       ...entrustmentData,
@@ -93,6 +95,75 @@ export const PUT = withErrorHandler(async (request: NextRequest, context?: { par
     }
   }
 
+  // 处理样品 (智能更新：更新现有、创建新增、删除移除)
+  if (samples && Array.isArray(samples)) {
+    const existingSamples = await prisma.sample.findMany({ where: { entrustmentId: id } })
+    const existingSampleIds = existingSamples.map((s: any) => s.id)
+
+    // 分类处理
+    const toUpdate = samples.filter((s: any) => s.id && existingSampleIds.includes(s.id))
+    const toCreate = samples.filter((s: any) => !s.id && s.name)
+    const toDeleteIds = existingSampleIds.filter((eid: string) => !samples.some((s: { id?: string }) => s.id === eid))
+
+    // 检查要删除的样品是否有关联的任务
+    if (toDeleteIds.length > 0) {
+      const linkedTasks = await prisma.testTask.findMany({
+        where: { sampleId: { in: toDeleteIds } },
+        select: { id: true, taskNo: true, sampleId: true }
+      })
+
+      if (linkedTasks.length > 0) {
+        // 有关联任务的样品不能删除，只删除没有关联的
+        const linkedSampleIds = linkedTasks.map(t => t.sampleId).filter(Boolean)
+        const safeToDeleteIds = toDeleteIds.filter((id: string) => !linkedSampleIds.includes(id))
+
+        if (safeToDeleteIds.length > 0) {
+          await prisma.sample.deleteMany({
+            where: { id: { in: safeToDeleteIds } }
+          })
+        }
+        // 记录警告：部分样品因关联任务无法删除
+        console.warn(`样品 ${linkedSampleIds.join(', ')} 因关联检测任务无法删除`)
+      } else {
+        // 没有关联任务，可以安全删除
+        await prisma.sample.deleteMany({
+          where: { id: { in: toDeleteIds } }
+        })
+      }
+    }
+
+    // 更新现有样品
+    for (const sample of toUpdate) {
+      await prisma.sample.update({
+        where: { id: sample.id },
+        data: {
+          name: sample.name,
+          specification: sample.model,
+          material: sample.material,
+          quantity: String(sample.quantity || 1),
+        }
+      })
+    }
+
+    // 创建新样品
+    const { generateNo, NumberPrefixes } = await import('@/lib/generate-no')
+    for (const sample of toCreate) {
+      const sampleNo = await generateNo(NumberPrefixes.SAMPLE, 4)
+      await prisma.sample.create({
+        data: {
+          sampleNo,
+          entrustmentId: id,
+          name: sample.name,
+          specification: sample.model,
+          material: sample.material,
+          quantity: String(sample.quantity || 1),
+          status: 'received',
+          createdById: session?.user?.id,
+        }
+      })
+    }
+  }
+
   // 返回更新后的完整数据
   const result = await prisma.entrustment.findUnique({
     where: { id },
@@ -100,6 +171,7 @@ export const PUT = withErrorHandler(async (request: NextRequest, context?: { par
       client: true,
       contract: true,
       projects: true,
+      samples: true,
     }
   })
 
@@ -111,7 +183,51 @@ export const DELETE = withErrorHandler(async (request: NextRequest, context?: { 
   const { params } = context!
   const { id } = await params
 
-  // 先删除关联的检测项目
+  // 检查是否有关联的检测任务
+  const linkedTasks = await prisma.testTask.findMany({
+    where: { entrustmentId: id },
+    select: { id: true, taskNo: true, status: true }
+  })
+
+  if (linkedTasks.length > 0) {
+    // 检查是否有进行中或已完成的任务
+    const activeTasks = linkedTasks.filter(t => t.status !== 'pending')
+    if (activeTasks.length > 0) {
+      return notFound(`无法删除：委托单有 ${activeTasks.length} 个进行中或已完成的检测任务`)
+    }
+    // 删除待处理的任务
+    await prisma.testTask.deleteMany({
+      where: { entrustmentId: id, status: 'pending' }
+    })
+  }
+
+  // 检查并删除关联的样品
+  const linkedSamples = await prisma.sample.findMany({
+    where: { entrustmentId: id },
+    select: { id: true }
+  })
+
+  if (linkedSamples.length > 0) {
+    // 检查样品是否有关联的任务（非本委托单的任务）
+    const sampleIds = linkedSamples.map(s => s.id)
+    const externalTasks = await prisma.testTask.findMany({
+      where: {
+        sampleId: { in: sampleIds },
+        entrustmentId: { not: id }
+      }
+    })
+
+    if (externalTasks.length > 0) {
+      return notFound('无法删除：样品被其他委托单的任务引用')
+    }
+
+    // 安全删除样品
+    await prisma.sample.deleteMany({
+      where: { entrustmentId: id }
+    })
+  }
+
+  // 删除关联的检测项目
   await prisma.entrustmentProject.deleteMany({
     where: { entrustmentId: id }
   })

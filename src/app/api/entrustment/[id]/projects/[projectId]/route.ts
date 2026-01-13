@@ -3,6 +3,7 @@ import { prisma } from '@/lib/prisma'
 import { NextRequest } from 'next/server'
 import { withErrorHandler, success, notFound } from '@/lib/api-handler'
 import { convertSchemaToPreviewData } from '@/lib/template-converter'
+import { generateNo, NumberPrefixes } from '@/lib/generate-no'
 
 interface RouteParams {
   params: Promise<{ id: string; projectId: string }>
@@ -107,9 +108,17 @@ export const PUT = withErrorHandler(async (request: NextRequest, context?: { par
 
   // 如果指定了内部检测人员，自动创建/更新检测任务
   if (data.assignTo && data.status === 'assigned') {
-    const user = await prisma.user.findFirst({
-      where: { name: data.assignTo }
-    })
+    // 优先使用 assignToId，如果没有则按名称查找（兼容旧逻辑）
+    let user = null
+    if (data.assignToId) {
+      user = await prisma.user.findUnique({
+        where: { id: data.assignToId }
+      })
+    } else {
+      user = await prisma.user.findFirst({
+        where: { name: data.assignTo }
+      })
+    }
 
     if (user) {
       // 检查任务是否存在
@@ -117,7 +126,8 @@ export const PUT = withErrorHandler(async (request: NextRequest, context?: { par
         where: { projectId: projectId }
       })
 
-      const taskNo = existingTask?.taskNo || `T${new Date().toISOString().slice(0, 10).replace(/-/g, '')}${Math.floor(Math.random() * 1000).toString().padStart(3, '0')}`
+      // 使用统一的编号生成函数，避免重复
+      const taskNo = existingTask?.taskNo || await generateNo(NumberPrefixes.TASK, 3)
 
       // 生成初始 sheetData（如果关联了模版）
       const sheetData = await generateSheetDataFromTemplate(data.testTemplateId || updatedProject.testTemplateId)
@@ -153,9 +163,17 @@ export const PUT = withErrorHandler(async (request: NextRequest, context?: { par
 
   // 如果指定了外包检测人员，自动创建/更新检测任务
   if (data.subcontractAssignee && data.status === 'subcontracted') {
-    const user = await prisma.user.findFirst({
-      where: { name: data.subcontractAssignee }
-    })
+    // 优先使用 subcontractAssigneeId，如果没有则按名称查找（兼容旧逻辑）
+    let user = null
+    if (data.subcontractAssigneeId) {
+      user = await prisma.user.findUnique({
+        where: { id: data.subcontractAssigneeId }
+      })
+    } else {
+      user = await prisma.user.findFirst({
+        where: { name: data.subcontractAssignee }
+      })
+    }
 
     if (user) {
       // 检查任务是否存在
@@ -163,7 +181,8 @@ export const PUT = withErrorHandler(async (request: NextRequest, context?: { par
         where: { projectId: projectId }
       })
 
-      const taskNo = existingTask?.taskNo || `T${new Date().toISOString().slice(0, 10).replace(/-/g, '')}${Math.floor(Math.random() * 1000).toString().padStart(3, '0')}`
+      // 使用统一的编号生成函数，避免重复
+      const taskNo = existingTask?.taskNo || await generateNo(NumberPrefixes.TASK, 3)
 
       // 生成初始 sheetData（如果关联了模版）
       const sheetData = await generateSheetDataFromTemplate(data.testTemplateId || updatedProject.testTemplateId)

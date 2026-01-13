@@ -88,8 +88,8 @@ export async function POST(
 
   // 根据 action 处理
   if (action === 'submit') {
-    // 提交后直接标记为已完成（简化流程，无需审核）
-    updateData.status = 'completed'
+    // 提交后进入待审核状态
+    updateData.status = 'pending_review'
     updateData.submittedAt = new Date()
     updateData.submittedBy = session.user.name || session.user.id
   } else if (action === 'save') {
@@ -142,7 +142,7 @@ export async function POST(
   return NextResponse.json({
     success: true,
     data: updatedTask,
-    message: action === 'submit' ? '检测数据已提交，等待主管审核' : '数据保存成功'
+    message: action === 'submit' ? '检测数据已提交，等待审核' : '数据保存成功'
   })
 }
 

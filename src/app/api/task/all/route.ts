@@ -1,8 +1,9 @@
 import { prisma } from '@/lib/prisma'
 import { NextRequest, NextResponse } from 'next/server'
+import { withAuth, AuthUser } from '@/lib/api-handler'
 
-// 获取全部任务
-export async function GET(request: NextRequest) {
+// 获取全部任务（需要登录）
+export const GET = withAuth(async (request: NextRequest, user: AuthUser) => {
   const { searchParams } = new URL(request.url)
   const page = parseInt(searchParams.get('page') || '1')
   const pageSize = parseInt(searchParams.get('pageSize') || '10')
@@ -69,18 +70,15 @@ export async function GET(request: NextRequest) {
       return acc
     }, {} as Record<string, number>)
   })
-}
+})
 
-// 创建任务
-export async function POST(request: NextRequest) {
+// 创建任务（需要登录）
+export const POST = withAuth(async (request: NextRequest, user: AuthUser) => {
   const data = await request.json()
-  const today = new Date().toISOString().slice(0, 10).replace(/-/g, '')
 
-  // 新 PRD 编号规则: T + 年月日 + 序号
-  const count = await prisma.testTask.count({
-    where: { taskNo: { startsWith: `T${today}` } }
-  })
-  const taskNo = `T${today}${String(count + 1).padStart(3, '0')}`
+  // 使用统一的编号生成函数
+  const { generateNo, NumberPrefixes } = await import('@/lib/generate-no')
+  const taskNo = await generateNo(NumberPrefixes.TASK, 3)
 
   const task = await prisma.testTask.create({
     data: {
@@ -96,4 +94,4 @@ export async function POST(request: NextRequest) {
   })
 
   return NextResponse.json(task)
-}
+})

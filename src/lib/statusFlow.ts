@@ -89,10 +89,11 @@ export function canChangeSampleStatus(from: string, to: string): boolean {
 
 // ==================== 任务状态流转 ====================
 export const taskStatusFlow = {
-  pending: ['进行中', '已转交'],
-  '进行中': ['已完成', '已转交'],
-  '已完成': [],
-  '已转交': ['pending'],
+  pending: ['in_progress', 'transferred'],
+  in_progress: ['pending_review', 'transferred'],
+  pending_review: ['completed', 'in_progress'],  // 审核通过 → completed，驳回 → in_progress
+  completed: [],
+  transferred: ['pending'],
 } as const
 
 /**

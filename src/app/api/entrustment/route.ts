@@ -48,7 +48,6 @@ export const GET = withErrorHandler(async (request: NextRequest) => {
     where.createdAt = {}
     if (startDate && startDate.trim()) (where.createdAt as Record<string, Date>).gte = new Date(startDate)
     if (endDate && endDate.trim()) (where.createdAt as Record<string, Date>).lte = new Date(endDate)
-    if (endDate && endDate.trim()) (where.createdAt as Record<string, Date>).lte = new Date(endDate)
   }
 
   // 注入数据权限过滤
@@ -148,6 +147,12 @@ export const POST = withErrorHandler(async (request: NextRequest) => {
   const entrustment = await prisma.entrustment.create({
     data: {
       ...entrustmentData,
+      // 兼容 flat fields (若前端传递了 samples 但未传递 flat fields)
+      sampleName: entrustmentData.sampleName || (data.samples?.[0]?.name),
+      sampleModel: entrustmentData.sampleModel || (data.samples?.[0]?.model),
+      sampleMaterial: entrustmentData.sampleMaterial || (data.samples?.[0]?.material),
+      sampleQuantity: entrustmentData.sampleQuantity ? Number(entrustmentData.sampleQuantity) : (data.samples?.[0]?.quantity),
+
       entrustmentNo,
       status: entrustmentData.status || 'pending',
       sampleDate: entrustmentData.sampleDate ? new Date(entrustmentData.sampleDate) : new Date(),
@@ -168,6 +173,28 @@ export const POST = withErrorHandler(async (request: NextRequest) => {
           standard: p.standard || null,
           status: 'pending',
         }))
+      })
+    }
+  }
+
+  // 创建样品 Sample records
+  if (data.samples && Array.isArray(data.samples) && data.samples.length > 0) {
+    for (const sample of data.samples) {
+      const sampleNo = await generateNo(NumberPrefixes.SAMPLE, 4)
+      await prisma.sample.create({
+        data: {
+          sampleNo,
+          entrustmentId: entrustment.id,
+          name: sample.name,
+          type: sample.model, // model -> type/specification mapping? Entrustment has sampleModel. Sample has specification. 
+          // Previous mapping in Entrustment: sampleModel. Sample model: specification.
+          // Let's use specification for model.
+          specification: sample.model,
+          material: sample.material,
+          quantity: String(sample.quantity || 1), // Sample quantity is string?
+          status: 'received', // Default status
+          createdById: session?.user?.id,
+        }
       })
     }
   }
