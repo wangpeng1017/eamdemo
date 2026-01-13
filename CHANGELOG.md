@@ -4,6 +4,34 @@
 
 ---
 
+## [2.0.0] - 2026-01-12
+
+### 新增功能
+- **可视化模版编辑器**
+  - `src/components/TemplateEditor.tsx` - 可视化模版编辑器主组件
+  - `src/components/ColumnPropertyForm.tsx` - 列属性配置表单
+  - `src/lib/template-converter.ts` - Schema 转换工具
+  - 支持左右分栏布局（表格编辑区 + 属性配置面板）
+  - 支持右键菜单配置统计列（平均值、标准差、离散系数）
+  - 支持实时 JSON 预览
+
+- **模版自动关联**
+  - `src/app/api/test-template/by-method/route.ts` - 根据检测方法匹配模版 API
+  - 数据录入页面自动根据检测方法加载对应模版
+  - 支持模版与检测标准的智能匹配
+
+- **预置检测模版**
+  - `src/app/api/test-template/seed/route.ts` - 预置模版种子 API
+  - `prisma/seed-templates.ts` - 预置模版数据脚本
+  - 预置模版：拉伸性能试验 (GB/T 3354-2014)、金属材料拉伸试验 (GB/T 228.1-2021)、布氏硬度试验 (GB/T 231.1-2018)
+
+### 技术改进
+- 检测模版管理页面集成可视化编辑器
+- 数据录入页面支持从模版自动生成表格结构
+- Fortune-sheet 表格组件与模版 Schema 双向转换
+
+---
+
 ## [1.9.0] - 2026-01-12
 
 ### 安全加固

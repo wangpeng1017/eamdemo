@@ -104,18 +104,6 @@ const menuItems = [
     label: <Link href="/statistics">统计报表</Link>,
   },
   {
-    key: '/system',
-    icon: <SettingOutlined />,
-    label: '系统设置',
-    children: [
-      { key: '/system/user', label: <Link href="/system/user">用户管理</Link> },
-      { key: '/system/role', label: <Link href="/system/role">角色管理</Link> },
-      { key: '/system/dept', label: <Link href="/system/dept">部门管理</Link> },
-      { key: '/system/approval-flow', label: <Link href="/system/approval-flow">审批流程</Link> },
-      { key: '/system/permission', label: <Link href="/system/permission">权限配置</Link> },
-    ],
-  },
-  {
     key: '/basic-data',
     icon: <DatabaseOutlined />,
     label: '基础数据配置',
@@ -125,6 +113,18 @@ const menuItems = [
       { key: '/basic-data/report-categories', label: <Link href="/basic-data/report-categories">报告分类</Link> },
       { key: '/basic-data/personnel-capability', label: <Link href="/basic-data/personnel-capability">人员资质</Link> },
       { key: '/basic-data/capability-review', label: <Link href="/basic-data/capability-review">能力评审</Link> },
+    ],
+  },
+  {
+    key: '/system',
+    icon: <SettingOutlined />,
+    label: '系统设置',
+    children: [
+      { key: '/system/user', label: <Link href="/system/user">用户管理</Link> },
+      { key: '/system/role', label: <Link href="/system/role">角色管理</Link> },
+      { key: '/system/dept', label: <Link href="/system/dept">部门管理</Link> },
+      { key: '/system/approval-flow', label: <Link href="/system/approval-flow">审批流程</Link> },
+      { key: '/system/permission', label: <Link href="/system/permission">权限配置</Link> },
     ],
   },
 ]
