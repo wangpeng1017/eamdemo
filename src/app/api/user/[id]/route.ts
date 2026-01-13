@@ -93,22 +93,22 @@ export const DELETE = withAuth(async (
     await prisma.approvalLog.deleteMany({ where: { operatorId: id } })
 
     // 5. 删除委托合同（创建的）
-    await prisma.contract.deleteMany({ where: { createdBy: id } })
+    await prisma.contract.deleteMany({ where: { createdById: id } })
 
     // 6. 删除报价单（创建的）
-    await prisma.quotation.deleteMany({ where: { createdBy: id } })
+    await prisma.quotation.deleteMany({ where: { createdById: id } })
 
     // 7. 删除委托单位（创建的）
-    await prisma.client.deleteMany({ where: { createdBy: id } })
+    await prisma.client.deleteMany({ where: { createdById: id } })
 
     // 8. 删除样品（创建的）
-    await prisma.sample.deleteMany({ where: { createdBy: id } })
+    await prisma.sample.deleteMany({ where: { createdById: id } })
 
     // 9. 删除检测任务（分配的）
     await prisma.testTask.deleteMany({ where: { assignedToId: id } })
 
     // 10. 删除委托单（创建的）
-    await prisma.entrustment.deleteMany({ where: { createdBy: id } })
+    await prisma.entrustment.deleteMany({ where: { createdById: id } })
 
     // 11. 删除用户角色关联
     await prisma.userRole.deleteMany({ where: { userId: id } })
