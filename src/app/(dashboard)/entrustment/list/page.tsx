@@ -557,32 +557,43 @@ export default function EntrustmentListPage() {
 
       if (json.success) {
         const link = json.data.link
-        // 尝试复制链接到剪贴板
+        message.destroy('externalLink')
+
+        // 始终显示 Modal 弹窗，让用户可以看到并复制链接
+        Modal.success({
+          title: '外部链接已生成',
+          content: (
+            <div>
+              <p>请复制以下链接发送给客户：</p>
+              <Input.TextArea
+                value={link}
+                autoSize
+                readOnly
+                style={{ marginTop: 8 }}
+                onClick={(e) => (e.target as HTMLTextAreaElement).select()}
+              />
+              <p style={{ marginTop: 8, color: '#666', fontSize: 12 }}>
+                有效期：7天（点击链接可全选）
+              </p>
+            </div>
+          ),
+          okText: '关闭',
+          width: 500,
+        })
+
+        // 尝试复制到剪贴板（静默操作，不影响弹窗显示）
         try {
           await navigator.clipboard.writeText(link)
-          message.success({ content: '外部链接已生成并复制到剪贴板', key: 'externalLink', duration: 3 })
+          message.success({ content: '链接已复制到剪贴板', duration: 2 })
         } catch (clipboardError) {
-          // 剪贴板 API 在 HTTP 环境下可能失败，显示弹窗让用户手动复制
-          message.destroy('externalLink')
-          Modal.info({
-            title: '外部链接已生成',
-            content: (
-              <div>
-                <p>请复制以下链接发送给客户：</p>
-                <Input.TextArea value={link} autoSize readOnly style={{ marginTop: 8 }} />
-                <p style={{ marginTop: 8, color: '#666', fontSize: 12 }}>
-                  有效期：7天
-                </p>
-              </div>
-            ),
-            okText: '关闭',
-            width: 500,
-          })
+          // 剪贴板 API 在 HTTP 环境下可能失败，忽略错误
+          console.log('[ExternalLink] Clipboard API failed:', clipboardError)
         }
       } else {
         message.error({ content: json.message || '生成失败', key: 'externalLink' })
       }
     } catch (error) {
+      console.error('[ExternalLink] Error:', error)
       message.error({ content: '生成外部链接失败', key: 'externalLink' })
     }
   }
