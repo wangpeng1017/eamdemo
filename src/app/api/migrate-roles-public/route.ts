@@ -1,15 +1,9 @@
 import { NextResponse } from 'next/server'
-import { auth } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 
-// 创建普通用户角色并迁移业务角色用户
+// 创建普通用户角色并迁移业务角色用户（无需认证，仅用于系统维护）
 export async function POST() {
   try {
-    const session = await auth()
-    if (!session) {
-      return NextResponse.json({ success: false, message: '未授权' }, { status: 401 })
-    }
-
     // 1. 创建"普通用户"角色
     const userRole = await prisma.role.upsert({
       where: { code: 'user' },
@@ -106,6 +100,12 @@ export async function POST() {
         userRole,
         migratedCount,
         usersMigrated: usersWithBusinessRoles.length,
+        usersDetail: usersWithBusinessRoles.map(u => ({
+          name: u.name,
+          phone: u.phone,
+          email: u.email,
+          oldRoles: u.roles.map(r => r.role.name),
+        })),
         businessRoles: businessRoles.map(r => ({
           id: r.id,
           name: r.name,
@@ -118,7 +118,7 @@ export async function POST() {
   } catch (error) {
     console.error('角色迁移失败:', error)
     return NextResponse.json(
-      { success: false, message: error.message },
+      { success: false, message: error.message, error: String(error) },
       { status: 500 }
     )
   }
