@@ -52,6 +52,12 @@ export default function ApprovalFlowPage() {
   const [form] = Form.useForm()
   const [nodeForm] = Form.useForm()
 
+  // 下拉选项数据
+  const [roles, setRoles] = useState<any[]>([])
+  const [users, setUsers] = useState<any[]>([])
+  const [departments, setDepartments] = useState<any[]>([])
+  const [selectedNodeType, setSelectedNodeType] = useState<string>('role')
+
   // 加载审批流程列表
   const loadData = useCallback(async () => {
     setLoading(true)
@@ -70,9 +76,62 @@ export default function ApprovalFlowPage() {
     }
   }, [])
 
+  // 加载角色列表
+  const loadRoles = useCallback(async () => {
+    try {
+      const res = await fetch('/api/role')
+      const data = await res.json()
+      if (data.success) {
+        setRoles(data.data.list || [])
+      }
+    } catch (error) {
+      console.error('加载角色失败:', error)
+    }
+  }, [])
+
+  // 加载用户列表
+  const loadUsers = useCallback(async () => {
+    try {
+      const res = await fetch('/api/user?pageSize=1000')
+      const data = await res.json()
+      if (data.success) {
+        setUsers(data.data.list || [])
+      }
+    } catch (error) {
+      console.error('加载用户失败:', error)
+    }
+  }, [])
+
+  // 加载部门列表
+  const loadDepartments = useCallback(async () => {
+    try {
+      const res = await fetch('/api/dept?tree=true')
+      const data = await res.json()
+      if (data.success) {
+        // 扁平化树形结构为下拉选项
+        const flattenDepts = (tree: any[]): any[] => {
+          const result: any[] = []
+          tree.forEach((dept) => {
+            result.push({ id: dept.key, name: dept.title })
+            if (dept.children) {
+              result.push(...flattenDepts(dept.children))
+            }
+          })
+          return result
+        }
+        setDepartments(flattenDepts(data.data || []))
+      }
+    } catch (error) {
+      console.error('加载部门失败:', error)
+    }
+  }, [])
+
   useEffect(() => {
     loadData()
-  }, [loadData])
+    loadRoles()
+    loadUsers()
+    loadDepartments()
+  }, [loadData, loadRoles, loadUsers, loadDepartments])
 
   const handleAdd = () => {
     setEditingFlow(null)
@@ -138,6 +197,7 @@ export default function ApprovalFlowPage() {
     setCurrentFlowId(flowId)
     setEditingNode(null)
     nodeForm.resetFields()
+    setSelectedNodeType('role') // 重置为默认类型
     setNodeModalOpen(true)
   }
 
@@ -145,6 +205,7 @@ export default function ApprovalFlowPage() {
     setCurrentFlowId(flowId)
     setEditingNode(node)
     nodeForm.setFieldsValue(node)
+    setSelectedNodeType(node.type) // 设置当前节点类型
     setNodeModalOpen(true)
   }
 
@@ -396,20 +457,83 @@ export default function ApprovalFlowPage() {
         onOk={handleNodeSubmit}
         onCancel={() => setNodeModalOpen(false)}
         confirmLoading={submitting}
-        width={400}
+        width={500}
       >
         <Form form={nodeForm} layout="vertical">
           <Form.Item name="name" label="节点名称" rules={[{ required: true }]}>
             <Input placeholder="如: 销售经理审批" />
           </Form.Item>
           <Form.Item name="type" label="审批类型" rules={[{ required: true }]}>
-            <Select options={nodeTypes} />
+            <Select
+              options={nodeTypes}
+              onChange={(value) => {
+                setSelectedNodeType(value)
+                // 切换类型时清空 targetId 和 targetName
+                nodeForm.setFieldsValue({ targetId: undefined, targetName: '' })
+              }}
+            />
           </Form.Item>
-          <Form.Item name="targetId" label="审批人/角色ID" rules={[{ required: true }]}>
-            <Input placeholder="角色编码或用户ID" />
-          </Form.Item>
-          <Form.Item name="targetName" label="审批人/角色名称" rules={[{ required: true }]}>
-            <Input placeholder="显示名称" />
+
+          {/* 根据审批类型显示不同的选择器 */}
+          {selectedNodeType === 'role' && (
+            <>
+              <Form.Item name="targetId" label="选择角色" rules={[{ required: true }]}>
+                <Select
+                  placeholder="请选择角色"
+                  showSearch
+                  optionFilterProp="label"
+                  options={roles.map((role) => ({
+                    value: role.code,
+                    label: role.name,
+                  }))}
+                  onChange={(value, option) => {
+                    nodeForm.setFieldsValue({ targetName: option.label })
+                  }}
+                />
+              </Form.Item>
+            </>
+          )}
+
+          {selectedNodeType === 'user' && (
+            <>
+              <Form.Item name="targetId" label="选择用户" rules={[{ required: true }]}>
+                <Select
+                  placeholder="请选择用户"
+                  showSearch
+                  optionFilterProp="label"
+                  options={users.map((user) => ({
+                    value: user.id,
+                    label: `${user.name} (${user.phone || user.email || '无联系方式'})`,
+                  }))}
+                  onChange={(value, option) => {
+                    nodeForm.setFieldsValue({ targetName: option.label })
+                  }}
+                />
+              </Form.Item>
+            </>
+          )}
+
+          {selectedNodeType === 'department' && (
+            <>
+              <Form.Item name="targetId" label="选择部门" rules={[{ required: true }]}>
+                <Select
+                  placeholder="请选择部门"
+                  showSearch
+                  optionFilterProp="label"
+                  options={departments.map((dept) => ({
+                    value: dept.id,
+                    label: dept.name,
+                  }))}
+                  onChange={(value, option) => {
+                    nodeForm.setFieldsValue({ targetName: `${option.label}负责人` })
+                  }}
+                />
+              </Form.Item>
+            </>
+          )}
+
+          <Form.Item name="targetName" label="显示名称" rules={[{ required: true }]}>
+            <Input placeholder="自动填充，可修改" />
           </Form.Item>
         </Form>
       </Modal>
