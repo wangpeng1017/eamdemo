@@ -99,10 +99,10 @@ export default function ReportCategoriesPage() {
       render: (t: string) => dayjs(t).format('YYYY-MM-DD HH:mm:ss')
     },
     {
-      title: '操作', width: 150, fixed: 'right',
+      title: '操作', width: 100, fixed: 'right',
       render: (_, record) => (
         <Space size="small">
-          <Button size="small" icon={<EditOutlined />} onClick={() => handleEdit(record)}>编辑</Button>
+          <Button size="small" icon={<EditOutlined />} onClick={() => handleEdit(record)}/>
           <Button size="small" danger icon={<DeleteOutlined />} onClick={() => handleDelete(record.id)} />
         </Space>
       )
@@ -155,7 +155,7 @@ export default function ReportCategoriesPage() {
                         <Input placeholder="如：抗压强度" />
                       </Form.Item>
                       {fields.length > 1 && (
-                        <Button type="link" danger onClick={() => remove(field.name)}>删除</Button>
+                        <Button type="link" danger onClick={() => remove(field.name)}/>
                       )}
                     </Space>
                   ))}

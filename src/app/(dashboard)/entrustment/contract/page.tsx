@@ -500,11 +500,11 @@ export default function ContractPage() {
     },
     {
       title: '操作',
-      width: 180,
+      width: 100,
       fixed: 'right',
       render: (_, record) => (
         <Space size="small">
-          <Button size="small" icon={<EyeOutlined />} onClick={() => handleView(record)}>查看</Button>
+          <Button size="small" icon={<EyeOutlined />} onClick={() => handleView(record)}/>
           <Button size="small" icon={<EditOutlined />} onClick={() => handleEdit(record)} />
           <Popconfirm title="确认删除" onConfirm={() => handleDelete(record.id)}>
             <Button size="small" danger icon={<DeleteOutlined />} />

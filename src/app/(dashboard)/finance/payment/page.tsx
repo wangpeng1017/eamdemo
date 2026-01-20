@@ -159,7 +159,7 @@ export default function PaymentPage() {
     { title: '经手人', dataIndex: 'handlerName', width: 80 },
     { title: '交易流水号', dataIndex: 'transactionNo', width: 150, ellipsis: true },
     {
-      title: '操作', width: 120, fixed: 'right',
+      title: '操作', width: 80, fixed: 'right',
       render: (_, record) => (
         <Space>
           <Button size="small" icon={<EyeOutlined />} onClick={() => handleView(record)} />

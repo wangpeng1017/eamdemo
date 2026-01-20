@@ -114,7 +114,7 @@ export default function TestTaskPage() {
       render: (t: string) => t ? dayjs(t).format('YYYY-MM-DD HH:mm:ss') : '-'
     },
     {
-      title: '操作', width: 150,
+      title: '操作', width: 100,
       render: (_, record) => (
         <Space>
           <Button size="small" icon={<EditOutlined />} onClick={() => handleEdit(record)} />

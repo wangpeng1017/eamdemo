@@ -210,7 +210,7 @@ export default function DeviceRepairPage() {
       render: (s: string) => <Tag color={statusMap[s]?.color}>{statusMap[s]?.text}</Tag>,
     },
     {
-      title: '操作', width: 200, fixed: 'right',
+      title: '操作', width: 120, fixed: 'right',
       render: (_, record) => (
         <Space>
           <Button size="small" icon={<EyeOutlined />} onClick={() => handleView(record)} />

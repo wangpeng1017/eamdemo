@@ -800,7 +800,7 @@ export default function QuotationPage() {
     },
     {
       title: '操作',
-      width: 250,
+      width: 100,
       fixed: 'right',
       render: (_, record) => {
         const canAudit = (
@@ -811,33 +811,6 @@ export default function QuotationPage() {
 
         return (
           <Space size="small">
-            <Button
-              size="small"
-              icon={<EyeOutlined />}
-              onClick={() => handleView(record)}
-            >
-              查看
-            </Button>
-            <Button
-              size="small"
-              icon={<EditOutlined />}
-              onClick={() => handleEdit(record)}
-              disabled={record.status !== 'draft'}
-            >
-              编辑
-            </Button>
-            <Popconfirm
-              title="确认删除"
-              onConfirm={() => handleDelete(record.id)}
-              disabled={record.status !== 'draft'}
-            >
-              <Button
-                size="small"
-                danger
-                icon={<DeleteOutlined />}
-                disabled={record.status !== 'draft'}
-              />
-            </Popconfirm>
             {canAudit && (
               <Button
                 type="primary"
@@ -851,6 +824,29 @@ export default function QuotationPage() {
                 审核
               </Button>
             )}
+            <Button
+              size="small"
+              icon={<EyeOutlined />}
+              onClick={() => handleView(record)}
+            />
+            <Button
+              size="small"
+              icon={<EditOutlined />}
+              onClick={() => handleEdit(record)}
+              disabled={record.status !== 'draft'}
+            />
+            <Popconfirm
+              title="确认删除"
+              onConfirm={() => handleDelete(record.id)}
+              disabled={record.status !== 'draft'}
+            >
+              <Button
+                size="small"
+                danger
+                icon={<DeleteOutlined />}
+                disabled={record.status !== 'draft'}
+              />
+            </Popconfirm>
           </Space>
         )
       },

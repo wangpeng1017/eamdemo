@@ -259,7 +259,7 @@ export default function MaintenancePlanPage() {
     },
     {
       title: '操作',
-      width: 180,
+      width: 100,
       fixed: 'right',
       render: (_, record) => (
         <Space size="small">

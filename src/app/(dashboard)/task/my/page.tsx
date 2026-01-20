@@ -168,7 +168,7 @@ export default function MyTasksPage() {
     },
     {
       title: "操作",
-      width: 200,
+      width: 120,
       render: (_, record) => (
         <Space size="small">
           {/* 待开始状态：显示"开始"按钮 */}

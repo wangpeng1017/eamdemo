@@ -263,7 +263,7 @@ export default function EvaluationTemplatePage() {
     },
     {
       title: '操作',
-      width: 200,
+      width: 120,
       render: (_, record) => (
         <Space>
           <Button size="small" onClick={() => handleAddItem(record.id)}>添加评价项</Button>
@@ -289,7 +289,7 @@ export default function EvaluationTemplatePage() {
       { title: '说明', dataIndex: 'description', ellipsis: true },
       {
         title: '操作',
-        width: 120,
+        width: 80,
         render: (_, item) => (
           <Space>
             <Button size="small" icon={<EditOutlined />} onClick={() => handleEditItem(record.id, item)} />

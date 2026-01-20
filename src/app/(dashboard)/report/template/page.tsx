@@ -141,15 +141,11 @@ export default function ReportTemplatePage() {
     { title: '备注', dataIndex: 'remark', ellipsis: true },
     {
       title: '操作',
-      width: 150,
+      width: 100,
       render: (_, record) => (
         <Space size="small">
-          <Button size="small" type="link" icon={<EditOutlined />} onClick={() => handleEdit(record)}>
-            编辑
-          </Button>
-          <Button size="small" type="link" danger icon={<DeleteOutlined />} onClick={() => handleDelete(record.id)}>
-            删除
-          </Button>
+          <Button size="small" type="link" icon={<EditOutlined />} onClick={() => handleEdit(record)}/>
+          <Button size="small" type="link" danger icon={<DeleteOutlined />} onClick={() => handleDelete(record.id)}/>
         </Space>
       )
     }

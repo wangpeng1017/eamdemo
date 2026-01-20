@@ -277,7 +277,7 @@ export default function CalibrationPlanPage() {
     },
     {
       title: '操作',
-      width: 200,
+      width: 120,
       fixed: 'right',
       render: (_, record) => (
         <Space size="small">

@@ -107,7 +107,7 @@ export default function ReceivablePage() {
       render: (s: string) => <Tag color={statusMap[s]?.color}>{statusMap[s]?.text}</Tag>
     },
     {
-      title: '操作', width: 150,
+      title: '操作', width: 100,
       render: (_, record) => (
         <Space>
           <Button size="small" icon={<EditOutlined />} onClick={() => handleEdit(record)} />

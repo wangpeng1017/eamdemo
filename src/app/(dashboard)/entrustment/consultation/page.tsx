@@ -505,11 +505,11 @@ export default function ConsultationPage() {
     },
     {
       title: '操作',
-      width: 150,
+      width: 100,
       fixed: 'right',
       render: (_, record) => (
         <Space size="small">
-          <Button size="small" icon={<EyeOutlined />} onClick={() => handleView(record)}>查看</Button>
+          <Button size="small" icon={<EyeOutlined />} onClick={() => handleView(record)}/>
           <Button size="small" icon={<EditOutlined />} onClick={() => handleEdit(record)} />
           <Button size="small" danger icon={<DeleteOutlined />} onClick={() => handleDelete(record)} />
         </Space>
@@ -926,7 +926,7 @@ export default function ConsultationPage() {
                 <span>总价: ¥{((item.quantity || 0) * (item.unitPrice || 0)).toFixed(2)}</span>
               </Col>
               <Col span={1}>
-                <Button danger size="small" onClick={() => handleRemoveQuoteItem(index)}>删除</Button>
+                <Button danger size="small" onClick={() => handleRemoveQuoteItem(index)}/>
               </Col>
             </Row>
           ))}

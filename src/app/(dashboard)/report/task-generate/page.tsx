@@ -139,7 +139,7 @@ export default function TestReportPage() {
     },
     {
       title: '操作',
-      width: 120,
+      width: 80,
       render: (_, record) => (
         <Space>
           <Button
@@ -147,9 +147,7 @@ export default function TestReportPage() {
             type="link"
             icon={<EyeOutlined />}
             onClick={() => handleView(record.id)}
-          >
-            查看
-          </Button>
+          />
         </Space>
       )
     }

@@ -255,7 +255,7 @@ export default function UserPage() {
       render: (s: number) => <Tag color={s === 1 ? 'success' : 'error'}>{s === 1 ? '启用' : '禁用'}</Tag>
     },
     {
-      title: '操作', width: 200,
+      title: '操作', width: 120,
       render: (_, record) => (
         <Space>
           <Button size="small" icon={<EditOutlined />} onClick={() => handleEditUser(record)} />

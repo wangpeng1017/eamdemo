@@ -206,7 +206,7 @@ export default function ClientPage() {
       render: (t: string) => dayjs(t).format('YYYY-MM-DD HH:mm:ss')
     },
     {
-      title: '操作', width: 120, fixed: 'right',
+      title: '操作', width: 80, fixed: 'right',
       render: (_, record) => (
         <Space>
           <Button size="small" icon={<EditOutlined />} onClick={() => handleEdit(record)} />

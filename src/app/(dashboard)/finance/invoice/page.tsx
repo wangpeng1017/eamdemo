@@ -109,7 +109,7 @@ export default function InvoicePage() {
       render: (t: string) => dayjs(t).format('YYYY-MM-DD HH:mm')
     },
     {
-      title: '操作', width: 150,
+      title: '操作', width: 100,
       render: (_, record) => (
         <Space>
           <Button size="small" icon={<EditOutlined />} onClick={() => handleEdit(record)} />

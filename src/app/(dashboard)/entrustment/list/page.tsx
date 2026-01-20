@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { Table, Button, Space, Modal, Form, Input, InputNumber, DatePicker, Select, message, Row, Col, Divider, Popconfirm, Tag, Radio } from 'antd'
-import { PlusOutlined, EditOutlined, DeleteOutlined, MinusCircleOutlined, TeamOutlined, ShareAltOutlined } from '@ant-design/icons'
+import { PlusOutlined, EditOutlined, DeleteOutlined, MinusCircleOutlined, TeamOutlined, ShareAltOutlined, EyeOutlined } from '@ant-design/icons'
 import { StatusTag } from '@/components/StatusTag'
 import type { ColumnsType } from 'antd/es/table'
 import dayjs from 'dayjs'
@@ -637,7 +637,7 @@ export default function EntrustmentListPage() {
     },
     {
       title: '操作',
-      width: 150,
+      width: 100,
       render: (_, record) => {
         // 从父级获取 entrustmentId
         const entrustment = data.find(d => d.projects?.some(p => p.id === record.id))
@@ -750,13 +750,13 @@ export default function EntrustmentListPage() {
     },
     {
       title: '操作',
-      width: 120,
+      width: 80,
       fixed: 'right',
       render: (_: any, record: Entrustment) => (
         <Space size="small">
-          <Button size="small" type="link" onClick={() => handleEdit(record)}>编辑</Button>
+          <Button size="small" icon={<EditOutlined />} onClick={() => handleEdit(record)} />
           <Popconfirm title="确认删除？" onConfirm={() => handleDelete(record.id)}>
-            <Button size="small" type="link" danger>删除</Button>
+            <Button size="small" danger icon={<DeleteOutlined />} />
           </Popconfirm>
         </Space>
       )

@@ -202,7 +202,7 @@ export default function ReportGeneratePage() {
     },
     {
       title: '操作',
-      width: 200,
+      width: 120,
       render: (_, record) => (
         <Space size="small">
           <Button

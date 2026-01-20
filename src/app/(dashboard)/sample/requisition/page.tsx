@@ -168,7 +168,7 @@ export default function SampleRequisitionPage() {
     },
     {
       title: "操作",
-      width: 120,
+      width: 80,
       fixed: "right" as const,
       render: (_, record) => (
         record.status === "requisitioned" || record.status === "overdue" ? (

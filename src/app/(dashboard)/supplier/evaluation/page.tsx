@@ -224,7 +224,7 @@ export default function SupplierEvaluationPage() {
     },
     {
       title: '操作',
-      width: 100,
+      width: 80,
       render: (_, record) => (
         <Button size="small" icon={<EyeOutlined />} onClick={() => handleView(record)}>
           详情

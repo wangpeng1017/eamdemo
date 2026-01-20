@@ -192,16 +192,14 @@ export default function ClientReportGeneratePage() {
         },
         {
             title: '操作',
-            width: 100,
+            width: 80,
             render: (_, record) => (
                 <Button
                     size="small"
                     type="link"
                     icon={<EyeOutlined />}
                     onClick={() => handleView(record.id)}
-                >
-                    查看
-                </Button>
+                />
             )
         }
     ]

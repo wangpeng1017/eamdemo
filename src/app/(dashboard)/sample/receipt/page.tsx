@@ -177,7 +177,7 @@ export default function SampleReceiptPage() {
     },
     {
       title: "操作",
-      width: 100,
+      width: 80,
       render: (_, record) => (
         <Button
           type="link"

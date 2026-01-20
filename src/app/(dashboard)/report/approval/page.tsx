@@ -205,12 +205,10 @@ export default function ReportApprovalPage() {
       render: (t: string) => dayjs(t).format('YYYY-MM-DD HH:mm:ss'),
     },
     {
-      title: '操作', width: 200, fixed: 'right',
+      title: '操作', width: 120, fixed: 'right',
       render: (_, record) => (
         <Space>
-          <Button size="small" icon={<EyeOutlined />} onClick={() => handleView(record.id, 'client')}>
-            查看
-          </Button>
+          <Button size="small" icon={<EyeOutlined />} onClick={() => handleView(record.id, 'client')}/>
           <Button
             size="small"
             type="primary"
@@ -247,7 +245,7 @@ export default function ReportApprovalPage() {
       render: (t: string) => dayjs(t).format('YYYY-MM-DD HH:mm:ss'),
     },
     {
-      title: '操作', width: 200, fixed: 'right',
+      title: '操作', width: 120, fixed: 'right',
       render: (_, record) => (
         <Space>
           <Button

@@ -221,7 +221,7 @@ export default function MySamplesPage() {
     },
     {
       title: "操作",
-      width: 100,
+      width: 80,
       render: (_, record) => (
         record.status === "requisitioned" || record.status === "overdue" ? (
           <Button

@@ -182,7 +182,7 @@ export default function SupplierCategoryPage() {
     },
     {
       title: '操作',
-      width: 180,
+      width: 100,
       render: (_, record) => (
         <Space>
           <Button size="small" onClick={() => handleAdd(record.id)}>添加子分类</Button>
