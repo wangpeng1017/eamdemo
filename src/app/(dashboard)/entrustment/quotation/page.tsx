@@ -885,7 +885,7 @@ export default function QuotationPage() {
     },
     {
       title: '操作',
-      width: 380,
+      key: 'action',
       fixed: 'right',
       render: (_, record) => {
         const canAudit = (
@@ -895,7 +895,7 @@ export default function QuotationPage() {
         )
 
         return (
-          <Space size="small">
+          <Space size="small" style={{ whiteSpace: 'nowrap' }}>
             {/* 业务按钮（带文字） */}
             {record.status === 'draft' && (
               <Button size="small" icon={<SendOutlined />} onClick={() => handleSubmitApprovalForRecord(record)}>提交审批</Button>

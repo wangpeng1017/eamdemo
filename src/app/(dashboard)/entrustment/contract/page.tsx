@@ -500,10 +500,10 @@ export default function ContractPage() {
     },
     {
       title: '操作',
-      width: 280,
+      key: 'action',
       fixed: 'right',
       render: (_, record) => (
-        <Space size="small">
+        <Space size="small" style={{ whiteSpace: 'nowrap' }}>
           {/* 业务按钮（带文字） */}
           <Button size="small" icon={<FilePdfOutlined />} onClick={() => {
             window.open(`/api/contract/${record.id}/pdf`, '_blank')

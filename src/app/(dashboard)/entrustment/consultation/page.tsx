@@ -552,10 +552,10 @@ export default function ConsultationPage() {
     },
     {
       title: '操作',
-      width: 220,
+      key: 'action',
       fixed: 'right',
       render: (_, record) => (
-        <Space size="small">
+        <Space size="small" style={{ whiteSpace: 'nowrap' }}>
           {/* 业务按钮（带文字） */}
           <Button size="small" icon={<FileTextOutlined />} onClick={() => handleOpenGenerateQuoteForRecord(record)}>生成报价单</Button>
           {/* 通用按钮（仅图标） */}

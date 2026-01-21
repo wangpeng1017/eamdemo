@@ -750,10 +750,10 @@ export default function EntrustmentListPage() {
     },
     {
       title: '操作',
-      width: 220,
+      key: 'action',
       fixed: 'right',
       render: (_: any, record: Entrustment) => (
-        <Space size="small">
+        <Space size="small" style={{ whiteSpace: 'nowrap' }}>
           {/* 业务按钮（带文字） */}
           {record.status === 'pending' && (
             <Button size="small" icon={<ShareAltOutlined />} onClick={() => handleGenerateExternalLink(record)}>生成外部链接</Button>
