@@ -1,3 +1,9 @@
+// @file: 报价单管理页面
+// @input: /api/quotation, /api/consultation, /api/client
+// @output: 报价CRUD、提交审批、生成PDF、生成合同
+// @pos: 委托流程核心页 - 咨询后生成报价
+// ⚠️ 更新我时，请同步更新本注释及 entrustment/_INDEX.md
+
 'use client'
 
 import { useState, useEffect } from 'react'

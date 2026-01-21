@@ -1,3 +1,9 @@
+// @file: 委托合同管理页面
+// @input: /api/contract, /api/client, /api/user
+// @output: 合同CRUD、生成PDF、生成委托单
+// @pos: 委托流程核心页 - 报价后签合同
+// ⚠️ 更新我时，请同步更新本注释及 entrustment/_INDEX.md
+
 'use client'
 
 import { useState, useEffect } from 'react'

@@ -1,3 +1,9 @@
+// @file: 委托咨询登记页面
+// @input: /api/consultation, /api/client
+// @output: 咨询CRUD、生成报价
+// @pos: 委托流程入口页 - 客户首次咨询
+// ⚠️ 更新我时，请同步更新本注释及 entrustment/_INDEX.md
+
 'use client'
 
 import { useState, useEffect } from 'react'

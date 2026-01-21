@@ -1432,6 +1432,24 @@ client/src/
 
 ## 七、变更历史
 
+### v2.4 - 2026-01-21
+
+**委托管理操作列优化**：
+- ✅ **操作列按钮布局统一**：
+  - 业务按钮（生成PDF、生成委托单等）：带文字+图标，左侧显示
+  - 通用按钮（查看/编辑/删除）：仅图标，右侧显示
+- ✅ **操作列宽度自适应**：
+  - 移除固定 `width` 属性
+  - 添加 `whiteSpace: 'nowrap'` 防止换行
+  - 解决按钮溢出"操作"标题的问题
+- 修改文件：
+  - `entrustment/contract/page.tsx`
+  - `entrustment/quotation/page.tsx`
+  - `entrustment/consultation/page.tsx`
+  - `entrustment/list/page.tsx`
+
+---
+
 ### v2.3 - 2026-01-15
 
 **菜单优化**：

@@ -1,3 +1,9 @@
+// @file: 委托单管理页面
+// @input: /api/entrustment, /api/contract, /api/user, /api/device
+// @output: 委托单CRUD、分配任务、分包、生成外部链接
+// @pos: 委托流程末端页 - 合同签订后创建委托单
+// ⚠️ 更新我时，请同步更新本注释及 entrustment/_INDEX.md
+
 'use client'
 
 import { useState, useEffect } from 'react'
