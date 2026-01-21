@@ -448,6 +448,53 @@ export default function ConsultationPage() {
   const taxAmount = totalAmount * 0.06
   const totalWithTax = totalAmount + taxAmount
 
+  // 针对单条记录生成报价单
+  const handleOpenGenerateQuoteForRecord = (consultation: Consultation) => {
+    // 初始化样品数据
+    let initSamples: any[] = []
+    if (consultation.consultationSamples && consultation.consultationSamples.length > 0) {
+      initSamples = consultation.consultationSamples.map(s => ({
+        name: s.name,
+        model: s.model,
+        material: s.material,
+        quantity: s.quantity,
+        remark: s.remark
+      }))
+    } else if (consultation.sampleName) {
+      initSamples = [{
+        name: consultation.sampleName,
+        model: consultation.sampleModel,
+        material: consultation.sampleMaterial,
+        quantity: parseInt(consultation.estimatedQuantity || '1') || 1
+      }]
+    }
+    setQuoteSamples(initSamples)
+
+    const items = (consultation.testItems || []).map(item => {
+      const template = testTemplates.find(t => t.name === item)
+      return {
+        name: item,
+        standard: template?.method || '',
+        quantity: 1,
+        unitPrice: 0
+      }
+    })
+    setQuoteItems(items)
+    generateQuoteForm.resetFields()
+    generateQuoteForm.setFieldsValue({
+      consultationId: consultation.id,
+      consultationNo: consultation.consultationNo,
+      clientId: consultation.clientId,
+      clientName: consultation.client?.name,
+      clientContact: consultation.clientContactPerson,
+      clientPhone: consultation.client?.phone,
+      validDays: 30,
+      taxRate: 6,
+      discountAmount: 0,
+    })
+    setGenerateQuoteModalOpen(true)
+  }
+
   const columns: ColumnsType<Consultation> = [
     { title: '咨询单号', dataIndex: 'consultationNo', width: 140 },
     {
@@ -505,11 +552,14 @@ export default function ConsultationPage() {
     },
     {
       title: '操作',
-      width: 100,
+      width: 220,
       fixed: 'right',
       render: (_, record) => (
         <Space size="small">
-          <Button size="small" icon={<EyeOutlined />} onClick={() => handleView(record)}/>
+          {/* 业务按钮（带文字） */}
+          <Button size="small" icon={<FileTextOutlined />} onClick={() => handleOpenGenerateQuoteForRecord(record)}>生成报价单</Button>
+          {/* 通用按钮（仅图标） */}
+          <Button size="small" icon={<EyeOutlined />} onClick={() => handleView(record)} />
           <Button size="small" icon={<EditOutlined />} onClick={() => handleEdit(record)} />
           <Button size="small" danger icon={<DeleteOutlined />} onClick={() => handleDelete(record)} />
         </Space>
@@ -614,20 +664,6 @@ export default function ConsultationPage() {
       <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'space-between' }}>
         <h2 style={{ margin: 0 }}>委托咨询</h2>
         <Space>
-          <Button
-            icon={<FileTextOutlined />}
-            onClick={handleOpenGenerateQuote}
-            disabled={selectedRowKeys.length !== 1}
-          >
-            生成报价单
-          </Button>
-          <Button
-            icon={<CloseCircleOutlined />}
-            onClick={handleOpenCloseConsult}
-            disabled={selectedRowKeys.length === 0}
-          >
-            关闭咨询
-          </Button>
           <Button type="primary" icon={<PlusOutlined />} onClick={handleAdd}>新增咨询</Button>
         </Space>
       </div>

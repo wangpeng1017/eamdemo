@@ -500,11 +500,37 @@ export default function ContractPage() {
     },
     {
       title: '操作',
-      width: 100,
+      width: 280,
       fixed: 'right',
       render: (_, record) => (
         <Space size="small">
-          <Button size="small" icon={<EyeOutlined />} onClick={() => handleView(record)}/>
+          {/* 业务按钮（带文字） */}
+          <Button size="small" icon={<FilePdfOutlined />} onClick={() => {
+            window.open(`/api/contract/${record.id}/pdf`, '_blank')
+          }}>生成PDF</Button>
+          <Button size="small" icon={<FileAddOutlined />} onClick={() => {
+            // 生成委托单逻辑
+            const params = new URLSearchParams({
+              contractNo: record.contractNo,
+              clientName: record.clientName || '',
+              contactPerson: record.clientContact || '',
+              contactPhone: record.clientPhone || '',
+              clientAddress: record.clientAddress || '',
+            })
+            if (record.contractSamples && record.contractSamples.length > 0) {
+              params.set('samples', JSON.stringify(record.contractSamples))
+            } else if (record.sampleName) {
+              params.set('samples', JSON.stringify([{
+                name: record.sampleName,
+                model: record.sampleModel,
+                material: record.sampleMaterial,
+                quantity: record.sampleQuantity || 1
+              }]))
+            }
+            router.push(`/entrustment/list?${params.toString()}`)
+          }}>生成委托单</Button>
+          {/* 通用按钮（仅图标） */}
+          <Button size="small" icon={<EyeOutlined />} onClick={() => handleView(record)} />
           <Button size="small" icon={<EditOutlined />} onClick={() => handleEdit(record)} />
           <Popconfirm title="确认删除" onConfirm={() => handleDelete(record.id)}>
             <Button size="small" danger icon={<DeleteOutlined />} />
@@ -519,12 +545,6 @@ export default function ContractPage() {
       <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'space-between' }}>
         <h2 style={{ margin: 0 }}>合同管理</h2>
         <Space>
-          <Button icon={<FilePdfOutlined />} disabled={selectedRowKeys.length !== 1} onClick={handleGeneratePDF}>
-            生成PDF
-          </Button>
-          <Button icon={<FileAddOutlined />} disabled={selectedRowKeys.length !== 1} onClick={handleGenerateEntrustment}>
-            生成委托单
-          </Button>
           <Button type="primary" icon={<PlusOutlined />} onClick={handleAdd}>新增合同</Button>
         </Space>
       </div>
@@ -889,8 +909,8 @@ export default function ContractPage() {
                         : currentContract.sampleName
                           ? [{
                             name: currentContract.sampleName,
-                            model: currentContract.sampleModel,
-                            material: currentContract.sampleMaterial,
+                            model: currentContract.sampleModel || undefined,
+                            material: currentContract.sampleMaterial || undefined,
                             quantity: currentContract.sampleQuantity || 1
                           }]
                           : []

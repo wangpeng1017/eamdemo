@@ -743,6 +743,91 @@ export default function QuotationPage() {
   const discountAmount = Number(form.getFieldValue('discountAmount')) || 0
   const finalAmount = totalWithTax - discountAmount
 
+  // 针对单条记录的处理函数
+  const handleSubmitApprovalForRecord = async (record: Quotation) => {
+    if (!session?.user?.id) {
+      message.error('无法获取用户信息，请刷新页面或重新登录')
+      return
+    }
+    if (record.status !== 'draft') {
+      message.warning('只有草稿状态可以提交审批')
+      return
+    }
+    const res = await fetch(`/api/quotation/${record.id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        action: 'submit',
+        approver: session.user.id,
+        submitterName: session.user.name || session.user.email || '未知用户',
+        comment: ''
+      }),
+    })
+    if (res.ok) {
+      message.success('已提交审批')
+      fetchData()
+    } else {
+      const error = await res.json()
+      message.error(error.message || '提交失败')
+    }
+  }
+
+  const handleGeneratePDFForRecord = (record: Quotation) => {
+    window.open(`/api/quotation/${record.id}/pdf`, '_blank')
+  }
+
+  const handleOpenContractForRecord = (record: Quotation) => {
+    if (record.status !== 'approved') {
+      message.warning('只有已批准的报价单可以生成合同')
+      return
+    }
+    contractForm.resetFields()
+    contractForm.setFieldsValue({
+      quotationId: record.id,
+      quotationNo: record.quotationNo,
+      clientName: record.client?.name,
+      clientContact: record.clientContactPerson,
+      clientPhone: record.client?.phone,
+      clientAddress: record.client?.address,
+      sampleName: record.sampleName,
+      amount: record.finalAmount,
+      contractName: `${record.sampleName || '检测'}委托合同`,
+      signDate: dayjs(),
+      startDate: dayjs(),
+      endDate: dayjs().add(1, 'year'),
+      prepaymentRatio: 30,
+      prepaymentAmount: record.finalAmount ? (record.finalAmount * 30 / 100) : 0,
+    })
+    // 设置合同明细
+    const cItems = (record.items || []).map(item => ({
+      serviceItem: item.serviceItem,
+      methodStandard: item.methodStandard,
+      quantity: item.quantity,
+      unitPrice: item.unitPrice,
+      totalPrice: item.totalPrice,
+    }))
+    setContractItems(cItems)
+    // 设置样品
+    let samples: any[] = []
+    if (record.quotationSamples && record.quotationSamples.length > 0) {
+      samples = record.quotationSamples.map(s => ({
+        name: s.name,
+        model: s.model,
+        material: s.material,
+        quantity: s.quantity,
+      }))
+    } else if (record.sampleName) {
+      samples = [{
+        name: record.sampleName,
+        model: record.sampleModel,
+        material: record.sampleMaterial,
+        quantity: record.sampleQuantity || 1,
+      }]
+    }
+    setContractSamples(samples)
+    setContractModalOpen(true)
+  }
+
   const columns: ColumnsType<Quotation> = [
     { title: '报价单号', dataIndex: 'quotationNo', width: 150 },
     {
@@ -800,7 +885,7 @@ export default function QuotationPage() {
     },
     {
       title: '操作',
-      width: 100,
+      width: 380,
       fixed: 'right',
       render: (_, record) => {
         const canAudit = (
@@ -811,41 +896,26 @@ export default function QuotationPage() {
 
         return (
           <Space size="small">
-            {canAudit && (
-              <Button
-                type="primary"
-                size="small"
-                onClick={() => {
-                  setCurrentQuotation(record)
-                  approvalForm.resetFields()
-                  setApprovalModalOpen(true)
-                }}
-              >
-                审核
-              </Button>
+            {/* 业务按钮（带文字） */}
+            {record.status === 'draft' && (
+              <Button size="small" icon={<SendOutlined />} onClick={() => handleSubmitApprovalForRecord(record)}>提交审批</Button>
             )}
-            <Button
-              size="small"
-              icon={<EyeOutlined />}
-              onClick={() => handleView(record)}
-            />
-            <Button
-              size="small"
-              icon={<EditOutlined />}
-              onClick={() => handleEdit(record)}
-              disabled={record.status !== 'draft'}
-            />
-            <Popconfirm
-              title="确认删除"
-              onConfirm={() => handleDelete(record.id)}
-              disabled={record.status !== 'draft'}
-            >
-              <Button
-                size="small"
-                danger
-                icon={<DeleteOutlined />}
-                disabled={record.status !== 'draft'}
-              />
+            {canAudit && (
+              <Button type="primary" size="small" onClick={() => {
+                setCurrentQuotation(record)
+                approvalForm.resetFields()
+                setApprovalModalOpen(true)
+              }}>审核</Button>
+            )}
+            <Button size="small" icon={<FilePdfOutlined />} onClick={() => handleGeneratePDFForRecord(record)}>生成PDF</Button>
+            {record.status === 'approved' && (
+              <Button size="small" icon={<FileAddOutlined />} onClick={() => handleOpenContractForRecord(record)}>生成合同</Button>
+            )}
+            {/* 通用按钮（仅图标） */}
+            <Button size="small" icon={<EyeOutlined />} onClick={() => handleView(record)} />
+            <Button size="small" icon={<EditOutlined />} onClick={() => handleEdit(record)} disabled={record.status !== 'draft'} />
+            <Popconfirm title="确认删除" onConfirm={() => handleDelete(record.id)} disabled={record.status !== 'draft'}>
+              <Button size="small" danger icon={<DeleteOutlined />} disabled={record.status !== 'draft'} />
             </Popconfirm>
           </Space>
         )
@@ -858,41 +928,6 @@ export default function QuotationPage() {
       <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <h2 style={{ margin: 0 }}>报价管理</h2>
         <Space>
-          <Button
-            icon={<SendOutlined />}
-            onClick={handleSubmitApproval}
-            disabled={selectedRowKeys.length !== 1 || selectedRows[0]?.status !== 'draft'}
-          >
-            提交审批
-          </Button>
-          <Button
-            icon={<FilePdfOutlined />}
-            onClick={handleGeneratePDF}
-            disabled={selectedRowKeys.length !== 1}
-          >
-            生成PDF
-          </Button>
-          <Button
-            icon={<FolderOutlined />}
-            onClick={handleArchive}
-            disabled={selectedRowKeys.length === 0}
-          >
-            归档
-          </Button>
-          <Button
-            icon={<FileAddOutlined />}
-            onClick={handleOpenContract}
-            disabled={selectedRowKeys.length !== 1 || selectedRows[0]?.status !== 'approved'}
-          >
-            生成合同
-          </Button>
-          <Button
-            icon={<MessageOutlined />}
-            onClick={handleOpenFeedback}
-            disabled={selectedRowKeys.length !== 1}
-          >
-            客户反馈
-          </Button>
           <Button type="primary" icon={<PlusOutlined />} onClick={handleAdd}>新增报价</Button>
         </Space>
       </div>

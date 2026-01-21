@@ -750,10 +750,16 @@ export default function EntrustmentListPage() {
     },
     {
       title: '操作',
-      width: 80,
+      width: 220,
       fixed: 'right',
       render: (_: any, record: Entrustment) => (
         <Space size="small">
+          {/* 业务按钮（带文字） */}
+          {record.status === 'pending' && (
+            <Button size="small" icon={<ShareAltOutlined />} onClick={() => handleGenerateExternalLink(record)}>生成外部链接</Button>
+          )}
+          {/* 通用按钮（仅图标） */}
+          <Button size="small" icon={<EyeOutlined />} onClick={() => handleEdit(record)} />
           <Button size="small" icon={<EditOutlined />} onClick={() => handleEdit(record)} />
           <Popconfirm title="确认删除？" onConfirm={() => handleDelete(record.id)}>
             <Button size="small" danger icon={<DeleteOutlined />} />
@@ -768,21 +774,6 @@ export default function EntrustmentListPage() {
       <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <h2 style={{ margin: 0 }}>委托单管理</h2>
         <Space>
-          {/* 外部链接按钮 - 始终显示，仅对待受理状态可点击 */}
-          <Button
-            icon={<ShareAltOutlined />}
-            disabled={selectedRowKeys.length !== 1 || selectedRows[0]?.status !== 'pending'}
-            onClick={() => {
-              console.log('[ExternalLink Button] Clicked, selectedRows:', selectedRows)
-              console.log('[ExternalLink Button] selectedRows[0]?.status:', selectedRows[0]?.status)
-              if (selectedRows[0]) {
-                handleGenerateExternalLink(selectedRows[0])
-              }
-            }}
-            title={selectedRowKeys.length !== 1 ? '请选择一个委托单' : selectedRows[0]?.status !== 'pending' ? `仅待受理状态可生成外部链接(当前:${selectedRows[0]?.status})` : ''}
-          >
-            生成外部链接
-          </Button>
           <Button type="primary" icon={<PlusOutlined />} onClick={handleAdd}>新建委托</Button>
         </Space>
       </div>
