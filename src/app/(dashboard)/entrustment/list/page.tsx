@@ -697,17 +697,7 @@ export default function EntrustmentListPage() {
       width: 150,
       render: (no: string) => <a style={{ color: '#1890ff' }}>{no}</a>
     },
-    { title: '委托单位', dataIndex: 'clientName', ellipsis: true },
-    {
-      title: '联系人/电话',
-      width: 140,
-      render: (_, record) => (
-        <div>
-          <div>{record.contactPerson || '-'}</div>
-          <div style={{ fontSize: 12, color: '#999' }}>{record.client?.phone || '-'}</div>
-        </div>
-      )
-    },
+    { title: '委托单位', dataIndex: 'clientName', width: 150, ellipsis: true },
     { title: '样品名称', dataIndex: 'sampleName', ellipsis: true },
     {
       title: '创建时间',
@@ -753,6 +743,16 @@ export default function EntrustmentListPage() {
           {no}
         </a>
       ) : '-'
+    },
+    {
+      title: '联系人/电话',
+      width: 140,
+      render: (_, record) => (
+        <div>
+          <div>{record.contactPerson || '-'}</div>
+          <div style={{ fontSize: 12, color: '#999' }}>{record.client?.phone || '-'}</div>
+        </div>
+      )
     },
     {
       title: '操作',

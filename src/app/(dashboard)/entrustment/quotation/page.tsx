@@ -856,16 +856,6 @@ export default function QuotationPage() {
       render: (client: Client) => client?.name || '-'
     },
     {
-      title: '联系人/电话',
-      width: 130,
-      render: (_, record) => (
-        <div>
-          <div>{record.clientContactPerson || '-'}</div>
-          <div style={{ fontSize: 12, color: '#999' }}>{record.client?.phone || '-'}</div>
-        </div>
-      )
-    },
-    {
       title: '报价金额',
       dataIndex: 'finalAmount',
       width: 120,
@@ -888,6 +878,16 @@ export default function QuotationPage() {
       dataIndex: 'createdAt',
       width: 160,
       render: (t: string) => dayjs(t).format('YYYY-MM-DD HH:mm:ss'),
+    },
+    {
+      title: '联系人/电话',
+      width: 130,
+      render: (_, record) => (
+        <div>
+          <div>{record.clientContactPerson || '-'}</div>
+          <div style={{ fontSize: 12, color: '#999' }}>{record.client?.phone || '-'}</div>
+        </div>
+      )
     },
     {
       title: '操作',

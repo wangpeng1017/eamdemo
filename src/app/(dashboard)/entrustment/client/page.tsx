@@ -182,8 +182,6 @@ export default function ClientPage() {
 
   const columns: ColumnsType<Client> = [
     { title: '单位名称', dataIndex: 'name', width: 200 },
-    { title: '联系人', dataIndex: 'contact', width: 100 },
-    { title: '联系方式', dataIndex: 'phone', width: 130 },
     { title: '地址', dataIndex: 'address', width: 150, ellipsis: true },
     {
       title: '开票信息',
@@ -205,6 +203,8 @@ export default function ClientPage() {
       title: '创建时间', dataIndex: 'createdAt', width: 160,
       render: (t: string) => dayjs(t).format('YYYY-MM-DD HH:mm:ss')
     },
+    { title: '联系人', dataIndex: 'contact', width: 100 },
+    { title: '联系方式', dataIndex: 'phone', width: 130 },
     {
       title: '操作', width: 80, fixed: 'right',
       render: (_, record) => (

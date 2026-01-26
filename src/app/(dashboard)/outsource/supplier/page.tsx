@@ -87,8 +87,6 @@ export default function SupplierPage() {
   const columns: ColumnsType<Supplier> = [
     { title: '供应商名称', dataIndex: 'name' },
     { title: '类型', dataIndex: 'type', width: 100 },
-    { title: '联系人', dataIndex: 'contact', width: 100 },
-    { title: '电话', dataIndex: 'phone', width: 130 },
     { title: '邮箱', dataIndex: 'email' },
     { title: '地址', dataIndex: 'address', ellipsis: true },
     {
@@ -99,6 +97,8 @@ export default function SupplierPage() {
       title: '创建时间', dataIndex: 'createdAt', width: 170,
       render: (t: string) => t ? dayjs(t).format('YYYY-MM-DD HH:mm:ss') : '-'
     },
+    { title: '联系人', dataIndex: 'contact', width: 100 },
+    { title: '电话', dataIndex: 'phone', width: 130 },
     {
       title: '操作', width: 100,
       render: (_, record) => (

@@ -510,16 +510,6 @@ export default function ConsultationPage() {
       render: (_, record) => record.client?.name || '-'
     },
     {
-      title: '联系人/电话',
-      width: 130,
-      render: (_, record) => (
-        <div>
-          <div>{record.clientContactPerson || '-'}</div>
-          <div style={{ fontSize: 12, color: '#999' }}>{record.client?.phone || '-'}</div>
-        </div>
-      )
-    },
-    {
       title: '样品名称',
       dataIndex: 'sampleName',
       width: 120,
@@ -555,6 +545,16 @@ export default function ConsultationPage() {
       dataIndex: 'createdAt',
       width: 160,
       render: (t: string) => dayjs(t).format('YYYY-MM-DD HH:mm:ss')
+    },
+    {
+      title: '联系人/电话',
+      width: 130,
+      render: (_, record) => (
+        <div>
+          <div>{record.clientContactPerson || '-'}</div>
+          <div style={{ fontSize: 12, color: '#999' }}>{record.client?.phone || '-'}</div>
+        </div>
+      )
     },
     {
       title: '操作',

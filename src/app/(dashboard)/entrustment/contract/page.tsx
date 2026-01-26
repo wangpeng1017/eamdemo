@@ -459,17 +459,7 @@ export default function ContractPage() {
         <a style={{ color: '#1890ff' }}>{no}</a>
       ) : '-'
     },
-    { title: '客户名称', dataIndex: 'clientName', ellipsis: true },
-    {
-      title: '联系人/电话',
-      width: 140,
-      render: (_, record) => (
-        <div>
-          <div>{record.clientContact || '-'}</div>
-          <div style={{ fontSize: 12, color: '#999' }}>{record.clientPhone || '-'}</div>
-        </div>
-      )
-    },
+    { title: '客户名称', dataIndex: 'clientName', width: 150, ellipsis: true },
     {
       title: '合同金额',
       dataIndex: 'amount',
@@ -503,6 +493,16 @@ export default function ContractPage() {
       dataIndex: 'status',
       width: 100,
       render: (s: string) => <StatusTag type="contract" status={s} />,
+    },
+    {
+      title: '联系人/电话',
+      width: 140,
+      render: (_, record) => (
+        <div>
+          <div>{record.clientContact || '-'}</div>
+          <div style={{ fontSize: 12, color: '#999' }}>{record.clientPhone || '-'}</div>
+        </div>
+      )
     },
     {
       title: '操作',
