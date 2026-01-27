@@ -3,6 +3,8 @@
 import { useState, useEffect, useRef } from "react"
 import { Table, Button, Space, Tag, Modal, Form, Input, Select, DatePicker, message, Card, Row, Col, Descriptions } from "antd"
 import { PlusOutlined, BarcodeOutlined, DownloadOutlined, SearchOutlined } from "@ant-design/icons"
+import { StatusTag } from '@/components/StatusTag'
+import SampleTestItemTable, { SampleTestItemData } from '@/components/SampleTestItemTable'
 import type { ColumnsType } from "antd/es/table"
 import dayjs from "dayjs"
 import Barcode from 'react-barcode'
@@ -54,6 +56,9 @@ export default function SampleReceiptPage() {
   const [entrustments, setEntrustments] = useState<Entrustment[]>([])
   const [selectedEntrustment, setSelectedEntrustment] = useState<Entrustment | null>(null)
 
+  // 样品检测项（新）
+  const [sampleTestItems, setSampleTestItems] = useState<SampleTestItemData[]>([])
+
   // Label Modal
   const [labelModalOpen, setLabelModalOpen] = useState(false)
   const [labelSample, setLabelSample] = useState<Sample | null>(null)
@@ -99,6 +104,7 @@ export default function SampleReceiptPage() {
     form.resetFields()
     form.setFieldValue("receiptDate", dayjs())
     setSelectedEntrustment(null)
+    setSampleTestItems([]) // 清空样品检测项
     setModalOpen(true)
   }
 
@@ -121,11 +127,37 @@ export default function SampleReceiptPage() {
       entrustmentId: selectedEntrustment?.id || null,
       receiptDate: values.receiptDate?.toISOString(),
     }
-    await fetch("/api/sample", {
+    const res = await fetch("/api/sample", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(data)
     })
+    const json = await res.json()
+    const sampleId = json.id
+
+    // 保存样品检测项数据
+    if (sampleId) {
+      try {
+        const res = await fetch('/api/sample-test-item', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            bizType: 'sample_receipt',
+            bizId: sampleId,
+            items: sampleTestItems,
+          })
+        })
+        if (!res.ok) {
+          const json = await res.json()
+          message.error(`保存样品检测项失败: ${json.error?.message || '未知错误'}`)
+          return // 不关闭弹窗
+        }
+      } catch (error) {
+        message.error('保存样品检测项失败，请重试')
+        return // 不关闭弹窗
+      }
+    }
+
     message.success("收样登记成功")
     setModalOpen(false)
     fetchData()
@@ -287,6 +319,15 @@ export default function SampleReceiptPage() {
           <Form.Item label="存放位置" name="storageLocation">
             <Input placeholder="如：A区-1-02" />
           </Form.Item>
+
+          {/* 样品检测项表格 */}
+          <div style={{ marginTop: 16 }}>
+            <SampleTestItemTable
+              bizType="sample_receipt"
+              value={sampleTestItems}
+              onChange={setSampleTestItems}
+            />
+          </div>
         </Form>
       </Modal>
 

@@ -10,20 +10,13 @@ import { useState, useEffect } from 'react'
 import { Table, Button, Space, Modal, Form, Input, InputNumber, DatePicker, Select, message, Row, Col, Divider, Popconfirm, Tag, Radio } from 'antd'
 import { PlusOutlined, EditOutlined, DeleteOutlined, MinusCircleOutlined, TeamOutlined, ShareAltOutlined, EyeOutlined } from '@ant-design/icons'
 import { StatusTag } from '@/components/StatusTag'
+import SampleTestItemTable, { SampleTestItemData } from '@/components/SampleTestItemTable'
 import type { ColumnsType } from 'antd/es/table'
 import dayjs from 'dayjs'
 import { exportToExcel } from '@/hooks/useExport'
 import { useRouter, useSearchParams } from 'next/navigation'
 
 // 类型定义
-interface EntrustmentSample {
-  name: string
-  model?: string
-  material?: string
-  quantity: number
-  remark?: string
-}
-
 interface EntrustmentProject {
   id: string
   // ... existing EntrustmentProject ...
@@ -56,7 +49,6 @@ interface Entrustment {
   status: string
   createdAt: string
   projects: EntrustmentProject[]
-  samples?: { id: string; name: string; type?: string; specification?: string; material?: string; quantity: string }[] // Add samples from include
   client?: {
     phone?: string
   }
@@ -113,81 +105,8 @@ export default function EntrustmentListPage() {
   const [editingId, setEditingId] = useState<string | null>(null)
   const [form] = Form.useForm()
 
-  const [samples, setSamples] = useState<EntrustmentSample[]>([])
-
-  const handleAddSample = () => {
-    setSamples([...samples, { name: '', quantity: 1 }])
-  }
-
-  const handleUpdateSample = (index: number, field: keyof EntrustmentSample, value: any) => {
-    const newSamples = [...samples]
-    newSamples[index] = { ...newSamples[index], [field]: value }
-    setSamples(newSamples)
-  }
-
-  const handleRemoveSample = (index: number) => {
-    setSamples(samples.filter((_, i) => i !== index))
-  }
-
-  const sampleColumns: ColumnsType<EntrustmentSample> = [
-    {
-      title: '样品名称',
-      dataIndex: 'name',
-      render: (val, record, index) => (
-        <Input
-          value={val}
-          onChange={e => handleUpdateSample(index, 'name', e.target.value)}
-          placeholder="样品名称"
-        />
-      )
-    },
-    {
-      title: '规格型号',
-      dataIndex: 'model',
-      render: (val, record, index) => (
-        <Input
-          value={val}
-          onChange={e => handleUpdateSample(index, 'model', e.target.value)}
-          placeholder="规格型号"
-        />
-      )
-    },
-    {
-      title: '材质',
-      dataIndex: 'material',
-      render: (val, record, index) => (
-        <Input
-          value={val}
-          onChange={e => handleUpdateSample(index, 'material', e.target.value)}
-          placeholder="材质"
-        />
-      )
-    },
-    {
-      title: '数量',
-      dataIndex: 'quantity',
-      width: 100,
-      render: (val, record, index) => (
-        <InputNumber
-          min={1}
-          value={val}
-          onChange={v => handleUpdateSample(index, 'quantity', v || 1)}
-        />
-      )
-    },
-    {
-      title: '操作',
-      width: 60,
-      render: (_, __, index) => (
-        <Button
-          type="text"
-          danger
-          icon={<DeleteOutlined />}
-          onClick={() => handleRemoveSample(index)}
-        />
-      )
-    }
-  ]
+  // 样品检测项（新）
+  const [sampleTestItems, setSampleTestItems] = useState<SampleTestItemData[]>([])
 
   // 行选择
   const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([])
@@ -275,31 +194,7 @@ export default function EntrustmentListPage() {
         follower: contract.salesPerson || undefined,
         // 自动填充送样时间为当前日期
         sampleDate: dayjs(),
-
-        // 自动填充样品信息
-        sampleName: contract.sampleName,
-        sampleModel: contract.sampleModel,
-        sampleMaterial: contract.sampleMaterial,
-        sampleQuantity: contract.sampleQuantity,
       })
-
-      // 自动填充样品列表
-      if ((contract as any).contractSamples && (contract as any).contractSamples.length > 0) {
-        setSamples((contract as any).contractSamples.map((s: any) => ({
-          name: s.name,
-          model: s.model,
-          material: s.material,
-          quantity: s.quantity,
-          remark: s.remark
-        })))
-      } else if (contract.sampleName) {
-        setSamples([{
-          name: contract.sampleName,
-          model: contract.sampleModel || undefined,
-          material: contract.sampleMaterial || undefined,
-          quantity: contract.sampleQuantity || 1
-        }])
-      }
 
       if (contract.salesPerson) {
         message.success(`已自动关联跟单人: ${contract.salesPerson}`)
@@ -315,6 +210,7 @@ export default function EntrustmentListPage() {
   // 处理从合同页面传递的参数
   useEffect(() => {
     const contractNo = searchParams.get('contractNo')
+    const contractId = searchParams.get('contractId') // 获取合同ID
     const clientName = searchParams.get('clientName')
     const contactPerson = searchParams.get('contactPerson')
     const contactPhone = searchParams.get('contactPhone')
@@ -344,6 +240,7 @@ export default function EntrustmentListPage() {
       form.resetFields()
       form.setFieldsValue({
         contractNo,
+        contractId, // 保存合同ID到表单
         clientName,
         contactPerson,
         contactPhone,
@@ -351,25 +248,6 @@ export default function EntrustmentListPage() {
         isSampleReturn: false,
         projects,
       })
-
-      // 解析样品信息
-      const samplesParam = searchParams.get('samples')
-      if (samplesParam) {
-        try {
-          const parsedSamples = JSON.parse(samplesParam)
-          if (Array.isArray(parsedSamples) && parsedSamples.length > 0) {
-            setSamples(parsedSamples.map((s: any) => ({
-              name: s.name,
-              model: s.model,
-              material: s.material,
-              quantity: s.quantity,
-              remark: s.remark
-            })))
-          }
-        } catch (e) {
-          console.error('解析样品信息失败:', e)
-        }
-      }
 
       setModalOpen(true)
 
@@ -381,14 +259,14 @@ export default function EntrustmentListPage() {
   // 新增委托单
   const handleAdd = () => {
     setEditingId(null)
-    setSamples([{ name: '', quantity: 1 }])
+    setSampleTestItems([]) // 清空样品检测项
     form.resetFields()
     form.setFieldsValue({ isSampleReturn: false, projects: [{}] })
     setModalOpen(true)
   }
 
   // 编辑委托单
-  const handleEdit = (record: Entrustment) => {
+  const handleEdit = async (record: Entrustment) => {
     setEditingId(record.id)
     const formData = {
       ...record,
@@ -400,23 +278,22 @@ export default function EntrustmentListPage() {
       })) : [{}],
     }
 
-    // 回填样品
-    if (record.samples && record.samples.length > 0) {
-      setSamples(record.samples.map(s => ({
-        name: s.name,
-        model: s.specification, // Sample model has specification
-        material: s.material,
-        quantity: s.quantity ? parseInt(s.quantity) : 1,
-      })))
-    } else if (record.sampleName) {
-      setSamples([{
-        name: record.sampleName,
-        model: record.sampleModel || undefined,
-        material: record.sampleMaterial || undefined,
-        quantity: record.sampleQuantity || 1
-      }])
-    } else {
-      setSamples([{ name: '', quantity: 1 }])
+    // 加载样品检测项数据
+    try {
+      const res = await fetch(`/api/sample-test-item?bizType=entrustment&bizId=${record.id}`)
+      const json = await res.json()
+      if (json.success && json.data) {
+        const loadedItems = json.data.map((item: any) => ({
+          ...item,
+          key: item.id || `temp_${Date.now()}_${Math.random()}`,
+        }))
+        setSampleTestItems(loadedItems)
+      } else {
+        setSampleTestItems([])
+      }
+    } catch (error) {
+      console.error('加载样品检测项失败:', error)
+      setSampleTestItems([])
     }
 
     form.setFieldsValue(formData)
@@ -448,7 +325,6 @@ export default function EntrustmentListPage() {
           testItems: p.testItems || [],
           deadline: p.deadline?.toISOString() || null,
         })) || [],
-        samples: samples,
       }
 
       const url = editingId ? `/api/entrustment/${editingId}` : '/api/entrustment'
@@ -461,6 +337,53 @@ export default function EntrustmentListPage() {
       })
 
       if (res.ok) {
+        const json = await res.json()
+        const entrustmentId = editingId || json.id
+        const contractId = values.contractId // 获取合同ID
+
+        // 保存样品检测项数据
+        if (entrustmentId) {
+          try {
+            const res = await fetch('/api/sample-test-item', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                bizType: 'entrustment',
+                bizId: entrustmentId,
+                items: sampleTestItems,
+              })
+            })
+            if (!res.ok) {
+              const json = await res.json()
+              message.error(`保存样品检测项失败: ${json.error?.message || '未知错误'}`)
+              return // 不关闭弹窗
+            }
+          } catch (error) {
+            message.error('保存样品检测项失败，请重试')
+            return // 不关闭弹窗
+          }
+        }
+
+        // 如果从合同生成委托单，复制样品检测项数据
+        if (contractId && entrustmentId && !editingId) {
+          try {
+            await fetch('/api/sample-test-item/copy', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                sourceBizType: 'contract',
+                sourceBizId: contractId,
+                targetBizType: 'entrustment',
+                targetBizId: entrustmentId,
+              })
+            })
+            message.success('已从合同复制样品检测项数据')
+          } catch (e) {
+            console.error('复制样品检测项失败:', e)
+            // 复制失败不影响主流程
+          }
+        }
+
         message.success(editingId ? '更新成功' : '创建成功')
         setModalOpen(false)
         fetchData()
@@ -899,23 +822,15 @@ export default function EntrustmentListPage() {
             </Col>
           </Row>
 
-          <Divider orientation="left" orientationMargin="0">
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <span>样品信息</span>
-              <Button type="dashed" size="small" onClick={handleAddSample} icon={<PlusOutlined />}>添加样品</Button>
-            </div>
-          </Divider>
-
-          <Table
-            rowKey={(r, i) => i || 0}
-            columns={sampleColumns}
-            dataSource={samples}
-            pagination={false}
-            size="small"
-            bordered
-            locale={{ emptyText: '暂无样品' }}
-            style={{ marginBottom: 16 }}
-          />
+          {/* 样品检测项表格 */}
+          <div style={{ marginBottom: 16 }}>
+            <SampleTestItemTable
+              bizType="entrustment"
+              bizId={editingId || undefined}
+              value={sampleTestItems}
+              onChange={setSampleTestItems}
+            />
+          </div>
 
           <Form.Item name="isSampleReturn" label="是否退样">
             <Radio.Group>

@@ -12,6 +12,7 @@ import { PlusOutlined, EditOutlined, DeleteOutlined, EyeOutlined, CheckOutlined,
 import { StatusTag } from '@/components/StatusTag'
 import { ApprovalTimeline } from '@/components/ApprovalTimeline'
 import UserSelect from '@/components/UserSelect'
+import SampleTestItemTable, { SampleTestItemData } from '@/components/SampleTestItemTable'
 import type { ColumnsType } from 'antd/es/table'
 import dayjs from 'dayjs'
 import { useRouter } from 'next/navigation'
@@ -46,14 +47,6 @@ interface QuotationApproval {
   timestamp: string
 }
 
-interface QuotationSample {
-  name: string
-  model?: string
-  material?: string
-  quantity: number
-  remark?: string
-}
-
 interface Quotation {
   id: string
   quotationNo: string
@@ -61,10 +54,6 @@ interface Quotation {
   clientId?: string
   client?: Client
   clientContactPerson?: string
-  sampleName?: string | null
-  sampleModel?: string | null
-  sampleMaterial?: string | null
-  sampleQuantity?: number | null
   consultationId?: string | null
   quotationDate: string
   validDays: number
@@ -83,7 +72,6 @@ interface Quotation {
   createdAt: string
   items?: QuotationItem[]
   approvals?: QuotationApproval[]
-  quotationSamples?: QuotationSample[]
 }
 
 const STATUS_OPTIONS = [
@@ -124,7 +112,6 @@ export default function QuotationPage() {
   const [editingId, setEditingId] = useState<string | null>(null)
   const [currentQuotation, setCurrentQuotation] = useState<Quotation | null>(null)
   const [items, setItems] = useState<QuotationItem[]>([])
-  const [samples, setSamples] = useState<QuotationSample[]>([])
   const [clients, setClients] = useState<Client[]>([])
   const [clientsLoading, setClientsLoading] = useState(false)
   const [testTemplates, setTestTemplates] = useState<TestTemplate[]>([])
@@ -145,6 +132,10 @@ export default function QuotationPage() {
 
 
   const [contractSamples, setContractSamples] = useState<any[]>([])
+
+  // 样品检测项（新）
+  const [sampleTestItems, setSampleTestItems] = useState<SampleTestItemData[]>([])
+  const [contractSampleTestItems, setContractSampleTestItems] = useState<SampleTestItemData[]>([])
 
   // 样品操作
   const handleAddSample = () => {
@@ -362,7 +353,7 @@ export default function QuotationPage() {
   const handleAdd = () => {
     setEditingId(null)
     setItems([{ serviceItem: '', methodStandard: '', quantity: 1, unitPrice: 0, totalPrice: 0 }])
-    setSamples([{ name: '', quantity: 1 }])
+    setSampleTestItems([]) // 清空样品检测项
     form.resetFields()
     form.setFieldsValue({
       quotationDate: dayjs(),
@@ -372,7 +363,7 @@ export default function QuotationPage() {
     setModalOpen(true)
   }
 
-  const handleEdit = (record: Quotation) => {
+  const handleEdit = async (record: Quotation) => {
     setEditingId(record.id)
     const safeItems = (record.items || []).map(item => ({
       ...item,
@@ -382,27 +373,23 @@ export default function QuotationPage() {
     }))
     setItems(safeItems)
 
-    // 初始化样品
-    let initSamples: QuotationSample[] = []
-    if (record.quotationSamples && record.quotationSamples.length > 0) {
-      initSamples = record.quotationSamples.map(s => ({
-        name: s.name,
-        model: s.model || undefined,
-        material: s.material || undefined,
-        quantity: s.quantity || 1,
-        remark: s.remark || undefined
-      }))
-    } else if (record.sampleName) {
-      // 兼容旧数据
-      const qty = (record as any).sampleQuantity ? parseInt((record as any).sampleQuantity) : 1
-      initSamples = [{
-        name: record.sampleName,
-        model: (record as any).sampleModel,
-        material: (record as any).sampleMaterial,
-        quantity: isNaN(qty) ? 1 : qty
-      }]
+    // 加载样品检测项数据
+    try {
+      const res = await fetch(`/api/sample-test-item?bizType=quotation&bizId=${record.id}`)
+      const json = await res.json()
+      if (json.success && json.data) {
+        const loadedItems = json.data.map((item: any) => ({
+          ...item,
+          key: item.id || `temp_${Date.now()}_${Math.random()}`,
+        }))
+        setSampleTestItems(loadedItems)
+      } else {
+        setSampleTestItems([])
+      }
+    } catch (error) {
+      console.error('加载样品检测项失败:', error)
+      setSampleTestItems([])
     }
-    setSamples(initSamples)
 
     const formData = {
       ...record,
@@ -422,9 +409,10 @@ export default function QuotationPage() {
       ...values,
       quotationDate: values.quotationDate.toISOString(),
       items,
-      samples, // 传递样品列表
       finalAmount: form.getFieldValue('finalAmount'),
     }
+
+    let quotationId = editingId
 
     if (editingId) {
       await fetch(`/api/quotation/${editingId}`, {
@@ -434,13 +422,39 @@ export default function QuotationPage() {
       })
       message.success('更新成功')
     } else {
-      await fetch('/api/quotation', {
+      const res = await fetch('/api/quotation', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(submitData),
       })
+      const json = await res.json()
+      quotationId = json.id
       message.success('创建成功')
     }
+
+    // 保存样品检测项数据
+    if (quotationId) {
+      try {
+        const res = await fetch('/api/sample-test-item', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            bizType: 'quotation',
+            bizId: quotationId,
+            items: sampleTestItems,
+          })
+        })
+        if (!res.ok) {
+          const json = await res.json()
+          message.error(`保存样品检测项失败: ${json.error?.message || '未知错误'}`)
+          return // 不关闭弹窗
+        }
+      } catch (error) {
+        message.error('保存样品检测项失败，请重试')
+        return // 不关闭弹窗
+      }
+    }
+
     setModalOpen(false)
     fetchData()
   }
@@ -734,6 +748,20 @@ export default function QuotationPage() {
     })
     const json = await res.json()
     if (res.ok && (json.success || json.id)) {
+      // 复制样品检测项数据到合同
+      if (json.id) {
+        await fetch('/api/sample-test-item/copy', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            sourceBizType: 'quotation',
+            sourceBizId: values.quotationId,
+            targetBizType: 'contract',
+            targetBizId: json.id,
+          })
+        })
+      }
+
       message.success(`合同创建成功`)
       setContractModalOpen(false)
       router.push('/entrustment/contract')
@@ -1014,60 +1042,15 @@ export default function QuotationPage() {
             </Col>
           </Row>
 
-          <Divider orientationMargin="0">样品信息</Divider>
-          <Form.Item name="sampleName" hidden><Input /></Form.Item>
-
-          <Table
-            dataSource={samples}
-            rowKey={(r, i) => i || 0}
-            pagination={false}
-            size="small"
-            bordered
-            locale={{ emptyText: '暂无样品' }}
-            footer={() => (
-              <Button type="dashed" onClick={handleAddSample} block icon={<PlusOutlined />}>
-                添加样品
-              </Button>
-            )}
-            columns={[
-              {
-                title: '样品名称',
-                dataIndex: 'name',
-                render: (val, record, index) => (
-                  <Input value={val} onChange={e => handleUpdateSample(index, 'name', e.target.value)} placeholder="样品名称" />
-                )
-              },
-              {
-                title: '规格型号',
-                dataIndex: 'model',
-                render: (val, record, index) => (
-                  <Input value={val} onChange={e => handleUpdateSample(index, 'model', e.target.value)} placeholder="规格型号" />
-                )
-              },
-              {
-                title: '材质',
-                dataIndex: 'material',
-                render: (val, record, index) => (
-                  <Input value={val} onChange={e => handleUpdateSample(index, 'material', e.target.value)} placeholder="材质" />
-                )
-              },
-              {
-                title: '数量',
-                dataIndex: 'quantity',
-                width: 80,
-                render: (val, record, index) => (
-                  <InputNumber min={1} value={val} onChange={v => handleUpdateSample(index, 'quantity', v || 1)} />
-                )
-              },
-              {
-                title: '操作',
-                width: 60,
-                render: (_, __, index) => (
-                  <Button type="text" danger icon={<DeleteOutlined />} onClick={() => handleRemoveSample(index)} />
-                )
-              }
-            ]}
-          />
+          {/* 新的样品检测项表格 */}
+          <div style={{ marginTop: 16 }}>
+            <SampleTestItemTable
+              bizType="quotation"
+              bizId={editingId || undefined}
+              value={sampleTestItems}
+              onChange={setSampleTestItems}
+            />
+          </div>
 
           <Divider orientationMargin="0">报价明细</Divider>
 
@@ -1536,61 +1519,6 @@ export default function QuotationPage() {
               </Form.Item>
             </Col>
           </Row>
-
-          <Divider orientationMargin="0">样品信息</Divider>
-          <Form.Item name="sampleName" hidden><Input /></Form.Item>
-
-          <Table
-            dataSource={contractSamples}
-            rowKey={(r, i) => i || 0}
-            pagination={false}
-            size="small"
-            bordered
-            locale={{ emptyText: '暂无样品' }}
-            footer={() => (
-              <Button type="dashed" onClick={handleAddContractSample} block icon={<PlusOutlined />}>
-                添加样品
-              </Button>
-            )}
-            columns={[
-              {
-                title: '样品名称',
-                dataIndex: 'name',
-                render: (val, record, index) => (
-                  <Input value={val} onChange={e => handleUpdateContractSample(index, 'name', e.target.value)} placeholder="样品名称" />
-                )
-              },
-              {
-                title: '规格型号',
-                dataIndex: 'model',
-                render: (val, record, index) => (
-                  <Input value={val} onChange={e => handleUpdateContractSample(index, 'model', e.target.value)} placeholder="规格型号" />
-                )
-              },
-              {
-                title: '材质',
-                dataIndex: 'material',
-                render: (val, record, index) => (
-                  <Input value={val} onChange={e => handleUpdateContractSample(index, 'material', e.target.value)} placeholder="材质" />
-                )
-              },
-              {
-                title: '数量',
-                dataIndex: 'quantity',
-                width: 80,
-                render: (val, record, index) => (
-                  <InputNumber min={1} value={val} onChange={v => handleUpdateContractSample(index, 'quantity', v || 1)} />
-                )
-              },
-              {
-                title: '操作',
-                width: 60,
-                render: (_, __, index) => (
-                  <Button type="text" danger icon={<DeleteOutlined />} onClick={() => handleRemoveContractSample(index)} />
-                )
-              }
-            ]}
-          />
 
           <Divider orientationMargin="0">合同条款（可选）</Divider>
 

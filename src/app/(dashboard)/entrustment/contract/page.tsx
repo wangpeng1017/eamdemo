@@ -10,18 +10,11 @@ import { useState, useEffect } from 'react'
 import { Table, Button, Space, Modal, Form, Input, InputNumber, Select, DatePicker, message, Drawer, Tag, Row, Col, Divider, Popconfirm, Tabs, Descriptions } from 'antd'
 import { PlusOutlined, EditOutlined, DeleteOutlined, EyeOutlined, FileTextOutlined, DownloadOutlined, FileAddOutlined, FilePdfOutlined } from '@ant-design/icons'
 import { StatusTag } from '@/components/StatusTag'
+import SampleTestItemTable, { SampleTestItemData } from '@/components/SampleTestItemTable'
 import type { ColumnsType } from 'antd/es/table'
 import dayjs from 'dayjs'
 import { useRouter } from 'next/navigation'
 import { exportContractPDF } from '@/lib/exportContractPDF'
-
-interface ContractSample {
-  name: string
-  model?: string
-  material?: string
-  quantity: number
-  remark?: string
-}
 
 interface Contract {
   id: string
@@ -33,10 +26,6 @@ interface Contract {
   clientPhone?: string | null
   clientAddress?: string | null
   amount: number | null
-  sampleName?: string | null
-  sampleModel?: string | null
-  sampleMaterial?: string | null
-  sampleQuantity?: number | null
   prepaymentAmount?: number | null
   prepaymentRatio?: number | null
   signDate: string | null
@@ -54,7 +43,6 @@ interface Contract {
   status: string
   createdAt: string
   items?: ContractItem[]
-  contractSamples?: ContractSample[]
 }
 
 interface ContractItem {
@@ -103,81 +91,9 @@ export default function ContractPage() {
 
   const [contractItems, setContractItems] = useState<ContractItem[]>([])
   const [testTemplates, setTestTemplates] = useState<any[]>([])
-  const [samples, setSamples] = useState<ContractSample[]>([])
 
-  const handleAddSample = () => {
-    setSamples([...samples, { name: '', quantity: 1 }])
-  }
-
-  const handleUpdateSample = (index: number, field: keyof ContractSample, value: any) => {
-    const newSamples = [...samples]
-    newSamples[index] = { ...newSamples[index], [field]: value }
-    setSamples(newSamples)
-  }
-
-  const handleRemoveSample = (index: number) => {
-    setSamples(samples.filter((_, i) => i !== index))
-  }
-
-  const sampleColumns: ColumnsType<ContractSample> = [
-    {
-      title: '样品名称',
-      dataIndex: 'name',
-      render: (val, record, index) => (
-        <Input
-          value={val}
-          onChange={e => handleUpdateSample(index, 'name', e.target.value)}
-          placeholder="样品名称"
-        />
-      )
-    },
-    {
-      title: '规格型号',
-      dataIndex: 'model',
-      render: (val, record, index) => (
-        <Input
-          value={val}
-          onChange={e => handleUpdateSample(index, 'model', e.target.value)}
-          placeholder="规格型号"
-        />
-      )
-    },
-    {
-      title: '材质',
-      dataIndex: 'material',
-      render: (val, record, index) => (
-        <Input
-          value={val}
-          onChange={e => handleUpdateSample(index, 'material', e.target.value)}
-          placeholder="材质"
-        />
-      )
-    },
-    {
-      title: '数量',
-      dataIndex: 'quantity',
-      width: 100,
-      render: (val, record, index) => (
-        <InputNumber
-          min={1}
-          value={val}
-          onChange={v => handleUpdateSample(index, 'quantity', v || 1)}
-        />
-      )
-    },
-    {
-      title: '操作',
-      width: 60,
-      render: (_, __, index) => (
-        <Button
-          type="text"
-          danger
-          icon={<DeleteOutlined />}
-          onClick={() => handleRemoveSample(index)}
-        />
-      )
-    }
-  ]
+  // 样品检测项（新）
+  const [sampleTestItems, setSampleTestItems] = useState<SampleTestItemData[]>([])
 
   const updateItem = (index: number, field: string, value: any) => {
     const newItems = [...contractItems]
@@ -274,7 +190,7 @@ export default function ContractPage() {
       prepaymentRatio: 30,
     })
     setContractItems([]) // Reset items
-    setSamples([{ name: '', quantity: 1 }])
+    setSampleTestItems([]) // 清空样品检测项
     setModalOpen(true)
   }
 
@@ -291,7 +207,7 @@ export default function ContractPage() {
     }
   }
 
-  const handleEdit = (record: Contract) => {
+  const handleEdit = async (record: Contract) => {
     setEditingId(record.id)
     const formData = {
       ...record,
@@ -307,27 +223,23 @@ export default function ContractPage() {
       totalPrice: Number(item.totalPrice),
     })))
 
-    // 回填样品
-    let initSamples: ContractSample[] = []
-    if (record.contractSamples && record.contractSamples.length > 0) {
-      initSamples = record.contractSamples.map(s => ({
-        name: s.name,
-        model: s.model || undefined,
-        material: s.material || undefined,
-        quantity: s.quantity || 1,
-        remark: s.remark || undefined
-      }))
-    } else if (record.sampleName) {
-      // 兼容旧数据
-      const qty = record.sampleQuantity ? Number(record.sampleQuantity) : 1
-      initSamples = [{
-        name: record.sampleName,
-        model: record.sampleModel || undefined,
-        material: record.sampleMaterial || undefined,
-        quantity: isNaN(qty) ? 1 : qty
-      }]
+    // 加载样品检测项数据
+    try {
+      const res = await fetch(`/api/sample-test-item?bizType=contract&bizId=${record.id}`)
+      const json = await res.json()
+      if (json.success && json.data) {
+        const loadedItems = json.data.map((item: any) => ({
+          ...item,
+          key: item.id || `temp_${Date.now()}_${Math.random()}`,
+        }))
+        setSampleTestItems(loadedItems)
+      } else {
+        setSampleTestItems([])
+      }
+    } catch (error) {
+      console.error('加载样品检测项失败:', error)
+      setSampleTestItems([])
     }
-    setSamples(initSamples)
 
     form.setFieldsValue(formData)
     setModalOpen(true)
@@ -357,15 +269,40 @@ export default function ContractPage() {
       startDate: values.startDate?.toISOString(),
       endDate: values.endDate?.toISOString(),
       items: contractItems,
-      samples: samples,
     }
     const url = editingId ? `/api/contract/${editingId}` : '/api/contract'
     const method = editingId ? 'PUT' : 'POST'
-    await fetch(url, {
+    const res = await fetch(url, {
       method,
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(data)
     })
+    const json = await res.json()
+    const contractId = editingId || json.id
+
+    // 保存样品检测项数据
+    if (contractId) {
+      try {
+        const res = await fetch('/api/sample-test-item', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            bizType: 'contract',
+            bizId: contractId,
+            items: sampleTestItems,
+          })
+        })
+        if (!res.ok) {
+          const json = await res.json()
+          message.error(`保存样品检测项失败: ${json.error?.message || '未知错误'}`)
+          return // 不关闭弹窗
+        }
+      } catch (error) {
+        message.error('保存样品检测项失败，请重试')
+        return // 不关闭弹窗
+      }
+    }
+
     message.success(editingId ? '更新成功' : '创建成功')
     setModalOpen(false)
     fetchData()
@@ -420,6 +357,7 @@ export default function ContractPage() {
     }
 
     const params = new URLSearchParams({
+      contractId: contract.id, // 添加合同ID用于复制样品检测项
       contractNo: contract.contractNo,
       clientName: contract.clientName || '',
       contactPerson: contract.clientContact || '',
@@ -430,19 +368,6 @@ export default function ContractPage() {
     // 如果有检测项目，通过 URL 参数传递
     if (testProjects.length > 0) {
       params.set('projects', JSON.stringify(testProjects))
-    }
-
-    // Pass samples via URL
-    if (contract.contractSamples && contract.contractSamples.length > 0) {
-      params.set('samples', JSON.stringify(contract.contractSamples))
-    } else if (contract.sampleName) {
-      // Fallback for single sample
-      params.set('samples', JSON.stringify([{
-        name: contract.sampleName,
-        model: contract.sampleModel,
-        material: contract.sampleMaterial,
-        quantity: contract.sampleQuantity || 1
-      }]))
     }
 
     router.push(`/entrustment/list?${params.toString()}`)
@@ -517,22 +442,13 @@ export default function ContractPage() {
           <Button size="small" icon={<FileAddOutlined />} onClick={() => {
             // 生成委托单逻辑
             const params = new URLSearchParams({
+              contractId: record.id, // 添加合同ID用于复制样品检测项
               contractNo: record.contractNo,
               clientName: record.clientName || '',
               contactPerson: record.clientContact || '',
               contactPhone: record.clientPhone || '',
               clientAddress: record.clientAddress || '',
             })
-            if (record.contractSamples && record.contractSamples.length > 0) {
-              params.set('samples', JSON.stringify(record.contractSamples))
-            } else if (record.sampleName) {
-              params.set('samples', JSON.stringify([{
-                name: record.sampleName,
-                model: record.sampleModel,
-                material: record.sampleMaterial,
-                quantity: record.sampleQuantity || 1
-              }]))
-            }
             router.push(`/entrustment/list?${params.toString()}`)
           }}>生成委托单</Button>
           {/* 通用按钮（仅图标） */}
@@ -787,23 +703,15 @@ export default function ContractPage() {
             </Form.Item>
           )}
 
-          <Divider orientationMargin="0">
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <span>样品信息</span>
-              <Button type="dashed" size="small" onClick={handleAddSample} icon={<PlusOutlined />}>添加样品</Button>
-            </div>
-          </Divider>
-
-          <Table
-            rowKey={(r, i) => i || 0}
-            columns={sampleColumns}
-            dataSource={samples}
-            pagination={false}
-            size="small"
-            bordered
-            locale={{ emptyText: '暂无样品' }}
-            style={{ marginBottom: 16 }}
-          />
+          {/* 新的样品检测项表格 */}
+          <div style={{ marginBottom: 16 }}>
+            <SampleTestItemTable
+              bizType="contract"
+              bizId={editingId || undefined}
+              value={sampleTestItems}
+              onChange={setSampleTestItems}
+            />
+          </div>
 
           <Divider orientationMargin="0">合同条款</Divider>
 
@@ -903,37 +811,6 @@ export default function ContractPage() {
                     )}
                   </div>
                 ),
-              },
-              {
-                key: 'samples',
-                label: '样品信息',
-                children: (
-                  <Table
-                    dataSource={
-                      currentContract.contractSamples && currentContract.contractSamples.length > 0
-                        ? currentContract.contractSamples
-                        : currentContract.sampleName
-                          ? [{
-                            name: currentContract.sampleName,
-                            model: currentContract.sampleModel || undefined,
-                            material: currentContract.sampleMaterial || undefined,
-                            quantity: currentContract.sampleQuantity || 1
-                          }]
-                          : []
-                    }
-                    rowKey={(record, index) => index?.toString() || '0'}
-                    pagination={false}
-                    size="small"
-                    locale={{ emptyText: '暂无样品信息' }}
-                    columns={[
-                      { title: '样品名称', dataIndex: 'name', key: 'name' },
-                      { title: '规格型号', dataIndex: 'model', key: 'model', render: v => v || '-' },
-                      { title: '材质', dataIndex: 'material', key: 'material', render: v => v || '-' },
-                      { title: '数量', dataIndex: 'quantity', key: 'quantity', width: 80 },
-                      { title: '备注', dataIndex: 'remark', key: 'remark', render: v => v || '-' },
-                    ]}
-                  />
-                )
               },
               {
                 key: 'items',

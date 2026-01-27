@@ -172,10 +172,6 @@ model Consultation {
   clientId           String?
   client             Client?   @relation(fields: [clientId], references: [id])
   clientContactPerson String?  @db.VarChar(50) // 联系人
-  sampleName         String?   @db.VarChar(200) // 样品名称
-  sampleModel        String?   @db.VarChar(100) // 型号规格
-  sampleMaterial     String?   @db.VarChar(100) // 材质信息
-  estimatedQuantity  Int? // 预估样品数量
   testItems          String?   @db.Text // JSON 数组 检测项目列表
   expectedDeadline   DateTime? // 期望完成时间
   budgetRange        String?   @db.VarChar(50) // 预算范围
@@ -189,25 +185,8 @@ model Consultation {
   updatedAt          DateTime  @updatedAt
 
   followUps ConsultationFollowUp[]
-  consultationSamples ConsultationSample[]
 
   @@map("biz_consultation")
-}
-
-model ConsultationSample {
-  id             String       @id @default(cuid())
-  consultationId String
-  consultation   Consultation @relation(fields: [consultationId], references: [id], onDelete: Cascade)
-  name           String       @db.VarChar(200)
-  model          String?      @db.VarChar(100)
-  material       String?      @db.VarChar(100)
-  quantity       Int          @default(1)
-  remark         String?      @db.Text
-  createdAt      DateTime     @default(now())
-  updatedAt      DateTime     @updatedAt
-
-  @@map("biz_consultation_sample")
-  @@index([consultationId])
 }
 
 // 报价明细项
@@ -223,23 +202,6 @@ model QuotationItem {
   sort           Int       @default(0)
 
   @@map("biz_quotation_item")
-}
-
-// 报价样品
-model QuotationSample {
-  id          String    @id @default(cuid())
-  quotationId String
-  quotation   Quotation @relation(fields: [quotationId], references: [id], onDelete: Cascade)
-  name        String    @db.VarChar(200)
-  model       String?   @db.VarChar(100)
-  material    String?   @db.VarChar(100)
-  quantity    Int       @default(1)
-  remark      String?   @db.Text
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
-
-  @@map("biz_quotation_sample")
-  @@index([quotationId])
 }
 
 // 报价审批记录
@@ -266,10 +228,6 @@ model Quotation {
   serviceCompany String   @default("江苏国轻检测技术有限公司") @db.VarChar(200)
   serviceContact String?  @db.VarChar(50) // 业务员
   serviceTel     String?  @db.VarChar(20)
-  sampleName     String?  @db.VarChar(200) // 样品名称
-  sampleModel    String?  @db.VarChar(100) // 规格型号
-  sampleMaterial String?  @db.VarChar(100) // 材质信息
-  sampleQuantity Int?                      // 预估数量
   follower       String?  @db.VarChar(50)  // 跟进人
   clientRemark   String?  @db.Text // 客户特殊要求
   subtotal       Decimal? @db.Decimal(12, 2) // 报价合计
@@ -295,7 +253,6 @@ model Quotation {
   updatedAt      DateTime @updatedAt
 
   items            QuotationItem[]
-  quotationSamples QuotationSample[]
   approvals        QuotationApproval[]
   contracts        Contract[]
 
@@ -331,10 +288,6 @@ model Contract {
   partyBAddress String? @db.VarChar(500)
 
   contractAmount Decimal? @db.Decimal(12, 2)
-  sampleName     String?  @db.VarChar(200)
-  sampleModel    String?  @db.VarChar(100)
-  sampleMaterial String?  @db.VarChar(100)
-  sampleQuantity Int?
 
   // 预付款
   hasAdvancePayment    Boolean  @default(false)
@@ -369,29 +322,12 @@ model Contract {
 
   entrustments    Entrustment[]
   items           ContractItem[] // 报价明细
-  contractSamples ContractSample[] // 合同样品
 
   @@index([clientId])
   @@index([status])
   @@index([approvalStatus])
   @@index([createdAt])
   @@map("biz_contract")
-}
-
-model ContractSample {
-  id         String   @id @default(cuid())
-  contractId String
-  contract   Contract @relation(fields: [contractId], references: [id], onDelete: Cascade)
-  name       String   @db.VarChar(200)
-  model      String?  @db.VarChar(100)
-  material   String?  @db.VarChar(100)
-  quantity   Int      @default(1)
-  remark     String?  @db.Text
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
-
-  @@map("biz_contract_sample")
-  @@index([contractId])
 }
 
 // 合同报价明细项
@@ -445,11 +381,6 @@ model Entrustment {
   contactPerson String?   @db.VarChar(50)
   sampleDate    DateTime? // 送样时间
   follower      String?   @db.VarChar(50) // 跟进人
-
-  sampleName     String? @db.VarChar(200) // 样品名称
-  sampleModel    String? @db.VarChar(100) // 规格型号
-  sampleMaterial String? @db.VarChar(100) // 材质牌号
-  sampleQuantity Int? // 样品总数
   isSampleReturn Boolean @default(false) // 是否退样
 
   sourceType String? @db.VarChar(20) // contract/quotation/direct
@@ -1274,4 +1205,38 @@ model AuditLog {
   @@index([action])
   @@index([createdAt])
   @@map("sys_audit_log")
+}
+
+// ==================== 样品检测项（统一表格） ====================
+
+// 样品检测项 - 用于业务单据中的样品+检测项目组合
+model SampleTestItem {
+  id                String    @id @default(cuid())
+
+  // 关联的业务单据（多态关联）
+  bizType           String    @db.VarChar(50)  // consultation/quotation/contract/entrustment/sample_receipt
+  bizId             String    @db.VarChar(50)  // 业务单据ID
+
+  // 样品信息
+  sampleName        String    @db.VarChar(200) // 样品名称
+  batchNo           String?   @db.VarChar(100) // 生产批次号
+  material          String?   @db.VarChar(100) // 材质/牌号
+  appearance        String?   @db.Text         // 样品外观
+  quantity          Int       @default(1)      // 样品数量
+
+  // 检测项目信息
+  testTemplateId    String?   @db.VarChar(50)  // 关联检测项目管理
+  testItemName      String    @db.VarChar(200) // 检测项目名称（冗余存储）
+  testStandard      String?   @db.VarChar(200) // 检测标准（冗余存储）
+  judgmentStandard  String?   @db.Text         // 评判标准
+
+  // 排序和状态
+  sortOrder         Int       @default(0)      // 排序序号
+
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  @@index([bizType, bizId])
+  @@index([testTemplateId])
+  @@map("biz_sample_test_item")
 }
