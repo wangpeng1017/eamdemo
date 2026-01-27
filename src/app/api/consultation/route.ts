@@ -43,7 +43,6 @@ export const GET = withAuth(async (request: NextRequest, user) => {
       include: {
         followUps: { orderBy: { date: 'desc' }, take: 1 },
         client: true,
-        consultationSamples: true,
       },
     }),
     prisma.consultation.count({ where }),
@@ -69,22 +68,10 @@ export const POST = withAuth(async (request: NextRequest, user) => {
 
   const createData: any = { ...data, consultationNo }
   createData.testItems = Array.isArray(data.testItems) ? JSON.stringify(data.testItems) : '[]'
+
   // 移除旧字段处理，或者保留兼容
   if (data.estimatedQuantity != null) {
     createData.estimatedQuantity = parseInt(data.estimatedQuantity, 10) || 0
-  }
-
-  // 处理样品列表
-  if (Array.isArray(data.samples) && data.samples.length > 0) {
-    createData.consultationSamples = {
-      create: data.samples.map((sample: any) => ({
-        name: sample.name,
-        model: sample.model,
-        material: sample.material,
-        quantity: parseInt(sample.quantity, 10) || 1,
-        remark: sample.remark,
-      })),
-    }
   }
 
   // 移除 samples 字段避免顶层写入错误
