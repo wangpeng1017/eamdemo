@@ -1,0 +1,123 @@
+import { prisma } from '@/lib/prisma'
+import { NextRequest } from 'next/server'
+import { withAuth, success, badRequest, notFound } from '@/lib/api-handler'
+
+/**
+ * POST /api/consultation/[id]/assessment
+ * 发起评估 - 为咨询单选择评估人
+ */
+export const POST = withAuth(async (
+  request: NextRequest,
+  user,
+  context?: { params: Promise<Record<string, string>> }
+) => {
+  const { id } = await context!.params
+  const data = await request.json()
+
+  // 验证请求参数
+  if (!data.assessors || !Array.isArray(data.assessors) || data.assessors.length === 0) {
+    badRequest('请选择至少一个评估人')
+  }
+
+  // 检查咨询单是否存在
+  const consultation = await prisma.consultation.findUnique({
+    where: { id },
+    include: {
+      assessments: {
+        where: { status: 'pending' }
+      }
+    }
+  })
+
+  if (!consultation) {
+    notFound('咨询单不存在')
+  }
+
+  // 验证咨询单状态 - 只有following状态可以发起评估
+  if (consultation.status !== 'following') {
+    badRequest(\`当前状态（\${consultation.status}）不能发起评估，只有跟进中的咨询单可以发起评估\`)
+  }
+
+  // 检查是否已有进行中的评估
+  if (consultation.assessments && consultation.assessments.length > 0) {
+    badRequest('该咨询单已有进行中的评估，请等待评估完成')
+  }
+
+  // 查询当前最大轮次
+  const maxRoundAssessment = await prisma.consultationAssessment.findFirst({
+    where: { consultationId: id },
+    orderBy: { round: 'desc' },
+    select: { round: true }
+  })
+  const nextRound = (maxRoundAssessment?.round || 0) + 1
+
+  // 使用事务创建评估记录并更新咨询单状态
+  await prisma.\$transaction(async (tx) => {
+    // 为每个评估人创建评估记录
+    await tx.consultationAssessment.createMany({
+      data: data.assessors.map((assessor: { id: string; name: string }) => ({
+        consultationId: id,
+        assessorId: assessor.id,
+        assessorName: assessor.name,
+        round: nextRound,
+        status: 'pending',
+        requestedBy: user?.name || 'unknown',
+      }))
+    })
+
+    // 更新咨询单状态为评估中
+    await tx.consultation.update({
+      where: { id },
+      data: { status: 'assessing' }
+    })
+  })
+
+  return success({
+    message: \`评估已发起，等待 \${data.assessors.length} 人反馈\`,
+    round: nextRound,
+    assessorCount: data.assessors.length
+  })
+})
+
+/**
+ * GET /api/consultation/[id]/assessment
+ * 查询评估详情
+ */
+export const GET = withAuth(async (
+  request: NextRequest,
+  user,
+  context?: { params: Promise<Record<string, string>> }
+) => {
+  const { id } = await context!.params
+
+  // 查询咨询单及其评估记录
+  const consultation = await prisma.consultation.findUnique({
+    where: { id },
+    include: {
+      assessments: {
+        orderBy: [
+          { round: 'desc' },
+          { requestedAt: 'asc' }
+        ]
+      }
+    }
+  })
+
+  if (!consultation) {
+    notFound('咨询单不存在')
+  }
+
+  // 获取最大轮次
+  const maxRound = consultation.assessments.length > 0
+    ? Math.max(...consultation.assessments.map(a => a.round))
+    : 0
+
+  return success({
+    data: {
+      consultationId: id,
+      status: consultation.status,
+      maxRound,
+      assessments: consultation.assessments
+    }
+  })
+})

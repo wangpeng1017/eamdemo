@@ -175,18 +175,52 @@ model Consultation {
   testItems          String?   @db.Text // JSON 数组 检测项目列表
   expectedDeadline   DateTime? // 期望完成时间
   budgetRange        String?   @db.VarChar(50) // 预算范围
-  status             String    @default("following") // following/quoted/rejected/closed
+  status             String    @default("following") // following/assessing/assessment_failed/quoted/rejected/closed
   follower           String?   @db.VarChar(50) // 跟进人
   feasibility        String?   @db.VarChar(20) // feasible/difficult/infeasible
   feasibilityNote    String?   @db.Text // 可行性说明
   quotationId        String?
   quotationNo        String?   @db.VarChar(50)
+  clientRequirement  String?   @db.Text // 客户需求说明（用于重新评估时修改）
   createdAt          DateTime  @default(now())
   updatedAt          DateTime  @updatedAt
 
-  followUps ConsultationFollowUp[]
+  followUps    ConsultationFollowUp[]
+  assessments  ConsultationAssessment[]
 
   @@map("biz_consultation")
+}
+
+// 业务咨询评估记录
+model ConsultationAssessment {
+  id             String       @id @default(cuid())
+  consultationId String
+  consultation   Consultation @relation(fields: [consultationId], references: [id], onDelete: Cascade)
+
+  // 评估人信息
+  assessorId     String       // 评估人用户ID
+  assessorName   String       @db.VarChar(50) // 评估人姓名
+
+  // 评估内容
+  conclusion     String?      @db.VarChar(20) // feasible/difficult/infeasible
+  feedback       String?      @db.Text // 评估意见（文字反馈）
+
+  // 评估轮次（支持多轮评估）
+  round          Int          @default(1) // 第几轮评估
+
+  // 状态和时间
+  status         String       @default("pending") // pending/completed
+  requestedAt    DateTime     @default(now()) // 发起时间
+  completedAt    DateTime? // 完成时间
+  requestedBy    String       @db.VarChar(50) // 发起人
+
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  @@index([consultationId])
+  @@index([assessorId, status])
+  @@index([consultationId, round]) // 按咨询单+轮次查询
+  @@map("biz_consultation_assessment")
 }
 
 // 报价明细项
