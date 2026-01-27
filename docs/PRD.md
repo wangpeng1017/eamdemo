@@ -155,6 +155,52 @@ LIMS（Laboratory Information Management System）是一套面向检测实验室
 ```
 
 ---
+## 三、功能清单
+
+### 状态说明
+- 🔴 待开发 | 🟡 开发中 | 🟢 已完成 | ⚫ 已废弃
+
+### 功能总览
+
+| ID | 模块 | 功能 | 状态 | 优先级 | 对应代码 |
+|----|------|------|------|--------|----------|
+| F001 | 用户管理 | 用户登录 | 🟢 | P0 | `src/app/api/auth/[...nextauth]/route.ts` |
+| F002 | 委托管理 | 委托咨询 | 🟢 | P0 | `src/app/(dashboard)/entrustment/consultation/page.tsx` |
+| F003 | 委托管理 | 报价管理 | 🟢 | P0 | `src/app/(dashboard)/entrustment/quotation/page.tsx` |
+| F004 | 委托管理 | 合同管理 | 🟢 | P0 | `src/app/(dashboard)/entrustment/contract/page.tsx` |
+| F005 | 委托管理 | 委托单管理 | 🟢 | P0 | `src/app/(dashboard)/entrustment/list/page.tsx` |
+| F006 | 委托管理 | 客户管理 | 🟢 | P0 | `src/app/(dashboard)/entrustment/client/page.tsx` |
+| F007 | 样品管理 | 样品登记 | 🟢 | P0 | `src/app/(dashboard)/sample/receipt/page.tsx` |
+| F008 | 样品管理 | 样品流转 | 🟢 | P0 | `src/app/(dashboard)/sample/list/page.tsx` |
+| F009 | 任务管理 | 任务分配 | 🟢 | P0 | `src/app/(dashboard)/task/all/page.tsx` |
+| F010 | 任务管理 | 数据录入 | 🟢 | P0 | `src/app/(dashboard)/task/data/[id]/page.tsx` |
+| F011 | 报告管理 | 报告生成 | 🟢 | P0 | `src/app/(dashboard)/report/generate/page.tsx` |
+| F012 | 报告管理 | 报告审批 | 🟢 | P0 | `src/app/(dashboard)/report/approval/page.tsx` |
+| F013 | 财务管理 | 应收款管理 | 🟢 | P1 | `src/app/(dashboard)/finance/receivable/page.tsx` |
+| F014 | 财务管理 | 开票管理 | 🟢 | P1 | `src/app/(dashboard)/finance/invoice/page.tsx` |
+| F015 | 系统管理 | 用户管理 | 🟢 | P0 | `src/app/(dashboard)/system/user/page.tsx` |
+| F016 | 系统管理 | 角色管理 | 🟢 | P0 | `src/app/(dashboard)/system/role/page.tsx` |
+| F017 | 系统管理 | 审批流程配置 | 🟢 | P0 | `src/app/(dashboard)/system/approval-flow/page.tsx` |
+| F018 | 设备管理 | 设备档案 | 🟢 | P1 | `src/app/(dashboard)/device/page.tsx` |
+| F019 | 外协管理 | 外协订单 | 🟢 | P1 | `src/app/(dashboard)/outsource/order/page.tsx` |
+
+### 功能统计
+
+| 模块 | 功能数 | 状态 |
+|------|--------|------|
+| 用户管理 | 1 | 🟢 |
+| 委托管理 | 5 | 🟢 |
+| 样品管理 | 2 | 🟢 |
+| 任务管理 | 2 | 🟢 |
+| 报告管理 | 2 | 🟢 |
+| 财务管理 | 2 | 🟢 |
+| 系统管理 | 3 | 🟢 |
+| 设备管理 | 1 | 🟢 |
+| 外协管理 | 1 | 🟢 |
+| **总计** | **19** | **🟢 全部完成** |
+
+---
+
 
 ## 三、功能模块详细说明
 
@@ -221,7 +267,7 @@ LIMS（Laboratory Information Management System）是一套面向检测实验室
 
 ---
 
-#### 3.1.2 报价管理 (QuotationManagement)
+#### 4.1.2 报价管理 (QuotationManagement)
 
 **功能描述**：创建和管理报价单，支持三级审批流程。
 
@@ -296,7 +342,7 @@ LIMS（Laboratory Information Management System）是一套面向检测实验室
 
 ---
 
-#### 3.1.3 合同管理 (ContractManagement)
+#### 4.1.3 合同管理 (ContractManagement)
 
 **功能描述**：管理检测服务合同，支持从报价单生成。
 
@@ -356,7 +402,7 @@ LIMS（Laboratory Information Management System）是一套面向检测实验室
 
 ---
 
-#### 3.1.4 委托单管理 (Entrustment)
+#### 4.1.4 委托单管理 (Entrustment)
 
 **功能描述**：管理检测委托单，是检测业务的核心单据。
 
@@ -451,7 +497,7 @@ LIMS（Laboratory Information Management System）是一套面向检测实验室
 
 ---
 
-#### 3.1.5 客户单位管理 (ClientUnit)
+#### 4.1.5 客户单位管理 (ClientUnit)
 
 **功能描述**：管理客户单位信息，包含开票信息。
 
@@ -477,9 +523,9 @@ LIMS（Laboratory Information Management System）是一套面向检测实验室
 
 ---
 
-### 3.2 样品管理模块
+### 4.2 样品管理模块
 
-#### 3.2.1 收样登记 (SampleRegistration)
+#### 4.2.1 收样登记 (SampleRegistration)
 
 **功能描述**：登记接收的样品信息，生成样品标签。
 
@@ -515,7 +561,7 @@ LIMS（Laboratory Information Management System）是一套面向检测实验室
 
 ---
 
-#### 3.2.2 样品明细 (SampleDetails)
+#### 4.2.2 样品明细 (SampleDetails)
 
 **功能描述**：查看所有样品的详细信息和流转记录。
 
@@ -540,7 +586,7 @@ LIMS（Laboratory Information Management System）是一套面向检测实验室
 
 ---
 
-#### 3.2.3 我的样品 (MySamples)
+#### 4.2.3 我的样品 (MySamples)
 
 **功能描述**：查看当前用户领用的样品，支持新建领用和归还。
 
@@ -558,9 +604,9 @@ LIMS（Laboratory Information Management System）是一套面向检测实验室
 
 ---
 
-### 3.3 任务管理模块
+### 4.3 任务管理模块
 
-#### 3.3.1 全部任务 (AllTasks)
+#### 4.3.1 全部任务 (AllTasks)
 
 **功能描述**：查看和管理所有检测任务，支持任务分配。
 
@@ -604,7 +650,7 @@ LIMS（Laboratory Information Management System）是一套面向检测实验室
 
 ---
 
-#### 3.3.2 我的任务 (MyTasks)
+#### 4.3.2 我的任务 (MyTasks)
 
 **功能描述**：查看当前用户被分配的任务。
 
@@ -636,9 +682,9 @@ LIMS（Laboratory Information Management System）是一套面向检测实验室
 
 ---
 
-### 3.4 检测管理模块
+### 4.4 检测管理模块
 
-#### 3.4.1 数据录入 (DataEntry)
+#### 4.4.1 数据录入 (DataEntry)
 
 **功能描述**：检测人员录入检测数据，支持表格编辑。
 
@@ -653,9 +699,9 @@ LIMS（Laboratory Information Management System）是一套面向检测实验室
 
 ---
 
-### 3.5 报告管理模块
+### 4.5 报告管理模块
 
-#### 3.5.1 任务报告 (TaskReports)
+#### 4.5.1 任务报告 (TaskReports)
 
 **功能描述**：管理基于单个检测任务的原始检测报告。
 
@@ -682,7 +728,7 @@ LIMS（Laboratory Information Management System）是一套面向检测实验室
 
 ---
 
-#### 3.5.2 客户报告 (ClientReports)
+#### 4.5.2 客户报告 (ClientReports)
 
 **功能描述**：管理面向客户的正式综合报告，支持合并多个任务报告。
 
@@ -709,7 +755,7 @@ LIMS（Laboratory Information Management System）是一套面向检测实验室
 
 ---
 
-#### 3.5.3 报告模板管理
+#### 4.5.3 报告模板管理
 
 **页面路径**：
 - 任务报告模板：`/report/task-template`
@@ -719,9 +765,9 @@ LIMS（Laboratory Information Management System）是一套面向检测实验室
 
 ---
 
-### 3.6 财务管理模块
+### 4.6 财务管理模块
 
-#### 3.6.1 应收账款 (Receivables)
+#### 4.6.1 应收账款 (Receivables)
 
 **功能描述**：管理检测服务应收款项。
 
@@ -744,7 +790,7 @@ LIMS（Laboratory Information Management System）是一套面向检测实验室
 
 ---
 
-#### 3.6.2 收款记录 (PaymentRecords)
+#### 4.6.2 收款记录 (PaymentRecords)
 
 **功能描述**：记录收款明细。
 
@@ -766,7 +812,7 @@ LIMS（Laboratory Information Management System）是一套面向检测实验室
 
 ---
 
-#### 3.6.3 开票管理 (InvoiceManagement)
+#### 4.6.3 开票管理 (InvoiceManagement)
 
 **功能描述**：管理发票开具。
 
@@ -795,9 +841,9 @@ LIMS（Laboratory Information Management System）是一套面向检测实验室
 
 ---
 
-### 3.7 设备管理模块
+### 4.7 设备管理模块
 
-#### 3.7.1 设备台账 (DeviceInfo)
+#### 4.7.1 设备台账 (DeviceInfo)
 
 **功能描述**：管理实验室设备信息。
 
@@ -827,7 +873,7 @@ LIMS（Laboratory Information Management System）是一套面向检测实验室
 
 ---
 
-#### 3.7.2 保养计划 (MaintenancePlan)
+#### 4.7.2 保养计划 (MaintenancePlan)
 
 **功能描述**：管理设备保养计划。
 
@@ -850,7 +896,7 @@ LIMS（Laboratory Information Management System）是一套面向检测实验室
 
 ---
 
-#### 3.7.3 维修管理 (RepairManagement)
+#### 4.7.3 维修管理 (RepairManagement)
 
 **功能描述**：管理设备维修记录。
 
@@ -858,7 +904,7 @@ LIMS（Laboratory Information Management System）是一套面向检测实验室
 
 ---
 
-#### 3.7.4 定检计划 (CalibrationPlan)
+#### 4.7.4 定检计划 (CalibrationPlan)
 
 **功能描述**：管理设备校准计划。
 
@@ -866,9 +912,9 @@ LIMS（Laboratory Information Management System）是一套面向检测实验室
 
 ---
 
-### 3.8 统计报表模块
+### 4.8 统计报表模块
 
-#### 3.8.1 委托统计 (EntrustmentStats)
+#### 4.8.1 委托统计 (EntrustmentStats)
 
 **页面路径**：`/statistics`
 
@@ -877,7 +923,7 @@ LIMS（Laboratory Information Management System）是一套面向检测实验室
 - 按客户：TOP客户委托量排名
 - 按类型：不同检测类型分布
 
-#### 3.8.2 样品统计 (SampleStats)
+#### 4.8.2 样品统计 (SampleStats)
 
 **页面路径**：`/statistics`（同一页面内切换）
 
@@ -886,7 +932,7 @@ LIMS（Laboratory Information Management System）是一套面向检测实验室
 - 样品状态分布
 - 各类型样品占比
 
-#### 3.8.3 任务统计 (TaskStats)
+#### 4.8.3 任务统计 (TaskStats)
 
 **页面路径**：`/statistics`（同一页面内切换）
 
@@ -897,9 +943,9 @@ LIMS（Laboratory Information Management System）是一套面向检测实验室
 
 ---
 
-### 3.9 系统管理模块
+### 4.9 系统管理模块
 
-#### 3.9.1 审批中心 (ApprovalCenter)
+#### 4.9.1 审批中心 (ApprovalCenter)
 
 **页面路径**：`/approval` （入口已集成至工作台 `/dashboard`）
 
@@ -942,7 +988,7 @@ LIMS（Laboratory Information Management System）是一套面向检测实验室
 
 ---
 
-#### 3.9.2 用户管理 (UserManagement)
+#### 4.9.2 用户管理 (UserManagement)
 
 **页面路径**：`/system/user`
 
@@ -956,7 +1002,7 @@ LIMS（Laboratory Information Management System）是一套面向检测实验室
 - 角色、状态（支持快速启用/禁用）
 - 创建时间、最后登录时间
 
-#### 3.9.3 角色管理 (RoleManagement)
+#### 4.9.3 角色管理 (RoleManagement)
 
 **页面路径**：`/system/role`
 
@@ -969,7 +1015,7 @@ LIMS（Laboratory Information Management System）是一套面向检测实验室
   - 仅本人数据 (Self)：仅可查看自己创建及相关的数据
 - 关联权限菜单
 
-#### 3.9.4 部门管理 (DepartmentManagement)
+#### 4.9.4 部门管理 (DepartmentManagement)
 
 > **重要变更 (v2.3)**：部门管理功能已完全集成到用户管理页面，不再提供独立菜单入口。
 
@@ -992,7 +1038,7 @@ LIMS（Laboratory Information Management System）是一套面向检测实验室
 - 原 `/system/dept` 独立页面已废弃，但保留代码文件
 - `/api/dept` 相关 API 接口继续提供服务（用户管理页面的组织架构使用）
 
-#### 3.9.5 权限配置 (PermissionConfig)
+#### 4.9.5 权限配置 (PermissionConfig)
 
 **页面路径**：`/system/permission`
 
@@ -1006,7 +1052,7 @@ LIMS（Laboratory Information Management System）是一套面向检测实验室
 - **归属原则**：数据创建时自动记录 `createdById`。
 - **查询规则**：根据当前用户角色的 `dataScope` 自动注入查询条件（All > Dept > Self）。
 
-#### 3.9.6 审批流程管理 (ApprovalFlow)
+#### 4.9.6 审批流程管理 (ApprovalFlow)
 
 **页面路径**：`/system/approval-flow`
 
@@ -1093,45 +1139,45 @@ LIMS（Laboratory Information Management System）是一套面向检测实验室
 
 ---
 
-### 3.10 供应商管理模块
+### 4.10 供应商管理模块
 
-#### 3.10.1 供应商信息 (SupplierInfo)
+#### 4.10.1 供应商信息 (SupplierInfo)
 
 **页面路径**：`/outsource/supplier`
 
-#### 3.10.2 供应商分类 (SupplierCategory)
+#### 4.10.2 供应商分类 (SupplierCategory)
 
 **页面路径**：`/supplier/category`
 
-#### 3.10.3 评价模板 (EvaluationTemplate)
+#### 4.10.3 评价模板 (EvaluationTemplate)
 
 **页面路径**：`/supplier/template`
 
-#### 3.10.4 绩效评价 (PerformanceEvaluation)
+#### 4.10.4 绩效评价 (PerformanceEvaluation)
 
 **页面路径**：`/supplier/evaluation`
 
 ---
 
-### 3.11 易耗品管理模块
+### 4.11 易耗品管理模块
 
-#### 3.11.1 易耗品信息 (ConsumableInfo)
+#### 4.11.1 易耗品信息 (ConsumableInfo)
 
 **页面路径**：`/consumable/info`
 
-#### 3.11.2 出入库记录 (StockTransactions)
+#### 4.11.2 出入库记录 (StockTransactions)
 
 **页面路径**：`/consumable/transaction`
 
 ---
 
-### 3.12 委外管理模块
+### 4.12 委外管理模块
 
-#### 3.12.1 全部委外 (AllOutsourcing)
+#### 4.12.1 全部委外 (AllOutsourcing)
 
 **页面路径**：`/outsource/order`
 
-#### 3.12.2 我的委外 (MyOutsourcing)
+#### 4.12.2 我的委外 (MyOutsourcing)
 
 **页面路径**：`/outsource/my`
 

@@ -4,6 +4,31 @@
 
 ---
 
+## [2.0.1] - 2026-01-27
+
+### 优化
+- **UI优化：列顺序和列宽调整**
+  - 委托管理模块（咨询、报价、合同、委托单）：将【联系人/电话】列移至最后一列（操作列之前）
+  - 合同管理：修复客户名称列宽度（添加 width: 150）
+  - 委托单管理：修复委托单位列宽度（添加 width: 150）
+  - 客户管理：将【联系人】【联系方式】列移至最后一列
+  - 外协供应商管理：将【联系人】【电话】列移至最后一列
+  - 目的：统一列顺序逻辑，联系方式信息靠后显示，改善用户体验
+
+### 文档
+- **代码索引完善**
+  - 新增 `src/_INDEX.md` - 代码层根索引
+  - 为14个模块创建 `_INDEX.md` 索引文件
+  - 涉及模块：approval, basic-data, consumable, device, finance, outsource, personnel, report, sample, statistics, supplier, system, task, test
+
+### 修复
+- **部署问题修复**
+  - 修复 HTTP ERROR 502 问题
+  - 原因：PM2 继承 HOSTNAME 环境变量导致 Next.js 绑定到错误主机名
+  - 解决：创建 `/root/lims-next/ecosystem.config.js` 明确设置 `HOSTNAME: '0.0.0.0'`
+
+---
+
 ## [2.0.0] - 2026-01-12
 
 ### 新增功能
