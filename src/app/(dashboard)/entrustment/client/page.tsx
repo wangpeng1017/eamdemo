@@ -225,7 +225,7 @@ export default function ClientPage() {
     <div>
       {contextHolder}
       <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'space-between' }}>
-        <h2 style={{ margin: 0 }}>委托单位管理</h2>
+        <h2 style={{ margin: 0 }}>业务单位管理</h2>
         <Button type="primary" icon={<PlusOutlined />} onClick={handleAdd}>新增单位</Button>
       </div>
       <Table

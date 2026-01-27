@@ -1,4 +1,4 @@
-// @file: 报价单管理页面
+// @file: 检测报价管理页面
 // @input: /api/quotation, /api/consultation, /api/client
 // @output: 报价CRUD、提交审批、生成PDF、生成合同
 // @pos: 委托流程核心页 - 咨询后生成报价

@@ -1,4 +1,4 @@
-// @file: 委托咨询登记页面
+// @file: 业务咨询登记页面
 // @input: /api/consultation, /api/client
 // @output: 咨询CRUD、生成报价
 // @pos: 委托流程入口页 - 客户首次咨询
@@ -574,7 +574,7 @@ export default function ConsultationPage() {
     <div>
       {contextHolder}
       <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'space-between' }}>
-        <h2 style={{ margin: 0 }}>委托咨询</h2>
+        <h2 style={{ margin: 0 }}>业务咨询</h2>
         <Space>
           <Button type="primary" icon={<PlusOutlined />} onClick={handleAdd}>新增咨询</Button>
         </Space>

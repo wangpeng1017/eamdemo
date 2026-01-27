@@ -32,11 +32,11 @@ const menuItems = [
     icon: <FileTextOutlined />,
     label: '业务管理',
     children: [
-      { key: '/entrustment/consultation', label: <Link href="/entrustment/consultation">委托咨询</Link> },
-      { key: '/entrustment/quotation', label: <Link href="/entrustment/quotation">报价单</Link> },
-      { key: '/entrustment/contract', label: <Link href="/entrustment/contract">委托合同</Link> },
-      { key: '/entrustment/list', label: <Link href="/entrustment/list">委托单</Link> },
-      { key: '/entrustment/client', label: <Link href="/entrustment/client">委托单位</Link> },
+      { key: '/entrustment/consultation', label: <Link href="/entrustment/consultation">业务咨询</Link> },
+      { key: '/entrustment/quotation', label: <Link href="/entrustment/quotation">检测报价</Link> },
+      { key: '/entrustment/contract', label: <Link href="/entrustment/contract">检测合同</Link> },
+      { key: '/entrustment/list', label: <Link href="/entrustment/list">检测委托单</Link> },
+      { key: '/entrustment/client', label: <Link href="/entrustment/client">业务单位</Link> },
     ],
   },
   {

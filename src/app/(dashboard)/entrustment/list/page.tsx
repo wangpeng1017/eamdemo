@@ -1,4 +1,4 @@
-// @file: 委托单管理页面
+// @file: 检测委托单管理页面
 // @input: /api/entrustment, /api/contract, /api/user, /api/device
 // @output: 委托单CRUD、分配任务、分包、生成外部链接
 // @pos: 委托流程末端页 - 合同签订后创建委托单
@@ -701,7 +701,7 @@ export default function EntrustmentListPage() {
   return (
     <div>
       <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <h2 style={{ margin: 0 }}>委托单管理</h2>
+        <h2 style={{ margin: 0 }}>检测委托单管理</h2>
         <Space>
           <Button type="primary" icon={<PlusOutlined />} onClick={handleAdd}>新建委托</Button>
         </Space>
