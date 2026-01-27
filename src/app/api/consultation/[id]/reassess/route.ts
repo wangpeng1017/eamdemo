@@ -36,7 +36,7 @@ export const POST = withAuth(async (
 
   // 验证状态 - 只有assessment_failed状态可以重新评估
   if (consultation.status !== 'assessment_failed') {
-    badRequest(\`当前状态（${consultation.status}）不能重新评估，只有评估未通过的咨询单可以重新评估\`)
+    badRequest(`当前状态（${consultation.status}）不能重新评估，只有评估未通过的咨询单可以重新评估`)
   }
 
   // 获取下一轮次
@@ -78,7 +78,7 @@ export const POST = withAuth(async (
   })
 
   return success({
-    message: \`已开始第 ${nextRound} 轮评估，等待 ${data.assessors.length} 人反馈\`,
+    message: `已开始第 ${nextRound} 轮评估，等待 ${data.assessors.length} 人反馈`,
     round: nextRound,
     assessorCount: data.assessors.length
   })

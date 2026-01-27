@@ -35,7 +35,7 @@ export const POST = withAuth(async (
 
   // 验证咨询单状态 - 只有following状态可以发起评估
   if (consultation.status !== 'following') {
-    badRequest(\`当前状态（${consultation.status}）不能发起评估，只有跟进中的咨询单可以发起评估\`)
+    badRequest(`当前状态（${consultation.status}）不能发起评估，只有跟进中的咨询单可以发起评估`)
   }
 
   // 检查是否已有进行中的评估
@@ -73,7 +73,7 @@ export const POST = withAuth(async (
   })
 
   return success({
-    message: \`评估已发起，等待 ${data.assessors.length} 人反馈\`,
+    message: `评估已发起，等待 ${data.assessors.length} 人反馈`,
     round: nextRound,
     assessorCount: data.assessors.length
   })

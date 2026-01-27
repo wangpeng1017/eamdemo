@@ -32,8 +32,8 @@ export const POST = withAuth(async (
   if (data.closeReason) {
     const existingNote = consultation.feasibilityNote || ''
     updateData.feasibilityNote = existingNote 
-      ? \`${existingNote}\n\n[关闭原因] ${data.closeReason}\`
-      : \`[关闭原因] ${data.closeReason}\`
+      ? `${existingNote}\n\n[关闭原因] ${data.closeReason}`
+      : `[关闭原因] ${data.closeReason}`
   }
 
   await prisma.consultation.update({
