@@ -145,7 +145,11 @@ model Consultation {
 **业务逻辑**：
 1. 更新评估记录的 `conclusion`、`feedback`、`status=completed`、`completedAt`
 2. 检查该咨询的所有评估是否都已完成
-3. 如果都已完成，更新咨询单的 `assessmentStatus` 为 `completed`
+3. 如果都已完成：
+   - 检查是否有任何评估人给出 `infeasible`（不可行）结论
+   - **有不可行** → 更新咨询单 `status` 为 `assessment_failed`
+   - **全部通过**（可行或有困难） → 更新咨询单 `status` 为 `following`，可以生成报价单
+4. 如果未全部完成，保持 `status` 为 `assessing`
 
 ---
 
@@ -204,6 +208,40 @@ model Consultation {
   }
 }
 ```
+
+---
+
+### 3.5 修改评估反馈
+
+**PUT** `/api/consultation/assessment/[assessmentId]`
+
+**请求体**：
+```json
+{
+  "conclusion": "difficult",  // 修改后的结论
+  "feedback": "项目有一定难度，需要额外购买设备"  // 修改后的意见
+}
+```
+
+**响应**：
+```json
+{
+  "success": true,
+  "message": "评估反馈已更新"
+}
+```
+
+**业务逻辑**：
+1. 验证评估记录是否存在，且当前用户是否为该评估的评估人
+2. 更新评估记录的 `conclusion`、`feedback`、`updatedAt`
+3. 检查该咨询的所有评估是否都已完成
+4. 如果都已完成，重新判断状态：
+   - 有 `infeasible` → 咨询单 `status` 为 `assessment_failed`
+   - 全部通过 → 咨询单 `status` 为 `following`
+
+**权限控制**：
+- 只有评估人本人（`assessorId === currentUserId`）可以修改自己的评估反馈
+- 已完成的评估也可以修改（允许评估人更正意见）
 
 ---
 
@@ -352,6 +390,187 @@ model Consultation {
 )}
 ```
 
+### 4.6 评估结果Tab（详情抽屉）
+
+**位置**：业务咨询详情抽屉，新增 Tab
+
+**Tab设计**：
+```tsx
+<Tabs>
+  <Tabs.TabPane tab="基本信息" key="basic">
+    {/* 现有的基本信息内容 */}
+  </Tabs.TabPane>
+
+  <Tabs.TabPane
+    tab={
+      <span>
+        评估结果
+        {hasAssessments && (
+          <Badge
+            count={completedCount}
+            showZero
+            style={{ marginLeft: 8 }}
+          />
+        )}
+      </span>
+    }
+    key="assessment"
+  >
+    {/* 评估结果内容 */}
+  </Tabs.TabPane>
+</Tabs>
+```
+
+**评估结果Tab内容**（类似审批流详情交互）：
+
+```tsx
+<div style={{ padding: '16px 0' }}>
+  {/* 状态总览 */}
+  <Alert
+    type={getStatusType(consultation.status)}
+    message={getStatusMessage(consultation.status)}
+    description={getStatusDescription(consultation.status)}
+    showIcon
+    style={{ marginBottom: 24 }}
+  />
+
+  {/* 评估进度 */}
+  <div style={{ marginBottom: 24 }}>
+    <Progress
+      percent={(completedCount / totalCount) * 100}
+      status={getProgressStatus(consultation.status)}
+      format={() => `${completedCount}/${totalCount} 人已反馈`}
+    />
+  </div>
+
+  {/* 评估人列表（类似审批流节点） */}
+  <Timeline mode="left">
+    {assessments.map((item, index) => (
+      <Timeline.Item
+        key={item.id}
+        color={getTimelineColor(item.status, item.conclusion)}
+        dot={getTimelineDot(item.status, item.conclusion)}
+      >
+        <div style={{ paddingBottom: 20 }}>
+          {/* 评估人信息 */}
+          <div style={{ marginBottom: 8 }}>
+            <Space>
+              <Avatar size="small" icon={<UserOutlined />} />
+              <strong>{item.assessorName}</strong>
+              <Tag color={getStatusColor(item.status)}>
+                {getStatusText(item.status)}
+              </Tag>
+              {item.conclusion && (
+                <Tag color={getConclusionColor(item.conclusion)}>
+                  {getConclusionText(item.conclusion)}
+                </Tag>
+              )}
+            </Space>
+          </div>
+
+          {/* 评估时间 */}
+          <div style={{ fontSize: 12, color: '#999', marginBottom: 8 }}>
+            {item.status === 'completed' ? (
+              <>
+                <ClockCircleOutlined /> 完成时间：
+                {dayjs(item.completedAt).format('YYYY-MM-DD HH:mm:ss')}
+              </>
+            ) : (
+              <>
+                <ClockCircleOutlined /> 发起时间：
+                {dayjs(item.requestedAt).format('YYYY-MM-DD HH:mm:ss')}
+              </>
+            )}
+          </div>
+
+          {/* 评估意见 */}
+          {item.feedback && (
+            <Card
+              size="small"
+              style={{
+                background: '#fafafa',
+                border: '1px solid #f0f0f0',
+                marginTop: 8
+              }}
+            >
+              <div style={{ whiteSpace: 'pre-wrap' }}>
+                {item.feedback}
+              </div>
+            </Card>
+          )}
+
+          {/* 操��按钮（评估人本人可见） */}
+          {item.assessorId === currentUserId && item.status === 'completed' && (
+            <div style={{ marginTop: 12 }}>
+              <Button
+                size="small"
+                type="link"
+                icon={<EditOutlined />}
+                onClick={() => handleEditAssessment(item)}
+              >
+                修改反馈
+              </Button>
+            </div>
+          )}
+        </div>
+      </Timeline.Item>
+    ))}
+  </Timeline>
+
+  {/* 空状态 */}
+  {assessments.length === 0 && (
+    <Empty
+      image={Empty.PRESENTED_IMAGE_SIMPLE}
+      description="暂未发起评估"
+    />
+  )}
+</div>
+```
+
+**辅助函数**：
+
+```typescript
+// 状态颜色映射
+const getStatusColor = (status: string) => {
+  return {
+    pending: 'default',
+    completed: 'success'
+  }[status] || 'default'
+}
+
+// 结论颜色映射
+const getConclusionColor = (conclusion: string) => {
+  return {
+    feasible: 'success',
+    difficult: 'warning',
+    infeasible: 'error'
+  }[conclusion] || 'default'
+}
+
+// Timeline dot样式
+const getTimelineDot = (status: string, conclusion: string) => {
+  if (status === 'pending') {
+    return <ClockCircleOutlined style={{ fontSize: 16 }} />
+  }
+  if (conclusion === 'infeasible') {
+    return <CloseCircleOutlined style={{ fontSize: 16, color: '#ff4d4f' }} />
+  }
+  if (conclusion === 'difficult') {
+    return <ExclamationCircleOutlined style={{ fontSize: 16, color: '#faad14' }} />
+  }
+  return <CheckCircleOutlined style={{ fontSize: 16, color: '#52c41a' }} />
+}
+
+// 状态提示消息
+const getStatusMessage = (status: string) => {
+  return {
+    assessing: '评估进行中',
+    assessment_failed: '评估未通过',
+    following: '评估已完成，可以生成报价单'
+  }[status] || ''
+}
+```
+
 ---
 
 ## 五、业务流程设计
@@ -415,15 +634,23 @@ model Consultation {
 2. **评估反馈要求**：
    - 评估人必须给出结论（可行/有困难/不可行）
    - 评估意见为必填项
-   - 提交后不可修改（如需修改，联系管理员）
+   - **提交后允许修改**（评估人可以更正自己的反馈意见）
+   - 修改权限：只有评估人本人可以修改自己的评估反馈
 
 3. **生成报价单限制**：
-   - 如果 `assessmentStatus = in_progress`，不能生成报价单
-   - 如果 `assessmentStatus = not_started` 或 `completed`，可以生成报价单
+   - 如果 `status = assessing`（评估中），**不能生成报价单**
+   - 如果 `status = assessment_failed`（评估未通过），**不能生成报价单**
+   - 如果 `status = following` 或未发起评估，可以生成报价单
 
 4. **评估结果影响**：
-   - 评估结果会显示在咨询详情中，供业务人员参考
-   - 如果有评估人给出"不可行"结论，系统会在生成报价单时给出提示警告
+   - 评估结果会显示在咨询详情的"评估结果"Tab中
+   - 如果有任何评估人给出"不可行"结论，咨询单状态自动变为 `assessment_failed`
+   - `assessment_failed` 状态的咨询单无法生成报价单，需要重新评估或修改需求
+
+5. **评估超时处理**：
+   - **不设置超时提醒** - 系统会一直等待评估人反馈
+   - 评估人可以在任何时间提交反馈
+   - 业务人员可以在详情页实时查看评估进度
 
 ---
 
@@ -466,51 +693,66 @@ ADD COLUMN `assessmentStatus` VARCHAR(20) DEFAULT 'not_started';
 ### 6.2 开发任务清单
 
 - [ ] 数据库 Schema 变更（Prisma）
+  - [ ] 添加 ConsultationAssessment 模型
+  - [ ] 修改 Consultation 模型的 status 枚举值
 - [ ] API 接口开发
   - [ ] POST `/api/consultation/[id]/assessment` - 发起评估
   - [ ] POST `/api/consultation/assessment/[id]/submit` - 提交反馈
+  - [ ] PUT `/api/consultation/assessment/[id]` - **修改评估反馈**（新增）
   - [ ] GET `/api/consultation/assessment/my-pending` - 我的待评估
   - [ ] GET `/api/consultation/[id]/assessment` - 查询评估详情
 - [ ] 前端组件开发
   - [ ] `ConsultationAssessmentModal` - 评估人选择弹窗
   - [ ] `AssessmentFeedbackModal` - 评估反馈弹窗
+  - [ ] `AssessmentResultTab` - **评估结果Tab组件**（新增）
   - [ ] `AssessmentProgress` - 评估进度展示组件
 - [ ] 页面集成
   - [ ] 业务咨询列表页 - 添加"评估"按钮
   - [ ] 工作台首页 - 添加"待我评估"卡片
+  - [ ] 业务咨询详情 - **添加"评估结果"Tab**（修改）
   - [ ] 业务咨询详情 - 集成评估进度展示
 - [ ] 业务逻辑修改
-  - [ ] 生成报价单时检查评估状态
-  - [ ] 评估完成后更新状态
+  - [ ] 生成报价单时检查评估状态（`assessing` 和 `assessment_failed` 不可生成）
+  - [ ] 评估完成后更新状态（判断是否有 `infeasible` 结论）
+  - [ ] 评估修改后重新判断咨询单状态
 - [ ] 测试
   - [ ] 单元测试
   - [ ] 集成测试
   - [ ] UI 测试
+  - [ ] 评估冲突场景测试（有人可行，有人不可行）
 
 ### 6.3 预计工作量
 
-| 任务 | 预计时间 |
-|------|----------|
-| 数据库设计与变更 | 0.5天 |
-| API 接口开发 | 1天 |
-| 前端组件开发 | 1.5天 |
-| 页面集成 | 1天 |
-| 测试与调试 | 1天 |
-| **总计** | **5天** |
+| 任务 | 预计时间 | 备注 |
+|------|----------|------|
+| 数据库设计与变更 | 0.5天 | 添加评估表，修改咨询表状态字段 |
+| API 接口开发 | 1.5天 | 5个接口（含修改评估接口） |
+| 前端组件开发 | 2天 | 4个组件（含评估结果Tab） |
+| 页面集成 | 1天 | 列表、工作台、详情页 |
+| 业务逻辑完善 | 0.5天 | 状态判断、冲突处理 |
+| 测试与调试 | 1.5天 | 含冲突场景测试 |
+| **总计** | **7天** | 比初版增加2天（Tab+修改功能） |
 
 ---
 
 ## 七、待讨论问题
 
-1. **评估超时提醒**：如果评估人长时间不反馈（如3天），是否需要发送提醒通知？
+1. ~~**评估超时提醒**~~：✅ **已明确** - 不需要超时提醒，系统一直等待评估人反馈
 
-2. **评估结果权重**：如果多个评估人给出不同结论（有人说可行，有人说不可行），如何处理？
+2. ~~**评估结果权重**~~：✅ **已明确** - 如果有任何评估人给出"不可行"结论，咨询单状态自动变为 `assessment_failed`，无法生成报价单
 
 3. **评估历史**：是否需要保留历史评估记录？如果咨询单被修改后重新发起评估，旧的评估记录如何处理？
+   - **建议方案**：保留历史记录，每次发起评估时创建新的评估记录，旧记录标记为"已废弃"
 
 4. **评估撤回**：发起人是否可以撤回评估请求？
+   - **建议方案**：允许撤回未完成的评估（所有评估人都未反馈时），删除所有评估记录，咨询单状态回到 `following`
 
-5. **评估修改**：评估人提交后，是否允许修改反馈？
+5. ~~**评估修改**~~：✅ **已明确** - 评估人提交后允许修改反馈，修改权限仅限评估人本人
+
+6. **评估失败后的处理**：`assessment_failed` 状态的咨询单，业务人员如何继续推进？
+   - **建议方案A**：允许重新发起评估（覆盖旧评估）
+   - **建议方案B**：强制关闭咨询单，重新创建新的咨询单
+   - **建议方案C**：允许修改咨询需求后重新发起评估
 
 ---
 
