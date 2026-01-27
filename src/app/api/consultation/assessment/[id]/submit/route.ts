@@ -43,7 +43,7 @@ export const POST = withAuth(async (
   }
 
   // 使用事务更新评估和检查咨询单状态
-  await prisma.\$transaction(async (tx) => {
+  await prisma.$transaction(async (tx) => {
     // 更新评估记录
     await tx.consultationAssessment.update({
       where: { id },
