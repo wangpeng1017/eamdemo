@@ -40,6 +40,9 @@ model ConsultationAssessment {
   conclusion     String?      @db.VarChar(20) // feasible/difficult/infeasible
   feedback       String?      @db.Text // 评估意见（文字反馈）
 
+  // 评估轮次（支持多轮评估）
+  round          Int          @default(1) // 第几轮评估
+
   // 状态和时间
   status         String       @default("pending") // pending/completed
   requestedAt    DateTime     @default(now()) // 发起时间
@@ -51,6 +54,7 @@ model ConsultationAssessment {
 
   @@index([consultationId])
   @@index([assessorId, status])
+  @@index([consultationId, round]) // 新增：按咨询单+轮次查询
   @@map("biz_consultation_assessment")
 }
 ```
@@ -80,14 +84,16 @@ model Consultation {
 - `assessment_failed`: 评估未通过（所有人都已反馈，但有人给出"不可行"结论）**【新增】**
 - `quoted`: 已报价（所有评估人都通过，已生成报价单）
 - `rejected`: 已拒绝
-- `closed`: 已关闭
+- `closed`: 已关闭（评估失败后关闭，或业务人员主动关闭）**【新增】**
 
 **状态流转规则**：
 - `following` → 发起评估 → `assessing`
 - `assessing` → 所有人反馈且全部通过 → `following`（可以生成报价单）
 - `assessing` → 所有人反馈但有人不通过 → `assessment_failed`
+- `assessment_failed` → 修改需求并重新评估 → `assessing`（新一轮评估）
+- `assessment_failed` → 关闭咨询单 → `closed`
 - `following` → 生成报价单 → `quoted`
-- `assessment_failed` → 不能生成报价单（需要重新评估或关闭）
+- `closed` → 终态（不可再变更）
 
 ---
 
@@ -245,6 +251,81 @@ model Consultation {
 
 ---
 
+### 3.6 修改需求并重新评估
+
+**POST** `/api/consultation/[id]/reassess`
+
+**请求体**：
+```json
+{
+  "consultationData": {
+    "testItems": ["更新后的检测项目"],
+    "clientRequirement": "补充说明的需求",
+    // ... 其他需要修改的咨询单字段
+  },
+  "assessors": [
+    { "id": "user_id_1", "name": "张三" },
+    { "id": "user_id_2", "name": "李四" }
+  ]
+}
+```
+
+**响应**：
+```json
+{
+  "success": true,
+  "message": "已开始第 2 轮评估，等待 2 人反馈",
+  "round": 2
+}
+```
+
+**业务逻辑**：
+1. 验证咨询单状态必须为 `assessment_failed`
+2. 验证当前用户是否有权限（咨询单跟进人或咨询管理权限）
+3. 更新咨询单的业务数据（testItems、clientRequirement等）
+4. 查询当前最大轮次，新轮次 = 最大轮次 + 1
+5. 为每个评估人创建新的评估记录（round = 新轮次，status = pending）
+6. 更新咨询单状态为 `assessing`
+7. 返回新轮次号
+
+**注意事项**：
+- 旧轮次的评估记录保留，不删除
+- 可以选择与上一轮相同或不同的评估人
+- 详情页可以查看所有轮次的评估历史
+
+---
+
+### 3.7 关闭咨询单
+
+**POST** `/api/consultation/[id]/close`
+
+**请求体**：
+```json
+{
+  "closeReason": "客户需求无法满足"  // 可选，关闭原因
+}
+```
+
+**响应**：
+```json
+{
+  "success": true,
+  "message": "咨询单已关闭"
+}
+```
+
+**业务逻辑**：
+1. 验证咨询单状态（通常从 `assessment_failed` 关闭，也可从其他状态关闭）
+2. 验证当前用户是否有权限（咨询单跟进人或咨询管理权限）
+3. 更新咨询单状态为 `closed`
+4. 可选：记录关闭原因到备注字段
+
+**权限控制**：
+- 只有咨询单跟进人或有"咨询管理"权限的用户可以关闭
+- `closed` 状态为终态，关闭后不可重新打开
+
+---
+
 ## 四、前端界面设计
 
 ### 4.1 业务咨询列表页 - 新增"评估"按钮
@@ -390,7 +471,90 @@ model Consultation {
 )}
 ```
 
-### 4.6 评估结果Tab（详情抽屉）
+### 4.6 评估失败后的操作按钮
+
+**位置**：业务咨询详情抽屉，`status === 'assessment_failed'` 时显示
+
+**按钮设计**：
+```tsx
+{consultation.status === 'assessment_failed' && (
+  <Alert
+    type="error"
+    message="评估未通过"
+    description="部分评估人给出了'不可行'的结论，无法生成报价单"
+    style={{ marginBottom: 16 }}
+  />
+)}
+
+{consultation.status === 'assessment_failed' && (
+  <Space style={{ marginBottom: 16 }}>
+    <Button
+      type="primary"
+      icon={<EditOutlined />}
+      onClick={handleReassess}
+    >
+      修改需求并重新评估
+    </Button>
+    <Button
+      danger
+      icon={<CloseOutlined />}
+      onClick={handleClose}
+    >
+      关闭咨询单
+    </Button>
+  </Space>
+)}
+```
+
+### 4.7 修改需求重评弹窗
+
+**组件**：`ReassessmentModal.tsx`
+
+**内容**：
+```tsx
+<Modal
+  title="修改需求并重新评估"
+  open={open}
+  onOk={handleSubmit}
+  width={800}
+>
+  <Alert
+    type="info"
+    message="提示"
+    description="修改咨询单内容后，将开始新一轮评估。旧的评估记录会被保留。"
+    showIcon
+    style={{ marginBottom: 16 }}
+  />
+
+  <Form form={form} layout="vertical">
+    <Form.Item label="检测项目" name="testItems">
+      <Select mode="tags" placeholder="请输入或选择检测项目" />
+    </Form.Item>
+
+    <Form.Item label="客户需求说明" name="clientRequirement">
+      <Input.TextArea
+        rows={4}
+        placeholder="请详细描述客户的检测需求"
+      />
+    </Form.Item>
+
+    <Divider />
+
+    <Form.Item
+      label="选择评估人"
+      name="assessors"
+      rules={[{ required: true, message: '请选择评估人' }]}
+    >
+      <UserSelect
+        mode="multiple"
+        placeholder="请选择评估人（可多选）"
+      />
+    </Form.Item>
+  </Form>
+</Modal>
+```
+
+### 4.8 评估结果Tab（详情抽屉）
 
 **位置**：业务咨询详情抽屉，新增 Tab
 
@@ -434,18 +598,37 @@ model Consultation {
     style={{ marginBottom: 24 }}
   />
 
-  {/* 评估进度 */}
+  {/* 轮次选择器（如果有多轮评估） */}
+  {maxRound > 1 && (
+    <div style={{ marginBottom: 16 }}>
+      <Space>
+        <span>评估轮次：</span>
+        <Segmented
+          options={Array.from({ length: maxRound }, (_, i) => ({
+            label: `第 ${i + 1} 轮`,
+            value: i + 1
+          }))}
+          value={selectedRound}
+          onChange={setSelectedRound}
+        />
+      </Space>
+    </div>
+  )}
+
+  {/* 当前轮次评估进度 */}
   <div style={{ marginBottom: 24 }}>
     <Progress
       percent={(completedCount / totalCount) * 100}
-      status={getProgressStatus(consultation.status)}
+      status={getProgressStatus(consultation.status, selectedRound)}
       format={() => `${completedCount}/${totalCount} 人已反馈`}
     />
   </div>
 
   {/* 评估人列表（类似审批流节点） */}
   <Timeline mode="left">
-    {assessments.map((item, index) => (
+    {assessments
+      .filter(item => item.round === selectedRound) // 只显示当前轮次
+      .map((item, index) => (
       <Timeline.Item
         key={item.id}
         color={getTimelineColor(item.status, item.conclusion)}
@@ -464,6 +647,10 @@ model Consultation {
                 <Tag color={getConclusionColor(item.conclusion)}>
                   {getConclusionText(item.conclusion)}
                 </Tag>
+              )}
+              {/* 轮次标记 */}
+              {maxRound > 1 && (
+                <Tag color="blue">第 {item.round} 轮</Tag>
               )}
             </Space>
           </div>
@@ -578,43 +765,77 @@ const getStatusMessage = (status: string) => {
 ### 5.1 状态流转图
 
 ```
-┌─────────────────────────────────────────────────────────────────────────────┐
-│                          业务咨询评估流程                                      │
-├─────────────────────────────────────────────────────────────────────────────┤
-│                                                                             │
-│  [新建咨询]                                                                  │
-│      │                                                                       │
-│      ▼                                                                       │
-│  assessmentStatus = not_started                                            │
-│      │                                                                       │
-│      ├──────────────┬──────────────┐                                        │
-│      │              │              │                                        │
-│      ▼              ▼              ▼                                        │
-│  [直接生成报价]  [发起评估]    [继续跟进]                                     │
-│                      │                                                       │
-│                      ▼                                                       │
-│              assessmentStatus = in_progress                                │
-│              创建N条 ConsultationAssessment (status=pending)                │
-│                      │                                                       │
-│                      ▼                                                       │
-│              [评估人收到待办]                                                │
-│                      │                                                       │
-│                      ▼                                                       │
-│              [评估人提交反馈]                                                │
-│              更新 status = completed                                        │
-│                      │                                                       │
-│                      ▼                                                       │
-│              [检查是否所有人都已反馈]                                         │
-│                      │                                                       │
-│              是      │     否                                                │
-│              ▼      │     ▼                                                │
-│      assessmentStatus = completed   [继续等待]                              │
-│              │                                                               │
-│              ▼                                                               │
-│          [可以生成报价单]                                                     │
-│                                                                             │
-└─────────────────────────────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────────────────────────────────┐
+│                          业务咨询评估流程（含多轮评估）                                      │
+├─────────────────────────────────────────────────────────────────────────────────────────┤
+│                                                                                         │
+│  [新建咨询]                                                                              │
+│      │                                                                                   │
+│      ▼                                                                                   │
+│  status = following                                                                     │
+│      │                                                                                   │
+│      ├──────────────┬──────────────┐                                                    │
+│      │              │              │                                                    │
+│      ▼              ▼              ▼                                                    │
+│  [直接生成报价]  [发起评估]    [继续跟进]                                                 │
+│                      │                                                                   │
+│                      ▼                                                                   │
+│              status = assessing (round = 1)                                            │
+│              创建N条 ConsultationAssessment (status=pending, round=1)                   │
+│                      │                                                                   │
+│                      ▼                                                                   │
+│              [评估人收到待办]                                                            │
+│                      │                                                                   │
+│                      ▼                                                                   │
+│              [评估人提交反馈]                                                            │
+│              更新 status = completed                                                    │
+│                      │                                                                   │
+│                      ▼                                                                   │
+│              [检查是否所有人都已反馈]                                                     │
+│                      │                                                                   │
+│          ┌───────────┴───────────┐                                                      │
+│          │                       │                                                      │
+│      所有人反馈                未全部反馈                                                │
+│          │                       │                                                      │
+│          ▼                       ▼                                                      │
+│    [检查结论]              [继续等待]                                                     │
+│          │                                                                               │
+│   ┌──────┴──────┐                                                                       │
+│   │             │                                                                       │
+│ 全部可行/有困难  有人不可行                                                              │
+│   │             │                                                                       │
+│   ▼             ▼                                                                       │
+│ status =    status =                                                                    │
+│ following   assessment_failed                                                           │
+│   │             │                                                                       │
+│   │             ├──────────────┬──────────────┐                                        │
+│   │             │              │              │                                        │
+│   │             ▼              ▼              ▼                                        │
+│   │      [修改需求重评]    [关闭咨询]    [业务人员修改]                                  │
+│   │             │              │                                                        │
+│   │             ▼              ▼                                                        │
+│   │      status = assessing   status = closed                                          │
+│   │      (round = round+1)    (终态，不可变更)                                           │
+│   │      创建新评估记录                                                                  │
+│   │      (保留旧记录)                                                                    │
+│   │             │                                                                       │
+│   │             └──────────────┐                                                        │
+│   │                            │                                                        │
+│   ▼                            ▼                                                        │
+│  [可以生成报价单]          [回到评估流程]                                                 │
+│   │                                                                                     │
+│   ▼                                                                                     │
+│ status = quoted                                                                         │
+│                                                                                         │
+└─────────────────────────────────────────────────────────────────────────────────────────┘
 ```
+
+**关键状态说明**：
+- `following`: 跟进中 → 可发起评估或直接生成报价
+- `assessing`: 评估中 → 等待所有评估人反馈
+- `assessment_failed`: 评估未通过 → 可修改重评或关闭
+- `closed`: 已关闭 → **终态**，不可再变更
+- `quoted`: 已报价 → 评估通过，报价单已生成
 
 ### 5.2 权限控制
 
@@ -693,45 +914,53 @@ ADD COLUMN `assessmentStatus` VARCHAR(20) DEFAULT 'not_started';
 ### 6.2 开发任务清单
 
 - [ ] 数据库 Schema 变更（Prisma）
-  - [ ] 添加 ConsultationAssessment 模型
-  - [ ] 修改 Consultation 模型的 status 枚举值
+  - [ ] 添加 ConsultationAssessment 模型（含 round 字段）
+  - [ ] 修改 Consultation 模型的 status 枚举值（新增 assessing/assessment_failed/closed）
+  - [ ] 添加 round 字段索引
 - [ ] API 接口开发
   - [ ] POST `/api/consultation/[id]/assessment` - 发起评估
   - [ ] POST `/api/consultation/assessment/[id]/submit` - 提交反馈
-  - [ ] PUT `/api/consultation/assessment/[id]` - **修改评估反馈**（新增）
+  - [ ] PUT `/api/consultation/assessment/[id]` - **修改评估反馈**
   - [ ] GET `/api/consultation/assessment/my-pending` - 我的待评估
   - [ ] GET `/api/consultation/[id]/assessment` - 查询评估详情
+  - [ ] POST `/api/consultation/[id]/reassess` - **修改需求并重新评估**（新增）
+  - [ ] POST `/api/consultation/[id]/close` - **关闭咨询单**（新增）
 - [ ] 前端组件开发
   - [ ] `ConsultationAssessmentModal` - 评估人选择弹窗
   - [ ] `AssessmentFeedbackModal` - 评估反馈弹窗
-  - [ ] `AssessmentResultTab` - **评估结果Tab组件**（新增）
+  - [ ] `AssessmentResultTab` - **评估结果Tab组件**（含轮次切换）
   - [ ] `AssessmentProgress` - 评估进度展示组件
+  - [ ] `ReassessmentModal` - **修改需求重评弹窗**（新增）
 - [ ] 页面集成
   - [ ] 业务咨询列表页 - 添加"评估"按钮
   - [ ] 工作台首页 - 添加"待我评估"卡片
-  - [ ] 业务咨询详情 - **添加"评估结果"Tab**（修改）
+  - [ ] 业务咨询详情 - **添加"评估结果"Tab**（含轮次展示）
+  - [ ] 业务咨询详情 - **添加评估失败后的操作按钮**（修改需求/关闭）
   - [ ] 业务咨询详情 - 集成评估进度展示
 - [ ] 业务逻辑修改
   - [ ] 生成报价单时检查评估状态（`assessing` 和 `assessment_failed` 不可生成）
   - [ ] 评估完成后更新状态（判断是否有 `infeasible` 结论）
   - [ ] 评估修改后重新判断咨询单状态
+  - [ ] **多轮评估逻辑**（记录轮次，保留历史）
+  - [ ] **关闭咨询单逻辑**（终态处理）
 - [ ] 测试
   - [ ] 单元测试
   - [ ] 集成测试
   - [ ] UI 测试
   - [ ] 评估冲突场景测试（有人可行，有人不可行）
+  - [ ] **多轮评估场景测试**（新增）
 
 ### 6.3 预计工作量
 
 | 任务 | 预计时间 | 备注 |
 |------|----------|------|
-| 数据库设计与变更 | 0.5天 | 添加评估表，修改咨询表状态字段 |
-| API 接口开发 | 1.5天 | 5个接口（含修改评估接口） |
-| 前端组件开发 | 2天 | 4个组件（含评估结果Tab） |
-| 页面集成 | 1天 | 列表、工作台、详情页 |
-| 业务逻辑完善 | 0.5天 | 状态判断、冲突处理 |
-| 测试与调试 | 1.5天 | 含冲突场景测试 |
-| **总计** | **7天** | 比初版增加2天（Tab+修改功能） |
+| 数据库设计与变更 | 0.5天 | 添加评估表（含round字段），修改咨询表状态字段 |
+| API 接口开发 | 2天 | 7个接口（含修改评估、重新评估、关闭接口） |
+| 前端组件开发 | 2.5天 | 5个组件（含评估结果Tab、重评弹窗） |
+| 页面集成 | 1.5天 | 列表、工作台、详情页（含轮次展示） |
+| 业务逻辑完善 | 1天 | 状态判断、冲突处理、多轮评估、终态处理 |
+| 测试与调试 | 2天 | 含冲突场景测试、多轮评估测试 |
+| **总计** | **9.5天** | 完整的混合方案实现（含多轮评估+关闭逻辑） |
 
 ---
 
@@ -749,10 +978,21 @@ ADD COLUMN `assessmentStatus` VARCHAR(20) DEFAULT 'not_started';
 
 5. ~~**评估修改**~~：✅ **已明确** - 评估人提交后允许修改反馈，修改权限仅限评估人本人
 
-6. **评估失败后的处理**：`assessment_failed` 状态的咨询单，业务人员如何继续推进？
-   - **建议方案A**：允许重新发起评估（覆盖旧评估）
-   - **建议方案B**：强制关闭咨询单，重新创建新的咨询单
-   - **建议方案C**：允许修改咨询需求后重新发起评估
+6. ~~**评估失败后的处理**~~：✅ **已明确** - 采用混合方案（方案C + 方案B）
+
+   **主路径 - 修改需求并重新评估**：
+   - `assessment_failed` 状态下，业务人员可以点击"修改需求并重新评估"
+   - 打开编辑弹窗，修改咨询单内容（检测项目、客户需求等）
+   - 保存修改后选择评估人，创建新一轮评估
+   - 旧评估记录标记轮次（第1轮），新评估记录标记为第2轮
+   - 咨询单状态变回 `assessing`
+   - 详情页可以查看每一轮的评估历史
+
+   **兜底路径 - 关闭咨询单**：
+   - 如果确实无法满足客户需求，可以点击"关闭咨询单"
+   - 咨询单状态变为 `closed`（已关闭）
+   - 关闭后的咨询单只能查看，不能再操作
+   - 需要重新创建新的咨询单来处理新需求
 
 ---
 
