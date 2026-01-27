@@ -1,29 +1,31 @@
 import { prisma } from '@/lib/prisma'
 import { NextRequest } from 'next/server'
-import { withErrorHandler, success, notFound } from '@/lib/api-handler'
+import { withAuth, success, notFound } from '@/lib/api-handler'
 
-export const GET = withErrorHandler(async (
+export const GET = withAuth(async (
   request: NextRequest,
+  user,
   context?: { params: Promise<Record<string, string>> }
 ) => {
   const { id } = await context!.params
   const contract = await prisma.contract.findUnique({
     where: { id },
-    include: { client: true, quotation: true, contractSamples: true },
+    include: { client: true, quotation: true, items: true },
   })
   if (!contract) notFound('合同不存在')
   return success(contract)
 })
 
-export const PUT = withErrorHandler(async (
+export const PUT = withAuth(async (
   request: NextRequest,
+  user,
   context?: { params: Promise<Record<string, string>> }
 ) => {
   const { id } = await context!.params
   const data = await request.json()
 
-  // 分离 items 和 samples 数据
-  const { items, samples, ...contractData } = data
+  // 分离 items 数据
+  const { items, ...contractData } = data
 
   const result = await prisma.$transaction(async (tx) => {
     // 1. 更新合同主体
@@ -55,36 +57,15 @@ export const PUT = withErrorHandler(async (
       }
     }
 
-    // 3. 如果提供了 samples，则更新样品
-    if (samples && Array.isArray(samples)) {
-      // 删除旧样品
-      await tx.contractSample.deleteMany({
-        where: { contractId: id }
-      })
-
-      // 创建新样品
-      if (samples.length > 0) {
-        await tx.contractSample.createMany({
-          data: samples.map((sample: any) => ({
-            contractId: id,
-            name: sample.name,
-            model: sample.model,
-            material: sample.material,
-            quantity: parseInt(sample.quantity, 10) || 1,
-            remark: sample.remark
-          }))
-        })
-      }
-    }
-
     return contract
   })
 
   return success(result)
 })
 
-export const DELETE = withErrorHandler(async (
+export const DELETE = withAuth(async (
   request: NextRequest,
+  user,
   context?: { params: Promise<Record<string, string>> }
 ) => {
   const { id } = await context!.params

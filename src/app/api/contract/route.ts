@@ -1,10 +1,10 @@
 import { prisma } from '@/lib/prisma'
 import { NextRequest } from 'next/server'
-import { withErrorHandler, success } from '@/lib/api-handler'
+import { withAuth, success } from '@/lib/api-handler'
 import { auth } from '@/lib/auth'
 import { getDataFilter } from '@/lib/data-permission'
 
-export const GET = withErrorHandler(async (request: NextRequest) => {
+export const GET = withAuth(async (request: NextRequest, user) => {
   const { searchParams } = new URL(request.url)
   const page = parseInt(searchParams.get('page') || '1')
   const pageSize = parseInt(searchParams.get('pageSize') || '10')
@@ -93,8 +93,7 @@ export const GET = withErrorHandler(async (request: NextRequest) => {
   return success({ list, total, page, pageSize })
 })
 
-export const POST = withErrorHandler(async (request: NextRequest) => {
-  const session = await auth()
+export const POST = withAuth(async (request: NextRequest, user) => {
   const data = await request.json()
   console.log('[Contract Create] Received Payload:', JSON.stringify(data, null, 2))
 
@@ -117,7 +116,7 @@ export const POST = withErrorHandler(async (request: NextRequest) => {
 
   // 构建合同创建数据
   const createData: any = {
-    createdBy: session?.user?.id ? { connect: { id: session.user.id } } : undefined,
+    createdBy: user?.id ? { connect: { id: user.id } } : undefined,
     contractNo,
     contractName: data.contractName,
     quotation: data.quotationId ? { connect: { id: data.quotationId } } : undefined,

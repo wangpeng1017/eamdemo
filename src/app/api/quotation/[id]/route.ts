@@ -1,7 +1,7 @@
 import { prisma } from '@/lib/prisma'
 import { NextRequest } from 'next/server'
 import {
-  withErrorHandler,
+  withAuth,
   success,
   notFound,
   badRequest,
@@ -31,8 +31,9 @@ const STATUS_APPROVAL_CONFIG = {
 } as const
 
 // 获取单个报价（含明细和审批记录）
-export const GET = withErrorHandler(async (
+export const GET = withAuth(async (
   request: NextRequest,
+  user,
   context?: { params: Promise<Record<string, string>> }
 ) => {
   const { params } = context!
@@ -42,7 +43,6 @@ export const GET = withErrorHandler(async (
     where: { id },
     include: {
       items: true,
-      quotationSamples: true,
       approvals: {
         orderBy: { timestamp: 'desc' },
       },
@@ -69,8 +69,9 @@ export const GET = withErrorHandler(async (
 })
 
 // 更新报价
-export const PUT = withErrorHandler(async (
+export const PUT = withAuth(async (
   request: NextRequest,
+  user,
   context?: { params: Promise<Record<string, string>> }
 ) => {
   const { params } = context!
@@ -114,13 +115,6 @@ export const PUT = withErrorHandler(async (
     })
   }
 
-  // 处理样品更新
-  if (data.samples) {
-    await prisma.quotationSample.deleteMany({
-      where: { quotationId: id }
-    })
-  }
-
   // 映射前端字段名到数据库字段名
   const updateData: Record<string, unknown> = {}
   if (data.clientId !== undefined) updateData.clientId = data.clientId
@@ -151,19 +145,9 @@ export const PUT = withErrorHandler(async (
           totalPrice: (item.quantity || 1) * (item.unitPrice || 0),
         })),
       } : undefined,
-      quotationSamples: data.samples ? {
-        create: data.samples.map((sample: any) => ({
-          name: sample.name,
-          model: sample.model,
-          material: sample.material,
-          quantity: parseInt(sample.quantity, 10) || 1,
-          remark: sample.remark,
-        }))
-      } : undefined
     },
     include: {
       items: true,
-      quotationSamples: true
     },
   })
 
@@ -171,8 +155,9 @@ export const PUT = withErrorHandler(async (
 })
 
 // 删除报价
-export const DELETE = withErrorHandler(async (
+export const DELETE = withAuth(async (
   request: NextRequest,
+  user,
   context?: { params: Promise<Record<string, string>> }
 ) => {
   const { params } = context!
@@ -204,8 +189,9 @@ export const DELETE = withErrorHandler(async (
  * 2. approve - 审批通过（流转到下一状态）
  * 3. reject - 审批驳回（回到 rejected 状态）
  */
-export const PATCH = withErrorHandler(async (
+export const PATCH = withAuth(async (
   request: NextRequest,
+  user,
   context?: { params: Promise<Record<string, string>> }
 ) => {
   const { params } = context!

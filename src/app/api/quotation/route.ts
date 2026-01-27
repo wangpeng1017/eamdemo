@@ -1,11 +1,11 @@
 import { prisma } from '@/lib/prisma'
 import { NextRequest } from 'next/server'
-import { withErrorHandler, success } from '@/lib/api-handler'
+import { withAuth, success } from '@/lib/api-handler'
 import { auth } from '@/lib/auth'
 import { getDataFilter } from '@/lib/data-permission'
 
 // 获取报价列表
-export const GET = withErrorHandler(async (request: NextRequest) => {
+export const GET = withAuth(async (request: NextRequest, user) => {
   const { searchParams } = new URL(request.url)
   const page = parseInt(searchParams.get('page') || '1')
   const pageSize = parseInt(searchParams.get('pageSize') || '10')
@@ -43,7 +43,6 @@ export const GET = withErrorHandler(async (request: NextRequest) => {
       take: pageSize,
       include: {
         items: true,
-        quotationSamples: true,
         approvals: { orderBy: { timestamp: 'desc' } },
         client: true,
       },
@@ -69,8 +68,7 @@ export const GET = withErrorHandler(async (request: NextRequest) => {
 })
 
 // 创建报价
-export const POST = withErrorHandler(async (request: NextRequest) => {
-  const session = await auth()
+export const POST = withAuth(async (request: NextRequest, user) => {
   const data = await request.json()
 
   const today = new Date().toISOString().slice(0, 10).replace(/-/g, '')
@@ -102,7 +100,7 @@ export const POST = withErrorHandler(async (request: NextRequest) => {
     discountTotal,
     status: data.status || 'draft',
     clientStatus: data.clientResponse || 'pending',
-    createdById: session?.user?.id,
+    createdById: user?.id,
     items: {
       create: items.map((item: any) => ({
         serviceItem: item.serviceItem,
@@ -114,24 +112,10 @@ export const POST = withErrorHandler(async (request: NextRequest) => {
     },
   }
 
-  // 处理样品列表
-  if (Array.isArray(data.samples) && data.samples.length > 0) {
-    createData.quotationSamples = {
-      create: data.samples.map((sample: any) => ({
-        name: sample.name,
-        model: sample.model,
-        material: sample.material,
-        quantity: parseInt(sample.quantity, 10) || 1,
-        remark: sample.remark,
-      })),
-    }
-  }
-
   const quotation = await prisma.quotation.create({
     data: createData,
     include: {
       items: true,
-      quotationSamples: true
     }
   })
 
