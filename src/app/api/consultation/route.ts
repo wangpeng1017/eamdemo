@@ -5,6 +5,10 @@
 import { prisma } from '@/lib/prisma'
 import { NextRequest } from 'next/server'
 import { withAuth, success } from '@/lib/api-handler'
+import fs from 'fs-extra'
+import path from 'path'
+
+const UPLOAD_DIR = path.join(process.cwd(), 'uploads/consultation')
 
 // 获取咨询列表 - 需要登录
 export const GET = withAuth(async (request: NextRequest, user) => {
@@ -51,6 +55,7 @@ export const GET = withAuth(async (request: NextRequest, user) => {
   const parsedList = list.map((item: any) => ({
     ...item,
     testItems: item.testItems ? JSON.parse(item.testItems as string) : [],
+    attachments: item.attachments ? JSON.parse(item.attachments as string) : [],
   }))
 
   return success({ list: parsedList, total, page, pageSize })
@@ -77,12 +82,56 @@ export const POST = withAuth(async (request: NextRequest, user) => {
   // 移除 samples 字段避免顶层写入错误
   delete createData.samples
 
+  // 暂时不处理附件，等咨询单创建后再处理
+  const attachments = data.attachments || []
+  delete createData.attachments
+
   const consultation = await prisma.consultation.create({
     data: createData
   })
 
+  // 处理附件：将文件从temp/移动到{consultationId}/
+  if (attachments && attachments.length > 0) {
+    const tempDir = path.join(UPLOAD_DIR, 'temp')
+    const finalDir = path.join(UPLOAD_DIR, consultation.id)
+    await fs.ensureDir(finalDir)
+
+    const updatedAttachments = await Promise.all(
+      attachments.map(async (file: any) => {
+        const tempPath = path.join(tempDir, file.fileName)
+        const finalPath = path.join(finalDir, file.fileName)
+
+        // 如果文件在temp目录存在，则移动
+        if (await fs.pathExists(tempPath)) {
+          await fs.move(tempPath, finalPath, { overwrite: true })
+        }
+
+        // 更新文件URL
+        return {
+          ...file,
+          fileUrl: `/uploads/consultation/${consultation.id}/${file.fileName}`,
+        }
+      })
+    )
+
+    // 更新数据库中的附件信息
+    await prisma.consultation.update({
+      where: { id: consultation.id },
+      data: {
+        attachments: JSON.stringify(updatedAttachments),
+      },
+    })
+
+    return success({
+      ...consultation,
+      testItems: consultation.testItems ? JSON.parse(consultation.testItems as string) : [],
+      attachments: updatedAttachments,
+    })
+  }
+
   return success({
     ...consultation,
     testItems: consultation.testItems ? JSON.parse(consultation.testItems as string) : [],
+    attachments: [],
   })
 })

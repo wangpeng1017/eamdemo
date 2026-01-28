@@ -7,8 +7,8 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Table, Button, Space, Modal, Form, Input, Select, DatePicker, message, Drawer, Row, Col, InputNumber, Divider, Tabs } from 'antd'
-import { PlusOutlined, EditOutlined, DeleteOutlined, EyeOutlined, FileTextOutlined, CloseCircleOutlined, TeamOutlined, SyncOutlined } from '@ant-design/icons'
+import { Table, Button, Space, Modal, Form, Input, Select, DatePicker, message, Drawer, Row, Col, InputNumber, Divider, Tabs, Upload, Image } from 'antd'
+import { PlusOutlined, EditOutlined, DeleteOutlined, EyeOutlined, FileTextOutlined, CloseCircleOutlined, TeamOutlined, SyncOutlined, PaperClipOutlined } from '@ant-design/icons'
 import { StatusTag } from '@/components/StatusTag'
 import UserSelect from '@/components/UserSelect'
 import SampleTestItemTable, { SampleTestItemData } from '@/components/SampleTestItemTable'
@@ -35,6 +35,17 @@ interface TestTemplate {
   name: string
   category?: string
   method?: string
+}
+
+interface Attachment {
+  id: string
+  originalName: string
+  fileName: string
+  fileSize: number
+  mimeType: string
+  fileUrl: string
+  uploadedAt: string
+  uploadedBy?: string
 }
 
 interface Consultation {
@@ -95,6 +106,10 @@ export default function ConsultationPage() {
   const [assessmentModalOpen, setAssessmentModalOpen] = useState(false)
   const [reassessmentModalOpen, setReassessmentModalOpen] = useState(false)
   const [currentUser, setCurrentUser] = useState<any>(null)
+
+  // 附件上传相关
+  const [fileList, setFileList] = useState<any[]>([])
+  const [uploading, setUploading] = useState(false)
 
   // 获取客户列表
   const fetchClients = async () => {
@@ -166,6 +181,7 @@ export default function ConsultationPage() {
   const handleAdd = () => {
     setEditingId(null)
     setSampleTestItems([])
+    setFileList([])
     form.resetFields()
     setModalOpen(true)
   }
@@ -189,6 +205,27 @@ export default function ConsultationPage() {
     } catch (error) {
       message.error('加载样品检测项失败')
       setSampleTestItems([])
+    }
+
+    // 加载附件数据
+    try {
+      const res = await fetch(`/api/consultation/${record.id}`)
+      const json = await res.json()
+      if (json.success && json.data && json.data.attachments) {
+        const loadedFiles = json.data.attachments.map((att: Attachment) => ({
+          uid: att.id,
+          name: att.originalName,
+          status: 'done',
+          url: att.fileUrl,
+          response: att,
+        }))
+        setFileList(loadedFiles)
+      } else {
+        setFileList([])
+      }
+    } catch (error) {
+      message.error('加载附件失败')
+      setFileList([])
     }
 
     const formData = {
@@ -245,9 +282,16 @@ export default function ConsultationPage() {
 
   const handleSubmit = async () => {
     const values = await form.validateFields()
+
+    // 提取附件信息
+    const attachments = fileList
+      .filter(file => file.status === 'done' && file.response)
+      .map(file => file.response)
+
     const submitData = {
       ...values,
       expectedDeadline: values.expectedDeadline ? values.expectedDeadline.toISOString() : null,
+      attachments: attachments,
     }
 
     let consultationId = editingId
@@ -266,7 +310,7 @@ export default function ConsultationPage() {
         body: JSON.stringify(submitData)
       })
       const json = await res.json()
-      consultationId = json.id
+      consultationId = json.data?.id || json.id
       message.success('创建成功')
     }
 
@@ -305,6 +349,50 @@ export default function ConsultationPage() {
         clientContactPerson: client.contact || '',
       })
     }
+  }
+
+  // 附件上传前验证
+  const beforeUpload = (file: File) => {
+    const validTypes = [
+      'image/jpeg', 'image/png', 'image/gif',
+      'application/pdf',
+      'application/msword',
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      'application/vnd.ms-excel',
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    ]
+
+    if (!validTypes.includes(file.type)) {
+      message.error('只能上传图片、PDF或Office文档！')
+      return false
+    }
+
+    const isLt5M = file.size / 1024 / 1024 < 5
+    if (!isLt5M) {
+      message.error('文件大小不能超过5MB！')
+      return false
+    }
+
+    return true
+  }
+
+  // 文件上传变化处理
+  const handleUploadChange = ({ fileList: newFileList }: any) => {
+    setFileList(newFileList)
+  }
+
+  // 文件删除处理
+  const handleRemove = async (file: any) => {
+    if (file.response && editingId) {
+      try {
+        await fetch(`/api/upload/consultation/${file.response.id}?consultationId=${editingId}`, {
+          method: 'DELETE',
+        })
+      } catch (error) {
+        console.error('删除文件失败:', error)
+      }
+    }
+    return true
   }
 
   // 打开生成报价单弹窗
@@ -785,6 +873,24 @@ export default function ConsultationPage() {
 
           <Form.Item name="feasibilityNote" label="可行性说明">
             <Input.TextArea rows={2} placeholder="请输入可行性说明" />
+          </Form.Item>
+
+          <Form.Item
+            label="附件上传"
+            extra="支持图片、PDF、Word、Excel，单个文件最大5MB，最多5个文件"
+          >
+            <Upload
+              action="/api/upload/consultation"
+              listType="picture"
+              fileList={fileList}
+              maxCount={5}
+              accept="image/*,.pdf,.doc,.docx,.xls,.xlsx"
+              beforeUpload={beforeUpload}
+              onChange={handleUploadChange}
+              onRemove={handleRemove}
+            >
+              <Button icon={<PlusOutlined />}>上传附件</Button>
+            </Upload>
           </Form.Item>
         </Form>
       </Modal>

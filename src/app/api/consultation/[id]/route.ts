@@ -1,6 +1,10 @@
 import { prisma } from '@/lib/prisma'
 import { NextRequest } from 'next/server'
 import { withErrorHandler, success, notFound } from '@/lib/api-handler'
+import fs from 'fs-extra'
+import path from 'path'
+
+const UPLOAD_DIR = path.join(process.cwd(), 'uploads/consultation')
 
 export const GET = withErrorHandler(async (
   request: NextRequest,
@@ -9,7 +13,7 @@ export const GET = withErrorHandler(async (
   const { id } = await context!.params
   const consultation = await prisma.consultation.findUnique({
     where: { id },
-    include: { followUps: { orderBy: { date: 'desc' } }, client: true, consultationSamples: true },
+    include: { followUps: { orderBy: { date: 'desc' } }, client: true },
   })
 
   if (!consultation) notFound('咨询单不存在')
@@ -17,6 +21,7 @@ export const GET = withErrorHandler(async (
   return success({
     ...consultation,
     testItems: consultation.testItems ? JSON.parse(consultation.testItems) : [],
+    attachments: consultation.attachments ? JSON.parse(consultation.attachments) : [],
   })
 })
 
@@ -32,26 +37,74 @@ export const PUT = withErrorHandler(async (
     updateData.testItems = JSON.stringify(data.testItems)
   }
 
-  // 处理样品更新：先删除旧的，再创建新的
-  if (Array.isArray(data.samples)) {
-    updateData.consultationSamples = {
-      deleteMany: {},
-      create: data.samples.map((sample: any) => ({
-        name: sample.name,
-        model: sample.model,
-        material: sample.material,
-        quantity: parseInt(sample.quantity, 10) || 1,
-        remark: sample.remark,
-      })),
+  // 处理附件更新
+  if (data.attachments !== undefined) {
+    const newAttachments = data.attachments || []
+
+    // 获取现有附件
+    const existing = await prisma.consultation.findUnique({
+      where: { id },
+      select: { attachments: true },
+    })
+
+    let oldAttachments: any[] = []
+    if (existing?.attachments) {
+      try {
+        oldAttachments = JSON.parse(existing.attachments)
+      } catch (e) {
+        console.error('Failed to parse old attachments:', e)
+      }
     }
-    delete updateData.samples
+
+    // 找出需要删除的附件（旧有但新列表中没有的）
+    const oldFileIds = oldAttachments.map((f: any) => f.id)
+    const newFileIds = newAttachments.map((f: any) => f.id)
+    const toDelete = oldAttachments.filter((f: any) => !newFileIds.includes(f.id))
+
+    // 删除旧文件
+    for (const file of toDelete) {
+      const filePath = path.join(UPLOAD_DIR, id, file.fileName)
+      if (await fs.pathExists(filePath)) {
+        await fs.remove(filePath)
+      }
+    }
+
+    // 移动新上传的文件（从temp到正式目录）
+    const tempDir = path.join(UPLOAD_DIR, 'temp')
+    const finalDir = path.join(UPLOAD_DIR, id)
+    await fs.ensureDir(finalDir)
+
+    const updatedAttachments = await Promise.all(
+      newAttachments.map(async (file: any) => {
+        const tempPath = path.join(tempDir, file.fileName)
+        const finalPath = path.join(finalDir, file.fileName)
+
+        // 如果文件在temp目录存在（新上传），则移动
+        if (await fs.pathExists(tempPath)) {
+          await fs.move(tempPath, finalPath, { overwrite: true })
+        }
+
+        // 更新文件URL
+        return {
+          ...file,
+          fileUrl: `/uploads/consultation/${id}/${file.fileName}`,
+        }
+      })
+    )
+
+    updateData.attachments = JSON.stringify(updatedAttachments)
   }
+
+  // 移除旧的samples处理
+  delete updateData.samples
+  delete updateData.consultationSamples
 
   const consultation = await prisma.consultation.update({ where: { id }, data: updateData })
 
   return success({
     ...consultation,
     testItems: consultation.testItems ? JSON.parse(consultation.testItems) : [],
+    attachments: consultation.attachments ? JSON.parse(consultation.attachments) : [],
   })
 })
 
@@ -67,8 +120,13 @@ export const DELETE = withErrorHandler(async (
     const existing = await prisma.consultation.findUnique({ where: { id } })
     if (!existing) {
       console.warn(`[API] Consultation not found: ${id}`)
-      // notFound throws error, handled by wrapper
       notFound('咨询记录不存在')
+    }
+
+    // 删除关联的附件文件
+    const consultationDir = path.join(UPLOAD_DIR, id)
+    if (await fs.pathExists(consultationDir)) {
+      await fs.remove(consultationDir)
     }
 
     await prisma.consultation.delete({ where: { id } })
@@ -76,6 +134,6 @@ export const DELETE = withErrorHandler(async (
     return success({ success: true })
   } catch (error) {
     console.error(`[API] DELETE /api/consultation/${id} failed:`, error)
-    throw error // Re-throw to be handled by withErrorHandler
+    throw error
   }
 })
