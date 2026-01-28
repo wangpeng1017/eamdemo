@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { Table, Button, Space, Tag, Modal, Form, Input, Select, message, Popconfirm } from 'antd'
 import { PlusOutlined, EditOutlined, DeleteOutlined, ExclamationCircleOutlined } from '@ant-design/icons'
+import { ClientApprovalButtons } from '@/components/ClientApprovalButtons'
 import type { ColumnsType } from 'antd/es/table'
 import dayjs from 'dayjs'
 
@@ -206,16 +207,31 @@ export default function ClientPage() {
     { title: '联系人', dataIndex: 'contact', width: 100 },
     { title: '联系方式', dataIndex: 'phone', width: 130 },
     {
-      title: '操作', width: 80, fixed: 'right',
+      title: '操作', width: 200, fixed: 'right',
       render: (_, record) => (
         <Space>
-          <Button size="small" icon={<EditOutlined />} onClick={() => handleEdit(record)} />
-          <Button
-            size="small"
-            danger
-            icon={<DeleteOutlined />}
-            onClick={() => handleDelete(record.id, record.name)}
+          {/* 🆕 新功能：审批按钮组 */}
+          <ClientApprovalButtons
+            clientId={record.id}
+            clientStatus={record.status}
+            onSuccess={() => fetchData()}
+            showLabel={true}
           />
+
+          {/* 编辑按钮（只对草稿或已拒绝状态显示） */}
+          {(record.status === 'draft' || record.status === 'rejected') && (
+            <Button size="small" icon={<EditOutlined />} onClick={() => handleEdit(record)} />
+          )}
+
+          {/* 删除按钮（只对草稿状态显示） */}
+          {record.status === 'draft' && (
+            <Button
+              size="small"
+              danger
+              icon={<DeleteOutlined />}
+              onClick={() => handleDelete(record.id, record.name)}
+            />
+          )}
         </Space>
       )
     }
