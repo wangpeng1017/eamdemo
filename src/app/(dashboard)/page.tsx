@@ -17,6 +17,7 @@ import { useRouter } from 'next/navigation'
 import { useSession } from 'next-auth/react'
 import Link from 'next/link'
 import dayjs from "dayjs"
+import PendingAssessmentCard from '@/components/PendingAssessmentCard'
 
 const { Text } = Typography
 
@@ -247,7 +248,7 @@ export default function DashboardPage() {
 
       <Row gutter={[16, 16]} style={{ marginTop: 24 }}>
         {/* 待审批 */}
-        <Col xs={24} lg={12}>
+        <Col xs={24} lg={8}>
           <Card
             title={
               <Space>
@@ -371,8 +372,13 @@ export default function DashboardPage() {
           </Card>
         </Col>
 
+        {/* 待我评估 */}
+        <Col xs={24} lg={8}>
+          <PendingAssessmentCard />
+        </Col>
+
         {/* 我的任务 */}
-        <Col xs={24} lg={12}>
+        <Col xs={24} lg={8}>
           <Card
             title={
               <Space>

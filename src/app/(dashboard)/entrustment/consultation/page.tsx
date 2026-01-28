@@ -7,11 +7,14 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Table, Button, Space, Modal, Form, Input, Select, DatePicker, message, Drawer, Row, Col, InputNumber, Divider } from 'antd'
-import { PlusOutlined, EditOutlined, DeleteOutlined, EyeOutlined, FileTextOutlined, CloseCircleOutlined } from '@ant-design/icons'
+import { Table, Button, Space, Modal, Form, Input, Select, DatePicker, message, Drawer, Row, Col, InputNumber, Divider, Tabs } from 'antd'
+import { PlusOutlined, EditOutlined, DeleteOutlined, EyeOutlined, FileTextOutlined, CloseCircleOutlined, TeamOutlined, SyncOutlined } from '@ant-design/icons'
 import { StatusTag } from '@/components/StatusTag'
 import UserSelect from '@/components/UserSelect'
 import SampleTestItemTable, { SampleTestItemData } from '@/components/SampleTestItemTable'
+import ConsultationAssessmentModal from '@/components/ConsultationAssessmentModal'
+import ReassessmentModal from '@/components/ReassessmentModal'
+import AssessmentResultTab from '@/components/AssessmentResultTab'
 import type { ColumnsType } from 'antd/es/table'
 import dayjs from 'dayjs'
 import { useRouter } from 'next/navigation'
@@ -88,6 +91,11 @@ export default function ConsultationPage() {
   // 样品检测项
   const [sampleTestItems, setSampleTestItems] = useState<SampleTestItemData[]>([])
 
+  // 评估相关状态
+  const [assessmentModalOpen, setAssessmentModalOpen] = useState(false)
+  const [reassessmentModalOpen, setReassessmentModalOpen] = useState(false)
+  const [currentUser, setCurrentUser] = useState<any>(null)
+
   // 获取客户列表
   const fetchClients = async () => {
     setClientsLoading(true)
@@ -140,7 +148,20 @@ export default function ConsultationPage() {
     fetchData()
     fetchClients()
     fetchTestTemplates()
+    fetchCurrentUser()
   }, [page])
+
+  const fetchCurrentUser = async () => {
+    try {
+      const res = await fetch('/api/auth/me')
+      const json = await res.json()
+      if (json.success && json.data) {
+        setCurrentUser(json.data)
+      }
+    } catch (error) {
+      console.error('获取当前用户信息失败:', error)
+    }
+  }
 
   const handleAdd = () => {
     setEditingId(null)
@@ -502,6 +523,44 @@ export default function ConsultationPage() {
     setGenerateQuoteModalOpen(true)
   }
 
+  // 发起评估
+  const handleStartAssessment = (consultation: Consultation) => {
+    setCurrentConsultation(consultation)
+    setAssessmentModalOpen(true)
+  }
+
+  // 重新评估
+  const handleReassessment = (consultation: Consultation) => {
+    setCurrentConsultation(consultation)
+    setReassessmentModalOpen(true)
+  }
+
+  // 关闭咨询单
+  const handleCloseConsultation = async (consultation: Consultation) => {
+    Modal.confirm({
+      title: '确认关闭咨询单',
+      content: `确定要关闭咨询单 ${consultation.consultationNo} 吗？关闭后将无法继续评估。`,
+      onOk: async () => {
+        try {
+          const res = await fetch(`/api/consultation/${consultation.id}/close`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+          })
+          const json = await res.json()
+          if (json.success) {
+            message.success('咨询单已关闭')
+            fetchData()
+          } else {
+            message.error(json.error?.message || '关闭失败')
+          }
+        } catch (error) {
+          console.error('关闭咨询单失败:', error)
+          message.error('关闭失败')
+        }
+      }
+    })
+  }
+
   const columns: ColumnsType<Consultation> = [
     { title: '咨询单号', dataIndex: 'consultationNo', width: 140 },
     {
@@ -548,8 +607,37 @@ export default function ConsultationPage() {
       title: '操作',
       key: 'action',
       fixed: 'right',
+      width: 350,
       render: (_, record) => (
         <Space size="small" style={{ whiteSpace: 'nowrap' }}>
+          {record.status === 'following' && (
+            <Button
+              size="small"
+              icon={<TeamOutlined />}
+              onClick={() => handleStartAssessment(record)}
+            >
+              发起评估
+            </Button>
+          )}
+          {record.status === 'assessment_failed' && (
+            <>
+              <Button
+                size="small"
+                icon={<SyncOutlined />}
+                onClick={() => handleReassessment(record)}
+              >
+                重新评估
+              </Button>
+              <Button
+                size="small"
+                danger
+                icon={<CloseCircleOutlined />}
+                onClick={() => handleCloseConsultation(record)}
+              >
+                关闭
+              </Button>
+            </>
+          )}
           <Button size="small" icon={<FileTextOutlined />} onClick={() => handleOpenGenerateQuoteForRecord(record)}>生成报价单</Button>
           <Button size="small" icon={<EyeOutlined />} onClick={() => handleView(record)} />
           <Button size="small" icon={<EditOutlined />} onClick={() => handleEdit(record)} />
@@ -705,16 +793,38 @@ export default function ConsultationPage() {
       <Drawer
         title="咨询详情"
         placement="right"
-        width={600}
+        width={800}
         open={viewDrawerOpen}
         onClose={() => setViewDrawerOpen(false)}
       >
         {currentConsultation && (
-          <div>
-            <Descriptions title="基本信息" data={currentConsultation} />
-            <Divider />
-            <Descriptions title="其他信息" data={currentConsultation} />
-          </div>
+          <Tabs
+            defaultActiveKey="basic"
+            items={[
+              {
+                key: 'basic',
+                label: '基本信息',
+                children: (
+                  <div>
+                    <Descriptions title="基本信息" data={currentConsultation} />
+                    <Divider />
+                    <Descriptions title="其他信息" data={currentConsultation} />
+                  </div>
+                )
+              },
+              {
+                key: 'assessment',
+                label: '评估结果',
+                children: (
+                  <AssessmentResultTab
+                    consultationId={currentConsultation.id}
+                    consultationNo={currentConsultation.consultationNo}
+                    currentUserId={currentUser?.id}
+                  />
+                )
+              }
+            ]}
+          />
         )}
       </Drawer>
 
@@ -897,6 +1007,40 @@ export default function ConsultationPage() {
           </Form.Item>
         </Form>
       </Modal>
+
+      {/* 发起评估弹窗 */}
+      <ConsultationAssessmentModal
+        open={assessmentModalOpen}
+        consultationId={currentConsultation?.id || null}
+        consultationNo={currentConsultation?.consultationNo}
+        onCancel={() => {
+          setAssessmentModalOpen(false)
+          setCurrentConsultation(null)
+        }}
+        onSuccess={() => {
+          setAssessmentModalOpen(false)
+          setCurrentConsultation(null)
+          fetchData()
+          message.success('评估已发起')
+        }}
+      />
+
+      {/* 重新评估弹窗 */}
+      <ReassessmentModal
+        open={reassessmentModalOpen}
+        consultationId={currentConsultation?.id || null}
+        consultationNo={currentConsultation?.consultationNo}
+        currentTestItems={currentConsultation?.testItems}
+        onCancel={() => {
+          setReassessmentModalOpen(false)
+          setCurrentConsultation(null)
+        }}
+        onSuccess={() => {
+          setReassessmentModalOpen(false)
+          setCurrentConsultation(null)
+          fetchData()
+        }}
+      />
     </div>
   )
 }
