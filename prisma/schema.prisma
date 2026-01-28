@@ -175,7 +175,7 @@ model Consultation {
   testItems          String?   @db.Text // JSON 数组 检测项目列表
   expectedDeadline   DateTime? // 期望完成时间
   budgetRange        String?   @db.VarChar(50) // 预算范围
-  status             String    @default("following") // following/assessing/assessment_failed/quoted/rejected/closed
+  status             String    @default("following") // following/assessing/assessment_passed/assessment_failed/quoted/rejected/closed
   follower           String?   @db.VarChar(50) // 跟进人
   feasibility        String?   @db.VarChar(20) // feasible/difficult/infeasible
   feasibilityNote    String?   @db.Text // 可行性说明
@@ -183,11 +183,20 @@ model Consultation {
   quotationNo        String?   @db.VarChar(50)
   clientRequirement  String?   @db.Text // 客户需求说明（用于重新评估时修改）
   attachments        String?   @db.Text // JSON数组格式存储附件信息
+
+  // v2评估系统字段
+  assessmentVersion  String?   @default("v2") @db.VarChar(10) // v1=旧系统 v2=新系统（样品检测项级）
+  assessmentTotalCount    Int   @default(0)      // 需要评估的样品检测项总数
+  assessmentPassedCount   Int   @default(0)      // 已通过评估的数量
+  assessmentFailedCount   Int   @default(0)      // 评估失败的数量
+  assessmentPendingCount  Int   @default(0)      // 待评估的数量
+
   createdAt          DateTime  @default(now())
   updatedAt          DateTime  @updatedAt
 
-  followUps    ConsultationFollowUp[]
-  assessments  ConsultationAssessment[]
+  followUps              ConsultationFollowUp[]
+  assessments            ConsultationAssessment[]
+  sampleAssessments      ConsultationSampleAssessment[]
 
   @@map("biz_consultation")
 }
@@ -222,6 +231,31 @@ model ConsultationAssessment {
   @@index([assessorId, status])
   @@index([consultationId, round]) // 按咨询单+轮次查询
   @@map("biz_consultation_assessment")
+}
+
+// 业务咨询样品检测项评估记录（v2新系统）
+model ConsultationSampleAssessment {
+  id                    String   @id @default(cuid())
+  consultationId        String
+  sampleTestItemId      String
+  assessorId            String   // 评估人用户ID
+  assessorName          String?  @db.VarChar(50) // 评估人姓名
+  feasibility           String   @db.VarChar(20) // feasible/difficult/infeasible
+  feasibilityNote       String?  @db.Text // 可行性说明
+  assessedAt            DateTime @default(now()) // 评估时间
+  round                 Int      @default(1)      // 第几轮评估
+  isLatest              Boolean  @default(true)   // 是否是最新记录
+
+  consultation          Consultation @relation(fields: [consultationId], references: [id], onDelete: Cascade)
+  sampleTestItem        SampleTestItem @relation(fields: [sampleTestItemId], references: [id], onDelete: Cascade)
+
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+
+  @@index([consultationId, isLatest])
+  @@index([sampleTestItemId, isLatest])
+  @@index([assessorId])
+  @@map("consultation_sample_assessment")
 }
 
 // 报价明细项
@@ -1265,13 +1299,21 @@ model SampleTestItem {
   testStandard      String?   @db.VarChar(200) // 检测标准（冗余存储）
   judgmentStandard  String?   @db.Text         // 评判标准
 
+  // 评估相关字段（v2）
+  assessmentStatus      String?   @db.VarChar(20)  // pending/assessing/passed/failed
+  currentAssessorId     String?   @db.VarChar(50)  // 当前评估人ID
+  currentAssessorName   String?   @db.VarChar(50)  // 当前评估人姓名
+
   // 排序和状态
   sortOrder         Int       @default(0)      // 排序序号
 
   createdAt         DateTime  @default(now())
   updatedAt         DateTime  @updatedAt
 
+  assessments       ConsultationSampleAssessment[]
+
   @@index([bizType, bizId])
   @@index([testTemplateId])
+  @@index([assessmentStatus])
   @@map("biz_sample_test_item")
 }
