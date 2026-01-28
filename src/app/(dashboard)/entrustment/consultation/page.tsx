@@ -1030,7 +1030,7 @@ export default function ConsultationPage() {
         open={reassessmentModalOpen}
         consultationId={currentConsultation?.id || null}
         consultationNo={currentConsultation?.consultationNo}
-        currentTestItems={currentConsultation?.testItems}
+        currentRequirement={currentConsultation?.clientRequirement}
         onCancel={() => {
           setReassessmentModalOpen(false)
           setCurrentConsultation(null)
