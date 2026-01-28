@@ -8,11 +8,14 @@
 
 import { useState, useEffect } from 'react'
 import { Table, Button, Space, Modal, Form, Input, InputNumber, Select, DatePicker, message, Drawer, Tag, Row, Col, Divider, Popconfirm, Tabs, Descriptions, Card, Radio, Upload } from 'antd'
-import { PlusOutlined, EditOutlined, DeleteOutlined, EyeOutlined, CheckOutlined, CloseOutlined, SendOutlined, FilePdfOutlined, FolderOutlined, FileAddOutlined, MessageOutlined, UploadOutlined } from '@ant-design/icons'
+import { PlusOutlined, EditOutlined, DeleteOutlined, EyeOutlined, CheckOutlined, CloseOutlined, SendOutlined, FilePdfOutlined, FolderOutlined, FileAddOutlined, MessageOutlined, UploadOutlined, FileTextOutlined } from '@ant-design/icons'
 import { StatusTag } from '@/components/StatusTag'
 import { ApprovalTimeline } from '@/components/ApprovalTimeline'
 import UserSelect from '@/components/UserSelect'
 import SampleTestItemTable, { SampleTestItemData } from '@/components/SampleTestItemTable'
+import { RejectModal } from '@/components/RejectModal'
+import { CreateEntrustmentButton } from '@/components/CreateEntrustmentButton'
+import { QuotationPDFButton } from '@/components/QuotationPDFButton'
 import type { ColumnsType } from 'antd/es/table'
 import dayjs from 'dayjs'
 import { useRouter } from 'next/navigation'
@@ -128,6 +131,10 @@ export default function QuotationPage() {
   const [contractModalOpen, setContractModalOpen] = useState(false)
   const [feedbackForm] = Form.useForm()
   const [contractForm] = Form.useForm()
+
+  // 🆕 新功能：驳回对话框状态
+  const [rejectModalVisible, setRejectModalVisible] = useState(false)
+  const [selectedQuotationForReject, setSelectedQuotationForReject] = useState<Quotation | null>(null)
 
 
 
@@ -928,6 +935,9 @@ export default function QuotationPage() {
           (record.status === 'pending_lab' && session?.user?.roles?.includes('lab_director'))
         )
 
+        // 判断是否为审批中状态（任意pending状态）
+        const isPending = record.status.startsWith('pending_') || record.status === 'pending'
+
         return (
           <Space size="small" style={{ whiteSpace: 'nowrap' }}>
             {/* 业务按钮（带文字） */}
@@ -941,10 +951,46 @@ export default function QuotationPage() {
                 setApprovalModalOpen(true)
               }}>审核</Button>
             )}
-            <Button size="small" icon={<FilePdfOutlined />} onClick={() => handleGeneratePDFForRecord(record)}>生成PDF</Button>
-            {record.status === 'approved' && (
-              <Button size="small" icon={<FileAddOutlined />} onClick={() => handleOpenContractForRecord(record)}>生成合同</Button>
+
+            {/* 🆕 新功能：生成委托单按钮（只对approved状态） */}
+            <CreateEntrustmentButton
+              quotationId={record.id}
+              quotationStatus={record.status}
+              onSuccess={() => {
+                message.success('委托单创建成功')
+                fetchData()
+              }}
+              buttonText="生成委托单"
+              icon={<FileTextOutlined />}
+            />
+
+            {/* 🆕 新功能：PDF打印按钮（带状态控制，替换原来的生成PDF按钮） */}
+            <QuotationPDFButton
+              quotationId={record.id}
+              quotationStatus={record.status}
+              buttonType="default"
+              size="small"
+              showLabel={true}
+            />
+
+            {/* 🆕 新功能：驳回按钮（只对pending状态） */}
+            {isPending && (
+              <Button
+                size="small"
+                danger
+                onClick={() => {
+                  setSelectedQuotationForReject(record)
+                  setRejectModalVisible(true)
+                }}
+              >
+                驳回
+              </Button>
             )}
+
+            {record.status === 'approved' && (
+              <Button size="small" icon={<FolderOutlined />} onClick={() => handleOpenContractForRecord(record)}>生成合同</Button>
+            )}
+
             {/* 通用按钮（仅图标） */}
             <Button size="small" icon={<EyeOutlined />} onClick={() => handleView(record)} />
             <Button size="small" icon={<EditOutlined />} onClick={() => handleEdit(record)} disabled={record.status !== 'draft'} />
@@ -1532,6 +1578,21 @@ export default function QuotationPage() {
 
         </Form>
       </Modal>
+
+      {/* 🆕 新功能：驳回对话框 */}
+      <RejectModal
+        visible={rejectModalVisible}
+        documentId={selectedQuotationForReject?.id || ''}
+        documentType="quotation"
+        onSuccess={() => {
+          fetchData()
+          setSelectedQuotationForReject(null)
+        }}
+        onCancel={() => {
+          setRejectModalVisible(false)
+          setSelectedQuotationForReject(null)
+        }}
+      />
     </div>
   )
 }
