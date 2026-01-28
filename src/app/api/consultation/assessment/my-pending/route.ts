@@ -41,7 +41,5 @@ export const GET = withAuth(async (
     round: assessment.round,
   }))
 
-  return success({
-    data: formattedData
-  })
+  return success(formattedData)
 })

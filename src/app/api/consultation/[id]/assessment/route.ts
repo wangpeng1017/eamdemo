@@ -113,11 +113,9 @@ export const GET = withAuth(async (
     : 0
 
   return success({
-    data: {
-      consultationId: id,
-      status: consultation.status,
-      maxRound,
-      assessments: consultation.assessments
-    }
+    consultationId: id,
+    status: consultation.status,
+    maxRound,
+    assessments: consultation.assessments
   })
 })
