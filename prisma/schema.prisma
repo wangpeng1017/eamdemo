@@ -336,6 +336,7 @@ model Quotation {
   items            QuotationItem[]
   approvals        QuotationApproval[]
   contracts        Contract[]
+  entrustments     Entrustment[]  // 模块1：报价单可以生成多个委托单
 
   @@index([clientId])
   @@index([status])
@@ -455,8 +456,16 @@ model EntrustmentProject {
 model Entrustment {
   id            String    @id @default(cuid())
   entrustmentNo String    @unique @db.VarChar(50) // WT+年月日+序号
+
+  // 关联合同（可选）
   contractNo    String?   @db.VarChar(50)
   contract      Contract? @relation(fields: [contractNo], references: [contractNo])
+
+  // 关联报价单（模块1：支持从报价单直接生成委托单）
+  quotationNo   String?   @db.VarChar(50)
+  quotationId   String?
+  quotation     Quotation? @relation(fields: [quotationId], references: [id])
+
   clientId      String?
   client        Client?   @relation(fields: [clientId], references: [id])
   contactPerson String?   @db.VarChar(50)
@@ -478,6 +487,7 @@ model Entrustment {
   receivables FinanceReceivable[]
 
   @@index([clientId])
+  @@index([quotationId])
   @@index([status])
   @@index([createdAt])
   @@map("biz_entrustment")
