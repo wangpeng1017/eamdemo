@@ -1,5 +1,6 @@
 import { prisma } from '@/lib/prisma'
 import { NextRequest, NextResponse } from 'next/server'
+import { validateQuotationForPDF } from '@/lib/quotation-pdf-validation'
 
 // 生成报价单 PDF（实际返回可打印的 HTML）
 export async function GET(
@@ -7,6 +8,19 @@ export async function GET(
     { params }: { params: Promise<{ id: string }> }
 ) {
     const { id } = await params
+
+    // ✅ 验证审批状态
+    const validation = await validateQuotationForPDF(id)
+    if (!validation.canGenerate) {
+        return NextResponse.json(
+            {
+                success: false,
+                error: validation.error,
+                currentStatus: validation.currentStatus
+            },
+            { status: 403 }
+        )
+    }
 
     const quotation = await prisma.quotation.findUnique({
         where: { id },
