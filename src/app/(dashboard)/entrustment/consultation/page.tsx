@@ -292,6 +292,8 @@ export default function ConsultationPage() {
       ...values,
       expectedDeadline: values.expectedDeadline ? values.expectedDeadline.toISOString() : null,
       attachments: attachments,
+      // 直接包含样品检测项数据
+      sampleTestItems: sampleTestItems,
     }
 
     let consultationId = editingId
@@ -312,29 +314,6 @@ export default function ConsultationPage() {
       const json = await res.json()
       consultationId = json.data?.id || json.id
       message.success('创建成功')
-    }
-
-    // 保存样品检测项数据
-    if (consultationId) {
-      try {
-        const res = await fetch('/api/sample-test-item', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            bizType: 'consultation',
-            bizId: consultationId,
-            items: sampleTestItems,
-          })
-        })
-        if (!res.ok) {
-          const json = await res.json()
-          message.error(`保存样品检测项失败: ${json.error?.message || '未知错误'}`)
-          return
-        }
-      } catch (error) {
-        message.error('保存样品检测项失败，请重试')
-        return
-      }
     }
 
     setModalOpen(false)
@@ -827,6 +806,7 @@ export default function ConsultationPage() {
               bizId={editingId || undefined}
               value={sampleTestItems}
               onChange={setSampleTestItems}
+              showAssessment={true}
             />
           </div>
 

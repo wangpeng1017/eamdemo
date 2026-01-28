@@ -71,10 +71,26 @@ export const POST = withAuth(async (request: NextRequest, user) => {
   })
   const consultationNo = `ZX${today}${String(count + 1).padStart(4, '0')}`
 
-  const createData: any = { ...data, consultationNo }
+  // 提取样品检测项数据
+  const sampleTestItems = data.sampleTestItems || []
+
+  // 准备咨询单创建数据
+  const createData: any = {
+    consultationNo,
+    status: 'following', // 初始状态为"跟进中"
+  }
+
+  // 复制其他字段
+  Object.keys(data).forEach(key => {
+    if (!['sampleTestItems', 'samples'].includes(key)) {
+      createData[key] = data[key]
+    }
+  })
+
+  // 处理 testItems（旧字段，保持兼容）
   createData.testItems = Array.isArray(data.testItems) ? JSON.stringify(data.testItems) : '[]'
 
-  // 移除旧字段处理，或者保留兼容
+  // 处理 estimatedQuantity
   if (data.estimatedQuantity != null) {
     createData.estimatedQuantity = parseInt(data.estimatedQuantity, 10) || 0
   }
@@ -86,8 +102,43 @@ export const POST = withAuth(async (request: NextRequest, user) => {
   const attachments = data.attachments || []
   delete createData.attachments
 
-  const consultation = await prisma.consultation.create({
-    data: createData
+  // 使用事务创建咨询单和样品检测项
+  const consultation = await prisma.$transaction(async (tx) => {
+    // 1. 创建咨询单
+    const newConsultation = await tx.consultation.create({
+      data: createData
+    })
+
+    // 2. 批量创建样品检测项
+    if (sampleTestItems.length > 0) {
+      await Promise.all(
+        sampleTestItems.map((item: any) =>
+          tx.sampleTestItem.create({
+            data: {
+              bizType: 'consultation',
+              bizId: newConsultation.id,
+              sampleName: item.sampleName,
+              batchNo: item.batchNo || null,
+              material: item.material || null,
+              appearance: item.appearance || null,
+              quantity: item.quantity || 1,
+              testTemplateId: item.testTemplateId || null,
+              testItemName: item.testItemName || '',
+              testStandard: item.testStandard || null,
+              judgmentStandard: item.judgmentStandard || null,
+              // 评估人信息
+              currentAssessorId: item.assessorId || null,
+              currentAssessorName: item.assessorName || null,
+              // 如果分配了评估人，状态设为 assessing，否则为 pending
+              assessmentStatus: item.assessorId ? 'assessing' : 'pending',
+              sortOrder: 0,
+            },
+          })
+        )
+      )
+    }
+
+    return newConsultation
   })
 
   // 处理附件：将文件从temp/移动到{consultationId}/

@@ -32,7 +32,17 @@ export const PUT = withErrorHandler(async (
   const { id } = await context!.params
   const data = await request.json()
 
-  const updateData: any = { ...data }
+  // 提取样品检测项数据
+  const sampleTestItems = data.sampleTestItems || []
+
+  // 准备咨询单更新数据
+  const updateData: any = {}
+  Object.keys(data).forEach(key => {
+    if (!['sampleTestItems', 'samples'].includes(key)) {
+      updateData[key] = data[key]
+    }
+  })
+
   if (Array.isArray(data.testItems)) {
     updateData.testItems = JSON.stringify(data.testItems)
   }
@@ -95,11 +105,57 @@ export const PUT = withErrorHandler(async (
     updateData.attachments = JSON.stringify(updatedAttachments)
   }
 
-  // 移除旧的samples处理
+  // 移除旧字段
   delete updateData.samples
   delete updateData.consultationSamples
 
-  const consultation = await prisma.consultation.update({ where: { id }, data: updateData })
+  // 使用事务更新咨询单和样品检测项
+  const consultation = await prisma.$transaction(async (tx) => {
+    // 1. 更新咨询单
+    const updatedConsultation = await tx.consultation.update({
+      where: { id },
+      data: updateData
+    })
+
+    // 2. 删除旧的样品检测项
+    await tx.sampleTestItem.deleteMany({
+      where: {
+        bizType: 'consultation',
+        bizId: id,
+      },
+    })
+
+    // 3. 批量创建新的样品检测项
+    if (sampleTestItems.length > 0) {
+      await Promise.all(
+        sampleTestItems.map((item: any) =>
+          tx.sampleTestItem.create({
+            data: {
+              bizType: 'consultation',
+              bizId: id,
+              sampleName: item.sampleName,
+              batchNo: item.batchNo || null,
+              material: item.material || null,
+              appearance: item.appearance || null,
+              quantity: item.quantity || 1,
+              testTemplateId: item.testTemplateId || null,
+              testItemName: item.testItemName || '',
+              testStandard: item.testStandard || null,
+              judgmentStandard: item.judgmentStandard || null,
+              // 评估人信息
+              currentAssessorId: item.assessorId || null,
+              currentAssessorName: item.assessorName || null,
+              // 如果分配了评估人，状态设为 assessing，否则为 pending
+              assessmentStatus: item.assessorId ? 'assessing' : 'pending',
+              sortOrder: 0,
+            },
+          })
+        )
+      )
+    }
+
+    return updatedConsultation
+  })
 
   return success({
     ...consultation,

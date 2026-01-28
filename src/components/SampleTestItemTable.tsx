@@ -7,9 +7,17 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
-import { Table, Button, Input, InputNumber, Select, Space, message, Popconfirm } from 'antd'
-import { PlusOutlined, DeleteOutlined } from '@ant-design/icons'
+import { Table, Button, Input, InputNumber, Select, Space, message, Popconfirm, Tag } from 'antd'
+import { PlusOutlined, DeleteOutlined, CopyOutlined } from '@ant-design/icons'
 import type { ColumnsType } from 'antd/es/table'
+
+// 用户类型
+interface User {
+  id: string
+  name: string
+  username: string
+  dept?: { name: string }
+}
 
 // 样品检测项数据类型
 export interface SampleTestItemData {
@@ -24,6 +32,11 @@ export interface SampleTestItemData {
   testItemName: string
   testStandard?: string
   judgmentStandard?: string
+
+  // === 新增：评估相关字段 ===
+  assessorId?: string          // 评估人 ID
+  assessorName?: string        // 评估人姓名
+  assigningState?: 'none' | 'selecting' | 'assigned'  // 分配状态
 }
 
 // 检测项目选项类型
@@ -34,12 +47,20 @@ interface TestTemplateOption {
   method: string // 检测标准
 }
 
+// 分配状态映射常量
+const ASSIGNMENT_STATE_MAP: Record<string, { text: string; color: string }> = {
+  none: { text: '待分配', color: 'default' },
+  selecting: { text: '选择中', color: 'processing' },
+  assigned: { text: '已分配', color: 'success' },
+}
+
 interface SampleTestItemTableProps {
   bizType: string
   bizId?: string
   value?: SampleTestItemData[]
   onChange?: (items: SampleTestItemData[]) => void
   readonly?: boolean
+  showAssessment?: boolean  // 新增：是否显示评估功能
 }
 
 export default function SampleTestItemTable({
@@ -48,10 +69,12 @@ export default function SampleTestItemTable({
   value,
   onChange,
   readonly = false,
+  showAssessment = false,  // 默认不显示评估功能
 }: SampleTestItemTableProps) {
   const [items, setItems] = useState<SampleTestItemData[]>(value || [])
   const [testTemplates, setTestTemplates] = useState<TestTemplateOption[]>([])
   const [loading, setLoading] = useState(false)
+  const [users, setUsers] = useState<User[]>([])  // 新增：用户列表
 
   // 加载检测项目选项
   useEffect(() => {
@@ -71,6 +94,25 @@ export default function SampleTestItemTable({
     }
     fetchTestTemplates()
   }, [])
+
+  // 加载用户列表（评估功能需要）
+  useEffect(() => {
+    if (!showAssessment) return  // 只在启用评估功能时加载
+
+    const fetchUsers = async () => {
+      try {
+        const res = await fetch('/api/user?pageSize=1000')
+        const json = await res.json()
+        if (json.success && json.data?.list) {
+          setUsers(json.data.list || [])
+        }
+      } catch (error) {
+        console.error('加载用户列表失败:', error)
+        message.error('加载用户列表失败')
+      }
+    }
+    fetchUsers()
+  }, [showAssessment])
 
   // 从服务器加载数据
   useEffect(() => {
@@ -131,6 +173,53 @@ export default function SampleTestItemTable({
     const newItems = items.filter((item) => item.key !== key)
     setItems(newItems)
     onChange?.(newItems)
+  }
+
+  // 更新单个样品检测项
+  const updateItem = (key: string, updates: Partial<SampleTestItemData>) => {
+    setItems((prevItems) => {
+      const newItems = prevItems.map((item) =>
+        item.key === key ? { ...item, ...updates } : item
+      )
+      onChange?.(newItems)
+      return newItems
+    })
+  }
+
+  // 开始分配评估人
+  const handleStartAssigning = (key: string) => {
+    updateItem(key, { assigningState: 'selecting' })
+  }
+
+  // 选择评估人
+  const handleSelectAssessor = (key: string, userId: string) => {
+    const user = users.find((u) => u.id === userId)
+    updateItem(key, {
+      assessorId: userId,
+      assessorName: user?.name,
+    })
+  }
+
+  // 确认分配
+  const handleConfirmAssign = (key: string) => {
+    updateItem(key, { assigningState: 'assigned' })
+  }
+
+  // 更换评估人
+  const handleChangeAssessor = (key: string) => {
+    updateItem(key, { assigningState: 'selecting' })
+  }
+
+  // 从上一行复制评估人
+  const handleCopyFromPrevious = (key: string, index: number) => {
+    const prevItem = items[index - 1]
+    if (prevItem?.assessorId) {
+      updateItem(key, {
+        assessorId: prevItem.assessorId,
+        assessorName: prevItem.assessorName,
+        assigningState: 'assigned',
+      })
+    }
   }
 
   // 更新单元格
@@ -287,6 +376,86 @@ export default function SampleTestItemTable({
     },
   ]
 
+  // 渲染评估列
+  const renderAssessmentColumn = (record: SampleTestItemData, index: number) => {
+    const state = record.assigningState || 'none'
+
+    // 未分配状态
+    if (state === 'none') {
+      return (
+        <Space size="small">
+          <Tag color={ASSIGNMENT_STATE_MAP.none.color}>{ASSIGNMENT_STATE_MAP.none.text}</Tag>
+          <Button type="primary" size="small" onClick={() => handleStartAssigning(record.key)}>
+            评估
+          </Button>
+          {index > 0 && items[index - 1]?.assessorId && (
+            <Button
+              type="text"
+              size="small"
+              icon={<CopyOutlined />}
+              onClick={() => handleCopyFromPrevious(record.key, index)}
+              title="复制上一行评估人"
+            />
+          )}
+        </Space>
+      )
+    }
+
+    // 选择中状态
+    if (state === 'selecting') {
+      return (
+        <Space size="small">
+          <Tag color={ASSIGNMENT_STATE_MAP.selecting.color}>{ASSIGNMENT_STATE_MAP.selecting.text}</Tag>
+          <Select
+            showSearch
+            allowClear
+            placeholder="选择评估人"
+            style={{ width: 150 }}
+            optionFilterProp="label"
+            value={record.assessorId}
+            onChange={(val) => handleSelectAssessor(record.key, val || '')}
+            options={users.map((u) => ({
+              value: u.id,
+              label: `${u.name}${u.dept ? ` (${u.dept.name})` : ''}`,
+            }))}
+          />
+          <Button type="primary" size="small" onClick={() => handleConfirmAssign(record.key)}>
+            确定
+          </Button>
+        </Space>
+      )
+    }
+
+    // 已分配状态
+    return (
+      <Space size="small">
+        <Tag color={ASSIGNMENT_STATE_MAP.assigned.color}>{ASSIGNMENT_STATE_MAP.assigned.text}</Tag>
+        <Tag color="blue">{record.assessorName}</Tag>
+        <Button size="small" onClick={() => handleChangeAssessor(record.key)}>
+          更换
+        </Button>
+        {index > 0 && (
+          <Button
+            type="text"
+            size="small"
+            icon={<CopyOutlined />}
+            onClick={() => handleCopyFromPrevious(record.key, index)}
+            title="复制上一行评估人"
+          />
+        )}
+      </Space>
+    )
+  }
+
+  // 添加评估列（只在启用评估功能且非只读模式时）
+  if (showAssessment && !readonly) {
+    columns.push({
+      title: '评估人',
+      width: 350,
+      render: (_, record, index) => renderAssessmentColumn(record, index),
+    })
+  }
+
   // 非只读模式添加操作列
   if (!readonly) {
     columns.push({
@@ -324,7 +493,7 @@ export default function SampleTestItemTable({
         loading={loading}
         pagination={false}
         size="small"
-        scroll={{ x: 1200 }}
+        scroll={{ x: showAssessment ? 1550 : 1200 }}
         bordered
       />
     </div>
