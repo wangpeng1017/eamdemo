@@ -138,6 +138,18 @@ model Client {
   approvalInstanceId String?  @unique
   approvalInstance ApprovalInstance? @relation(fields: [approvalInstanceId], references: [id])
 
+  // 审批流程字段（模块4）
+  submittedAt   DateTime? // 提交审批时间
+  submittedBy   String?   @db.VarChar(50) // 提交人
+  approvedAt    DateTime? // 审批通过时间
+  approvedBy    String?   @db.VarChar(50) // 审批人
+
+  // 驳回记录字段（模块2）
+  rejectedCount     Int      @default(0) // 驳回次数
+  lastRejectReason  String?  @db.Text // 最后一次驳回原因
+  lastRejectBy      String?  @db.VarChar(50) // 最后一次驳回人
+  lastRejectAt      DateTime? // 最后一次驳回时间
+
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
 
