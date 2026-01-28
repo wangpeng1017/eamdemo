@@ -15,6 +15,12 @@ interface OutsourceOrder {
   expectedDate: string | null
   completedDate: string | null
   supplier: { name: string } | null
+  task?: {
+    project?: {
+      subcontractAssignee?: string | null
+      subcontractAssigneeName?: string | null
+    }
+  } | null
   createdAt: string
 }
 
@@ -103,6 +109,12 @@ export default function OutsourceOrderPage() {
   const columns: ColumnsType<OutsourceOrder> = [
     { title: '外包单号', dataIndex: 'orderNo', width: 150 },
     { title: '供应商', render: (_, r) => r.supplier?.name || r.supplierName || '-' },
+    {
+      title: '内部负责人',
+      key: 'manager',
+      width: 150,
+      render: (_, record) => record.task?.project?.subcontractAssigneeName || '-'
+    },
     { title: '金额', dataIndex: 'amount', width: 120, render: (v) => v ? `¥${v}` : '-' },
     { title: '期望完成', dataIndex: 'expectedDate', width: 120, render: (t: string) => t ? dayjs(t).format('YYYY-MM-DD HH:mm:ss') : '-' },
     { title: '实际完成', dataIndex: 'completedDate', width: 120, render: (t: string) => t ? dayjs(t).format('YYYY-MM-DD HH:mm:ss') : '-' },

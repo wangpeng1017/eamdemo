@@ -55,6 +55,7 @@ export default function MyOutsourcePage() {
       const params = new URLSearchParams({
         page: String(pagination.current),
         pageSize: String(pagination.pageSize),
+        filter: 'my', // 只显示我负责的委外订单
       })
       if (statusFilter) params.append('status', statusFilter)
       if (keyword) params.append('keyword', keyword)

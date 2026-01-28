@@ -71,6 +71,17 @@ export const GET = withAuth(async (request: NextRequest, user) => {
 export const POST = withAuth(async (request: NextRequest, user) => {
   const data = await request.json()
 
+  // 如果从咨询单创建，查询咨询单以继承 clientReportDeadline
+  let inheritedDeadline = null
+  const consultationNo = data.consultationNo || data.consultationId
+  if (consultationNo && !data.clientReportDeadline) {
+    const consultation = await prisma.consultation.findUnique({
+      where: { consultationNo },
+      select: { clientReportDeadline: true },
+    })
+    inheritedDeadline = consultation?.clientReportDeadline
+  }
+
   const today = new Date().toISOString().slice(0, 10).replace(/-/g, '')
   const count = await prisma.quotation.count({
     where: { quotationNo: { startsWith: `BJ${today}` } }
@@ -100,6 +111,8 @@ export const POST = withAuth(async (request: NextRequest, user) => {
     discountTotal,
     status: data.status || 'draft',
     clientStatus: data.clientResponse || 'pending',
+    // 优先使用手动提供的值，否则继承咨询单的值
+    clientReportDeadline: data.clientReportDeadline ? new Date(data.clientReportDeadline) : (inheritedDeadline || null),
     createdById: user?.id,
     items: {
       create: items.map((item: any) => ({
@@ -120,7 +133,6 @@ export const POST = withAuth(async (request: NextRequest, user) => {
   })
 
   // 回写咨询单
-  const consultationNo = data.consultationNo || data.consultationId
   if (consultationNo) {
     await prisma.consultation.updateMany({
       where: { consultationNo },

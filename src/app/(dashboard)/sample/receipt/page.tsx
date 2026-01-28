@@ -62,6 +62,7 @@ export default function SampleReceiptPage() {
   // Label Modal
   const [labelModalOpen, setLabelModalOpen] = useState(false)
   const [labelSample, setLabelSample] = useState<Sample | null>(null)
+  const [labelTestItems, setLabelTestItems] = useState<string[]>([])
   const labelRef = useRef<HTMLDivElement>(null)
 
   const fetchData = async (p = page) => {
@@ -163,9 +164,23 @@ export default function SampleReceiptPage() {
     fetchData()
   }
 
-  const handleShowLabel = (record: Sample) => {
+  const handleShowLabel = async (record: Sample) => {
     setLabelSample(record)
     setLabelModalOpen(true)
+
+    // 查询检测项目
+    try {
+      const res = await fetch(`/api/sample-test-item?bizType=sample_receipt&bizId=${record.id}`)
+      const json = await res.json()
+      if (json.success && json.data) {
+        const testItems = json.data.map((item: any) => item.testItemName)
+        setLabelTestItems(testItems)
+      } else {
+        setLabelTestItems([])
+      }
+    } catch (e) {
+      setLabelTestItems([])
+    }
   }
 
   const handleDownloadLabel = async () => {
@@ -344,7 +359,7 @@ export default function SampleReceiptPage() {
         ]}
         width={400}
       >
-        <div ref={labelRef} style={{ padding: 24, textAlign: 'center', background: '#fff' }}>
+        <div ref={labelRef} style={{ padding: 24, textAlign: 'center', background: '#fff', minHeight: 200 }}>
           <Barcode
             value={labelSample?.sampleNo || 'SAMPLE'}
             width={2}
@@ -352,9 +367,27 @@ export default function SampleReceiptPage() {
             displayValue={true}
             fontSize={14}
           />
-          <div style={{ marginTop: 12 }}>
+          <div style={{ marginTop: 12, fontSize: 12 }}>
             <div><strong>样品编号:</strong> {labelSample?.sampleNo}</div>
             <div><strong>样品名称:</strong> {labelSample?.name}</div>
+
+            {/* 检测项目多行显示 */}
+            {labelTestItems.length > 0 && (
+              <div style={{ marginTop: 8, textAlign: 'left' }}>
+                <div style={{ fontWeight: 'bold', marginBottom: 4, fontSize: 12 }}>
+                  检测项目:
+                </div>
+                {labelTestItems.map((item, index) => (
+                  <div key={index} style={{
+                    fontSize: 11,
+                    lineHeight: 1.4,
+                    paddingLeft: 8
+                  }}>
+                    {index + 1}. {item}
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         </div>
       </Modal>

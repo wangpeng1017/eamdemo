@@ -11,6 +11,7 @@ export const GET = withAuth(async (request: NextRequest, user) => {
   const status = searchParams.get('status')
   const supplierId = searchParams.get('supplierId')
   const keyword = searchParams.get('keyword')
+  const filter = searchParams.get('filter')
 
   const where: Record<string, unknown> = {}
   if (status) where.status = status
@@ -23,6 +24,15 @@ export const GET = withAuth(async (request: NextRequest, user) => {
     ]
   }
 
+  // filter=my: 只显示当前用户作为内部负责人的订单
+  if (filter === 'my') {
+    where.task = {
+      project: {
+        subcontractAssignee: user.id
+      }
+    }
+  }
+
   const [list, total] = await Promise.all([
     prisma.outsourceOrder.findMany({
       where,
@@ -31,6 +41,17 @@ export const GET = withAuth(async (request: NextRequest, user) => {
       take: pageSize,
       include: {
         supplier: { select: { id: true, name: true } },
+        task: {
+          include: {
+            project: {
+              select: {
+                id: true,
+                subcontractAssignee: true,
+                subcontractAssigneeName: true,
+              }
+            }
+          }
+        }
       },
     }),
     prisma.outsourceOrder.count({ where }),

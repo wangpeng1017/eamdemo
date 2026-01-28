@@ -402,6 +402,7 @@ export default function QuotationPage() {
       ...record,
       clientId: record.clientId || record.client?.id,
       quotationDate: dayjs(record.quotationDate),
+      clientReportDeadline: record.clientReportDeadline ? dayjs(record.clientReportDeadline) : null,
       discountAmount: Number((record as any).discountAmount) || 0,
     }
     form.setFieldsValue(formData)
@@ -415,6 +416,7 @@ export default function QuotationPage() {
     const submitData = {
       ...values,
       quotationDate: values.quotationDate.toISOString(),
+      clientReportDeadline: values.clientReportDeadline?.toISOString() || null,
       items,
       finalAmount: form.getFieldValue('finalAmount'),
     }
@@ -909,6 +911,12 @@ export default function QuotationPage() {
       render: (s: string) => <StatusTag type="quotation" status={s} />,
     },
     {
+      title: '报告时间',
+      dataIndex: 'clientReportDeadline',
+      width: 120,
+      render: (t: string) => t ? dayjs(t).format('YYYY-MM-DD') : '-',
+    },
+    {
       title: '创建日期',
       dataIndex: 'createdAt',
       width: 160,
@@ -1085,6 +1093,16 @@ export default function QuotationPage() {
               <Form.Item name="clientContactPerson" label="联系人" rules={[{ required: true, message: '请输入联系人' }]}>
                 <Input placeholder="请输入联系人" />
               </Form.Item>
+            </Col>
+          </Row>
+          <Row gutter={16}>
+            <Col span={12}>
+              <Form.Item name="clientReportDeadline" label="客户报告截止日期">
+                <DatePicker style={{ width: '100%' }} placeholder="选择报告截止日期" />
+              </Form.Item>
+            </Col>
+            <Col span={12}>
+              {/* 预留空间，可以放其他字段 */}
             </Col>
           </Row>
 
