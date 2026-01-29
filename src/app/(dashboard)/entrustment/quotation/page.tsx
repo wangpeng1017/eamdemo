@@ -970,6 +970,8 @@ export default function QuotationPage() {
               }}
               buttonText="生成委托单"
               icon={<FileTextOutlined />}
+              size="small"
+              type="default"
             />
 
             {/* 🆕 新功能：PDF打印按钮（带状态控制，替换原来的生成PDF按钮） */}

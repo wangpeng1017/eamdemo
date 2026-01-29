@@ -174,13 +174,10 @@ export async function createEntrustmentFromQuotation(
     quotation.items.map(item =>
       prisma.entrustmentProject.create({
         data: {
-          entrustmentId: entrustment.entrustmentNo,
-          serviceName: item.serviceItem,
-          testStandard: item.methodStandard,
-          quantity: item.quantity,
-          unitPrice: Number(item.unitPrice),
-          totalPrice: Number(item.totalPrice),
-          testMethod: ''
+          entrustmentId: entrustment.id,  // 使用 id 而不是 entrustmentNo
+          name: item.serviceItem,          // serviceName -> name
+          testItems: '[]',                 // 检测参数列表（空数组）
+          method: item.methodStandard      // testStandard -> method
         }
       })
     )

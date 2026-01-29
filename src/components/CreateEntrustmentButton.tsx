@@ -31,6 +31,8 @@ interface CreateEntrustmentButtonProps {
   onSuccess?: (entrustmentId: string, entrustmentNo: string) => void
   buttonText?: string
   icon?: React.ReactNode
+  size?: 'small' | 'middle' | 'large'
+  type?: 'default' | 'primary' | 'dashed' | 'link' | 'text'
 }
 
 interface CreateEntrustmentResponse {
@@ -52,7 +54,9 @@ export function CreateEntrustmentButton({
   quotationStatus,
   onSuccess,
   buttonText = '生成委托单',
-  icon = <FileTextOutlined />
+  icon = <FileTextOutlined />,
+  size = 'middle',
+  type = 'primary'
 }: CreateEntrustmentButtonProps) {
   const [loading, setLoading] = useState(false)
   const [resultModalVisible, setResultModalVisible] = useState(false)
@@ -135,8 +139,9 @@ export function CreateEntrustmentButton({
   return (
     <>
       <Button
-        type="primary"
+        type={type}
         icon={icon}
+        size={size}
         loading={loading}
         disabled={!canCreate}
         onClick={handleCreate}
