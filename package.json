@@ -31,6 +31,7 @@
     "html-to-image": "^1.11.13",
     "jspdf": "^4.0.0",
     "mime-types": "^2.1.35",
+    "mysql2": "^3.16.2",
     "next": "15.1.0",
     "next-auth": "^5.0.0-beta.30",
     "react": "^18.3.1",
