@@ -4,6 +4,7 @@ import {
   withAuth,
   success,
   validateRequired,
+  badRequest,
 } from '@/lib/api-handler'
 import { generateNo, NumberPrefixes } from '@/lib/generate-no'
 import { getDataFilter } from '@/lib/data-permission'
@@ -123,16 +124,37 @@ export const GET = withAuth(async (request: NextRequest, user) => {
 export const POST = withAuth(async (request: NextRequest, user) => {
   const data = await request.json()
 
-  // 验证必填字段
-  validateRequired(data, ['name'])
+  // 验证必填字段：testItems
+  validateRequired(data, ['testItems'])
+
+  // 验证testItems是非空数组
+  if (!Array.isArray(data.testItems) || data.testItems.length === 0) {
+    badRequest('testItems不能为空')
+  }
+
+  const { testItems, ...otherFields } = data
+
+  // 从检测项计算Sample字段
+  const firstItem = testItems[0]
+
+  // 计算totalQuantity：所有检测项的quantity总和
+  const totalQuantity = testItems.reduce((sum: number, item: any) => {
+    return sum + (Number(item.quantity) || 0)
+  }, 0)
 
   // 生成样品编号
   const sampleNo = await generateNo(NumberPrefixes.SAMPLE, 3)
 
   const sample = await prisma.sample.create({
     data: {
-      ...data,
+      ...otherFields,
       sampleNo,
+      // 从第一个检测项自动计算的字段
+      name: firstItem.sampleName,
+      specification: firstItem.material || null,
+      quantity: String(firstItem.quantity || 1),
+      totalQuantity: String(totalQuantity),
+      // 状态和日期
       status: data.status || 'received',
       receiptDate: data.receiptDate ? new Date(data.receiptDate) : new Date(),
       createdById: user.id,

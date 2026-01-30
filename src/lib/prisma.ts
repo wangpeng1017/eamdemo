@@ -14,12 +14,28 @@ const globalForPrisma = globalThis as unknown as {
 }
 
 // 强制使用运行时 DATABASE_URL，避免构建时硬编码
+// 动态添加连接池参数，避免连接池耗尽
+function getDatabaseUrl(): string {
+  const baseUrl = process.env.DATABASE_URL
+  if (!baseUrl) throw new Error('DATABASE_URL is not set')
+
+  // 如果已经包含连接池参数，直接返回
+  if (baseUrl.includes('connection_limit')) {
+    return baseUrl
+  }
+
+  // 添加连接池参数
+  const separator = baseUrl.includes('?') ? '&' : '?'
+  return `${baseUrl}${separator}schema=lims&connect_timeout=30&pool_timeout=60&connection_limit=10`
+}
+
 export const prisma = globalForPrisma.prisma ?? new PrismaClient({
   datasources: {
     db: {
-      url: process.env.DATABASE_URL
+      url: getDatabaseUrl()
     }
-  }
+  },
+  log: process.env.NODE_ENV === 'development' ? ['query', 'error', 'warn'] : ['error', 'warn'],
 })
 
 if (process.env.NODE_ENV !== 'production') globalForPrisma.prisma = prisma

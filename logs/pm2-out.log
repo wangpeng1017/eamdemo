@@ -1,0 +1,47 @@
+{"message":"   ▲ Next.js 15.1.0\n","timestamp":"2026-01-30 14:37:43 +08:00","type":"out","process_id":0,"app_name":"lims-next"}
+{"message":"   - Local:        http://localhost:3000\n   - Network:      http://192.168.244.163:3000\n\n ✓ Starting...\n","timestamp":"2026-01-30 14:37:43 +08:00","type":"out","process_id":0,"app_name":"lims-next"}
+{"message":" ✓ Ready in 221ms\n","timestamp":"2026-01-30 14:37:43 +08:00","type":"out","process_id":0,"app_name":"lims-next"}
+{"message":"prisma:error \nInvalid `prisma.$queryRaw()` invocation:\n\n\nCan't reach database server at `localhost:3307`\n\nPlease make sure your database server is running at `localhost:3307`.\n","timestamp":"2026-01-30 14:38:21 +08:00","type":"out","process_id":0,"app_name":"lims-next"}
+{"message":"   ▲ Next.js 15.1.0\n","timestamp":"2026-01-30 14:42:44 +08:00","type":"out","process_id":0,"app_name":"lims-next"}
+{"message":"   - Local:        http://localhost:3000\n   - Network:      http://192.168.244.163:3000\n\n ✓ Starting...\n","timestamp":"2026-01-30 14:42:44 +08:00","type":"out","process_id":0,"app_name":"lims-next"}
+{"message":" ✓ Ready in 254ms\n","timestamp":"2026-01-30 14:42:44 +08:00","type":"out","process_id":0,"app_name":"lims-next"}
+{"message":"   ▲ Next.js 15.1.0\n","timestamp":"2026-01-30 14:46:39 +08:00","type":"out","process_id":0,"app_name":"lims-next"}
+{"message":"   - Local:        http://localhost:3000\n   - Network:      http://192.168.244.163:3000\n\n ✓ Starting...\n","timestamp":"2026-01-30 14:46:39 +08:00","type":"out","process_id":0,"app_name":"lims-next"}
+{"message":" ✓ Ready in 217ms\n","timestamp":"2026-01-30 14:46:39 +08:00","type":"out","process_id":0,"app_name":"lims-next"}
+{"message":"prisma:error \nInvalid `prisma.$queryRaw()` invocation:\n\n\nCan't reach database server at `localhost:3307`\n\nPlease make sure your database server is running at `localhost:3307`.\n","timestamp":"2026-01-30 14:51:05 +08:00","type":"out","process_id":0,"app_name":"lims-next"}
+{"message":"prisma:error \nInvalid `prisma.$queryRaw()` invocation:\n\n\nCan't reach database server at `localhost:3307`\n\nPlease make sure your database server is running at `localhost:3307`.\n","timestamp":"2026-01-30 14:51:10 +08:00","type":"out","process_id":0,"app_name":"lims-next"}
+{"message":"prisma:error \nInvalid `prisma.$queryRaw()` invocation:\n\n\nCan't reach database server at `localhost:3307`\n\nPlease make sure your database server is running at `localhost:3307`.\n","timestamp":"2026-01-30 14:51:15 +08:00","type":"out","process_id":0,"app_name":"lims-next"}
+{"message":"   ▲ Next.js 15.1.0\n","timestamp":"2026-01-30 14:51:20 +08:00","type":"out","process_id":0,"app_name":"lims-next"}
+{"message":"   - Local:        http://localhost:3000\n   - Network:      http://192.168.244.163:3000\n\n ✓ Starting...\n","timestamp":"2026-01-30 14:51:20 +08:00","type":"out","process_id":0,"app_name":"lims-next"}
+{"message":" ✓ Ready in 219ms\n","timestamp":"2026-01-30 14:51:20 +08:00","type":"out","process_id":0,"app_name":"lims-next"}
+{"message":"prisma:error \nInvalid `prisma.$queryRaw()` invocation:\n\n\nCan't reach database server at `localhost:3307`\n\nPlease make sure your database server is running at `localhost:3307`.\n","timestamp":"2026-01-30 14:51:30 +08:00","type":"out","process_id":0,"app_name":"lims-next"}
+{"message":"prisma:error \nInvalid `prisma.$queryRaw()` invocation:\n\n\nCan't reach database server at `localhost:3307`\n\nPlease make sure your database server is running at `localhost:3307`.\n","timestamp":"2026-01-30 14:51:35 +08:00","type":"out","process_id":0,"app_name":"lims-next"}
+{"message":"prisma:error \nInvalid `prisma.$queryRaw()` invocation:\n\n\nCan't reach database server at `localhost:3307`\n\nPlease make sure your database server is running at `localhost:3307`.\n","timestamp":"2026-01-30 14:51:40 +08:00","type":"out","process_id":0,"app_name":"lims-next"}
+{"message":"   ▲ Next.js 15.1.0\n","timestamp":"2026-01-30 14:59:41 +08:00","type":"out","process_id":0,"app_name":"lims-next"}
+{"message":"   - Local:        http://localhost:3000\n   - Network:      http://192.168.244.163:3000\n\n ✓ Starting...\n","timestamp":"2026-01-30 14:59:41 +08:00","type":"out","process_id":0,"app_name":"lims-next"}
+{"message":" ✓ Ready in 222ms\n","timestamp":"2026-01-30 14:59:41 +08:00","type":"out","process_id":0,"app_name":"lims-next"}
+{"message":"   ▲ Next.js 15.1.0\n","timestamp":"2026-01-30 14:59:52 +08:00","type":"out","process_id":0,"app_name":"lims-next"}
+{"message":"   - Local:        http://localhost:3000\n   - Network:      http://192.168.244.163:3000\n\n ✓ Starting...\n","timestamp":"2026-01-30 14:59:52 +08:00","type":"out","process_id":0,"app_name":"lims-next"}
+{"message":" ✓ Ready in 217ms\n","timestamp":"2026-01-30 14:59:52 +08:00","type":"out","process_id":0,"app_name":"lims-next"}
+{"message":"prisma:error \nInvalid `prisma.$queryRaw()` invocation:\n\n\nServer has closed the connection.\n","timestamp":"2026-01-30 15:00:05 +08:00","type":"out","process_id":0,"app_name":"lims-next"}
+{"message":"   ▲ Next.js 15.1.0\n","timestamp":"2026-01-30 15:02:03 +08:00","type":"out","process_id":0,"app_name":"lims-next"}
+{"message":"   - Local:        http://localhost:3000\n   - Network:      http://192.168.244.163:3000\n\n ✓ Starting...\n","timestamp":"2026-01-30 15:02:03 +08:00","type":"out","process_id":0,"app_name":"lims-next"}
+{"message":" ✓ Ready in 224ms\n","timestamp":"2026-01-30 15:02:03 +08:00","type":"out","process_id":0,"app_name":"lims-next"}
+{"message":"prisma:error \nInvalid `prisma.$queryRaw()` invocation:\n\n\nServer has closed the connection.\n","timestamp":"2026-01-30 15:02:26 +08:00","type":"out","process_id":0,"app_name":"lims-next"}
+{"message":"prisma:error \nInvalid `prisma.user.findUnique()` invocation:\n\n\nServer has closed the connection.\n","timestamp":"2026-01-30 15:04:41 +08:00","type":"out","process_id":0,"app_name":"lims-next"}
+{"message":"   ▲ Next.js 15.1.0\n","timestamp":"2026-01-30 15:11:56 +08:00","type":"out","process_id":0,"app_name":"lims-next"}
+{"message":"   - Local:        http://localhost:3000\n   - Network:      http://192.168.244.163:3000\n\n ✓ Starting...\n","timestamp":"2026-01-30 15:11:56 +08:00","type":"out","process_id":0,"app_name":"lims-next"}
+{"message":" ✓ Ready in 224ms\n","timestamp":"2026-01-30 15:11:56 +08:00","type":"out","process_id":0,"app_name":"lims-next"}
+{"message":"prisma:error \nInvalid `prisma.$queryRaw()` invocation:\n\n\nServer has closed the connection.\n","timestamp":"2026-01-30 15:12:21 +08:00","type":"out","process_id":0,"app_name":"lims-next"}
+{"message":"   ▲ Next.js 15.1.0\n","timestamp":"2026-01-30 15:35:09 +08:00","type":"out","process_id":0,"app_name":"lims-next"}
+{"message":"   - Local:        http://localhost:3000\n   - Network:      http://192.168.244.163:3000\n\n ✓ Starting...\n","timestamp":"2026-01-30 15:35:09 +08:00","type":"out","process_id":0,"app_name":"lims-next"}
+{"message":" ✓ Ready in 261ms\n","timestamp":"2026-01-30 15:35:09 +08:00","type":"out","process_id":0,"app_name":"lims-next"}
+{"message":"   ▲ Next.js 15.1.0\n","timestamp":"2026-01-30 15:48:57 +08:00","type":"out","process_id":0,"app_name":"lims-next"}
+{"message":"   - Local:        http://localhost:3000\n   - Network:      http://192.168.244.163:3000\n\n ✓ Starting...\n","timestamp":"2026-01-30 15:48:57 +08:00","type":"out","process_id":0,"app_name":"lims-next"}
+{"message":" ✓ Ready in 219ms\n","timestamp":"2026-01-30 15:48:57 +08:00","type":"out","process_id":0,"app_name":"lims-next"}
+{"message":"prisma:error \nInvalid `prisma.$queryRaw()` invocation:\n\n\nServer has closed the connection.\n","timestamp":"2026-01-30 15:50:07 +08:00","type":"out","process_id":0,"app_name":"lims-next"}
+{"message":"prisma:error \nInvalid `prisma.$queryRaw()` invocation:\n\n\nServer has closed the connection.\n","timestamp":"2026-01-30 15:50:25 +08:00","type":"out","process_id":0,"app_name":"lims-next"}
+{"message":"   ▲ Next.js 15.1.0\n","timestamp":"2026-01-30 15:51:33 +08:00","type":"out","process_id":0,"app_name":"lims-next"}
+{"message":"   - Local:        http://localhost:3000\n   - Network:      http://0.0.0.0:3000\n\n ✓ Starting...\n","timestamp":"2026-01-30 15:51:33 +08:00","type":"out","process_id":0,"app_name":"lims-next"}
+{"message":" ✓ Ready in 37ms\n","timestamp":"2026-01-30 15:51:33 +08:00","type":"out","process_id":0,"app_name":"lims-next"}
+{"message":"prisma:error \nInvalid `prisma.$queryRaw()` invocation:\n\n\nServer has closed the connection.\n","timestamp":"2026-01-30 15:51:48 +08:00","type":"out","process_id":0,"app_name":"lims-next"}

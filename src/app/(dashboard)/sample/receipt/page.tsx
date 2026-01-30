@@ -6,9 +6,10 @@ import { PlusOutlined, BarcodeOutlined, DownloadOutlined, SearchOutlined } from 
 import { StatusTag } from '@/components/StatusTag'
 import SampleTestItemTable, { SampleTestItemData } from '@/components/SampleTestItemTable'
 import type { ColumnsType } from "antd/es/table"
-import dayjs from "dayjs"
+import dayjs from 'dayjs'
 import Barcode from 'react-barcode'
 import { toPng } from 'html-to-image'
+import { fetcher } from '@/lib/fetcher'
 
 interface Sample {
   id: string
@@ -29,9 +30,6 @@ interface Sample {
 interface Entrustment {
   id: string
   entrustmentNo: string
-  sampleName: string | null
-  sampleModel: string | null
-  sampleQuantity: number | null
   client?: { name: string }
 }
 
@@ -58,6 +56,8 @@ export default function SampleReceiptPage() {
 
   // 样品检测项（新）
   const [sampleTestItems, setSampleTestItems] = useState<SampleTestItemData[]>([])
+  const [loadingTestItems, setLoadingTestItems] = useState(false)
+  const [locked, setLocked] = useState(false) // 是否锁定检测项表格
 
   // Label Modal
   const [labelModalOpen, setLabelModalOpen] = useState(false)
@@ -72,7 +72,7 @@ export default function SampleReceiptPage() {
       pageSize: "10",
       ...(keyword && { keyword }),
     })
-    const res = await fetch(`/api/sample?${params}`)
+    const res = await fetcher(`/api/sample?${params}`)
     const json = await res.json()
     if (json.success && json.data) {
       setData(json.data.list || [])
@@ -86,7 +86,7 @@ export default function SampleReceiptPage() {
 
   const fetchEntrustments = async () => {
     try {
-      const res = await fetch('/api/entrustment?pageSize=100')
+      const res = await fetcher('/api/entrustment?pageSize=100')
       const json = await res.json()
       if (json.success && json.data) {
         setEntrustments(json.data.list || [])
@@ -106,18 +106,40 @@ export default function SampleReceiptPage() {
     form.setFieldValue("receiptDate", dayjs())
     setSelectedEntrustment(null)
     setSampleTestItems([]) // 清空样品检测项
+    setLocked(false) // 解锁检测项表格
     setModalOpen(true)
   }
 
-  const handleEntrustmentChange = (entrustmentId: string) => {
+  const handleEntrustmentChange = async (entrustmentId: string) => {
     const ent = entrustments.find(e => e.id === entrustmentId)
     setSelectedEntrustment(ent || null)
-    if (ent) {
-      form.setFieldsValue({
-        name: ent.sampleName || '',
-        specification: ent.sampleModel || '',
-        quantity: ent.sampleQuantity?.toString() || '',
-      })
+
+    // 清空现有检测项
+    setSampleTestItems([])
+
+    if (!entrustmentId) {
+      setLocked(false) // 清空委托单时解锁
+      return
+    }
+
+    // 自动加载委托单的检测项
+    try {
+      setLoadingTestItems(true)
+      const res = await fetcher(`/api/entrustment/${entrustmentId}/projects`)
+      const json = await res.json()
+
+      if (json.success && json.data) {
+        setSampleTestItems(json.data)
+        setLocked(true) // 加载成功后锁定
+      } else {
+        message.error('加载检测项失败')
+        setLocked(false)
+      }
+    } catch (error) {
+      message.error('加载检测项失败')
+      setLocked(false)
+    } finally {
+      setLoadingTestItems(false)
     }
   }
 
@@ -128,9 +150,8 @@ export default function SampleReceiptPage() {
       entrustmentId: selectedEntrustment?.id || null,
       receiptDate: values.receiptDate?.toISOString(),
     }
-    const res = await fetch("/api/sample", {
+    const res = await fetcher("/api/sample", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
       body: JSON.stringify(data)
     })
     const json = await res.json()
@@ -139,9 +160,8 @@ export default function SampleReceiptPage() {
     // 保存样品检测项数据
     if (sampleId) {
       try {
-        const res = await fetch('/api/sample-test-item', {
+        const res = await fetcher('/api/sample-test-item', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             bizType: 'sample_receipt',
             bizId: sampleId,
@@ -170,7 +190,7 @@ export default function SampleReceiptPage() {
 
     // 查询检测项目
     try {
-      const res = await fetch(`/api/sample-test-item?bizType=sample_receipt&bizId=${record.id}`)
+      const res = await fetcher(`/api/sample-test-item?bizType=sample_receipt&bizId=${record.id}`)
       const json = await res.json()
       if (json.success && json.data) {
         const testItems = json.data.map((item: any) => item.testItemName)
@@ -280,41 +300,32 @@ export default function SampleReceiptPage() {
               placeholder="选择委托单（可选）"
               optionFilterProp="label"
               onChange={handleEntrustmentChange}
+              loading={loadingTestItems}
               options={entrustments.map(e => ({
                 value: e.id,
-                label: `${e.entrustmentNo} - ${e.sampleName || '未命名'}`,
+                label: `${e.entrustmentNo}${e.client ? ' - ' + e.client.name : ''}`,
               }))}
             />
           </Form.Item>
 
           {selectedEntrustment && (
-            <Card size="small" style={{ marginBottom: 16, background: '#fafafa' }}>
-              <Descriptions size="small" column={2}>
+            <Card size="small" style={{ marginBottom: 16, background: '#e6f7ff' }}>
+              <Descriptions size="small" column={1}>
                 <Descriptions.Item label="委托单号">{selectedEntrustment.entrustmentNo}</Descriptions.Item>
-                <Descriptions.Item label="样品名称">{selectedEntrustment.sampleName || '-'}</Descriptions.Item>
+                <Descriptions.Item label="客户名称">{selectedEntrustment.client?.name || '-'}</Descriptions.Item>
+                <Descriptions.Item label="检测项">
+                  {sampleTestItems.length > 0 ? (
+                    <Tag color="blue">{sampleTestItems.length} 个检测项已自动加载</Tag>
+                  ) : (
+                    <Tag color="default">加载中...</Tag>
+                  )}
+                </Descriptions.Item>
               </Descriptions>
             </Card>
           )}
 
           <Row gutter={16}>
             <Col span={12}>
-              <Form.Item label="样品名称" name="name" rules={[{ required: true }]}>
-                <Input />
-              </Form.Item>
-            </Col>
-            <Col span={12}>
-              <Form.Item label="规格型号" name="specification">
-                <Input />
-              </Form.Item>
-            </Col>
-          </Row>
-          <Row gutter={16}>
-            <Col span={8}>
-              <Form.Item label="数量" name="quantity">
-                <Input />
-              </Form.Item>
-            </Col>
-            <Col span={8}>
               <Form.Item label="单位" name="unit">
                 <Select allowClear>
                   <Select.Option value="个">个</Select.Option>
@@ -322,10 +333,11 @@ export default function SampleReceiptPage() {
                   <Select.Option value="片">片</Select.Option>
                   <Select.Option value="根">根</Select.Option>
                   <Select.Option value="组">组</Select.Option>
+                  <Select.Option value="批">批</Select.Option>
                 </Select>
               </Form.Item>
             </Col>
-            <Col span={8}>
+            <Col span={12}>
               <Form.Item label="收样日期" name="receiptDate" rules={[{ required: true }]}>
                 <DatePicker style={{ width: "100%" }} />
               </Form.Item>
@@ -337,10 +349,16 @@ export default function SampleReceiptPage() {
 
           {/* 样品检测项表格 */}
           <div style={{ marginTop: 16 }}>
+            {locked && (
+              <div style={{ marginBottom: 8, color: '#ff4d4f', fontSize: 12 }}>
+                <Tag color="warning">已锁定</Tag> 检测项从委托单自动加载，不可编辑
+              </div>
+            )}
             <SampleTestItemTable
               bizType="sample_receipt"
               value={sampleTestItems}
               onChange={setSampleTestItems}
+              readonly={locked}
             />
           </div>
         </Form>
