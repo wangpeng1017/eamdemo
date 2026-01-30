@@ -66,7 +66,6 @@ export const GET = withAuth(async (request: NextRequest, user) => {
           select: {
             id: true,
             entrustmentNo: true,
-            sampleName: true,
             client: {
               select: {
                 id: true,
