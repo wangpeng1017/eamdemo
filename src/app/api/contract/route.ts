@@ -44,7 +44,6 @@ export const GET = withAuth(async (request: NextRequest, user) => {
         client: true,
         quotation: true,
         createdBy: true,
-        contractSamples: true,
         items: {
           orderBy: { sort: 'asc' }
         }
@@ -70,12 +69,8 @@ export const GET = withAuth(async (request: NextRequest, user) => {
     startDate: contract.effectiveDate,
     endDate: contract.expiryDate,
 
-    // 样品信息
-    sampleName: contract.sampleName,
-    sampleModel: contract.sampleModel,
-    sampleMaterial: contract.sampleMaterial,
-    sampleQuantity: contract.sampleQuantity,
-    contractSamples: contract.contractSamples || [],
+    // 样品信息(已迁移到Sample模型)
+    // contractSamples: contract.contractSamples || [],
 
     // 跟进人 (默认为合同创建人)
     salesPerson: contract.createdBy?.name || null,
@@ -159,18 +154,8 @@ export const POST = withAuth(async (request: NextRequest, user) => {
     }
   }
 
-  // 处理样品列表
-  if (Array.isArray(data.samples) && data.samples.length > 0) {
-    createData.contractSamples = {
-      create: data.samples.map((sample: any) => ({
-        name: sample.name,
-        model: sample.model,
-        material: sample.material,
-        quantity: parseInt(sample.quantity, 10) || 1,
-        remark: sample.remark,
-      })),
-    }
-  }
+  // 处理样品列表 - 功能已移除，跳过contractSamples
+  // if (Array.isArray(data.samples) && data.samples.length > 0) {...}
 
   console.log('[Contract Create] Prisma Data:', JSON.stringify(createData, null, 2))
 
@@ -179,7 +164,6 @@ export const POST = withAuth(async (request: NextRequest, user) => {
       data: createData,
       include: {
         items: true,
-        contractSamples: true,
       }
     })
 
