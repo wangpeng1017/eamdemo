@@ -52,6 +52,7 @@ sshpass -p "$SERVER_PASS" ssh -o StrictHostKeyChecking=no -o ServerAliveInterval
   tar -xzf public.tar.gz && \
   rm -rf .next && \
   mv standalone/.next . && \
+  mkdir -p .next/static && \
   cp -r static/* .next/static/ && \
   cp standalone/server.js . && \
   cp standalone/package.json . 2>/dev/null || true && \
