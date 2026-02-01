@@ -429,10 +429,17 @@ export default function ConsultationPage() {
       body: JSON.stringify({
         consultationNo: values.consultationNo,
         clientId: values.clientId,
-        clientContactPerson: values.contact,
-        samples: quoteSamples,
+        clientContactPerson: values.clientContactPerson,
+        // ✅ 需求2：提交新增的字段
+        clientReportDeadline: values.clientReportDeadline ? dayjs(values.clientReportDeadline).format('YYYY-MM-DD') : undefined,
+        quotationDate: values.quotationDate ? dayjs(values.quotationDate).format('YYYY-MM-DD') : undefined,
+        validDays: values.validDays,
+        paymentTerms: values.paymentTerms,
+        deliveryTerms: values.deliveryTerms,
+        follower: values.follower,
+        remark: values.remark,
         clientRemark: values.clientRemark,
-        clientReportDeadline: values.clientReportDeadline,
+        samples: quoteSamples,
         items: quoteItems.map((item: any) => ({
           serviceItem: item.name,
           methodStandard: item.standard,
@@ -552,44 +559,80 @@ export default function ConsultationPage() {
   const totalWithTax = totalAmount + taxAmount
 
   // 针对单条记录生成报价单
-  const handleOpenGenerateQuoteForRecord = (consultation: Consultation) => {
-    // 初始化样品数据（从样品检测项获取）
-    let initSamples: any[] = []
-    if (sampleTestItems.length > 0) {
-      initSamples = sampleTestItems.map(item => ({
-        name: item.sampleName,
-        model: '',
-        material: item.material,
-        quantity: item.quantity,
-        remark: ''
-      }))
-    }
-    setQuoteSamples(initSamples)
+  const handleOpenGenerateQuoteForRecord = async (consultation: Consultation) => {
+    // ✅ 需求1：评估验证 - 检查所有样品检测项是否已评估通过
+    try {
+      const res = await fetch(`/api/consultation/${consultation.id}`)
+      const data = await res.json()
 
-    const items = (consultation.testItems || []).map(item => {
-      const template = testTemplates.find(t => t.name === item)
-      return {
-        name: item,
-        standard: template?.method || '',
-        quantity: 1,
-        unitPrice: 0
+      if (!res.ok || !data) {
+        message.error('获取咨询详情失败')
+        return
       }
-    })
-    setQuoteItems(items)
-    generateQuoteForm.resetFields()
-    generateQuoteForm.setFieldsValue({
-      consultationId: consultation.id,
-      consultationNo: consultation.consultationNo,
-      clientId: consultation.clientId,
-      clientName: consultation.client?.name,
-      clientContact: consultation.clientContactPerson,
-      clientPhone: consultation.client?.phone,
-      validDays: 30,
-      taxRate: 6,
-      discountAmount: 0,
-      clientReportDeadline: consultation.expectedDeadline,
-    })
-    setGenerateQuoteModalOpen(true)
+
+      const items = data.sampleTestItems || []
+
+      // 检查是否有未评估或评估未通过的项
+      const unfinishedItems = items.filter(
+        (item: any) => item.assessmentStatus !== 'approved'
+      )
+
+      if (unfinishedItems.length > 0) {
+        Modal.warning({
+          title: '评估未完成',
+          content: '请先完成所有样品检测项的评估后再生成报价单',
+        })
+        return
+      }
+
+      // ✅ 评估验证通过，继续原有逻辑
+      // 初始化样品数据（从样品检测项获取）
+      let initSamples: any[] = []
+      if (sampleTestItems.length > 0) {
+        initSamples = sampleTestItems.map(item => ({
+          name: item.sampleName,
+          model: '',
+          material: item.material,
+          quantity: item.quantity,
+          remark: ''
+        }))
+      }
+      setQuoteSamples(initSamples)
+
+      const quoteItemsList = (consultation.testItems || []).map(item => {
+        const template = testTemplates.find(t => t.name === item)
+        return {
+          name: item,
+          standard: template?.method || '',
+          quantity: 1,
+          unitPrice: 0
+        }
+      })
+      setQuoteItems(quoteItemsList)
+      generateQuoteForm.resetFields()
+      generateQuoteForm.setFieldsValue({
+        consultationId: consultation.id,
+        consultationNo: consultation.consultationNo,
+        clientId: consultation.clientId,
+        clientName: consultation.client?.name,
+        clientContactPerson: consultation.clientContactPerson,
+        clientPhone: consultation.client?.phone,
+        clientReportDeadline: consultation.expectedDeadline ? dayjs(consultation.expectedDeadline) : undefined,
+        // ✅ 需求2：补充主报价单表单的字段
+        quotationDate: dayjs(), // 默认今天
+        validDays: 30,
+        taxRate: 6,
+        discountAmount: 0,
+        paymentTerms: '', // 可选
+        deliveryTerms: '', // 可选
+        follower: consultation.follower || '', // 从咨询单带入跟单人
+        remark: '', // 备注
+      })
+      setGenerateQuoteModalOpen(true)
+    } catch (error) {
+      console.error('生成报价单失败:', error)
+      message.error('操作失败，请重试')
+    }
   }
 
   // v2: "发起评估"功能已废弃，评估人在创建时通过样品检测项分配
@@ -933,6 +976,45 @@ export default function ConsultationPage() {
             </Col>
           </Row>
 
+          {/* ✅ 需求2：添加报价信息字段，与主报价单表单一致 */}
+          <Divider>报价信息</Divider>
+          <Row gutter={16}>
+            <Col span={12}>
+              <Form.Item name="quotationDate" label="报价日期" rules={[{ required: true, message: '请选择报价日期' }]}>
+                <DatePicker style={{ width: '100%' }} placeholder="选择报价日期" />
+              </Form.Item>
+            </Col>
+            <Col span={12}>
+              <Form.Item name="validDays" label="有效期（天）">
+                <InputNumber min={1} style={{ width: '100%' }} placeholder="如：30" />
+              </Form.Item>
+            </Col>
+          </Row>
+          <Row gutter={16}>
+            <Col span={12}>
+              <Form.Item name="clientReportDeadline" label="客户报告截止日期">
+                <DatePicker style={{ width: '100%' }} placeholder="选择报告截止日期" />
+              </Form.Item>
+            </Col>
+            <Col span={12}>
+              <Form.Item name="follower" label="跟单人">
+                <UserSelect placeholder="请选择跟单人" />
+              </Form.Item>
+            </Col>
+          </Row>
+          <Row gutter={16}>
+            <Col span={12}>
+              <Form.Item name="paymentTerms" label="付款方式">
+                <Input placeholder="如：预付50%" />
+              </Form.Item>
+            </Col>
+            <Col span={12}>
+              <Form.Item name="deliveryTerms" label="交付方式">
+                <Input placeholder="如：检测完成后3个工作日内出具报告" />
+              </Form.Item>
+            </Col>
+          </Row>
+
           <Divider>样品信息</Divider>
 
           <Table
@@ -1044,7 +1126,10 @@ export default function ConsultationPage() {
           </div>
 
           <Form.Item name="clientRemark" label="客户要求备注" style={{ marginTop: 16 }}>
-            <Input.TextArea rows={3} />
+            <Input.TextArea rows={3} placeholder="请输入客户要求备注" />
+          </Form.Item>
+          <Form.Item name="remark" label="备注">
+            <Input.TextArea rows={3} placeholder="请输入备注" />
           </Form.Item>
           <Form.Item name="consultationId" hidden><Input /></Form.Item>
           <Form.Item name="consultationNo" hidden><Input /></Form.Item>
