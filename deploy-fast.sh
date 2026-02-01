@@ -48,13 +48,15 @@ sshpass -p "$SERVER_PASS" scp -o StrictHostKeyChecking=no -o ServerAliveInterval
 echo ""
 echo "[4/5] 服务器解压并配置..."
 sshpass -p "$SERVER_PASS" ssh -o StrictHostKeyChecking=no -o ServerAliveInterval=60 "$SERVER" "cd $REMOTE_DIR && \
-  rm -rf .next/standalone .next/static 2>/dev/null || true && \
-  tar -xzf standalone.tar.gz -C .next && \
+  tar -xzf standalone.tar.gz && \
   tar -xzf public.tar.gz && \
-  cp -r .next/standalone/* . && \
-  cp -r .next/static .next/standalone/.next/ && \
-  cp .env .next/standalone/ 2>/dev/null || true && \
-  rm standalone.tar.gz public.tar.gz && \
+  rm -rf .next && \
+  mv standalone/.next . && \
+  cp -r static/* .next/static/ && \
+  cp standalone/server.js . && \
+  cp standalone/package.json . 2>/dev/null || true && \
+  cp .env standalone/ 2>/dev/null || true && \
+  rm -rf standalone standalone.tar.gz public.tar.gz && \
   node update-db-schema.js"
 
 # 5. 重启服务（使用 PORT 环境变量）
