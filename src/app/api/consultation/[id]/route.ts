@@ -13,7 +13,11 @@ export const GET = withErrorHandler(async (
   const { id } = await context!.params
   const consultation = await prisma.consultation.findUnique({
     where: { id },
-    include: { followUps: { orderBy: { date: 'desc' } }, client: true },
+    include: {
+      followUps: { orderBy: { date: 'desc' } },
+      client: true,
+      sampleTestItems: { orderBy: { sortOrder: 'asc' } },
+    },
   })
 
   if (!consultation) notFound('咨询单不存在')

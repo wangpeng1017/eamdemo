@@ -439,8 +439,9 @@ export default function ConsultationPage() {
         follower: values.follower,
         remark: values.remark,
         clientRemark: values.clientRemark,
-        samples: quoteSamples,
+        // ✅ 需求3：提交样品检测项格式的报价明细（包含样品名）
         items: quoteItems.map((item: any) => ({
+          sampleName: item.sampleName || '',
           serviceItem: item.name,
           methodStandard: item.standard,
           quantity: item.quantity,
@@ -585,29 +586,14 @@ export default function ConsultationPage() {
         return
       }
 
-      // ✅ 评估验证通过，继续原有逻辑
-      // 初始化样品数据（从样品检测项获取）
-      let initSamples: any[] = []
-      if (sampleTestItems.length > 0) {
-        initSamples = sampleTestItems.map(item => ({
-          name: item.sampleName,
-          model: '',
-          material: item.material,
-          quantity: item.quantity,
-          remark: ''
-        }))
-      }
-      setQuoteSamples(initSamples)
-
-      const quoteItemsList = (consultation.testItems || []).map(item => {
-        const template = testTemplates.find(t => t.name === item)
-        return {
-          name: item,
-          standard: template?.method || '',
-          quantity: 1,
-          unitPrice: 0
-        }
-      })
+      // ✅ 需求3：从样品检测项直接生成报价明细（样品+检测项合并）
+      const quoteItemsList = items.map((item: any) => ({
+        sampleName: item.sampleName || '',
+        name: item.testItemName || '', // 检测项目名称
+        standard: item.testStandard || '', // 检测标准
+        quantity: item.quantity || 1,
+        unitPrice: 0
+      }))
       setQuoteItems(quoteItemsList)
       generateQuoteForm.resetFields()
       generateQuoteForm.setFieldsValue({
@@ -1015,109 +1001,110 @@ export default function ConsultationPage() {
             </Col>
           </Row>
 
-          <Divider>样品信息</Divider>
+          <Divider>样品检测项</Divider>
 
           <Table
-            dataSource={quoteSamples}
+            dataSource={quoteItems}
             rowKey={(r, i) => i || 0}
             pagination={false}
             size="small"
             bordered
-            locale={{ emptyText: '暂无样品' }}
-            footer={() => (
-              <Button type="dashed" onClick={handleAddQuoteSample} block icon={<PlusOutlined />}>
-                添加样品
-              </Button>
-            )}
+            scroll={{ x: 'max-content' }}
+            locale={{ emptyText: '暂无检测项' }}
             columns={[
               {
                 title: '样品名称',
+                dataIndex: 'sampleName',
+                width: 150,
+                render: (val, record, index) => (
+                  <Input
+                    value={val}
+                    onChange={e => handleUpdateQuoteItem(index, 'sampleName', e.target.value)}
+                    placeholder="样品名称"
+                  />
+                )
+              },
+              {
+                title: '检测项目',
                 dataIndex: 'name',
+                width: 150,
                 render: (val, record, index) => (
-                  <Input value={val} onChange={e => handleUpdateQuoteSample(index, 'name', e.target.value)} placeholder="样品名称" />
+                  <Select
+                    placeholder="检测项目"
+                    value={val}
+                    onChange={(v) => handleUpdateQuoteItem(index, 'name', v)}
+                    showSearch
+                    optionFilterProp="label"
+                    options={testTemplates.map(t => ({ value: t.name, label: t.name }))}
+                    style={{ width: '100%' }}
+                  />
                 )
               },
               {
-                title: '规格型号',
-                dataIndex: 'model',
+                title: '检测标准',
+                dataIndex: 'standard',
+                width: 150,
                 render: (val, record, index) => (
-                  <Input value={val} onChange={e => handleUpdateQuoteSample(index, 'model', e.target.value)} placeholder="规格型号" />
-                )
-              },
-              {
-                title: '材质',
-                dataIndex: 'material',
-                render: (val, record, index) => (
-                  <Input value={val} onChange={e => handleUpdateQuoteSample(index, 'material', e.target.value)} placeholder="材质" />
+                  <Input
+                    placeholder="检测标准"
+                    value={val}
+                    onChange={(e) => handleUpdateQuoteItem(index, 'standard', e.target.value)}
+                  />
                 )
               },
               {
                 title: '数量',
                 dataIndex: 'quantity',
-                width: 80,
+                width: 100,
                 render: (val, record, index) => (
-                  <InputNumber min={1} value={val} onChange={v => handleUpdateQuoteSample(index, 'quantity', v || 1)} />
+                  <InputNumber
+                    placeholder="数量"
+                    value={val}
+                    onChange={(v) => handleUpdateQuoteItem(index, 'quantity', v)}
+                    min={1}
+                    style={{ width: '100%' }}
+                  />
                 )
               },
               {
-                title: '操作', fixed: 'right',
-
+                title: '单价(¥)',
+                dataIndex: 'unitPrice',
+                width: 120,
+                render: (val, record, index) => (
+                  <InputNumber
+                    placeholder="单价"
+                    value={val}
+                    onChange={(v) => handleUpdateQuoteItem(index, 'unitPrice', v)}
+                    min={0}
+                    precision={2}
+                    style={{ width: '100%' }}
+                  />
+                )
+              },
+              {
+                title: '总价(¥)',
+                dataIndex: 'totalPrice',
+                width: 100,
+                render: (_, record) => (
+                  <span>¥{((record.quantity || 0) * (record.unitPrice || 0)).toFixed(2)}</span>
+                )
+              },
+              {
+                title: '操作',
+                fixed: 'right',
+                width: 80,
                 render: (_, __, index) => (
-                  <Button type="text" danger icon={<DeleteOutlined />} onClick={() => handleRemoveQuoteSample(index)} />
+                  <Button
+                    danger
+                    size="small"
+                    icon={<DeleteOutlined />}
+                    onClick={() => handleRemoveQuoteItem(index)}
+                  />
                 )
               }
             ]}
           />
 
-          <Divider>检测项目</Divider>
-          {quoteItems.map((item, index) => (
-            <Row key={index} gutter={8} style={{ marginBottom: 8 }}>
-              <Col span={6}>
-                <Select
-                  placeholder="检测项目"
-                  value={item.name}
-                  onChange={(v) => handleUpdateQuoteItem(index, 'name', v)}
-                  showSearch
-                  optionFilterProp="label"
-                  options={testTemplates.map(t => ({ value: t.name, label: t.name }))}
-                  style={{ width: '100%' }}
-                />
-              </Col>
-              <Col span={6}>
-                <Input
-                  placeholder="检测标准"
-                  value={item.standard}
-                  onChange={(e) => handleUpdateQuoteItem(index, 'standard', e.target.value)}
-                />
-              </Col>
-              <Col span={3}>
-                <InputNumber
-                  placeholder="数量"
-                  value={item.quantity}
-                  onChange={(v) => handleUpdateQuoteItem(index, 'quantity', v)}
-                  min={1}
-                  style={{ width: '100%' }}
-                />
-              </Col>
-              <Col span={4}>
-                <InputNumber
-                  placeholder="单价"
-                  value={item.unitPrice}
-                  onChange={(v) => handleUpdateQuoteItem(index, 'unitPrice', v)}
-                  min={0}
-                  precision={2}
-                  prefix="¥"
-                  style={{ width: '100%' }}
-                />
-              </Col>
-              <Col span={4}>
-                <span>总价: ¥{((item.quantity || 0) * (item.unitPrice || 0)).toFixed(2)}</span>
-              </Col>
-              <Col span={1}>
-                <Button danger size="small" onClick={() => handleRemoveQuoteItem(index)} />
-              </Col>
-            </Row>
-          ))}
 
           <div style={{ background: '#f5f5f5', padding: 12, marginTop: 16 }}>
             <div>报价合计: ¥{totalAmount.toFixed(2)}</div>
