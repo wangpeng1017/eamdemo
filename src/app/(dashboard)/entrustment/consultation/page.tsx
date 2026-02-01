@@ -671,7 +671,7 @@ export default function ConsultationPage() {
       )
     },
     {
-      title: '操作', fixed: 'right',
+      title: '操作',
       key: 'action',
       fixed: 'right',
       render: (_, record) => (
@@ -1002,7 +1002,7 @@ export default function ConsultationPage() {
               },
               {
                 title: '操作', fixed: 'right',
-                
+
                 render: (_, __, index) => (
                   <Button type="text" danger icon={<DeleteOutlined />} onClick={() => handleRemoveQuoteSample(index)} />
                 )
