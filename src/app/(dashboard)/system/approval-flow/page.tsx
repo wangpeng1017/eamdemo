@@ -332,8 +332,8 @@ export default function ApprovalFlowPage() {
       ),
     },
     {
-      title: '操作',
-      width: 120,
+      title: '操作', fixed: 'right',
+      
       render: (_, record) => (
         <Space>
           <Button size="small" onClick={() => handleAddNode(record.id)}>添加节点</Button>
@@ -370,8 +370,8 @@ export default function ApprovalFlowPage() {
       },
       { title: '审批人/角色', dataIndex: 'targetName' },
       {
-        title: '操作',
-        width: 80,
+        title: '操作', fixed: 'right',
+        
         render: (_, node) => (
           <Space>
             <Button size="small" icon={<EditOutlined />} onClick={() => handleEditNode(record.id, node)} />

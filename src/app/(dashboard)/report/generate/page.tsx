@@ -201,8 +201,8 @@ export default function ReportGeneratePage() {
       render: (s) => <Tag color={statusMap[s]?.color}>{statusMap[s]?.text}</Tag>,
     },
     {
-      title: '操作',
-      width: 120,
+      title: '操作', fixed: 'right',
+      
       render: (_, record) => (
         <Space size="small">
           <Button

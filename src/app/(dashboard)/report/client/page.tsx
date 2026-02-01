@@ -297,7 +297,7 @@ export default function ClientReportPage() {
       render: (t: string) => dayjs(t).format('YYYY-MM-DD HH:mm:ss'),
     },
     {
-      title: '操作', width: 120, fixed: 'right',
+      title: '操作', fixed: 'right',
       render: (_, record) => getActions(record),
     },
   ]

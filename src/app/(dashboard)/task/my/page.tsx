@@ -167,8 +167,8 @@ export default function MyTasksPage() {
       render: (d) => d ? dayjs(d).format("YYYY-MM-DD HH:mm:ss") : "-",
     },
     {
-      title: "操作",
-      width: 120,
+      title: '操作', fixed: 'right',
+      
       render: (_, record) => (
         <Space size="small">
           {/* 待开始状态：显示"开始"按钮 */}

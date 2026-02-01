@@ -138,8 +138,8 @@ export default function TestReportPage() {
       render: (t: string) => dayjs(t).format('YYYY-MM-DD HH:mm')
     },
     {
-      title: '操作',
-      width: 80,
+      title: '操作', fixed: 'right',
+      
       render: (_, record) => (
         <Space>
           <Button

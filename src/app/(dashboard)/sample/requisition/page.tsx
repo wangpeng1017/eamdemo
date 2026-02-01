@@ -167,8 +167,8 @@ export default function SampleRequisitionPage() {
       render: (t: string) => t ? dayjs(t).format("YYYY-MM-DD HH:mm:ss") : "-",
     },
     {
-      title: "操作",
-      width: 80,
+      title: '操作', fixed: 'right',
+      
       fixed: "right" as const,
       render: (_, record) => (
         record.status === "requisitioned" || record.status === "overdue" ? (

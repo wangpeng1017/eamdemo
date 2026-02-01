@@ -150,8 +150,8 @@ export default function MyOutsourcePage() {
       render: (date: string | null) => date ? date.split('T')[0] : '-',
     },
     {
-      title: '操作',
-      width: 80,
+      title: '操作', fixed: 'right',
+      
       render: (_, record) => (
         <Button size="small" icon={<EyeOutlined />} onClick={() => handleView(record)}>
           详情

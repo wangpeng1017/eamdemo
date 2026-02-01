@@ -239,8 +239,8 @@ export default function ConsumableInfoPage() {
       ),
     },
     {
-      title: '操作',
-      width: 80,
+      title: '操作', fixed: 'right',
+      
       render: (_, record) => (
         <Space>
           <Button size="small" icon={<EditOutlined />} onClick={() => handleEdit(record)} />

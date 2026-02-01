@@ -565,8 +565,8 @@ export default function EntrustmentListPage() {
       }
     },
     {
-      title: '操作',
-      width: 100,
+      title: '操作', fixed: 'right',
+      
       render: (_, record) => {
         // 从父级获取 entrustmentId
         const entrustment = data.find(d => d.projects?.some(p => p.id === record.id))
@@ -678,7 +678,7 @@ export default function EntrustmentListPage() {
       )
     },
     {
-      title: '操作',
+      title: '操作', fixed: 'right',
       key: 'action',
       fixed: 'right',
       render: (_: any, record: Entrustment) => (

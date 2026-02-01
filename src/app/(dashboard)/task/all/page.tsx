@@ -104,8 +104,8 @@ export default function AllTasksPage() {
     },
 
     {
-      title: "操作",
-      width: 100,
+      title: '操作', fixed: 'right',
+      
       render: (_, record) => (
         <Space size="small">
           <Button type="link" size="small" onClick={() => handleAssign(record)} disabled={record.status === "completed"}>

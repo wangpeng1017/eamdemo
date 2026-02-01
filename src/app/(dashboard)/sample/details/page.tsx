@@ -242,8 +242,8 @@ export default function SampleDetailsPage() {
     },
     { title: "收样人", dataIndex: "receiptPerson", width: 80 },
     {
-      title: "操作",
-      width: 120,
+      title: '操作', fixed: 'right',
+      
       fixed: "right" as const,
       render: (_, record) => (
         <Space size="small">

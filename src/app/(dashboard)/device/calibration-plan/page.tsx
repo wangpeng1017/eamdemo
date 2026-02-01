@@ -276,8 +276,8 @@ export default function CalibrationPlanPage() {
       render: (s: string) => <StatusTag type="calibration_plan" status={s} />,
     },
     {
-      title: '操作',
-      width: 120,
+      title: '操作', fixed: 'right',
+      
       fixed: 'right',
       render: (_, record) => (
         <Space size="small">

@@ -243,8 +243,8 @@ export default function SampleReceiptPage() {
       render: (d: string) => d ? dayjs(d).format("YYYY-MM-DD HH:mm:ss") : "-",
     },
     {
-      title: "操作",
-      width: 80,
+      title: '操作', fixed: 'right',
+      
       render: (_, record) => (
         <Button
           type="link"

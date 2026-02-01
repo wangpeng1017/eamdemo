@@ -157,7 +157,7 @@ export default function PersonnelCapabilityPage() {
       }
     },
     {
-      title: '操作', width: 100, fixed: 'right',
+      title: '操作', fixed: 'right',
       render: (_, record) => (
         <Space size="small">
           <Button size="small" icon={<EditOutlined />} onClick={() => handleEdit(record)}/>

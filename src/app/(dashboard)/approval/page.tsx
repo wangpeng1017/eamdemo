@@ -212,9 +212,9 @@ export default function ApprovalPage() {
       render: (date: string) => date ? new Date(date).toLocaleString('zh-CN') : '-',
     },
     {
-      title: '操作',
+      title: '操作', fixed: 'right',
       key: 'action',
-      width: 180,
+      
       render: (_, record) => (
         <Space>
           {record.status === 'pending' && (
@@ -271,9 +271,9 @@ export default function ApprovalPage() {
   // 已审批记录的列配置(不显示通过/驳回按钮)
   const historyColumns = columns.filter(col => col.key !== 'action').concat([
     {
-      title: '操作',
+      title: '操作', fixed: 'right',
       key: 'action',
-      width: 100,
+      
       render: (_: unknown, record: ApprovalInstance) => (
         <Space>
           <Tooltip title="查看详情">

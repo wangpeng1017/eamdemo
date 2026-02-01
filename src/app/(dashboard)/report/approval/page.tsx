@@ -205,7 +205,7 @@ export default function ReportApprovalPage() {
       render: (t: string) => dayjs(t).format('YYYY-MM-DD HH:mm:ss'),
     },
     {
-      title: '操作', width: 120, fixed: 'right',
+      title: '操作', fixed: 'right',
       render: (_, record) => (
         <Space>
           <Button size="small" icon={<EyeOutlined />} onClick={() => handleView(record.id, 'client')}/>
@@ -245,7 +245,7 @@ export default function ReportApprovalPage() {
       render: (t: string) => dayjs(t).format('YYYY-MM-DD HH:mm:ss'),
     },
     {
-      title: '操作', width: 120, fixed: 'right',
+      title: '操作', fixed: 'right',
       render: (_, record) => (
         <Space>
           <Button

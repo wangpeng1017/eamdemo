@@ -207,7 +207,7 @@ export default function ClientPage() {
     { title: '联系人', dataIndex: 'contact', width: 100 },
     { title: '联系方式', dataIndex: 'phone', width: 130 },
     {
-      title: '操作', width: 200, fixed: 'right',
+      title: '操作', fixed: 'right',
       render: (_, record) => (
         <Space>
           {/* 🆕 新功能：审批按钮组 */}

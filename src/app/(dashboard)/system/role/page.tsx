@@ -98,7 +98,7 @@ export default function RolePage() {
     { title: '描述', dataIndex: 'description' },
     { title: '用户数', dataIndex: ['_count', 'users'], width: 100 },
     {
-      title: '操作', width: 100,
+      title: '操作', fixed: 'right', 
       render: (_, record) => (
         <Space>
           <Button size="small" icon={<EditOutlined />} onClick={() => handleEdit(record)} />

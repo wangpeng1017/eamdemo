@@ -262,8 +262,8 @@ export default function EvaluationTemplatePage() {
       ),
     },
     {
-      title: '操作',
-      width: 120,
+      title: '操作', fixed: 'right',
+      
       render: (_, record) => (
         <Space>
           <Button size="small" onClick={() => handleAddItem(record.id)}>添加评价项</Button>
@@ -288,8 +288,8 @@ export default function EvaluationTemplatePage() {
       { title: '满分', dataIndex: 'maxScore', width: 60 },
       { title: '说明', dataIndex: 'description', ellipsis: true },
       {
-        title: '操作',
-        width: 80,
+        title: '操作', fixed: 'right',
+        
         render: (_, item) => (
           <Space>
             <Button size="small" icon={<EditOutlined />} onClick={() => handleEditItem(record.id, item)} />

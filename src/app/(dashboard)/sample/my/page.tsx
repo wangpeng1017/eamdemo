@@ -220,8 +220,8 @@ export default function MySamplesPage() {
       render: (s: string) => <Tag color={statusMap[s]?.color}>{statusMap[s]?.text || s}</Tag>,
     },
     {
-      title: "操作",
-      width: 80,
+      title: '操作', fixed: 'right',
+      
       render: (_, record) => (
         record.status === "requisitioned" || record.status === "overdue" ? (
           <Button

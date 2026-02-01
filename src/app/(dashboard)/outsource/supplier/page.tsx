@@ -100,7 +100,7 @@ export default function SupplierPage() {
     { title: '联系人', dataIndex: 'contact', width: 100 },
     { title: '电话', dataIndex: 'phone', width: 130 },
     {
-      title: '操作', width: 100,
+      title: '操作', fixed: 'right', 
       render: (_, record) => (
         <Space>
           <Button size="small" icon={<EditOutlined />} onClick={() => handleEdit(record)} />

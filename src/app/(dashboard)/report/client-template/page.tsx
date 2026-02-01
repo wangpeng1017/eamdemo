@@ -131,8 +131,8 @@ export default function ClientTemplateePage() {
         },
         { title: '备注', dataIndex: 'remark', ellipsis: true },
         {
-            title: '操作',
-            width: 100,
+            title: '操作', fixed: 'right',
+            
             render: (_, record) => (
                 <Space size="small">
                     <Button size="small" type="link" icon={<EditOutlined />} onClick={() => handleEdit(record)}/>

@@ -96,7 +96,7 @@ export default function InspectionStandardsPage() {
       render: (t: string) => dayjs(t).format('YYYY-MM-DD HH:mm:ss')
     },
     {
-      title: '操作', width: 100, fixed: 'right',
+      title: '操作', fixed: 'right',
       render: (_, record) => (
         <Space size="small">
           <Button size="small" icon={<EditOutlined />} onClick={() => handleEdit(record)}/>

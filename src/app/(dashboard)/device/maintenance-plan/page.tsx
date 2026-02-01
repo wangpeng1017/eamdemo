@@ -194,8 +194,8 @@ export default function MaintenancePlanPage() {
       ),
     },
     {
-      title: '操作',
-      width: 60,
+      title: '操作', fixed: 'right',
+      
       render: (_, record, index) => (
         <Button
           size="small"
@@ -258,8 +258,8 @@ export default function MaintenancePlanPage() {
       render: (s: string) => <StatusTag type="boolean" status={s === 'active' ? 'true' : 'false'} />,
     },
     {
-      title: '操作',
-      width: 100,
+      title: '操作', fixed: 'right',
+      
       fixed: 'right',
       render: (_, record) => (
         <Space size="small">

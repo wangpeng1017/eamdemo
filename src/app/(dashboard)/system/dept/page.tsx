@@ -77,7 +77,7 @@ export default function DeptPage() {
       render: (s: number) => <Tag color={s === 1 ? 'success' : 'error'}>{s === 1 ? '启用' : '禁用'}</Tag>
     },
     {
-      title: '操作', width: 100,
+      title: '操作', fixed: 'right', 
       render: (_, record) => (
         <Space>
           <Button size="small" icon={<EditOutlined />} onClick={() => handleEdit(record)} />

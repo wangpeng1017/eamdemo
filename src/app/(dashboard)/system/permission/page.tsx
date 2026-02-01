@@ -203,8 +203,8 @@ export default function PermissionPage() {
     { title: '角色名称', dataIndex: 'name' },
     { title: '角色编码', dataIndex: 'code' },
     {
-      title: '操作',
-      width: 80,
+      title: '操作', fixed: 'right',
+      
       render: (_, record) => (
         <Button
           type={selectedRole?.id === record.id ? 'primary' : 'default'}
@@ -257,8 +257,8 @@ export default function PermissionPage() {
       ),
     },
     {
-      title: '操作',
-      width: 120,
+      title: '操作', fixed: 'right',
+      
       render: (_, record) => (
         <Space>
           <Button size="small" icon={<EditOutlined />} onClick={() => handleEdit(record)} />
