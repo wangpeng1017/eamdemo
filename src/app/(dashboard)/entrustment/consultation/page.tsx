@@ -196,6 +196,9 @@ export default function ConsultationPage() {
         const loadedItems = json.data.map((item: any) => ({
           ...item,
           key: item.id || `temp_${Date.now()}_${Math.random()}`,
+          // 字段映射: currentAssessorId → assessorId
+          assessorId: item.currentAssessorId,
+          assessorName: item.currentAssessorName,
         }))
         setSampleTestItems(loadedItems)
       } else {
@@ -564,13 +567,15 @@ export default function ConsultationPage() {
     // ✅ 需求1：评估验证 - 检查所有样品检测项是否已评估通过
     try {
       const res = await fetch(`/api/consultation/${consultation.id}`)
-      const data = await res.json()
+      const result = await res.json()
 
-      if (!res.ok || !data) {
+      if (!res.ok || !result.success) {
         message.error('获取咨询详情失败')
         return
       }
 
+      // 正确解包: result.data 才是咨询单数据
+      const data = result.data
       const items = data.sampleTestItems || []
 
       // 检查是否有未评估或评估未通过的项
