@@ -674,7 +674,6 @@ export default function ConsultationPage() {
       title: '操作',
       key: 'action',
       fixed: 'right',
-      width: 350,
       render: (_, record) => (
         <Space size="small" style={{ whiteSpace: 'nowrap' }}>
           {record.status === 'following' && (
@@ -1056,7 +1055,7 @@ export default function ConsultationPage() {
                 <span>总价: ¥{((item.quantity || 0) * (item.unitPrice || 0)).toFixed(2)}</span>
               </Col>
               <Col span={1}>
-                <Button danger size="small" onClick={() => handleRemoveQuoteItem(index)}/>
+                <Button danger size="small" onClick={() => handleRemoveQuoteItem(index)} />
               </Col>
             </Row>
           ))}
