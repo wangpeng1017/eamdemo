@@ -842,18 +842,6 @@ export default function ConsultationPage() {
             </Col>
           </Row>
 
-          <Row gutter={16}>
-            <Col span={12}>
-              <Form.Item name="feasibility" label="可行性评估">
-                <Select options={FEASIBILITY_OPTIONS} placeholder="请选择" />
-              </Form.Item>
-            </Col>
-          </Row>
-
-          <Form.Item name="feasibilityNote" label="可行性说明">
-            <Input.TextArea rows={2} placeholder="请输入可行性说明" />
-          </Form.Item>
-
           <Form.Item
             label="附件上传"
             extra="支持图片、PDF、Word、Excel，单个文件最大5MB，最多5个文件"
