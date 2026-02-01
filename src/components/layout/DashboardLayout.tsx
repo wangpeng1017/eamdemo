@@ -136,7 +136,15 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const userMenuItems = [
     { key: 'profile', icon: <UserOutlined />, label: '个人中心' },
     { type: 'divider' as const },
-    { key: 'logout', icon: <LogoutOutlined />, label: '退出登录', onClick: () => signOut() },
+    {
+      key: 'logout',
+      icon: <LogoutOutlined />,
+      label: '退出登录',
+      onClick: () => {
+        const currentOrigin = typeof window !== 'undefined' ? window.location.origin : ''
+        signOut({ callbackUrl: `${currentOrigin}/login` })
+      }
+    },
   ]
 
   // 获取当前选中的菜单项
