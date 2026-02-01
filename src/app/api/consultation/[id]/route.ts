@@ -16,16 +16,25 @@ export const GET = withErrorHandler(async (
     include: {
       followUps: { orderBy: { date: 'desc' } },
       client: true,
-      sampleTestItems: { orderBy: { sortOrder: 'asc' } },
     },
   })
 
   if (!consultation) notFound('咨询单不存在')
 
+  // 手动查询样品检测项（多态关联）
+  const sampleTestItems = await prisma.sampleTestItem.findMany({
+    where: {
+      bizType: 'consultation',
+      bizId: id,
+    },
+    orderBy: { sortOrder: 'asc' }
+  })
+
   return success({
     ...consultation,
     testItems: consultation.testItems ? JSON.parse(consultation.testItems) : [],
     attachments: consultation.attachments ? JSON.parse(consultation.attachments) : [],
+    sampleTestItems,
   })
 })
 
