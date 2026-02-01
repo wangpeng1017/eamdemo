@@ -80,14 +80,35 @@ export const POST = withAuth(async (request: NextRequest, user) => {
     status: 'following', // 初始状态为"跟进中"
   }
 
-  // 复制其他字段
-  Object.keys(data).forEach(key => {
-    if (!['sampleTestItems', 'samples'].includes(key)) {
-      createData[key] = data[key]
+  // 明确指定允许的字段
+  const allowedFields = [
+    'clientId',
+    'clientContactPerson',
+    'expectedDeadline',
+    'clientReportDeadline',
+    'budgetRange',
+    'follower',
+    'feasibility',
+    'feasibilityNote',
+    'quotationId',
+    'quotationNo',
+    'clientRequirement',
+    'assessmentVersion',
+    'assessmentTotalCount',
+    'assessmentPassedCount',
+    'assessmentFailedCount',
+    'assessmentPendingCount',
+    'estimatedQuantity',
+  ]
+
+  // 只复制允许的字段
+  allowedFields.forEach(field => {
+    if (data[field] !== undefined) {
+      createData[field] = data[field]
     }
   })
 
-  // 处理 testItems（旧字段，保持兼容）
+  // 处理 testItems（旧字段,保持兼容）
   createData.testItems = Array.isArray(data.testItems) ? JSON.stringify(data.testItems) : '[]'
 
   // 处理 estimatedQuantity
@@ -95,12 +116,8 @@ export const POST = withAuth(async (request: NextRequest, user) => {
     createData.estimatedQuantity = parseInt(data.estimatedQuantity, 10) || 0
   }
 
-  // 移除 samples 字段避免顶层写入错误
-  delete createData.samples
-
-  // 暂时不处理附件，等咨询单创建后再处理
+  // 暂时不处理附件,等咨询单创建后再处理
   const attachments = data.attachments || []
-  delete createData.attachments
 
   // 使用事务创建咨询单和样品检测项
   const consultation = await prisma.$transaction(async (tx) => {
