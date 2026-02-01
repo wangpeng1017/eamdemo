@@ -745,7 +745,18 @@ export default function ConsultationPage() {
               </Button>
             </>
           )}
-          <Button size="small" icon={<FileTextOutlined />} onClick={() => handleOpenGenerateQuoteForRecord(record)}>生成报价单</Button>
+          <Button
+            size="small"
+            icon={<FileTextOutlined />}
+            onClick={(e) => {
+              e.stopPropagation()
+              console.log('🔴 [按钮点击] 按钮被点击了!', record)
+              alert('按钮点击成功! consultationId: ' + record.id)
+              handleOpenGenerateQuoteForRecord(record)
+            }}
+          >
+            生成报价单
+          </Button>
           <Button size="small" icon={<EyeOutlined />} onClick={() => handleView(record)} />
           <Button size="small" icon={<EditOutlined />} onClick={() => handleEdit(record)} />
           <Button size="small" danger icon={<DeleteOutlined />} onClick={() => handleDelete(record)} />
