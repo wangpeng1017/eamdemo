@@ -729,7 +729,7 @@ export default function ConsultationPage() {
       {contextHolder}
       <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'space-between' }}>
         <h2 style={{ margin: 0 }}>业务咨询</h2>
-        <Space>
+        <Space style={{ whiteSpace: 'nowrap' }}>
           <Button type="primary" icon={<PlusOutlined />} onClick={handleAdd}>新增咨询</Button>
         </Space>
       </div>

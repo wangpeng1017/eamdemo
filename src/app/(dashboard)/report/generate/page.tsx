@@ -204,7 +204,7 @@ export default function ReportGeneratePage() {
       title: '操作', fixed: 'right',
       
       render: (_, record) => (
-        <Space size="small">
+        <Space size="small" style={{ whiteSpace: 'nowrap' }}>
           <Button
             type="primary"
             size="small"

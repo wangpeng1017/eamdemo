@@ -260,7 +260,7 @@ export default function PermissionPage() {
       title: '操作', fixed: 'right',
       
       render: (_, record) => (
-        <Space>
+        <Space style={{ whiteSpace: 'nowrap' }}>
           <Button size="small" icon={<EditOutlined />} onClick={() => handleEdit(record)} />
           {record.status === 1 ? (
             <Popconfirm title="确认禁用?" onConfirm={() => handleToggleStatus(record)}>

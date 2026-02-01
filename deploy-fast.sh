@@ -28,17 +28,20 @@ echo ""
 echo "[1/5] 本地构建项目..."
 npm run build
 
-# 2. 打包 standalone 目录（包含 static）
+# 2. 打包 standalone 目录（包含 static 和 public）
 echo ""
 echo "[2/5] 打包构建产物..."
 cd .next
 tar -czf standalone.tar.gz standalone static
 cd ..
+# 单独打包 public 目录
+tar -czf public.tar.gz public
 
 # 3. 上传到服务器
 echo ""
 echo "[3/5] 上传到服务器..."
 sshpass -p "$SERVER_PASS" scp -o StrictHostKeyChecking=no -o ServerAliveInterval=60 .next/standalone.tar.gz "$SERVER:$REMOTE_DIR/"
+sshpass -p "$SERVER_PASS" scp -o StrictHostKeyChecking=no -o ServerAliveInterval=60 public.tar.gz "$SERVER:$REMOTE_DIR/"
 sshpass -p "$SERVER_PASS" scp -o StrictHostKeyChecking=no -o ServerAliveInterval=60 update-db-schema.js "$SERVER:$REMOTE_DIR/"
 
 # 4. 服务器解压并配置
@@ -47,23 +50,23 @@ echo "[4/5] 服务器解压并配置..."
 sshpass -p "$SERVER_PASS" ssh -o StrictHostKeyChecking=no -o ServerAliveInterval=60 "$SERVER" "cd $REMOTE_DIR && \
   rm -rf .next/standalone .next/static 2>/dev/null || true && \
   tar -xzf standalone.tar.gz -C .next && \
+  tar -xzf public.tar.gz && \
+  cp -r .next/standalone/* . && \
   cp -r .next/static .next/standalone/.next/ && \
-  cp -r public .next/standalone/ 2>/dev/null || true && \
   cp .env .next/standalone/ 2>/dev/null || true && \
-  rm standalone.tar.gz && \
-  cd .next/standalone && \
-  node ../../update-db-schema.js"
+  rm standalone.tar.gz public.tar.gz && \
+  node update-db-schema.js"
 
 # 5. 重启服务（使用 PORT 环境变量）
 echo ""
 echo "[5/5] 重启服务..."
-sshpass -p "$SERVER_PASS" ssh -o StrictHostKeyChecking=no -o ServerAliveInterval=60 "$SERVER" "cd $REMOTE_DIR/.next/standalone && \
+sshpass -p "$SERVER_PASS" ssh -o StrictHostKeyChecking=no -o ServerAliveInterval=60 "$SERVER" "cd $REMOTE_DIR && \
   pm2 delete lims-next 2>/dev/null || true && \
-  PORT=3001 pm2 start server.js --name lims-next && \
+  PORT=3001 pm2 start server.js --name lims-next --update-env && \
   pm2 save"
 
 # 清理本地临时文件
-rm -f .next/standalone.tar.gz
+rm -f .next/standalone.tar.gz public.tar.gz
 
 echo ""
 echo "=========================================="

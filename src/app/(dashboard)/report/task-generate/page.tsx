@@ -141,7 +141,7 @@ export default function TestReportPage() {
       title: '操作', fixed: 'right',
       
       render: (_, record) => (
-        <Space>
+        <Space style={{ whiteSpace: 'nowrap' }}>
           <Button
             size="small"
             type="link"

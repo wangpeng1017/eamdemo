@@ -313,7 +313,7 @@ export default function ApprovalFlowPage() {
       key: 'nodes',
       width: 300,
       render: (_, record) => (
-        <Space size={4}>
+        <Space size={4} style={{ whiteSpace: 'nowrap' }}>
           {(record.nodes || []).map((node, index) => (
             <span key={node.id}>
               <Tag color="green">{node.targetName}</Tag>
@@ -335,7 +335,7 @@ export default function ApprovalFlowPage() {
       title: '操作', fixed: 'right',
       
       render: (_, record) => (
-        <Space>
+        <Space style={{ whiteSpace: 'nowrap' }}>
           <Button size="small" onClick={() => handleAddNode(record.id)}>添加节点</Button>
           <Button size="small" icon={<EditOutlined />} onClick={() => handleEdit(record)} />
           {record.status ? (
@@ -373,7 +373,7 @@ export default function ApprovalFlowPage() {
         title: '操作', fixed: 'right',
         
         render: (_, node) => (
-          <Space>
+          <Space style={{ whiteSpace: 'nowrap' }}>
             <Button size="small" icon={<EditOutlined />} onClick={() => handleEditNode(record.id, node)} />
             <Popconfirm title="确认删除?" onConfirm={() => handleDeleteNode(record.id, node.id)}>
               <Button size="small" danger icon={<DeleteOutlined />} />
@@ -398,7 +398,7 @@ export default function ApprovalFlowPage() {
     <div>
       <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'space-between' }}>
         <h2 style={{ margin: 0 }}>审批流程配置</h2>
-        <Space>
+        <Space style={{ whiteSpace: 'nowrap' }}>
           <Button icon={<ReloadOutlined />} onClick={loadData}>刷新</Button>
           <Button type="primary" icon={<PlusOutlined />} onClick={handleAdd}>
             新增流程

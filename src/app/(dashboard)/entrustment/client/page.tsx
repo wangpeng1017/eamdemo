@@ -209,7 +209,7 @@ export default function ClientPage() {
     {
       title: '操作', fixed: 'right',
       render: (_, record) => (
-        <Space>
+        <Space style={{ whiteSpace: 'nowrap' }}>
           {/* 🆕 新功能：审批按钮组 */}
           <ClientApprovalButtons
             clientId={record.id}

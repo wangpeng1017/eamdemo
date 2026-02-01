@@ -242,7 +242,7 @@ export default function ConsumableInfoPage() {
       title: '操作', fixed: 'right',
       
       render: (_, record) => (
-        <Space>
+        <Space style={{ whiteSpace: 'nowrap' }}>
           <Button size="small" icon={<EditOutlined />} onClick={() => handleEdit(record)} />
           <Popconfirm title="确认删除?" onConfirm={() => handleDelete(record.id)}>
             <Button size="small" danger icon={<DeleteOutlined />} />
@@ -256,7 +256,7 @@ export default function ConsumableInfoPage() {
     <div>
       <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'space-between' }}>
         <h2 style={{ margin: 0 }}>易耗品信息</h2>
-        <Space>
+        <Space style={{ whiteSpace: 'nowrap' }}>
           <Button icon={<ReloadOutlined />} onClick={loadData}>刷新</Button>
           <Button type="primary" icon={<PlusOutlined />} onClick={handleAdd}>
             新增易耗品
@@ -298,7 +298,7 @@ export default function ConsumableInfoPage() {
       </Row>
 
       <Card>
-        <Space style={{ marginBottom: 16 }}>
+        <Space style={{ marginBottom: 16 }} style={{ whiteSpace: 'nowrap' }}>
           <Input.Search
             placeholder="搜索编码/名称"
             value={keyword}

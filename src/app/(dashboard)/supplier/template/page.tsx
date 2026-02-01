@@ -265,7 +265,7 @@ export default function EvaluationTemplatePage() {
       title: '操作', fixed: 'right',
       
       render: (_, record) => (
-        <Space>
+        <Space style={{ whiteSpace: 'nowrap' }}>
           <Button size="small" onClick={() => handleAddItem(record.id)}>添加评价项</Button>
           <Button size="small" icon={<EditOutlined />} onClick={() => handleEdit(record)} />
           <Popconfirm title="确认删除?" onConfirm={() => handleDelete(record.id)}>
@@ -291,7 +291,7 @@ export default function EvaluationTemplatePage() {
         title: '操作', fixed: 'right',
         
         render: (_, item) => (
-          <Space>
+          <Space style={{ whiteSpace: 'nowrap' }}>
             <Button size="small" icon={<EditOutlined />} onClick={() => handleEditItem(record.id, item)} />
             <Popconfirm title="确认删除?" onConfirm={() => handleDeleteItem(record.id, item.id)}>
               <Button size="small" danger icon={<DeleteOutlined />} />
@@ -323,7 +323,7 @@ export default function EvaluationTemplatePage() {
     <div>
       <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'space-between' }}>
         <h2 style={{ margin: 0 }}>评价模板管理</h2>
-        <Space>
+        <Space style={{ whiteSpace: 'nowrap' }}>
           <Button icon={<ReloadOutlined />} onClick={loadData}>刷新</Button>
           <Button type="primary" icon={<PlusOutlined />} onClick={handleAdd}>
             新增模板

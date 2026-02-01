@@ -466,7 +466,7 @@ export default function ContractPage() {
     <div>
       <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'space-between' }}>
         <h2 style={{ margin: 0 }}>合同管理</h2>
-        <Space>
+        <Space style={{ whiteSpace: 'nowrap' }}>
           <Button type="primary" icon={<PlusOutlined />} onClick={handleAdd}>新增合同</Button>
         </Space>
       </div>
@@ -744,7 +744,7 @@ export default function ContractPage() {
         onClose={() => setViewDrawerOpen(false)}
         footer={
           <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-            <Space>
+            <Space style={{ whiteSpace: 'nowrap' }}>
               {currentContract?.status === 'signed' && (
                 <Button type="primary" onClick={() => handleStatusChange('executing')}>开始执行</Button>
               )}

@@ -262,7 +262,7 @@ export default function MaintenancePlanPage() {
       
       fixed: 'right',
       render: (_, record) => (
-        <Space size="small">
+        <Space size="small" style={{ whiteSpace: 'nowrap' }}>
           <Button
             size="small"
             type="primary"

@@ -279,7 +279,7 @@ export default function ClientReportPage() {
       )
     }
 
-    return <Space wrap>{actions}</Space>
+    return <Space wrap style={{ whiteSpace: 'nowrap' }}>{actions}</Space>
   }
 
   const columns: ColumnsType<ClientReport> = [
@@ -324,7 +324,7 @@ export default function ClientReportPage() {
       </Row>
 
       <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'space-between' }}>
-        <Space>
+        <Space style={{ whiteSpace: 'nowrap' }}>
           <Input.Search
             placeholder="搜索报告编号/客户/样品"
             value={keyword}

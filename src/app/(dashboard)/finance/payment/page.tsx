@@ -161,7 +161,7 @@ export default function PaymentPage() {
     {
       title: '操作', fixed: 'right',
       render: (_, record) => (
-        <Space>
+        <Space style={{ whiteSpace: 'nowrap' }}>
           <Button size="small" icon={<EyeOutlined />} onClick={() => handleView(record)} />
           <Popconfirm title="删除后将回滚应收账款，确认删除?" onConfirm={() => handleDelete(record.id)}>
             <Button size="small" danger icon={<DeleteOutlined />} />

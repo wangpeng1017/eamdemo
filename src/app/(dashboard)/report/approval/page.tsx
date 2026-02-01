@@ -207,7 +207,7 @@ export default function ReportApprovalPage() {
     {
       title: '操作', fixed: 'right',
       render: (_, record) => (
-        <Space>
+        <Space style={{ whiteSpace: 'nowrap' }}>
           <Button size="small" icon={<EyeOutlined />} onClick={() => handleView(record.id, 'client')}/>
           <Button
             size="small"
@@ -247,7 +247,7 @@ export default function ReportApprovalPage() {
     {
       title: '操作', fixed: 'right',
       render: (_, record) => (
-        <Space>
+        <Space style={{ whiteSpace: 'nowrap' }}>
           <Button
             size="small"
             type="primary"

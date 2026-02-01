@@ -247,7 +247,7 @@ export default function SupplierEvaluationPage() {
     <div>
       <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'space-between' }}>
         <h2 style={{ margin: 0 }}>供应商绩效评价</h2>
-        <Space>
+        <Space style={{ whiteSpace: 'nowrap' }}>
           <Button icon={<ReloadOutlined />} onClick={loadData}>刷新</Button>
           <Button type="primary" icon={<PlusOutlined />} onClick={handleAdd}>
             新增评价

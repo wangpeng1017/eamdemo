@@ -1017,7 +1017,7 @@ export default function QuotationPage() {
     <div>
       <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <h2 style={{ margin: 0 }}>报价管理</h2>
-        <Space>
+        <Space style={{ whiteSpace: 'nowrap' }}>
           <Button type="primary" icon={<PlusOutlined />} onClick={handleAdd}>新增报价</Button>
         </Space>
       </div>
@@ -1134,7 +1134,7 @@ export default function QuotationPage() {
           />
 
           <div style={{ marginTop: 16, textAlign: 'right' }}>
-            <Space direction="vertical" style={{ width: 300 }}>
+            <Space direction="vertical" style={{ width: 300 }} style={{ whiteSpace: 'nowrap' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                 <span>报价合计：</span>
                 <span>¥{totalAmount.toFixed(2)}</span>
@@ -1221,7 +1221,7 @@ export default function QuotationPage() {
         onClose={() => setViewDrawerOpen(false)}
         footer={
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <Space>
+            <Space style={{ whiteSpace: 'nowrap' }}>
               {currentQuotation?.status === 'approved' && (
                 <>
                   <Button onClick={() => handleClientResponse('ok')}>客户接受</Button>

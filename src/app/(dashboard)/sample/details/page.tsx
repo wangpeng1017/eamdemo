@@ -246,7 +246,7 @@ export default function SampleDetailsPage() {
       
       fixed: "right" as const,
       render: (_, record) => (
-        <Space size="small">
+        <Space size="small" style={{ whiteSpace: 'nowrap' }}>
           <Button
             type="link"
             size="small"
@@ -294,7 +294,7 @@ export default function SampleDetailsPage() {
     <div className="p-4">
       <Card title="样品明细台账" bordered={false}>
         <div className="mb-4 flex justify-between items-center">
-          <Space>
+          <Space style={{ whiteSpace: 'nowrap' }}>
             <Input
               placeholder="搜索样品编号/名称/委托单号"
               style={{ width: 240 }}

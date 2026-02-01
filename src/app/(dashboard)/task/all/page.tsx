@@ -107,7 +107,7 @@ export default function AllTasksPage() {
       title: '操作', fixed: 'right',
       
       render: (_, record) => (
-        <Space size="small">
+        <Space size="small" style={{ whiteSpace: 'nowrap' }}>
           <Button type="link" size="small" onClick={() => handleAssign(record)} disabled={record.status === "completed"}>
             分配
           </Button>

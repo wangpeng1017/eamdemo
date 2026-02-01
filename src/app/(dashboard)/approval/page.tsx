@@ -216,7 +216,7 @@ export default function ApprovalPage() {
       key: 'action',
       
       render: (_, record) => (
-        <Space>
+        <Space style={{ whiteSpace: 'nowrap' }}>
           {record.status === 'pending' && (
             <>
               <Tooltip title="通过">
@@ -275,7 +275,7 @@ export default function ApprovalPage() {
       key: 'action',
       
       render: (_: unknown, record: ApprovalInstance) => (
-        <Space>
+        <Space style={{ whiteSpace: 'nowrap' }}>
           <Tooltip title="查看详情">
             <Button
               size="small"

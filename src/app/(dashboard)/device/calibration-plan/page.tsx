@@ -280,7 +280,7 @@ export default function CalibrationPlanPage() {
       
       fixed: 'right',
       render: (_, record) => (
-        <Space size="small">
+        <Space size="small" style={{ whiteSpace: 'nowrap' }}>
           <Button
             size="small"
             icon={<FileTextOutlined />}

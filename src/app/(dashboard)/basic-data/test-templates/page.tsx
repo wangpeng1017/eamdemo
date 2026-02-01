@@ -178,7 +178,7 @@ export default function TestTemplatesPage() {
     {
       title: '操作', fixed: 'right',
       render: (_, record) => (
-        <Space size="small">
+        <Space size="small" style={{ whiteSpace: 'nowrap' }}>
           <Button size="small" icon={<EditOutlined />} onClick={() => handleEdit(record)}/>
           <Button
             size="small"
@@ -204,7 +204,7 @@ export default function TestTemplatesPage() {
     <div>
       <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'space-between' }}>
         <h2 style={{ margin: 0 }}>检测项目管理</h2>
-        <Space>
+        <Space style={{ whiteSpace: 'nowrap' }}>
           <Select
             placeholder="分类筛选"
             allowClear

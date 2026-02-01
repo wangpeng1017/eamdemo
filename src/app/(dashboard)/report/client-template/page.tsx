@@ -134,7 +134,7 @@ export default function ClientTemplateePage() {
             title: '操作', fixed: 'right',
             
             render: (_, record) => (
-                <Space size="small">
+                <Space size="small" style={{ whiteSpace: 'nowrap' }}>
                     <Button size="small" type="link" icon={<EditOutlined />} onClick={() => handleEdit(record)}/>
                     <Button size="small" type="link" danger icon={<DeleteOutlined />} onClick={() => handleDelete(record.id)}/>
                 </Space>

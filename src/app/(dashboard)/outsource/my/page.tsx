@@ -201,7 +201,7 @@ export default function MyOutsourcePage() {
       </Row>
 
       <Card>
-        <Space style={{ marginBottom: 16 }}>
+        <Space style={{ marginBottom: 16 }} style={{ whiteSpace: 'nowrap' }}>
           <Input.Search
             placeholder="搜索编号/样品/供应商"
             value={keyword}

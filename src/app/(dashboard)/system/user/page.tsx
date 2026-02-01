@@ -258,7 +258,7 @@ export default function UserPage() {
       title: '操作',
       fixed: 'right',
       render: (_, record) => (
-        <Space>
+        <Space style={{ whiteSpace: 'nowrap' }}>
           <Button size="small" icon={<EditOutlined />} onClick={() => handleEditUser(record)} />
           {record.status === 1 ? (
             <Popconfirm title="确认禁用此用户?" onConfirm={() => handleToggleStatus(record)}>

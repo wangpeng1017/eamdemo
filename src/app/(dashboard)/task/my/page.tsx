@@ -170,7 +170,7 @@ export default function MyTasksPage() {
       title: '操作', fixed: 'right',
       
       render: (_, record) => (
-        <Space size="small">
+        <Space size="small" style={{ whiteSpace: 'nowrap' }}>
           {/* 待开始状态：显示"开始"按钮 */}
           {record.status === "pending" && (
             <Button type="primary" size="small" icon={<PlayCircleOutlined />} onClick={() => handleStart(record.id)}>

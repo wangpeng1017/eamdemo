@@ -212,7 +212,7 @@ export default function DeviceRepairPage() {
     {
       title: '操作', fixed: 'right',
       render: (_, record) => (
-        <Space>
+        <Space style={{ whiteSpace: 'nowrap' }}>
           <Button size="small" icon={<EyeOutlined />} onClick={() => handleView(record)} />
           {record.status === 'pending' && (
             <>
@@ -273,7 +273,7 @@ export default function DeviceRepairPage() {
       </Row>
 
       <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'space-between' }}>
-        <Space>
+        <Space style={{ whiteSpace: 'nowrap' }}>
           <Select
             placeholder="状态筛选"
             allowClear

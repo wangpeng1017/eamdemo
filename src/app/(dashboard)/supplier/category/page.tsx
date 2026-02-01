@@ -184,7 +184,7 @@ export default function SupplierCategoryPage() {
       title: '操作', fixed: 'right',
       
       render: (_, record) => (
-        <Space>
+        <Space style={{ whiteSpace: 'nowrap' }}>
           <Button size="small" onClick={() => handleAdd(record.id)}>添加子分类</Button>
           <Button size="small" icon={<EditOutlined />} onClick={() => handleEdit(record)} />
           <Popconfirm title="确认删除?" onConfirm={() => handleDelete(record.id)}>
@@ -202,7 +202,7 @@ export default function SupplierCategoryPage() {
     <div>
       <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'space-between' }}>
         <h2 style={{ margin: 0 }}>供应商分类</h2>
-        <Space>
+        <Space style={{ whiteSpace: 'nowrap' }}>
           <Button icon={<ReloadOutlined />} onClick={loadData}>刷新</Button>
           <Button type="primary" icon={<PlusOutlined />} onClick={() => handleAdd(null)}>
             新增一级分类

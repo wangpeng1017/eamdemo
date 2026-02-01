@@ -101,7 +101,7 @@ export default function ReportCategoriesPage() {
     {
       title: '操作', fixed: 'right',
       render: (_, record) => (
-        <Space size="small">
+        <Space size="small" style={{ whiteSpace: 'nowrap' }}>
           <Button size="small" icon={<EditOutlined />} onClick={() => handleEdit(record)}/>
           <Button size="small" danger icon={<DeleteOutlined />} onClick={() => handleDelete(record.id)} />
         </Space>
@@ -146,7 +146,7 @@ export default function ReportCategoriesPage() {
               {(fields, { add, remove }) => (
                 <>
                   {fields.map((field, index) => (
-                    <Space key={field.key} style={{ display: 'flex', marginBottom: 8 }} align="baseline">
+                    <Space key={field.key} style={{ display: 'flex', marginBottom: 8 }} align="baseline" style={{ whiteSpace: 'nowrap' }}>
                       <Form.Item
                         {...field}
                         style={{ marginBottom: 0, flex: 1 }}
