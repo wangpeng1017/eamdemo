@@ -414,6 +414,7 @@ export default function ConsultationPage() {
       phone: consultation.client?.phone,
       email: consultation.client?.email,
       address: consultation.client?.address,
+      clientReportDeadline: consultation.expectedDeadline,
     })
     setGenerateQuoteModalOpen(true)
   }
@@ -432,6 +433,7 @@ export default function ConsultationPage() {
         clientContactPerson: values.contact,
         samples: quoteSamples,
         clientRemark: values.clientRemark,
+        clientReportDeadline: values.clientReportDeadline,
         items: quoteItems.map((item: any) => ({
           serviceItem: item.name,
           methodStandard: item.standard,
@@ -586,6 +588,7 @@ export default function ConsultationPage() {
       validDays: 30,
       taxRate: 6,
       discountAmount: 0,
+      clientReportDeadline: consultation.expectedDeadline,
     })
     setGenerateQuoteModalOpen(true)
   }
@@ -823,7 +826,7 @@ export default function ConsultationPage() {
 
           <Row gutter={16}>
             <Col span={8}>
-              <Form.Item name="expectedDeadline" label="期望交付日期">
+              <Form.Item name="expectedDeadline" label="报告时间">
                 <DatePicker style={{ width: '100%' }} />
               </Form.Item>
             </Col>
@@ -1129,7 +1132,7 @@ function Descriptions({ title, data }: { title: string; data: Consultation }) {
     { label: '客户地址', value: data.client?.address || '-' },
     { label: '预估数量', value: data.estimatedQuantity },
     { label: '检测项目', value: data.testItems?.join(', ') },
-    { label: '期望交付日期', value: data.expectedDeadline ? dayjs(data.expectedDeadline).format('YYYY-MM-DD HH:mm:ss') : '-' },
+    { label: '报告时间', value: data.expectedDeadline ? dayjs(data.expectedDeadline).format('YYYY-MM-DD HH:mm:ss') : '-' },
     { label: '预算范围', value: data.budgetRange },
     { label: '可行性评估', value: <StatusTag type="feasibility" status={data.feasibility} /> },
     { label: '可行性说明', value: data.feasibilityNote },
