@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { Table, Button, Space, Tag, Modal, Form, Input, Select, message, Popconfirm } from 'antd'
-import { PlusOutlined, EditOutlined, DeleteOutlined, ExclamationCircleOutlined } from '@ant-design/icons'
+import { PlusOutlined, EditOutlined, DeleteOutlined, ExclamationCircleOutlined, EyeOutlined } from '@ant-design/icons'
 import { ClientApprovalButtons } from '@/components/ClientApprovalButtons'
 import type { ColumnsType } from 'antd/es/table'
 import dayjs from 'dayjs'
@@ -207,35 +207,40 @@ export default function ClientPage() {
     { title: '联系人', dataIndex: 'contact', width: 100 },
     { title: '联系方式', dataIndex: 'phone', width: 130 },
     {
-      title: '操作', fixed: 'right',
+      title: '操作',
+      key: 'action',
+      fixed: 'right',
       render: (_, record) => (
-        <Space style={{ whiteSpace: 'nowrap' }}>
-          {/* 🆕 新功能：审批按钮组 */}
+        <Space size="small" style={{ whiteSpace: 'nowrap' }}>
+          {/* 业务按钮 */}
           <ClientApprovalButtons
             clientId={record.id}
             clientStatus={record.status}
             onSuccess={() => fetchData()}
-            showLabel={true}
+            showLabel={false}
           />
 
-          {/* 编辑按钮（只对草稿或已拒绝状态显示） */}
-          {(record.status === 'draft' || record.status === 'rejected') && (
-            <Button size="small" icon={<EditOutlined />} onClick={() => handleEdit(record)} />
-          )}
-
-          {/* 删除按钮（只对草稿状态显示） */}
-          {record.status === 'draft' && (
-            <Button
-              size="small"
-              danger
-              icon={<DeleteOutlined />}
-              onClick={() => handleDelete(record.id, record.name)}
-            />
-          )}
+          {/* 通用操作按钮 */}
+          <Button size="small" icon={<EyeOutlined />} onClick={() => handleView(record)} />
+          <Button size="small" icon={<EditOutlined />} onClick={() => handleEdit(record)} />
+          <Button
+            size="small"
+            danger
+            icon={<DeleteOutlined />}
+            onClick={() => handleDelete(record.id, record.name)}
+          />
         </Space>
       )
     }
   ]
+
+  const handleView = (record: Client) => {
+    setEditingId(record.id)
+    form.setFieldsValue(record)
+    setModalOpen(true)
+    // 设置表单为只读模式
+    form.getFieldsValue()
+  }
 
   return (
     <div>

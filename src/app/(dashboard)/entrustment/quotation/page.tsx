@@ -244,8 +244,9 @@ export default function QuotationPage() {
       render: (value) => `¥${Number(value || 0).toFixed(2)}`,
     },
     {
-      title: '操作', fixed: 'right',
-      
+      title: '操作',
+      key: 'action',
+      fixed: 'right',
       render: (_, record, index) => (
         <Button
           size="small"
@@ -933,7 +934,7 @@ export default function QuotationPage() {
       )
     },
     {
-      title: '操作', fixed: 'right',
+      title: '操作',
       key: 'action',
       fixed: 'right',
       render: (_, record) => {
@@ -1508,8 +1509,9 @@ export default function QuotationPage() {
                 render: (val) => `¥${Number(val || 0).toFixed(2)}`
               },
               {
-                title: '操作', fixed: 'right',
-                
+                title: '操作',
+                key: 'action',
+                fixed: 'right',
                 render: (_, record, index) => (
                   <Button danger type="text" icon={<DeleteOutlined />} onClick={() => removeContractItem(index)} />
                 )

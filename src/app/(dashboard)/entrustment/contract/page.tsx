@@ -430,7 +430,7 @@ export default function ContractPage() {
       )
     },
     {
-      title: '操作', fixed: 'right',
+      title: '操作',
       key: 'action',
       fixed: 'right',
       render: (_, record) => (
@@ -621,8 +621,9 @@ export default function ContractPage() {
                 render: (val) => `¥${Number(val || 0).toFixed(2)}`
               },
               {
-                title: '操作', fixed: 'right',
-                
+                title: '操作',
+                key: 'action',
+                fixed: 'right',
                 render: (_, record, index) => (
                   <Button danger type="text" icon={<DeleteOutlined />} onClick={() => removeItem(index)} />
                 )
