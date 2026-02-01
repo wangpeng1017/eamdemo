@@ -20,6 +20,7 @@ interface StatusTagProps {
 const STATUS_TEXT_MAP: Record<string, Record<string, string>> = {
   consultation: {
     following: '跟进中',
+    assessing: '评估中',
     quoted: '已报价',
     rejected: '已拒绝',
     closed: '已关闭',
@@ -121,6 +122,7 @@ const STATUS_TEXT_MAP: Record<string, Record<string, string>> = {
 const STATUS_COLOR_MAP: Record<string, Record<string, string>> = {
   consultation: {
     following: 'processing',
+    assessing: 'processing',
     quoted: 'success',
     rejected: 'error',
     closed: 'default',

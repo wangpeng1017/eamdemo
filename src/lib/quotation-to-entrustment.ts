@@ -5,7 +5,7 @@
  */
 
 import { prisma } from '@/lib/prisma'
-import { getNextCounter } from '@/lib/generate-no'
+import { generateNo, NumberPrefixes } from '@/lib/generate-no'
 
 /**
  * 委托单来源类型
@@ -36,36 +36,16 @@ export interface EntrustmentCreationResult {
 }
 
 /**
- * 生成今日日期字符串 YYYYMMDD
- */
-function getTodayString(): string {
-  const now = new Date()
-  const year = now.getFullYear()
-  const month = String(now.getMonth() + 1).padStart(2, '0')
-  const day = String(now.getDate()).padStart(2, '0')
-  return `${year}${month}${day}`
-}
-
-/**
  * 生成委托单编号（WT+年月日+序号）
  * 格式: WT-YYYYMMDD-XXX
  */
 export async function generateEntrustmentNo(): Promise<string> {
-  const today = getTodayString()
-
-  try {
-    // 使用计数器表生成编号（原子操作）
-    const counter = await getNextCounter('WT', today)
-    return `WT-${today}-${String(counter).padStart(3, '0')}`
-  } catch {
-    // 降级方案：基于 count 生成编号
-    console.warn('[generateEntrustmentNo] 计数器表不可用，使用降级方案')
-    const searchPattern = `WT-${today}`
-    const count = await prisma.entrustment.count({
-      where: { entrustmentNo: { startsWith: searchPattern } }
-    })
-    return `WT-${today}-${String(count + 1).padStart(3, '0')}`
-  }
+  const no = await generateNo(NumberPrefixes.ENTRUSTMENT, 3)
+  // generateNo 返回格式: WT20260201001，需要转换为 WT-20260201-001
+  const prefix = no.slice(0, 2)  // WT
+  const date = no.slice(2, 10)   // 20260201
+  const seq = no.slice(10)       // 001
+  return `${prefix}-${date}-${seq}`
 }
 
 /**
