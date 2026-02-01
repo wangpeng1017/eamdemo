@@ -74,10 +74,22 @@ export const POST = withAuth(async (request: NextRequest, user) => {
   // 提取样品检测项数据
   const sampleTestItems = data.sampleTestItems || []
 
+  // v2: 根据样品检测项是否有评估人自动判定初始状态
+  const hasAssessors = sampleTestItems.some((item: any) => item.assessorId)
+  const assessorCount = sampleTestItems.filter((item: any) => item.assessorId).length
+
   // 准备咨询单创建数据
   const createData: any = {
     consultationNo,
-    status: 'following', // 初始状态为"跟进中"
+    status: hasAssessors ? 'assessing' : 'following',
+    // v2: 自动设置评估计数
+    ...(hasAssessors ? {
+      assessmentVersion: 'v2',
+      assessmentTotalCount: assessorCount,
+      assessmentPendingCount: assessorCount,
+      assessmentPassedCount: 0,
+      assessmentFailedCount: 0,
+    } : {}),
   }
 
   // 明确指定允许的字段

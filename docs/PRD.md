@@ -1,8 +1,8 @@
 # LIMS 实验室信息管理系统 - 产品需求文档 (PRD)
 
-> **版本**: 2.3
-> **最后更新**: 2026-01-15
-> **本次更新**: 移除独立的部门管理菜单，功能已完全集成到用户管理页面的组织架构树
+> **版本**: 2.5
+> **最后更新**: 2026-02-01
+> **本次更新**: 咨询评估系统优化（统一到 v2 系统），移除"发起评估"按钮，修复评估人待办查询
 > **文档类型**: 详细需求规格说明书
 > **技术栈变更**: 已迁移至 Next.js 全栈方案
 > **审批流系统**: 统一可配置审批流系统 v1.1
@@ -1477,6 +1477,42 @@ client/src/
 ---
 
 ## 七、变更历史
+
+### v2.5 - 2026-02-01
+
+**咨询评估系统优化（统一到 v2 系统）**：
+- ✅ **移除 v1 评估系统**：
+  - 删除咨询列表页的"发起评估"按钮
+  - 删除 `ConsultationAssessmentModal` 组件
+  - 统一使用样品检测项级评估（v2 系统）
+- ✅ **状态自动判定**：
+  - 创建咨询单时，如果样品检测项中分配了评估人 → `status = 'assessing'`
+  - 如果样品检测项中未分配评估人 → `status = 'following'`
+  - 自动设置 `assessmentTotalCount` 和 `assessmentPendingCount`
+- ✅ **修复"我的待评估"API**：
+  - 从查询 `ConsultationAssessment` 表改为查询 `SampleTestItem` 表
+  - 按 `currentAssessorId` 和 `assessmentStatus='assessing'` 查询
+  - 按咨询单分组返回，每组包含待评估的样品检测项列表
+- ✅ **工作台待办卡片适配**：
+  - `PendingAssessmentCard` 组件适配 v2 API 返回的数据结构
+  - 显示每个咨询单下的样品检测项列表
+- ✅ **TDD 测试覆盖**：
+  - 新增 `create-consultation-v2.test.ts`（5个测试用例）
+  - 新增 `my-pending-v2.test.ts`（4个测试用例）
+  - 更新 `other-apis.test.ts` 适配 v2 API
+  - 所有咨询相关测试套件通过（55/55）
+- 修改文件：
+  - `src/app/api/consultation/route.ts` - 创建时自动判定状态
+  - `src/app/api/consultation/assessment/my-pending/route.ts` - 完全重写查询逻辑
+  - `src/app/(dashboard)/entrustment/consultation/page.tsx` - 移除 v1 评估入口
+  - `src/components/PendingAssessmentCard.tsx` - 适配 v2 数据结构
+
+**技术改进**：
+- 彻底解决评估人看不到待评估任务的问题
+- 简化业务流程，移除冗余的"发起评估"操作
+- 统一评估系统，降低代码维护成本
+
+---
 
 ### v2.4 - 2026-01-21
 

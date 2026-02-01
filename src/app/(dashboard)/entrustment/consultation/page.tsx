@@ -12,7 +12,7 @@ import { PlusOutlined, EditOutlined, DeleteOutlined, EyeOutlined, FileTextOutlin
 import { StatusTag } from '@/components/StatusTag'
 import UserSelect from '@/components/UserSelect'
 import SampleTestItemTable, { SampleTestItemData } from '@/components/SampleTestItemTable'
-import ConsultationAssessmentModal from '@/components/ConsultationAssessmentModal'
+// ConsultationAssessmentModal 已废弃 - v2系统中评估人在创建咨询单时通过样品检测项分配
 import ReassessmentModal from '@/components/ReassessmentModal'
 import AssessmentResultTab from '@/components/AssessmentResultTab'
 import type { ColumnsType } from 'antd/es/table'
@@ -103,7 +103,6 @@ export default function ConsultationPage() {
   const [sampleTestItems, setSampleTestItems] = useState<SampleTestItemData[]>([])
 
   // 评估相关状态
-  const [assessmentModalOpen, setAssessmentModalOpen] = useState(false)
   const [reassessmentModalOpen, setReassessmentModalOpen] = useState(false)
   const [currentUser, setCurrentUser] = useState<any>(null)
 
@@ -593,11 +592,7 @@ export default function ConsultationPage() {
     setGenerateQuoteModalOpen(true)
   }
 
-  // 发起评估
-  const handleStartAssessment = (consultation: Consultation) => {
-    setCurrentConsultation(consultation)
-    setAssessmentModalOpen(true)
-  }
+  // v2: "发起评估"功能已废弃，评估人在创建时通过样品检测项分配
 
   // 重新评估
   const handleReassessment = (consultation: Consultation) => {
@@ -679,15 +674,6 @@ export default function ConsultationPage() {
       fixed: 'right',
       render: (_, record) => (
         <Space size="small" style={{ whiteSpace: 'nowrap' }}>
-          {record.status === 'following' && (
-            <Button
-              size="small"
-              icon={<TeamOutlined />}
-              onClick={() => handleStartAssessment(record)}
-            >
-              发起评估
-            </Button>
-          )}
           {record.status === 'assessment_failed' && (
             <>
               <Button
@@ -1084,22 +1070,7 @@ export default function ConsultationPage() {
         </Form>
       </Modal>
 
-      {/* 发起评估弹窗 */}
-      <ConsultationAssessmentModal
-        open={assessmentModalOpen}
-        consultationId={currentConsultation?.id || null}
-        consultationNo={currentConsultation?.consultationNo}
-        onCancel={() => {
-          setAssessmentModalOpen(false)
-          setCurrentConsultation(null)
-        }}
-        onSuccess={() => {
-          setAssessmentModalOpen(false)
-          setCurrentConsultation(null)
-          fetchData()
-          message.success('评估已发起')
-        }}
-      />
+      {/* v2: 发起评估弹窗已废弃，评估人在创建咨询单时通过样品检测项分配 */}
 
       {/* 重新评估弹窗 */}
       <ReassessmentModal

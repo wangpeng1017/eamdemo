@@ -32,7 +32,11 @@ jest.mock('@/lib/prisma', () => ({
     },
     consultation: {
       findUnique: jest.fn(),
+      findMany: jest.fn(),
       update: jest.fn(),
+    },
+    sampleTestItem: {
+      findMany: jest.fn(),
     },
     $transaction: jest.fn(),
   }
@@ -170,38 +174,55 @@ describe('PUT /api/consultation/assessment/[id] - 修改评估反馈', () => {
   })
 })
 
-describe('GET /api/consultation/assessment/my-pending - 查询待评估列表', () => {
+describe('GET /api/consultation/assessment/my-pending - 查询待评估列表 (v2)', () => {
   beforeEach(() => {
     jest.clearAllMocks()
   })
 
-  it('应该成功查询待评估列表', async () => {
-    const mockAssessments = [
+  it('应该成功查询待评估列表（通过SampleTestItem）', async () => {
+    // v2: mock SampleTestItem
+    ;(prisma.sampleTestItem.findMany as jest.Mock).mockResolvedValue([
       {
-        id: 'assessment-1',
-        requestedAt: new Date(),
-        round: 1,
-        requestedBy: '跟进人1',
-        consultation: {
-          consultationNo: 'XZ202401001',
-          testItems: JSON.stringify([{ name: '项目A' }, { name: '项目B' }]),
-          client: { name: '客户A' },
-        },
+        id: 'sti-1',
+        bizType: 'consultation',
+        bizId: 'consultation-id-1',
+        sampleName: '样品A',
+        testItemName: '项目A',
+        testStandard: 'GB/T228',
+        currentAssessorId: 'assessor-1',
+        assessmentStatus: 'assessing',
+        createdAt: new Date(),
       },
       {
-        id: 'assessment-2',
-        requestedAt: new Date(),
-        round: 2,
-        requestedBy: '跟进人2',
-        consultation: {
-          consultationNo: 'XZ202401002',
-          testItems: JSON.stringify([{ name: '项目C' }]),
-          client: { name: '客户B' },
-        },
+        id: 'sti-2',
+        bizType: 'consultation',
+        bizId: 'consultation-id-2',
+        sampleName: '样品B',
+        testItemName: '项目C',
+        testStandard: 'GB/T229',
+        currentAssessorId: 'assessor-1',
+        assessmentStatus: 'assessing',
+        createdAt: new Date(),
       },
-    ]
+    ])
 
-    ;(prisma.consultationAssessment.findMany as jest.Mock).mockResolvedValue(mockAssessments)
+    // v2: mock consultation.findMany
+    ;(prisma.consultation.findMany as jest.Mock).mockResolvedValue([
+      {
+        id: 'consultation-id-1',
+        consultationNo: 'XZ202401001',
+        testItems: JSON.stringify([{ name: '项目A' }, { name: '项目B' }]),
+        client: { name: '客户A' },
+        createdAt: new Date(),
+      },
+      {
+        id: 'consultation-id-2',
+        consultationNo: 'XZ202401002',
+        testItems: JSON.stringify([{ name: '项目C' }]),
+        client: { name: '客户B' },
+        createdAt: new Date(),
+      },
+    ])
 
     const request = new NextRequest('http://localhost:3001/api/consultation/assessment/my-pending', {
       method: 'GET',
@@ -214,22 +235,31 @@ describe('GET /api/consultation/assessment/my-pending - 查询待评估列表', 
     expect(data.success).toBe(true)
     expect(data.data).toHaveLength(2)
     expect(data.data[0].consultationNo).toBe('XZ202401001')
-    expect(data.data[0].testItems).toEqual([{ name: '项目A' }, { name: '项目B' }])
     expect(data.data[0].clientName).toBe('客户A')
+    expect(data.data[0].sampleTestItems).toHaveLength(1)
   })
 
   it('应该处理客户为空的情况', async () => {
-    ;(prisma.consultationAssessment.findMany as jest.Mock).mockResolvedValue([
+    ;(prisma.sampleTestItem.findMany as jest.Mock).mockResolvedValue([
       {
-        id: 'assessment-1',
-        requestedAt: new Date(),
-        round: 1,
-        requestedBy: '跟进人',
-        consultation: {
-          consultationNo: 'XZ202401001',
-          testItems: '[]',
-          client: null,
-        },
+        id: 'sti-1',
+        bizType: 'consultation',
+        bizId: 'consultation-id-1',
+        sampleName: '样品A',
+        testItemName: '项目A',
+        currentAssessorId: 'assessor-1',
+        assessmentStatus: 'assessing',
+        createdAt: new Date(),
+      },
+    ])
+
+    ;(prisma.consultation.findMany as jest.Mock).mockResolvedValue([
+      {
+        id: 'consultation-id-1',
+        consultationNo: 'XZ202401001',
+        testItems: '[]',
+        client: null,
+        createdAt: new Date(),
       },
     ])
 
@@ -244,7 +274,7 @@ describe('GET /api/consultation/assessment/my-pending - 查询待评估列表', 
   })
 
   it('应该处理空列表', async () => {
-    ;(prisma.consultationAssessment.findMany as jest.Mock).mockResolvedValue([])
+    ;(prisma.sampleTestItem.findMany as jest.Mock).mockResolvedValue([])
 
     const request = new NextRequest('http://localhost:3001/api/consultation/assessment/my-pending', {
       method: 'GET',
