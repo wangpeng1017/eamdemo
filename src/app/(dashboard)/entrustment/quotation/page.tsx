@@ -33,6 +33,7 @@ interface Client {
 
 interface QuotationItem {
   id?: string
+  sampleName: string
   serviceItem: string
   methodStandard: string
   quantity: number
@@ -177,6 +178,18 @@ export default function QuotationPage() {
   // 明细项表格列定义
   const itemColumns: ColumnsType<QuotationItem> = [
     {
+      title: '样品名称',
+      dataIndex: 'sampleName',
+      width: 120,
+      render: (value, record, index) => (
+        <Input
+          value={value}
+          onChange={(e) => updateItem(index, 'sampleName', e.target.value)}
+          placeholder="请输入样品名称"
+        />
+      ),
+    },
+    {
       title: '检测项目',
       dataIndex: 'serviceItem',
       width: 150,
@@ -199,7 +212,7 @@ export default function QuotationPage() {
       ),
     },
     {
-      title: '方法/标准',
+      title: '检测标准',
       dataIndex: 'methodStandard',
       width: 180,
       render: (value, record, index) => (
@@ -360,7 +373,7 @@ export default function QuotationPage() {
 
   const handleAdd = () => {
     setEditingId(null)
-    setItems([{ serviceItem: '', methodStandard: '', quantity: 1, unitPrice: 0, totalPrice: 0 }])
+    setItems([{ sampleName: '', serviceItem: '', methodStandard: '', quantity: 1, unitPrice: 0, totalPrice: 0 }])
     setSampleTestItems([]) // 清空样品检测项
     form.resetFields()
     form.setFieldsValue({
@@ -498,7 +511,41 @@ export default function QuotationPage() {
   }
 
   const handleAddItem = () => {
-    setItems([...items, { serviceItem: '', methodStandard: '', quantity: 1, unitPrice: 0, totalPrice: 0 }])
+    setItems([...items, { sampleName: '', serviceItem: '', methodStandard: '', quantity: 1, unitPrice: 0, totalPrice: 0 }])
+  }
+
+  // 当样品检测项变化时,自动填充报价明细
+  const syncSampleTestItemsToQuotationItems = (sampleItems: SampleTestItemData[]) => {
+    if (sampleItems.length === 0) return
+
+    // 从样品检测项生成报价明细
+    const newItems: QuotationItem[] = sampleItems.map(item => ({
+      sampleName: item.sampleName || '',
+      serviceItem: item.testItemName || '',
+      methodStandard: item.testStandard || '',
+      quantity: item.quantity || 1,
+      unitPrice: 0,
+      totalPrice: 0,
+    }))
+
+    // 合并现有的报价明细(保留单价和用户修改的数量)
+    const mergedItems = newItems.map(newItem => {
+      const existingItem = items.find(
+        item =>
+          item.sampleName === newItem.sampleName &&
+          item.serviceItem === newItem.serviceItem
+      )
+      return existingItem
+        ? {
+          ...newItem,
+          quantity: existingItem.quantity,      // 保留用户修改的数量
+          unitPrice: existingItem.unitPrice,
+          totalPrice: existingItem.totalPrice
+        }
+        : newItem
+    })
+
+    setItems(mergedItems)
   }
 
   const handleApproval = async () => {
@@ -1115,7 +1162,10 @@ export default function QuotationPage() {
               bizType="quotation"
               bizId={editingId || undefined}
               value={sampleTestItems}
-              onChange={setSampleTestItems}
+              onChange={(newItems) => {
+                setSampleTestItems(newItems)
+                syncSampleTestItemsToQuotationItems(newItems)
+              }}
             />
           </div>
 
