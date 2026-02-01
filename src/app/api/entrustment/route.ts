@@ -147,10 +147,7 @@ export const POST = withErrorHandler(async (request: NextRequest) => {
   const entrustmentNo = await generateNo(NumberPrefixes.ENTRUSTMENT, 4)
   console.log('[Entrustment Create] Generated entrustmentNo:', entrustmentNo)
 
-  // 获取样品名称（可选）
-  const sampleName = data.sampleName || (data.samples?.[0]?.name) || null
-
-  // 只提取 schema 中存在的字段
+  // 只提取 schema 中存在的字段（移除sampleName等不存在的字段）
   const createData: any = {
     entrustmentNo,
     contractNo: data.contractNo || null,
@@ -158,10 +155,6 @@ export const POST = withErrorHandler(async (request: NextRequest) => {
     contactPerson: data.contactPerson || null,
     sampleDate: data.sampleDate ? new Date(data.sampleDate) : new Date(),
     follower: data.follower || null,
-    sampleName: sampleName,
-    sampleModel: data.sampleModel || (data.samples?.[0]?.model) || null,
-    sampleMaterial: data.sampleMaterial || (data.samples?.[0]?.material) || null,
-    sampleQuantity: data.sampleQuantity ? Number(data.sampleQuantity) : (data.samples?.[0]?.quantity ? Number(data.samples[0].quantity) : null),
     isSampleReturn: data.isSampleReturn || false,
     sourceType: data.sourceType || null,
     status: data.status || 'pending',

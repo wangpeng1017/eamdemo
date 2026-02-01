@@ -2,6 +2,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { showSuccess, showError } from '@/lib/confirm'
 import { Table, Button, Space, Modal, Form, Input, Select, Tag, message } from 'antd'
 import { PlusOutlined, EditOutlined, DeleteOutlined } from '@ant-design/icons'
 import type { ColumnsType } from 'antd/es/table'
@@ -38,7 +39,7 @@ export default function InspectionStandardsPage() {
       setData(json.list || [])
       setTotal(json.total || 0)
     } catch {
-      message.error('加载数据失败')
+      showError('加载数据失败')
     }
     setLoading(false)
   }
@@ -61,10 +62,10 @@ export default function InspectionStandardsPage() {
     const res = await fetch(`/api/inspection-standard/${id}`, { method: 'DELETE' })
     const json = await res.json()
     if (res.ok && json.success) {
-      message.success('删除成功')
+      showSuccess('删除成功')
       fetchData()
     } else {
-      message.error(json.error?.message || '删除失败')
+      showError(json.error?.message || '删除失败')
     }
   }
 
@@ -77,7 +78,7 @@ export default function InspectionStandardsPage() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(values)
     })
-    message.success(editingId ? '更新成功' : '创建成功')
+    showSuccess(editingId ? '更新成功' : '创建成功')
     setModalOpen(false)
     fetchData()
   }

@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from "react"
+import { showSuccess, showError } from '@/lib/confirm'
 import { useParams, useRouter } from "next/navigation"
 import { Card, Button, Form, Select, Input, message, Space, Modal, Descriptions, Tag } from "antd"
 import { SaveOutlined, CheckOutlined, ArrowLeftOutlined } from "@ant-design/icons"
@@ -118,7 +119,7 @@ export default function DataEntryPage() {
       }
     } catch (error) {
       console.error("[DataEntry Fetch] Error:", error)
-      message.error("获取任务失败")
+      showError("获取任务失败")
     } finally {
       setLoading(false)
     }
@@ -158,18 +159,18 @@ export default function DataEntryPage() {
       console.log("[DataEntry Save] Response:", responseJson)
 
       if (res.ok) {
-        message.success({
+        showSuccess({
           content: '✅ 数据已保存',
           duration: 2,
           key: 'save-draft'
         })
       } else {
         console.error("[DataEntry Save] Save failed:", responseJson)
-        message.error({ content: '保存失败', key: 'save-draft' })
+        showError({ content: '保存失败', key: 'save-draft' })
       }
     } catch (error) {
       console.error("[DataEntry Save] Error:", error)
-      message.error({ content: '保存失败', key: 'save-draft' })
+      showError({ content: '保存失败', key: 'save-draft' })
     } finally {
       setSaving(false)
     }
@@ -196,14 +197,14 @@ export default function DataEntryPage() {
       })
 
       if (res.ok) {
-        message.success("提交成功，任务已完成")
+        showSuccess("提交成功，任务已完成")
         setSubmitModalOpen(false)
         router.push("/task/my")
       } else {
-        message.error("提交失败")
+        showError("提交失败")
       }
     } catch (error) {
-      message.error("请填写完整信息")
+      showError("请填写完整信息")
     }
   }
 

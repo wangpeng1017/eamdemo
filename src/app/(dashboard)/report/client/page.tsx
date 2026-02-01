@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { showSuccess, showError } from '@/lib/confirm'
 import {
   Table, Button, Space, Tag, Modal, Form, Input, Select, message,
   Card, Row, Col, Statistic, Descriptions, Timeline, Popconfirm
@@ -135,10 +136,10 @@ export default function ClientReportPage() {
     const res = await fetch(`/api/report/client/${id}`, { method: 'DELETE' })
     const json = await res.json()
     if (json.success) {
-      message.success('删除成功')
+      showSuccess('删除成功')
       fetchData()
     } else {
-      message.error(json.error?.message || '删除失败')
+      showError(json.error?.message || '删除失败')
     }
   }
 
@@ -155,11 +156,11 @@ export default function ClientReportPage() {
     const json = await res.json()
 
     if (json.success) {
-      message.success(editingId ? '更新成功' : '创建成功')
+      showSuccess(editingId ? '更新成功' : '创建成功')
       setModalOpen(false)
       fetchData()
     } else {
-      message.error(json.error?.message || '操作失败')
+      showError(json.error?.message || '操作失败')
     }
   }
 
@@ -186,11 +187,11 @@ export default function ClientReportPage() {
     const json = await res.json()
 
     if (json.success) {
-      message.success('操作成功')
+      showSuccess('操作成功')
       setApprovalOpen(false)
       fetchData()
     } else {
-      message.error(json.error?.message || '操作失败')
+      showError(json.error?.message || '操作失败')
     }
   }
 

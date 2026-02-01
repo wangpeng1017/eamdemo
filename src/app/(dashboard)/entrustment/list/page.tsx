@@ -7,6 +7,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { showSuccess, showError } from '@/lib/confirm'
 import { Table, Button, Space, Modal, Form, Input, InputNumber, DatePicker, Select, message, Row, Col, Divider, Popconfirm, Tag, Radio } from 'antd'
 import { PlusOutlined, EditOutlined, DeleteOutlined, MinusCircleOutlined, TeamOutlined, ShareAltOutlined, EyeOutlined } from '@ant-design/icons'
 import { StatusTag } from '@/components/StatusTag'
@@ -197,7 +198,7 @@ export default function EntrustmentListPage() {
       })
 
       if (contract.salesPerson) {
-        message.success(`已自动关联跟单人: ${contract.salesPerson}`)
+        showSuccess(`已自动关联跟单人: ${contract.salesPerson}`)
       }
     }
   }
@@ -305,10 +306,10 @@ export default function EntrustmentListPage() {
     const res = await fetch(`/api/entrustment/${id}`, { method: 'DELETE' })
     const json = await res.json()
     if (res.ok && json.success) {
-      message.success('删除成功')
+      showSuccess('删除成功')
       fetchData()
     } else {
-      message.error(json.error?.message || '删除失败')
+      showError(json.error?.message || '删除失败')
     }
   }
 
@@ -355,11 +356,11 @@ export default function EntrustmentListPage() {
             })
             if (!res.ok) {
               const json = await res.json()
-              message.error(`保存样品检测项失败: ${json.error?.message || '未知错误'}`)
+              showError(`保存样品检测项失败: ${json.error?.message || '未知错误'}`)
               return // 不关闭弹窗
             }
           } catch (error) {
-            message.error('保存样品检测项失败，请重试')
+            showError('保存样品检测项失败，请重试')
             return // 不关闭弹窗
           }
         }
@@ -377,23 +378,23 @@ export default function EntrustmentListPage() {
                 targetBizId: entrustmentId,
               })
             })
-            message.success('已从合同复制样品检测项数据')
+            showSuccess('已从合同复制样品检测项数据')
           } catch (e) {
             console.error('复制样品检测项失败:', e)
             // 复制失败不影响主流程
           }
         }
 
-        message.success(editingId ? '更新成功' : '创建成功')
+        showSuccess(editingId ? '更新成功' : '创建成功')
         setModalOpen(false)
         fetchData()
       } else {
         const errorData = await res.json().catch(() => ({}))
-        message.error(errorData.error || errorData.message || `操作失败(${res.status})`)
+        showError(errorData.error || errorData.message || `操作失败(${res.status})`)
       }
     } catch (err: any) {
       console.error('提交失败:', err)
-      message.error(err.message || '提交失败')
+      showError(err.message || '提交失败')
     }
   }
 
@@ -437,11 +438,11 @@ export default function EntrustmentListPage() {
     })
 
     if (res.ok) {
-      message.success('分配成功')
+      showSuccess('分配成功')
       setAssignModalOpen(false)
       fetchData()
     } else {
-      message.error('分配失败')
+      showError('分配失败')
     }
   }
 
@@ -462,11 +463,11 @@ export default function EntrustmentListPage() {
     })
 
     if (res.ok) {
-      message.success('分包成功')
+      showSuccess('分包成功')
       setSubcontractModalOpen(false)
       fetchData()
     } else {
-      message.error('分包失败')
+      showError('分包失败')
     }
   }
 
@@ -513,17 +514,17 @@ export default function EntrustmentListPage() {
         // 尝试复制到剪贴板（静默操作，不影响弹窗显示）
         try {
           await navigator.clipboard.writeText(link)
-          message.success({ content: '链接已复制到剪贴板', duration: 2 })
+          showSuccess({ content: '链接已复制到剪贴板', duration: 2 })
         } catch (clipboardError) {
           // 剪贴板 API 在 HTTP 环境下可能失败，忽略错误
           console.log('[ExternalLink] Clipboard API failed:', clipboardError)
         }
       } else {
-        message.error({ content: json.message || '生成失败', key: 'externalLink' })
+        showError({ content: json.message || '生成失败', key: 'externalLink' })
       }
     } catch (error) {
       console.error('[ExternalLink] Error:', error)
-      message.error({ content: '生成外部链接失败', key: 'externalLink' })
+      showError({ content: '生成外部链接失败', key: 'externalLink' })
     }
   }
 

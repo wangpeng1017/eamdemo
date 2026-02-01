@@ -6,6 +6,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { showSuccess, showError } from '@/lib/confirm'
 import { Modal, Form, Select, Input, message, Divider } from 'antd'
 import SampleTestItemTable, { SampleTestItemData } from './SampleTestItemTable'
 
@@ -75,7 +76,7 @@ export default function ReassessmentModal({
       }
     } catch (error) {
       console.error('获取用户列表失败:', error)
-      message.error('获取用户列表失败')
+      showError('获取用户列表失败')
     } finally {
       setUsersLoading(false)
     }
@@ -125,19 +126,19 @@ export default function ReassessmentModal({
       const json = await res.json()
 
       if (json.success) {
-        message.success(json.data.message || `已开始第 ${json.data.round} 轮评估`)
+        showSuccess(json.data.message || `已开始第 ${json.data.round} 轮评估`)
         form.resetFields()
         setSampleTestItems([])
         onSuccess()
       } else {
-        message.error(json.error?.message || '发起重新评估失败')
+        showError(json.error?.message || '发起重新评估失败')
       }
     } catch (error: any) {
       if (error.errorFields) {
         return
       }
       console.error('发起重新评估失败:', error)
-      message.error('发起重新评估失败')
+      showError('发起重新评估失败')
     } finally {
       setLoading(false)
     }

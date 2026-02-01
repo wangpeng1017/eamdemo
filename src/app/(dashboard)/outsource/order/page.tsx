@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { showSuccess, showError } from '@/lib/confirm'
 import { Table, Button, Space, Tag, Modal, Form, Input, InputNumber, DatePicker, Select, message } from 'antd'
 import { PlusOutlined, EditOutlined, DeleteOutlined } from '@ant-design/icons'
 import type { ColumnsType } from 'antd/es/table'
@@ -80,10 +81,10 @@ export default function OutsourceOrderPage() {
     const res = await fetch(`/api/outsource-order/${id}`, { method: 'DELETE' })
     const json = await res.json()
     if (res.ok && json.success) {
-      message.success('删除成功')
+      showSuccess('删除成功')
       fetchData()
     } else {
-      message.error(json.error?.message || '删除失败')
+      showError(json.error?.message || '删除失败')
     }
   }
 
@@ -101,7 +102,7 @@ export default function OutsourceOrderPage() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(data)
     })
-    message.success(editingId ? '更新成功' : '创建成功')
+    showSuccess(editingId ? '更新成功' : '创建成功')
     setModalOpen(false)
     fetchData()
   }

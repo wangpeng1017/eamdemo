@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useRef } from "react"
+import { showSuccess, showError } from '@/lib/confirm'
 import { Table, Button, Space, Tag, Modal, Form, Input, Select, DatePicker, message, Card, Row, Col, Descriptions } from "antd"
 import { PlusOutlined, BarcodeOutlined, DownloadOutlined, SearchOutlined } from "@ant-design/icons"
 import { StatusTag } from '@/components/StatusTag'
@@ -132,11 +133,11 @@ export default function SampleReceiptPage() {
         setSampleTestItems(json.data)
         setLocked(true) // 加载成功后锁定
       } else {
-        message.error('加载检测项失败')
+        showError('加载检测项失败')
         setLocked(false)
       }
     } catch (error) {
-      message.error('加载检测项失败')
+      showError('加载检测项失败')
       setLocked(false)
     } finally {
       setLoadingTestItems(false)
@@ -170,16 +171,16 @@ export default function SampleReceiptPage() {
         })
         if (!res.ok) {
           const json = await res.json()
-          message.error(`保存样品检测项失败: ${json.error?.message || '未知错误'}`)
+          showError(`保存样品检测项失败: ${json.error?.message || '未知错误'}`)
           return // 不关闭弹窗
         }
       } catch (error) {
-        message.error('保存样品检测项失败，请重试')
+        showError('保存样品检测项失败，请重试')
         return // 不关闭弹窗
       }
     }
 
-    message.success("收样登记成功")
+    showSuccess("收样登记成功")
     setModalOpen(false)
     fetchData()
   }
@@ -211,9 +212,9 @@ export default function SampleReceiptPage() {
         link.download = `label_${labelSample?.sampleNo || 'sample'}.png`
         link.href = dataUrl
         link.click()
-        message.success('标签下载成功')
+        showSuccess('标签下载成功')
       } catch (e) {
-        message.error('下载失败')
+        showError('下载失败')
       }
     }
   }

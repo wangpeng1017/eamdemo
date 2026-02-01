@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { showSuccess, showError } from '@/lib/confirm'
 import { useParams, useRouter } from 'next/navigation'
 import { Form, Input, InputNumber, Button, message, Card, Typography, Row, Col, Space, Spin } from 'antd'
 import { CheckCircleOutlined, LoadingOutlined } from '@ant-design/icons'
@@ -60,11 +61,11 @@ export default function ExternalEntrustmentPage() {
 
           generateCaptcha()
         } else {
-          message.error(json.message || '链接无效')
+          showError(json.message || '链接无效')
           setValid(false)
         }
       } catch (error) {
-        message.error('验证失败，请检查链接是否正确')
+        showError('验证失败，请检查链接是否正确')
         setValid(false)
       } finally {
         setLoading(false)
@@ -80,7 +81,7 @@ export default function ExternalEntrustmentPage() {
   const handleSubmit = async () => {
     // 验证验证码
     if (userCaptcha !== captcha) {
-      message.error('验证码错误')
+      showError('验证码错误')
       return
     }
 
@@ -101,12 +102,12 @@ export default function ExternalEntrustmentPage() {
 
       if (json.success) {
         setSubmitted(true)
-        message.success('提交成功，感谢您的配合！')
+        showSuccess('提交成功，感谢您的配合！')
       } else {
-        message.error(json.message || '提交失败')
+        showError(json.message || '提交失败')
       }
     } catch (error) {
-      message.error('提交失败，请稍后重试')
+      showError('提交失败，请稍后重试')
     } finally {
       setSubmitting(false)
     }

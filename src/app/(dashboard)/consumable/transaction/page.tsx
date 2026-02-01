@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
+import { showSuccess, showError } from '@/lib/confirm'
 import { Card, Table, Button, Modal, Form, Input, InputNumber, Select, message, Space, Tag, Row, Col, Statistic } from 'antd'
 import { ImportOutlined, ExportOutlined, ReloadOutlined } from '@ant-design/icons'
 import type { ColumnsType, TablePaginationConfig } from 'antd/es/table'
@@ -91,10 +92,10 @@ export default function StockTransactionPage() {
         setPagination(prev => ({ ...prev, total: data.data.total }))
         setStats(data.data.stats || { inTotal: 0, outTotal: 0 })
       } else {
-        message.error(data.message || '加载失败')
+        showError(data.message || '加载失败')
       }
     } catch {
-      message.error('网络错误')
+      showError('网络错误')
     } finally {
       setLoading(false)
     }
@@ -131,14 +132,14 @@ export default function StockTransactionPage() {
       const data = await res.json()
 
       if (data.success) {
-        message.success(`${transactionType === 'in' ? '入库' : '出库'}成功`)
+        showSuccess(`${transactionType === 'in' ? '入库' : '出库'}成功`)
         setModalOpen(false)
         loadData()
       } else {
-        message.error(data.message || '操作失败')
+        showError(data.message || '操作失败')
       }
     } catch {
-      message.error('网络错误')
+      showError('网络错误')
     } finally {
       setSubmitting(false)
     }

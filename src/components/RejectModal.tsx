@@ -19,6 +19,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { showSuccess, showError, showWarningMessage } from '@/lib/confirm'
 import { Modal, Input, message, Form } from 'antd'
 import { ExclamationCircleOutlined } from '@ant-design/icons'
 
@@ -81,7 +82,7 @@ export function RejectModal({
   const handleReject = async () => {
     // 验证驳回原因
     if (!rejectReason.trim()) {
-      message.warning('请输入驳回原因')
+      showWarningMessage('请输入驳回原因')
       return
     }
 
@@ -101,17 +102,17 @@ export function RejectModal({
       const result: RejectResponse = await response.json()
 
       if (result.success) {
-        message.success(`${getDocumentTypeName(documentType)}驳回成功`)
+        showSuccess(`${getDocumentTypeName(documentType)}驳回成功`)
         form.resetFields()
         setRejectReason('')
         onSuccess?.()
         onCancel()
       } else {
-        message.error(result.error || '驳回失败')
+        showError(result.error || '驳回失败')
       }
     } catch (error) {
       console.error('驳回失败:', error)
-      message.error('驳回失败，请重试')
+      showError('驳回失败，请重试')
     } finally {
       setLoading(false)
     }

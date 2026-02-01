@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from "react"
+import { showSuccess, showError } from '@/lib/confirm'
 import { Table, Button, Tag, Modal, Form, Input, DatePicker, Select, message, Card, Statistic, Space } from "antd"
 import { ArrowLeftOutlined, ClockCircleOutlined, ExclamationCircleOutlined, PlusOutlined } from "@ant-design/icons"
 import type { ColumnsType } from "antd/es/table"
@@ -90,7 +91,7 @@ export default function MySamplesPage() {
         overdue: allList.filter((r: any) => r.status === 'overdue').length,
       })
     } catch (error) {
-      message.error("获取数据失败")
+      showError("获取数据失败")
     } finally {
       setLoading(false)
     }
@@ -135,14 +136,14 @@ export default function MySamplesPage() {
         }),
       })
       if (res.ok) {
-        message.success("归还成功")
+        showSuccess("归还成功")
         setReturnModalOpen(false)
         fetchData()
       } else {
-        message.error("归还失败")
+        showError("归还失败")
       }
     } catch (error) {
-      message.error("归还失败")
+      showError("归还失败")
     }
   }
 
@@ -178,15 +179,15 @@ export default function MySamplesPage() {
         }),
       })
       if (res.ok) {
-        message.success("领用成功")
+        showSuccess("领用成功")
         setRequisitionModalOpen(false)
         fetchData()
       } else {
         const err = await res.json()
-        message.error(err.error || "领用失败")
+        showError(err.error || "领用失败")
       }
     } catch (error) {
-      message.error("领用失败")
+      showError("领用失败")
     }
   }
 

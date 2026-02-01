@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
+import { showSuccess, showError } from '@/lib/confirm'
 import { Card, Table, Button, Modal, Form, Input, Select, message, Space, Tag, Popconfirm } from 'antd'
 import { PlusOutlined, EditOutlined, DeleteOutlined, ArrowRightOutlined, ReloadOutlined, StopOutlined, CheckCircleOutlined } from '@ant-design/icons'
 import type { ColumnsType } from 'antd/es/table'
@@ -67,10 +68,10 @@ export default function ApprovalFlowPage() {
       if (data.success) {
         setFlows(data.data.list)
       } else {
-        message.error(data.message || '加载失败')
+        showError(data.message || '加载失败')
       }
     } catch {
-      message.error('网络错误')
+      showError('网络错误')
     } finally {
       setLoading(false)
     }
@@ -151,13 +152,13 @@ export default function ApprovalFlowPage() {
       const res = await fetch(`/api/approval-flow/${id}`, { method: 'DELETE' })
       const data = await res.json()
       if (data.success) {
-        message.success('删除成功')
+        showSuccess('删除成功')
         loadData()
       } else {
-        message.error(data.message || '删除失败')
+        showError(data.message || '删除失败')
       }
     } catch {
-      message.error('网络错误')
+      showError('网络错误')
     }
   }
 
@@ -180,14 +181,14 @@ export default function ApprovalFlowPage() {
       const data = await res.json()
 
       if (data.success) {
-        message.success(editingFlow ? '更新成功' : '创建成功')
+        showSuccess(editingFlow ? '更新成功' : '创建成功')
         setModalOpen(false)
         loadData()
       } else {
-        message.error(data.message || '操作失败')
+        showError(data.message || '操作失败')
       }
     } catch {
-      message.error('网络错误')
+      showError('网络错误')
     } finally {
       setSubmitting(false)
     }
@@ -223,13 +224,13 @@ export default function ApprovalFlowPage() {
       })
       const data = await res.json()
       if (data.success) {
-        message.success('删除成功')
+        showSuccess('删除成功')
         loadData()
       } else {
-        message.error(data.message || '删除失败')
+        showError(data.message || '删除失败')
       }
     } catch {
-      message.error('网络错误')
+      showError('网络错误')
     }
   }
 
@@ -262,14 +263,14 @@ export default function ApprovalFlowPage() {
       const data = await res.json()
 
       if (data.success) {
-        message.success(editingNode ? '更新成功' : '添加成功')
+        showSuccess(editingNode ? '更新成功' : '添加成功')
         setNodeModalOpen(false)
         loadData()
       } else {
-        message.error(data.message || '操作失败')
+        showError(data.message || '操作失败')
       }
     } catch {
-      message.error('网络错误')
+      showError('网络错误')
     } finally {
       setSubmitting(false)
     }
@@ -285,13 +286,13 @@ export default function ApprovalFlowPage() {
       })
       const data = await res.json()
       if (data.success) {
-        message.success(newStatus ? '已启用' : '已禁用')
+        showSuccess(newStatus ? '已启用' : '已禁用')
         loadData()
       } else {
-        message.error(data.message || '操作失败')
+        showError(data.message || '操作失败')
       }
     } catch {
-      message.error('网络错误')
+      showError('网络错误')
     }
   }
 

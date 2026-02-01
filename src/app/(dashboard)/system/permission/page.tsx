@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
+import { showSuccess, showError } from '@/lib/confirm'
 import { Card, Table, Tree, Button, Modal, Form, Input, Select, message, Space, Tag, Popconfirm, Row, Col } from 'antd'
 import { PlusOutlined, EditOutlined, DeleteOutlined, SaveOutlined, ReloadOutlined, CheckCircleOutlined, StopOutlined } from '@ant-design/icons'
 import type { ColumnsType } from 'antd/es/table'
@@ -59,10 +60,10 @@ export default function PermissionPage() {
       if (data.success) {
         setPermissions(data.data.list || [])
       } else {
-        message.error(data.message || '加载失败')
+        showError(data.message || '加载失败')
       }
     } catch {
-      message.error('网络错误')
+      showError('网络错误')
     } finally {
       setLoading(false)
     }
@@ -134,13 +135,13 @@ export default function PermissionPage() {
       const res = await fetch(`/api/permission/${id}`, { method: 'DELETE' })
       const data = await res.json()
       if (data.success) {
-        message.success('删除成功')
+        showSuccess('删除成功')
         loadPermissions()
       } else {
-        message.error(data.message || '删除失败')
+        showError(data.message || '删除失败')
       }
     } catch {
-      message.error('网络错误')
+      showError('网络错误')
     }
   }
 
@@ -160,14 +161,14 @@ export default function PermissionPage() {
       const data = await res.json()
 
       if (data.success) {
-        message.success(editingId ? '更新成功' : '创建成功')
+        showSuccess(editingId ? '更新成功' : '创建成功')
         setModalOpen(false)
         loadPermissions()
       } else {
-        message.error(data.message || '操作失败')
+        showError(data.message || '操作失败')
       }
     } catch {
-      message.error('网络错误')
+      showError('网络错误')
     } finally {
       setSubmitting(false)
     }
@@ -189,13 +190,13 @@ export default function PermissionPage() {
       })
       const data = await res.json()
       if (data.success !== false) {
-        message.success('权限保存成功')
+        showSuccess('权限保存成功')
         loadRoles()
       } else {
-        message.error(data.message || '保存失败')
+        showError(data.message || '保存失败')
       }
     } catch {
-      message.error('保存失败')
+      showError('保存失败')
     }
   }
 
@@ -227,13 +228,13 @@ export default function PermissionPage() {
       })
       const data = await res.json()
       if (data.success) {
-        message.success(newStatus === 1 ? '已启用' : '已禁用')
+        showSuccess(newStatus === 1 ? '已启用' : '已禁用')
         loadPermissions()
       } else {
-        message.error(data.message || '操作失败')
+        showError(data.message || '操作失败')
       }
     } catch {
-      message.error('网络错误')
+      showError('网络错误')
     }
   }
 

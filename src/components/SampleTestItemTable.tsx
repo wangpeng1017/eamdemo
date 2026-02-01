@@ -7,6 +7,7 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
+import { showError } from '@/lib/confirm'
 import { Table, Button, Input, InputNumber, Select, Space, message, Popconfirm, Tag } from 'antd'
 import { PlusOutlined, DeleteOutlined, CopyOutlined } from '@ant-design/icons'
 import type { ColumnsType } from 'antd/es/table'
@@ -108,7 +109,7 @@ export default function SampleTestItemTable({
         }
       } catch (error) {
         console.error('加载用户列表失败:', error)
-        message.error('加载用户列表失败')
+        showError('加载用户列表失败')
       }
     }
     fetchUsers()

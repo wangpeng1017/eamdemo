@@ -6,6 +6,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { showError } from '@/lib/confirm'
 import { Card, Table, Tag, Button, Space, Empty, Spin, message, Collapse, Timeline } from 'antd'
 import { EditOutlined, ClockCircleOutlined } from '@ant-design/icons'
 import dayjs from 'dayjs'
@@ -68,11 +69,11 @@ export default function AssessmentResultTab({
         setAssessments(json.data.assessments || [])
         setMaxRound(json.data.maxRound || 0)
       } else {
-        message.error(json.error?.message || '获取评估记录失败')
+        showError(json.error?.message || '获取评估记录失败')
       }
     } catch (error) {
       console.error('获取评估记录失败:', error)
-      message.error('获取评估记录失败')
+      showError('获取评估记录失败')
     } finally {
       setLoading(false)
     }

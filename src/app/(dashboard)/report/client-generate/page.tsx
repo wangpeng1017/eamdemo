@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { showSuccess, showError } from '@/lib/confirm'
 import { Table, Button, Space, Tag, Modal, Select, message, Card, Statistic, Row, Col, Form, Input, Descriptions } from 'antd'
 import { PlusOutlined, EyeOutlined, FileTextOutlined } from '@ant-design/icons'
 import type { ColumnsType } from 'antd/es/table'
@@ -70,7 +71,7 @@ export default function ClientReportGeneratePage() {
                 setTotal(json.total || 0)
             }
         } catch (error) {
-            message.error('获取报告列表失败')
+            showError('获取报告列表失败')
         } finally {
             setLoading(false)
         }
@@ -87,7 +88,7 @@ export default function ClientReportGeneratePage() {
             )
             setEntrustments(filtered)
         } catch (error) {
-            message.error('获取委托单失败')
+            showError('获取委托单失败')
         }
     }
 
@@ -117,7 +118,7 @@ export default function ClientReportGeneratePage() {
 
     const handleGenerateSubmit = async () => {
         if (!selectedEntrustment || selectedTaskIds.length === 0) {
-            message.error('请选择委托单和至少一个任务')
+            showError('请选择委托单和至少一个任务')
             return
         }
 
@@ -141,14 +142,14 @@ export default function ClientReportGeneratePage() {
             const json = await res.json()
 
             if (res.ok && json.success) {
-                message.success('客户报告生成成功')
+                showSuccess('客户报告生成成功')
                 setGenerateModalOpen(false)
                 fetchData()
             } else {
-                message.error(json.error || '报告生成失败')
+                showError(json.error || '报告生成失败')
             }
         } catch (error) {
-            message.error('报告生成失败')
+            showError('报告生成失败')
         } finally {
             setGenerating(false)
         }

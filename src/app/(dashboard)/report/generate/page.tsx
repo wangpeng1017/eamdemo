@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { showSuccess, showError } from '@/lib/confirm'
 import { Table, Button, Modal, Form, Input, Select, message, Space, Card, Tag, Descriptions } from 'antd'
 import { FileAddOutlined, EyeOutlined, PrinterOutlined, DownloadOutlined } from '@ant-design/icons'
 import type { ColumnsType } from 'antd/es/table'
@@ -70,7 +71,7 @@ export default function ReportGeneratePage() {
         setTotal(json.total || 0)
       }
     } catch (error) {
-      message.error('获取数据失败')
+      showError('获取数据失败')
     } finally {
       setLoading(false)
     }
@@ -109,13 +110,13 @@ export default function ReportGeneratePage() {
       })
 
       if (res.ok) {
-        message.success('报告生成成功')
+        showSuccess('报告生成成功')
         setGenerateModalOpen(false)
       } else {
-        message.error('报告生成失败')
+        showError('报告生成失败')
       }
     } catch (error) {
-      message.error('报告生成失败')
+      showError('报告生成失败')
     }
   }
 
@@ -157,11 +158,11 @@ export default function ReportGeneratePage() {
 
         await exportReportPDF(reportData)
       } else {
-        message.error('获取任务信息失败')
+        showError('获取任务信息失败')
       }
     } catch (error) {
       console.error('导出 PDF 失败:', error)
-      message.error('导出 PDF 失败')
+      showError('导出 PDF 失败')
     }
   }
 

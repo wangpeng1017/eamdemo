@@ -7,6 +7,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { showSuccess, showError, showWarningMessage } from '@/lib/confirm'
 import { Table, Button, Space, Modal, Form, Input, InputNumber, Select, DatePicker, message, Drawer, Tag, Row, Col, Divider, Popconfirm, Tabs, Descriptions } from 'antd'
 import { PlusOutlined, EditOutlined, DeleteOutlined, EyeOutlined, FileTextOutlined, DownloadOutlined, FileAddOutlined, FilePdfOutlined } from '@ant-design/icons'
 import { StatusTag } from '@/components/StatusTag'
@@ -138,7 +139,8 @@ export default function ContractPage() {
       const templates = (json.success && json.data?.list) || json.list || []
       setTestTemplates(templates)
     } catch (error) {
-      console.error('获取检测项目列表失败:', error)
+      console.error('[Contract] 获取检测项目列表失败:', error)
+      showError('获取检测项目失败', '无法加载检测项目列表，请刷新页面重试')
     }
   }
 
@@ -174,7 +176,8 @@ export default function ContractPage() {
       const json = await res.json()
       setClients(json.list || [])
     } catch (error) {
-      console.error('获取客户列表失败:', error)
+      console.error('[Contract] 获取客户列表失败:', error)
+      showError('获取客户列表失败', '无法加载客户列表，请刷新页面重试')
     } finally {
       setClientsLoading(false)
     }
@@ -237,7 +240,8 @@ export default function ContractPage() {
         setSampleTestItems([])
       }
     } catch (error) {
-      console.error('加载样品检测项失败:', error)
+      console.error('[Contract] 加载样品检测项失败:', error)
+      showError('加载检测项失败', '无法加载样品检测项，请重试')
       setSampleTestItems([])
     }
 
@@ -254,10 +258,10 @@ export default function ContractPage() {
     const res = await fetch(`/api/contract/${id}`, { method: 'DELETE' })
     const json = await res.json()
     if (res.ok && json.success) {
-      message.success('删除成功')
+      showSuccess('删除成功')
       fetchData()
     } else {
-      message.error(json.error?.message || '删除失败')
+      showError(json.error?.message || '删除失败')
     }
   }
 
@@ -294,16 +298,16 @@ export default function ContractPage() {
         })
         if (!res.ok) {
           const json = await res.json()
-          message.error(`保存样品检测项失败: ${json.error?.message || '未知错误'}`)
+          showError(`保存样品检测项失败: ${json.error?.message || '未知错误'}`)
           return // 不关闭弹窗
         }
       } catch (error) {
-        message.error('保存样品检测项失败，请重试')
+        showError('保存样品检测项失败，请重试')
         return // 不关闭弹窗
       }
     }
 
-    message.success(editingId ? '更新成功' : '创建成功')
+    showSuccess(editingId ? '更新成功' : '创建成功')
     setModalOpen(false)
     fetchData()
   }
@@ -314,14 +318,14 @@ export default function ContractPage() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ status }),
     })
-    message.success('状态更新成功')
+    showSuccess('状态更新成功')
     fetchData()
     setViewDrawerOpen(false)
   }
 
   const handleGeneratePDF = () => {
     if (selectedRowKeys.length !== 1) {
-      message.warning('请选择一条合同记录')
+      showWarningMessage('请选择一条合同记录')
       return
     }
     const contract = data.find(c => c.id === selectedRowKeys[0])
@@ -333,7 +337,7 @@ export default function ContractPage() {
 
   const handleGenerateEntrustment = async () => {
     if (selectedRowKeys.length !== 1) {
-      message.warning('请选择一条合同记录')
+      showWarningMessage('请选择一条合同记录')
       return
     }
     const contract = data.find(c => c.id === selectedRowKeys[0])
@@ -352,7 +356,8 @@ export default function ContractPage() {
           }))
         }
       } catch (e) {
-        console.error('获取报价单失败:', e)
+        console.error('[Contract] 获取报价单失败:', e)
+        showError('获取报价单失败', '无法加载报价单数据，请重试')
       }
     }
 

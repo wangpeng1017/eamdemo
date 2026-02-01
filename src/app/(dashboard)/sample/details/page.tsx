@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from "react"
+import { showSuccess, showError } from '@/lib/confirm'
 import { Table, Button, Tag, Modal, Form, Input, InputNumber, Select, DatePicker, message, Space, Card } from "antd"
 import { UserOutlined, SendOutlined, HistoryOutlined, SearchOutlined } from "@ant-design/icons"
 import type { ColumnsType } from "antd/es/table"
@@ -97,7 +98,7 @@ export default function SampleDetailsPage() {
         setTotal(json.total || 0)
       }
     } catch (error) {
-      message.error("获取数据失败")
+      showError("获取数据失败")
     } finally {
       setLoading(false)
     }
@@ -149,15 +150,15 @@ export default function SampleDetailsPage() {
         }),
       })
       if (res.ok) {
-        message.success("内部领用成功")
+        showSuccess("内部领用成功")
         setInternalModalOpen(false)
         fetchData()
       } else {
         const err = await res.json()
-        message.error(err.error || "领用失败")
+        showError(err.error || "领用失败")
       }
     } catch (error) {
-      message.error("领用失败")
+      showError("领用失败")
     }
   }
 
@@ -188,15 +189,15 @@ export default function SampleDetailsPage() {
         }),
       })
       if (res.ok) {
-        message.success("外部委外成功")
+        showSuccess("外部委外成功")
         setExternalModalOpen(false)
         fetchData()
       } else {
         const err = await res.json()
-        message.error(err.error || "委外失败")
+        showError(err.error || "委外失败")
       }
     } catch (error) {
-      message.error("委外失败")
+      showError("委外失败")
     }
   }
 
@@ -209,7 +210,7 @@ export default function SampleDetailsPage() {
       setRequisitionRecords(json.list || [])
       setRecordsModalOpen(true)
     } catch (e) {
-      message.error("获取记录失败")
+      showError("获取记录失败")
     }
   }
 

@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { showSuccess, showError } from '@/lib/confirm'
 import {
   Table, Button, Space, Tag, Modal, Form, Input, Select, DatePicker,
   InputNumber, message, Card, Row, Col, Statistic, Popconfirm, Descriptions
@@ -127,10 +128,10 @@ export default function DeviceRepairPage() {
     const res = await fetch(`/api/device/repair/${id}`, { method: 'DELETE' })
     const json = await res.json()
     if (json.success) {
-      message.success('删除成功')
+      showSuccess('删除成功')
       fetchData()
     } else {
-      message.error(json.error?.message || '删除失败')
+      showError(json.error?.message || '删除失败')
     }
   }
 
@@ -147,11 +148,11 @@ export default function DeviceRepairPage() {
     const json = await res.json()
 
     if (json.success) {
-      message.success('维修登记成功')
+      showSuccess('维修登记成功')
       setModalOpen(false)
       fetchData()
     } else {
-      message.error(json.error?.message || '操作失败')
+      showError(json.error?.message || '操作失败')
     }
   }
 
@@ -166,11 +167,11 @@ export default function DeviceRepairPage() {
     const json = await res.json()
 
     if (json.success) {
-      message.success('更新成功')
+      showSuccess('更新成功')
       setEditModalOpen(false)
       fetchData()
     } else {
-      message.error(json.error?.message || '更新失败')
+      showError(json.error?.message || '更新失败')
     }
   }
 
@@ -183,10 +184,10 @@ export default function DeviceRepairPage() {
     const json = await res.json()
 
     if (json.success) {
-      message.success('操作成功')
+      showSuccess('操作成功')
       fetchData()
     } else {
-      message.error(json.error?.message || '操作失败')
+      showError(json.error?.message || '操作失败')
     }
   }
 

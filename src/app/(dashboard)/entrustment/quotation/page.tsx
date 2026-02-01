@@ -7,6 +7,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { showSuccess, showError, showWarningMessage } from '@/lib/confirm'
 import { Table, Button, Space, Modal, Form, Input, InputNumber, Select, DatePicker, message, Drawer, Tag, Row, Col, Divider, Popconfirm, Tabs, Descriptions, Card, Radio, Upload } from 'antd'
 import { PlusOutlined, EditOutlined, DeleteOutlined, EyeOutlined, CheckOutlined, CloseOutlined, SendOutlined, FilePdfOutlined, FolderOutlined, FileAddOutlined, MessageOutlined, UploadOutlined, FileTextOutlined } from '@ant-design/icons'
 import { StatusTag } from '@/components/StatusTag'
@@ -279,7 +280,8 @@ export default function QuotationPage() {
       const json = await res.json()
       setClients(json.list || [])
     } catch (error) {
-      console.error('获取客户列表失败:', error)
+      console.error('[Quotation] 获取客户列表失败:', error)
+      showError('获取客户列表失败', '无法加载客户列表，请刷新页面重试')
     } finally {
       setClientsLoading(false)
     }
@@ -293,7 +295,8 @@ export default function QuotationPage() {
       const templates = json.list || []
       setTestTemplates(templates)
     } catch (error) {
-      console.error('获取检测项目列表失败:', error)
+      console.error('[Quotation] 获取检测项目列表失败:', error)
+      showError('获取检测项目失败', '无法加载检测项目列表，请刷新页面重试')
     }
   }
 
@@ -408,7 +411,8 @@ export default function QuotationPage() {
         setSampleTestItems([])
       }
     } catch (error) {
-      console.error('加载样品检测项失败:', error)
+      console.error('[Quotation] 加载样品检测项失败:', error)
+      showError('加载检测项失败', '无法加载样品检测项，请重试')
       setSampleTestItems([])
     }
 
@@ -443,7 +447,7 @@ export default function QuotationPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(submitData),
       })
-      message.success('更新成功')
+      showSuccess('更新成功')
     } else {
       const res = await fetch('/api/quotation', {
         method: 'POST',
@@ -452,7 +456,7 @@ export default function QuotationPage() {
       })
       const json = await res.json()
       quotationId = json.id
-      message.success('创建成功')
+      showSuccess('创建成功')
     }
 
     // 保存样品检测项数据
@@ -469,11 +473,11 @@ export default function QuotationPage() {
         })
         if (!res.ok) {
           const json = await res.json()
-          message.error(`保存样品检测项失败: ${json.error?.message || '未知错误'}`)
+          showError(`保存样品检测项失败: ${json.error?.message || '未知错误'}`)
           return // 不关闭弹窗
         }
       } catch (error) {
-        message.error('保存样品检测项失败，请重试')
+        showError('保存样品检测项失败，请重试')
         return // 不关闭弹窗
       }
     }
@@ -491,10 +495,10 @@ export default function QuotationPage() {
     const res = await fetch(`/api/quotation/${id}`, { method: 'DELETE' })
     const json = await res.json()
     if (res.ok && json.success) {
-      message.success('删除成功')
+      showSuccess('删除成功')
       fetchData()
     } else {
-      message.error(json.error?.message || '删除失败')
+      showError(json.error?.message || '删除失败')
     }
   }
 
@@ -564,13 +568,13 @@ export default function QuotationPage() {
     })
 
     if (res.ok) {
-      message.success('审批提交成功')
+      showSuccess('审批提交成功')
       setApprovalModalOpen(false)
       fetchData()
       setViewDrawerOpen(false)
     } else {
       const error = await res.json()
-      message.error(error.message || '审批失败')
+      showError(error.message || '审批失败')
     }
   }
 
@@ -580,7 +584,7 @@ export default function QuotationPage() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ clientResponse: response }),
     })
-    message.success('客户反馈更新成功')
+    showSuccess('客户反馈更新成功')
     fetchData()
     setViewDrawerOpen(false)
   }
@@ -590,19 +594,19 @@ export default function QuotationPage() {
   // 提交审批
   const handleSubmitApproval = async () => {
     if (selectedRows.length !== 1) {
-      message.warning('请选择一条记录')
+      showWarningMessage('请选择一条记录')
       return
     }
 
     // 检查用户登录状态
     if (!session?.user?.id) {
-      message.error('无法获取用户信息，请刷新页面或重新登录')
+      showError('无法获取用户信息，请刷新页面或重新登录')
       return
     }
 
     const quotation = selectedRows[0]
     if (quotation.status !== 'draft') {
-      message.warning('只有草稿状态可以提交审批')
+      showWarningMessage('只有草稿状态可以提交审批')
       return
     }
     const res = await fetch(`/api/quotation/${quotation.id}`, {
@@ -616,20 +620,20 @@ export default function QuotationPage() {
       }),
     })
     if (res.ok) {
-      message.success('已提交审批')
+      showSuccess('已提交审批')
       setSelectedRowKeys([])
       setSelectedRows([])
       fetchData()
     } else {
       const error = await res.json()
-      message.error(error.message || '提交失败')
+      showError(error.message || '提交失败')
     }
   }
 
   // 生成PDF
   const handleGeneratePDF = () => {
     if (selectedRows.length !== 1) {
-      message.warning('请选择一条记录')
+      showWarningMessage('请选择一条记录')
       return
     }
     window.open(`/api/quotation/${selectedRows[0].id}/pdf`, '_blank')
@@ -638,14 +642,14 @@ export default function QuotationPage() {
   // 归档
   const handleArchive = async () => {
     if (selectedRows.length === 0) {
-      message.warning('请选择记录')
+      showWarningMessage('请选择记录')
       return
     }
     // 检查状态，只有已批准或已拒绝的可以归档
     const invalidRows = selectedRows.filter(row => !['approved', 'rejected'].includes(row.status))
     if (invalidRows.length > 0) {
       const invalidNos = invalidRows.map(r => r.quotationNo).join(', ')
-      message.warning(`以下报价单无法归档：${invalidNos}。当前仅支持“已批准”或“已拒绝”状态的单据进行归档。`)
+      showWarningMessage(`以下报价单无法归档：${invalidNos}。当前仅支持“已批准”或“已拒绝”状态的单据进行归档。`)
       return
     }
 
@@ -658,16 +662,16 @@ export default function QuotationPage() {
         })
         if (!res.ok) {
           const error = await res.json()
-          message.error(error.message || `归档失败: ${row.quotationNo}`)
+          showError(error.message || `归档失败: ${row.quotationNo}`)
           return
         }
       }
-      message.success('已归档')
+      showSuccess('已归档')
       setSelectedRowKeys([])
       setSelectedRows([])
       fetchData()
     } catch (error) {
-      message.error('归档失败，请重试')
+      showError('归档失败，请重试')
       console.error('Archive error:', error)
     }
   }
@@ -675,7 +679,7 @@ export default function QuotationPage() {
   // 打开客户反馈弹窗
   const handleOpenFeedback = () => {
     if (selectedRows.length !== 1) {
-      message.warning('请选择一条记录')
+      showWarningMessage('请选择一条记录')
       return
     }
     feedbackForm.resetFields()
@@ -693,7 +697,7 @@ export default function QuotationPage() {
         status: values.clientResponse === 'ok' ? 'archived' : 'rejected',
       }),
     })
-    message.success('客户反馈已保存')
+    showSuccess('客户反馈已保存')
     setFeedbackModalOpen(false)
     setSelectedRowKeys([])
     setSelectedRows([])
@@ -703,12 +707,12 @@ export default function QuotationPage() {
   // 打开生成合同弹窗
   const handleOpenContract = () => {
     if (selectedRows.length !== 1) {
-      message.warning('请选择一条报价单')
+      showWarningMessage('请选择一条报价单')
       return
     }
     const quotation = selectedRows[0]
     if (quotation.status !== 'approved') {
-      message.warning('只有已批准的报价单可以生成合同')
+      showWarningMessage('只有已批准的报价单可以生成合同')
       return
     }
     contractForm.resetFields()
@@ -819,11 +823,11 @@ export default function QuotationPage() {
         })
       }
 
-      message.success(`合同创建成功`)
+      showSuccess(`合同创建成功`)
       setContractModalOpen(false)
       router.push('/entrustment/contract')
     } else {
-      message.error(json.error?.message || '创建合同失败')
+      showError(json.error?.message || '创建合同失败')
     }
   }
 
@@ -837,11 +841,11 @@ export default function QuotationPage() {
   // 针对单条记录的处理函数
   const handleSubmitApprovalForRecord = async (record: Quotation) => {
     if (!session?.user?.id) {
-      message.error('无法获取用户信息，请刷新页面或重新登录')
+      showError('无法获取用户信息，请刷新页面或重新登录')
       return
     }
     if (record.status !== 'draft') {
-      message.warning('只有草稿状态可以提交审批')
+      showWarningMessage('只有草稿状态可以提交审批')
       return
     }
     const res = await fetch(`/api/quotation/${record.id}`, {
@@ -855,11 +859,11 @@ export default function QuotationPage() {
       }),
     })
     if (res.ok) {
-      message.success('已提交审批')
+      showSuccess('已提交审批')
       fetchData()
     } else {
       const error = await res.json()
-      message.error(error.message || '提交失败')
+      showError(error.message || '提交失败')
     }
   }
 
@@ -869,7 +873,7 @@ export default function QuotationPage() {
 
   const handleOpenContractForRecord = (record: Quotation) => {
     if (record.status !== 'approved') {
-      message.warning('只有已批准的报价单可以生成合同')
+      showWarningMessage('只有已批准的报价单可以生成合同')
       return
     }
     contractForm.resetFields()
@@ -1013,7 +1017,7 @@ export default function QuotationPage() {
               quotationId={record.id}
               quotationStatus={record.status}
               onSuccess={() => {
-                message.success('委托单创建成功')
+                showSuccess('委托单创建成功')
                 fetchData()
               }}
               buttonText="生成委托单"

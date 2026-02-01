@@ -1,7 +1,8 @@
 'use client'
 
 import { useState, useEffect } from "react"
-import { Table, Button, Tag, Modal, Form, Input, Select, DatePicker, message, Space, Card, Statistic } from "antd"
+import { showSuccess, showError, showConfirm } from '@/lib/confirm'
+import { Table, Button, Tag, Modal, Form, Input, Select, DatePicker, Space, Card, Statistic } from "antd"
 import { PlusOutlined, ArrowLeftOutlined, CheckOutlined } from "@ant-design/icons"
 import type { ColumnsType } from "antd/es/table"
 import dayjs from "dayjs"
@@ -53,7 +54,7 @@ export default function SampleRequisitionPage() {
       setTotal(json.total || 0)
     }
     } catch (error) {
-      message.error("获取数据失败")
+      showError("获取数据失败")
     } finally {
       setLoading(false)
     }
@@ -91,22 +92,22 @@ export default function SampleRequisitionPage() {
         }),
       })
       if (res.ok) {
-        message.success("借样登记成功")
+        showSuccess("借样登记成功")
         setModalOpen(false)
         fetchData()
       } else {
-        message.error("借样登记失败")
+        showError("借样登记失败")
       }
     } catch (error) {
-      message.error("借样登记失败")
+      showError("借样登记失败")
     }
   }
 
   const handleReturn = async (record: Requisition) => {
-    Modal.confirm({
-      title: "确认归还",
-      content: `确认归还样品 ${record.sample.name} 吗？`,
-      onOk: async () => {
+    showConfirm(
+      '确认归还',
+      `确认归还样品 ${record.sample.name} 吗？`,
+      async () => {
         try {
           const res = await fetch(`/api/sample/requisition/${record.id}`, {
             method: "PUT",
@@ -117,16 +118,16 @@ export default function SampleRequisitionPage() {
             }),
           })
           if (res.ok) {
-            message.success("归还成功")
+            showSuccess("归还成功")
             fetchData()
           } else {
-            message.error("归还失败")
+            showError("归还失败")
           }
         } catch (error) {
-          message.error("归还失败")
+          showError("归还失败")
         }
-      },
-    })
+      }
+    )
   }
 
   const columns: ColumnsType<Requisition> = [

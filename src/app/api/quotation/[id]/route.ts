@@ -220,6 +220,7 @@ export const PATCH = withAuth(async (
   }
 
   let newStatus = quotation.status
+  let shouldCreateApprovalRecord = false  // 是否创建旧的审批记录
   let approvalLevel = 0
   let approvalRole = ''
 
@@ -235,7 +236,7 @@ export const PATCH = withAuth(async (
       }
 
       const { approvalEngine } = await import('@/lib/approval/engine')
-      const instance = await approvalEngine.submit({
+      await approvalEngine.submit({
         bizType: 'quotation',
         bizId: id,
         flowCode: 'QUOTATION_APPROVAL',
@@ -243,10 +244,20 @@ export const PATCH = withAuth(async (
         submitterName: submitterName || '未知用户',
       })
 
-      newStatus = 'pending_sales' // 保持冗余状态同步
-      approvalLevel = 0
-      approvalRole = 'submitter'
-      break
+      // ✅ 修复：submit操作由审批引擎负责创建ApprovalInstance和更新status
+      //    这里不需要创建旧的QuotationApproval记录，也不需要重复更新status
+      //    直接返回更新后的报价单数据
+      const updatedQuotation = await prisma.quotation.findUnique({
+        where: { id },
+        include: {
+          items: true,
+          approvals: {
+            orderBy: { timestamp: 'desc' },
+          },
+        },
+      })
+
+      return success(updatedQuotation)
 
     case 'approve':
       // 审批通过：根据当前状态流转到下一状态
@@ -258,6 +269,7 @@ export const PATCH = withAuth(async (
       approvalLevel = currentConfig.level
       approvalRole = currentConfig.role
       newStatus = STATUS_FLOW[quotation.status as keyof typeof STATUS_FLOW]
+      shouldCreateApprovalRecord = true
       break
 
     case 'reject':
@@ -270,12 +282,18 @@ export const PATCH = withAuth(async (
       approvalLevel = rejectConfig.level
       approvalRole = rejectConfig.role
       newStatus = 'rejected'
+      shouldCreateApprovalRecord = true
       break
+  }
+
+  // ✅ 修复：只有approve/reject操作才创建旧的审批记录并更新status
+  if (!shouldCreateApprovalRecord) {
+    badRequest('无效的操作')
   }
 
   // 使用事务确保数据一致性
   const updated = await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
-    // 创建审批记录（submit 操作也记录）
+    // 创建审批记录（仅approve/reject操作）
     await tx.quotationApproval.create({
       data: {
         quotationId: id,

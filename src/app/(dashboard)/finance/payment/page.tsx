@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { showSuccess, showError } from '@/lib/confirm'
 import {
   Table, Button, Space, Tag, Modal, Form, Input, Select, DatePicker,
   InputNumber, message, Card, Row, Col, Statistic, Popconfirm
@@ -107,10 +108,10 @@ export default function PaymentPage() {
     const res = await fetch(`/api/finance/payment/${id}`, { method: 'DELETE' })
     const json = await res.json()
     if (json.success) {
-      message.success('删除成功，已回滚应收账款')
+      showSuccess('删除成功，已回滚应收账款')
       fetchData()
     } else {
-      message.error(json.error?.message || '删除失败')
+      showError(json.error?.message || '删除失败')
     }
   }
 
@@ -132,11 +133,11 @@ export default function PaymentPage() {
     const json = await res.json()
 
     if (json.success) {
-      message.success('收款登记成功')
+      showSuccess('收款登记成功')
       setModalOpen(false)
       fetchData()
     } else {
-      message.error(json.error?.message || '操作失败')
+      showError(json.error?.message || '操作失败')
     }
   }
 

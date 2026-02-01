@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { showSuccess, showError } from '@/lib/confirm'
 import { Table, Button, Space, Modal, Form, Input, Select, Tag, message, DatePicker } from 'antd'
 import { PlusOutlined, EditOutlined, DeleteOutlined, WarningOutlined } from '@ant-design/icons'
 import type { ColumnsType } from 'antd/es/table'
@@ -51,7 +52,7 @@ export default function PersonnelCapabilityPage() {
       setData(json.list || [])
       setTotal(json.total || 0)
     } catch {
-      message.error('加载数据失败')
+      showError('加载数据失败')
     }
     setLoading(false)
   }
@@ -89,10 +90,10 @@ export default function PersonnelCapabilityPage() {
     const res = await fetch(`/api/personnel-capability/${id}`, { method: 'DELETE' })
     const json = await res.json()
     if (res.ok && json.success) {
-      message.success('删除成功')
+      showSuccess('删除成功')
       fetchData()
     } else {
-      message.error(json.error?.message || '删除失败')
+      showError(json.error?.message || '删除失败')
     }
   }
 
@@ -109,7 +110,7 @@ export default function PersonnelCapabilityPage() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(data)
     })
-    message.success(editingId ? '更新成功' : '创建成功')
+    showSuccess(editingId ? '更新成功' : '创建成功')
     setModalOpen(false)
     fetchData()
   }

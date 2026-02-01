@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { showSuccess, showError } from '@/lib/confirm'
 import { Card, Row, Col, Statistic, List, Tag, Typography, Space, Button, message, Modal, Input } from 'antd'
 import {
   FileTextOutlined,
@@ -131,14 +132,14 @@ export default function DashboardPage() {
         }),
       })
       if (res.ok) {
-        message.success(action === 'approve' ? '审批通过' : '已驳回')
+        showSuccess(action === 'approve' ? '审批通过' : '已驳回')
         fetchDashboardData()
       } else {
         const data = await res.json()
-        message.error(data.error || '操作失败')
+        showError(data.error || '操作失败')
       }
     } catch {
-      message.error('操作失败')
+      showError('操作失败')
     }
   }
 
@@ -295,7 +296,7 @@ export default function DashboardPage() {
                           onClick={(e) => {
                             e.stopPropagation()
                             if (!session?.user?.id) {
-                              message.error('请先登录')
+                              showError('请先登录')
                               return
                             }
                             setApproveItemId(item.id)
@@ -312,7 +313,7 @@ export default function DashboardPage() {
                           onClick={(e) => {
                             e.stopPropagation()
                             if (!session?.user?.id) {
-                              message.error('请先登录')
+                              showError('请先登录')
                               return
                             }
                             setRejectItemId(item.id)
@@ -465,7 +466,7 @@ export default function DashboardPage() {
         open={rejectModalOpen}
         onOk={async () => {
           if (!rejectReason.trim()) {
-            message.error('请输入驳回原因')
+            showError('请输入驳回原因')
             return
           }
           await handleApprove(rejectItemId, 'reject', rejectReason)

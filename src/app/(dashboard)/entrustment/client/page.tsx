@@ -1,7 +1,8 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Table, Button, Space, Tag, Modal, Form, Input, Select, message, Popconfirm } from 'antd'
+import { showSuccess, showError, showLoading, showConfirm, showWarning } from '@/lib/confirm'
+import { Table, Button, Space, Tag, Modal, Form, Input, Select, Popconfirm } from 'antd'
 import { PlusOutlined, EditOutlined, DeleteOutlined, ExclamationCircleOutlined, EyeOutlined } from '@ant-design/icons'
 import { ClientApprovalButtons } from '@/components/ClientApprovalButtons'
 import type { ColumnsType } from 'antd/es/table'
@@ -71,7 +72,7 @@ export default function ClientPage() {
 
   // 获取委托单位的关联数据
   const checkClientRelations = async (id: string, name: string) => {
-    const hide = message.loading('正在检查关联数据...', 0)
+    const hide = showLoading('正在检查关联数据...', 'check-relations')
     console.log(`[Client] checking relations for ${id} (${name})`)
     try {
       const res = await fetch(`/api/client/${id}/relations`)
@@ -85,11 +86,11 @@ export default function ClientPage() {
         showDeleteConfirm(id, name, relations)
       } else {
         console.error('[Client] api failed:', json)
-        message.error(json.error?.message || '获取关联数据失败')
+        showError(json.error?.message || '获取关联数据失败')
       }
     } catch (error) {
       console.error('[Client] check relations error:', error)
-      message.error('获取关联数据失败，请检查网络或重试')
+      showError('获取关联数据失败，请检查网络或重试')
     } finally {
       hide()
     }
@@ -102,10 +103,9 @@ export default function ClientPage() {
     if (!relations.canDelete) {
       console.log('[Client] Cannot delete, showing warning')
       // 有关联数据，显示详细信息
-      modal.confirm({
-        title: '无法删除委托单位',
-        icon: <ExclamationCircleOutlined style={{ color: '#ff4d4f' }} />,
-        content: (
+      showWarning(
+        '无法删除委托单位',
+        (
           <div>
             <p style={{ marginBottom: 16, fontSize: 16 }}>
               <strong>{name}</strong> {relations.message}
@@ -129,37 +129,40 @@ export default function ClientPage() {
             </p>
           </div>
         ),
-        okText: '知道了',
-        okType: 'danger',
-        cancelButtonProps: { style: { display: 'none' } },
-      })
+        {
+          okText: '知道了',
+          icon: <ExclamationCircleOutlined style={{ color: '#ff4d4f' }} />,
+          cancelButtonProps: { style: { display: 'none' } },
+        }
+      )
     } else {
       console.log('[Client] Can delete, showing confirm')
       // 无关联数据，显示删除确认
-      modal.confirm({
-        title: '确认删除委托单位',
-        icon: <ExclamationCircleOutlined />,
-        content: (
+      showConfirm(
+        '确认删除委托单位',
+        (
           <div>
             <p>确定要删除委托单位 <strong>{name}</strong> 吗？</p>
             <p style={{ color: '#999', fontSize: 13 }}>此操作不可恢复</p>
           </div>
         ),
-        okText: '确认删除',
-        okType: 'danger',
-        cancelText: '取消',
-        onOk: async () => {
+        async () => {
           console.log('[Client] Executing delete...')
           const res = await fetch(`/api/client/${id}`, { method: 'DELETE' })
           const json = await res.json()
           if (res.ok && json.success) {
-            message.success('删除成功')
+            showSuccess('删除成功')
             fetchData()
           } else {
-            message.error(json.error?.message || '删除失败')
+            showError(json.error?.message || '删除失败')
           }
         },
-      })
+        {
+          okText: '确认删除',
+          okType: 'danger',
+          icon: <ExclamationCircleOutlined />,
+        }
+      )
     }
   }
 
@@ -176,7 +179,7 @@ export default function ClientPage() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(values)
     })
-    message.success(editingId ? '更新成功' : '创建成功')
+    showSuccess(editingId ? '更新成功' : '创建成功')
     setModalOpen(false)
     fetchData()
   }

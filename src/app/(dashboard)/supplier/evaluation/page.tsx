@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
+import { showSuccess, showError } from '@/lib/confirm'
 import { Card, Table, Button, Modal, Form, Input, InputNumber, Select, message, Space, Tag, Row, Col, Descriptions, Statistic } from 'antd'
 import { PlusOutlined, EyeOutlined, ReloadOutlined } from '@ant-design/icons'
 import type { ColumnsType, TablePaginationConfig } from 'antd/es/table'
@@ -92,10 +93,10 @@ export default function SupplierEvaluationPage() {
         setPagination(prev => ({ ...prev, total: data.data.total }))
         setStats(data.data.stats || {})
       } else {
-        message.error(data.message || '加载失败')
+        showError(data.message || '加载失败')
       }
     } catch {
-      message.error('网络错误')
+      showError('网络错误')
     } finally {
       setLoading(false)
     }
@@ -148,14 +149,14 @@ export default function SupplierEvaluationPage() {
       const data = await res.json()
 
       if (data.success) {
-        message.success('评价创建成功')
+        showSuccess('评价创建成功')
         setModalOpen(false)
         loadData()
       } else {
-        message.error(data.message || '操作失败')
+        showError(data.message || '操作失败')
       }
     } catch {
-      message.error('网络错误')
+      showError('网络错误')
     } finally {
       setSubmitting(false)
     }

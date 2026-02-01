@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { showInfo } from '@/lib/confirm'
 import { Layout, Menu, Avatar, Dropdown, Button, theme, message } from 'antd'
 import {
   DashboardOutlined,
@@ -224,7 +225,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             onClick: ({ key }) => {
               if (key === 'profile') {
                 // TODO: Implement profile page
-                message.info('个人中心功能开发中')
+                showInfo('个人中心功能开发中')
               }
             }
           }} placement="bottomRight">

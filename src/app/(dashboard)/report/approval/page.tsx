@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { showSuccess, showError } from '@/lib/confirm'
 import {
   Table, Button, Space, Tag, Modal, Form, Input, message,
   Card, Row, Col, Statistic, Tabs, Descriptions, Timeline
@@ -174,7 +175,7 @@ export default function ReportApprovalPage() {
     const json = await res.json()
 
     if (json.success !== false) {
-      message.success('操作成功')
+      showSuccess('操作成功')
       setApprovalOpen(false)
       fetchStats()
       // 刷新当前列表
@@ -186,7 +187,7 @@ export default function ReportApprovalPage() {
         fetchTestData()
       }
     } else {
-      message.error(json.error?.message || '操作失败')
+      showError(json.error?.message || '操作失败')
     }
   }
 

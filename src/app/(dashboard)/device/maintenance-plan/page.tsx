@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { showSuccess, showError } from '@/lib/confirm'
 import { Table, Button, Space, Modal, Form, Input, Select, DatePicker, InputNumber, message, Tag, Popconfirm, Row, Col } from 'antd'
 import { PlusOutlined, EditOutlined, DeleteOutlined, CheckOutlined, ClockCircleOutlined } from '@ant-design/icons'
 import { StatusTag } from '@/components/StatusTag'
@@ -116,10 +117,10 @@ export default function MaintenancePlanPage() {
     const res = await fetch(`/api/device/maintenance-plan/${id}`, { method: 'DELETE' })
     const json = await res.json()
     if (res.ok && json.success) {
-      message.success('删除成功')
+      showSuccess('删除成功')
       fetchData()
     } else {
-      message.error(json.error?.message || '删除失败')
+      showError(json.error?.message || '删除失败')
     }
   }
 
@@ -137,7 +138,7 @@ export default function MaintenancePlanPage() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(data)
     })
-    message.success(editingId ? '更新成功' : '创建成功')
+    showSuccess(editingId ? '更新成功' : '创建成功')
     setModalOpen(false)
     fetchData()
   }
@@ -155,7 +156,7 @@ export default function MaintenancePlanPage() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ nextDate: nextDate.toISOString() })
     })
-    message.success('保养完成，已更新下一次保养日期')
+    showSuccess('保养完成，已更新下一次保养日期')
     fetchData()
   }
 

@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from "react"
+import { showSuccess, showError } from '@/lib/confirm'
 import { Table, Button, Space, Tag, Modal, Form, Select, message, Card, Statistic } from "antd"
 import { PlayCircleOutlined, CheckCircleOutlined, ClockCircleOutlined, SwapOutlined, EditOutlined } from "@ant-design/icons"
 import type { ColumnsType } from "antd/es/table"
@@ -87,11 +88,11 @@ export default function MyTasksPage() {
       body: JSON.stringify({ action: 'start' })
     })
     if (res.ok) {
-      message.success("任务已开始")
+      showSuccess("任务已开始")
       fetchData()
     } else {
       const data = await res.json()
-      message.error(data.error || "操作失败")
+      showError(data.error || "操作失败")
     }
   }
 
@@ -102,11 +103,11 @@ export default function MyTasksPage() {
       body: JSON.stringify({ action: 'complete' })
     })
     if (res.ok) {
-      message.success("任务已完成")
+      showSuccess("任务已完成")
       fetchData()
     } else {
       const data = await res.json()
-      message.error(data.error || "操作失败")
+      showError(data.error || "操作失败")
     }
   }
 
@@ -129,12 +130,12 @@ export default function MyTasksPage() {
       })
     })
     if (res.ok) {
-      message.success("任务已转交")
+      showSuccess("任务已转交")
       setTransferModalOpen(false)
       fetchData()
     } else {
       const data = await res.json()
-      message.error(data.error || "转交失败")
+      showError(data.error || "转交失败")
     }
   }
 

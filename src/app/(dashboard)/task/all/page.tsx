@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from "react"
+import { showSuccess } from '@/lib/confirm'
 import { Table, Button, Space, Tag, Modal, Form, Select, DatePicker, Input, message } from "antd"
 import type { ColumnsType } from "antd/es/table"
 import dayjs from "dayjs"
@@ -74,7 +75,7 @@ export default function AllTasksPage() {
   const handleAssignSubmit = async () => {
     const values = await assignForm.validateFields()
     // TODO: 实现任务分配 API
-    message.success("任务分配成功")
+    showSuccess("任务分配成功")
     setAssignModalOpen(false)
     fetchData()
   }

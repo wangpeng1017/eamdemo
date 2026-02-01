@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { showSuccess, showError } from '@/lib/confirm'
 import { Table, Button, Space, Tag, Modal, Select, message, Card, Statistic, Row, Col } from 'antd'
 import { PlusOutlined, EyeOutlined, FileTextOutlined } from '@ant-design/icons'
 import type { ColumnsType } from 'antd/es/table'
@@ -57,7 +58,7 @@ export default function TestReportPage() {
         setTotal(json.total || 0)
       }
     } catch (error) {
-      message.error('获取报告列表失败')
+      showError('获取报告列表失败')
     } finally {
       setLoading(false)
     }
@@ -70,7 +71,7 @@ export default function TestReportPage() {
       const tasks = json.data?.list || json.list || []
       setCompletedTasks(tasks)
     } catch (error) {
-      message.error('获取已完成任务失败')
+      showError('获取已完成任务失败')
     }
   }
 
@@ -85,7 +86,7 @@ export default function TestReportPage() {
 
   const handleGenerateSubmit = async () => {
     if (!selectedTaskId) {
-      message.error('请选择任务')
+      showError('请选择任务')
       return
     }
 
@@ -100,15 +101,15 @@ export default function TestReportPage() {
       const json = await res.json()
 
       if (res.ok && json.success) {
-        message.success('报告生成成功')
+        showSuccess('报告生成成功')
         setGenerateModalOpen(false)
         setSelectedTaskId(null)
         fetchData()
       } else {
-        message.error(json.error || '报告生成失败')
+        showError(json.error || '报告生成失败')
       }
     } catch (error) {
-      message.error('报告生成失败')
+      showError('报告生成失败')
     } finally {
       setGenerating(false)
     }

@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
+import { showSuccess, showError } from '@/lib/confirm'
 import { Card, Tree, Button, Modal, Form, Input, message, Space, Popconfirm, Row, Col, Table, Tag, Select } from 'antd'
 import { PlusOutlined, EditOutlined, DeleteOutlined, FolderOutlined, FolderOpenOutlined, ReloadOutlined } from '@ant-design/icons'
 import type { DataNode } from 'antd/es/tree'
@@ -49,10 +50,10 @@ export default function SupplierCategoryPage() {
         }
         setCategories(flattenTree(data.data))
       } else {
-        message.error(data.message || '加载失败')
+        showError(data.message || '加载失败')
       }
     } catch {
-      message.error('网络错误')
+      showError('网络错误')
     } finally {
       setLoading(false)
     }
@@ -108,7 +109,7 @@ export default function SupplierCategoryPage() {
     // 检查是否有子分类
     const hasChildren = categories.some(c => c.parentId === id)
     if (hasChildren) {
-      message.error('请先删除子分类')
+      showError('请先删除子分类')
       return
     }
 
@@ -116,16 +117,16 @@ export default function SupplierCategoryPage() {
       const res = await fetch(`/api/supplier-category/${id}`, { method: 'DELETE' })
       const data = await res.json()
       if (data.success) {
-        message.success('删除成功')
+        showSuccess('删除成功')
         if (selectedCategory?.id === id) {
           setSelectedCategory(null)
         }
         loadData()
       } else {
-        message.error(data.message || '删除失败')
+        showError(data.message || '删除失败')
       }
     } catch {
-      message.error('网络错误')
+      showError('网络错误')
     }
   }
 
@@ -145,14 +146,14 @@ export default function SupplierCategoryPage() {
       const data = await res.json()
 
       if (data.success) {
-        message.success(editingId ? '更新成功' : '创建成功')
+        showSuccess(editingId ? '更新成功' : '创建成功')
         setModalOpen(false)
         loadData()
       } else {
-        message.error(data.message || '操作失败')
+        showError(data.message || '操作失败')
       }
     } catch {
-      message.error('网络错误')
+      showError('网络错误')
     } finally {
       setSubmitting(false)
     }

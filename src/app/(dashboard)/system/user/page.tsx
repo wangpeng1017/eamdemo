@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import {
-  Table, Button, Space, Tag, Modal, Form, Input, Select, message,
+  Table, Button, Space, Tag, Modal, Form, Input, Select,
   Popconfirm, Row, Col, Card, Tree, Dropdown, MenuProps, Tooltip
 } from 'antd'
 import {
@@ -12,6 +12,7 @@ import {
 import type { ColumnsType } from 'antd/es/table'
 import type { DataNode } from 'antd/es/tree'
 import dayjs from 'dayjs'
+import { showConfirm, showSuccess, showError } from '@/lib/confirm'
 
 interface Dept {
   id: string
@@ -96,11 +97,11 @@ export default function UserPage() {
   const handleDeleteDept = async (id: string) => {
     try {
       await fetch(`/api/dept/${id}`, { method: 'DELETE' })
-      message.success('部门删除成功')
+      showSuccess('部门删除成功')
       fetchDeptTree()
       if (selectedDeptId === id) setSelectedDeptId(null)
     } catch (e) {
-      message.error('删除失败，可能包含子部门或用户')
+      showError('删除失败，可能包含子部门或用户')
     }
   }
 
@@ -120,11 +121,11 @@ export default function UserPage() {
     })
 
     if (res.ok) {
-      message.success(editingDeptId ? '更新成功' : '创建成功')
+      showSuccess(editingDeptId ? '更新成功' : '创建成功')
       setDeptModalOpen(false)
       fetchDeptTree()
     } else {
-      message.error('操作失败')
+      showError('操作失败')
     }
   }
 
@@ -176,7 +177,7 @@ export default function UserPage() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(values)
     })
-    message.success(editingUserId ? '更新成功' : '创建成功')
+    showSuccess(editingUserId ? '更新成功' : '创建成功')
     setUserModalOpen(false)
     fetchUsers()
   }
@@ -189,10 +190,10 @@ export default function UserPage() {
       body: JSON.stringify({ status: newStatus })
     })
     if (res.ok) {
-      message.success(newStatus === 1 ? '已启用' : '已禁用')
+      showSuccess(newStatus === 1 ? '已启用' : '已禁用')
       fetchUsers()
     } else {
-      message.error('操作失败')
+      showError('操作失败')
     }
   }
 
@@ -200,10 +201,10 @@ export default function UserPage() {
     const res = await fetch(`/api/user/${id}`, { method: 'DELETE' })
     const json = await res.json()
     if (res.ok && json.success) {
-      message.success('删除成功')
+      showSuccess('删除成功')
       fetchUsers()
     } else {
-      message.error(json.error?.message || '删除失败')
+      showError(json.error?.message || '删除失败')
     }
   }
 
@@ -224,11 +225,11 @@ export default function UserPage() {
                   icon: <DeleteOutlined />,
                   danger: true,
                   onClick: () => {
-                    Modal.confirm({
-                      title: '确认删除?',
-                      content: '删除部门将同时删除其子部门，请谨慎操作。',
-                      onOk: () => handleDeleteDept(node.key)
-                    })
+                    showConfirm(
+                      '确认删除?',
+                      '删除部门将同时删除其子部门，请谨慎操作。',
+                      () => handleDeleteDept(node.key)
+                    )
                   }
                 },
               ]

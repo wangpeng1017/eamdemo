@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
+import { showSuccess, showError } from '@/lib/confirm'
 import { Card, Table, Button, Modal, Form, Input, InputNumber, Select, message, Space, Tag, Popconfirm, Row, Col, Statistic } from 'antd'
 import { PlusOutlined, EditOutlined, DeleteOutlined, WarningOutlined, ReloadOutlined } from '@ant-design/icons'
 import type { ColumnsType, TablePaginationConfig } from 'antd/es/table'
@@ -86,10 +87,10 @@ export default function ConsumableInfoPage() {
         setPagination(prev => ({ ...prev, total: data.data.total }))
         setStats(data.data.stats || {})
       } else {
-        message.error(data.message || '加载失败')
+        showError(data.message || '加载失败')
       }
     } catch {
-      message.error('网络错误')
+      showError('网络错误')
     } finally {
       setLoading(false)
     }
@@ -124,13 +125,13 @@ export default function ConsumableInfoPage() {
       const res = await fetch(`/api/consumable/${id}`, { method: 'DELETE' })
       const data = await res.json()
       if (data.success) {
-        message.success('删除成功')
+        showSuccess('删除成功')
         loadData()
       } else {
-        message.error(data.message || '删除失败')
+        showError(data.message || '删除失败')
       }
     } catch {
-      message.error('网络错误')
+      showError('网络错误')
     }
   }
 
@@ -150,14 +151,14 @@ export default function ConsumableInfoPage() {
       const data = await res.json()
 
       if (data.success) {
-        message.success(editingId ? '更新成功' : '创建成功')
+        showSuccess(editingId ? '更新成功' : '创建成功')
         setModalOpen(false)
         loadData()
       } else {
-        message.error(data.message || '操作失败')
+        showError(data.message || '操作失败')
       }
     } catch {
-      message.error('网络错误')
+      showError('网络错误')
     } finally {
       setSubmitting(false)
     }

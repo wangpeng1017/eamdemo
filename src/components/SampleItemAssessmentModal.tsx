@@ -7,6 +7,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { showSuccess, showError } from '@/lib/confirm'
 import { Modal, Form, Radio, Input, Descriptions, message, Space } from 'antd'
 import { CheckCircleOutlined, CloseCircleOutlined, ClockCircleOutlined } from '@ant-design/icons'
 
@@ -49,7 +50,7 @@ export default function SampleItemAssessmentModal({
       const values = await form.validateFields()
 
       if (!sampleItem) {
-        message.error('样品检测项信息缺失')
+        showError('样品检测项信息缺失')
         return
       }
 
@@ -67,15 +68,15 @@ export default function SampleItemAssessmentModal({
       const json = await res.json()
 
       if (json.success) {
-        message.success('评估提交成功')
+        showSuccess('评估提交成功')
         form.resetFields()
         onSuccess()
       } else {
-        message.error(json.error || '提交失败')
+        showError(json.error || '提交失败')
       }
     } catch (error) {
       console.error('提交评估失败:', error)
-      message.error('提交失败')
+      showError('提交失败')
     } finally {
       setSubmitting(false)
     }

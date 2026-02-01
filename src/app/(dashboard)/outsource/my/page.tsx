@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
+import { showError } from '@/lib/confirm'
 import { Card, Table, Button, Modal, Tag, Space, Descriptions, Timeline, Row, Col, Statistic, Progress, Input, Select, message } from 'antd'
 import { EyeOutlined, CheckCircleOutlined, ClockCircleOutlined, SyncOutlined, ReloadOutlined } from '@ant-design/icons'
 import type { ColumnsType, TablePaginationConfig } from 'antd/es/table'
@@ -67,10 +68,10 @@ export default function MyOutsourcePage() {
         setPagination(prev => ({ ...prev, total: data.data.total }))
         setStats(data.data.stats || {})
       } else {
-        message.error(data.message || '加载失败')
+        showError(data.message || '加载失败')
       }
     } catch {
-      message.error('网络错误')
+      showError('网络错误')
     } finally {
       setLoading(false)
     }

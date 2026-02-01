@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
+import { showSuccess, showError } from '@/lib/confirm'
 import { Card, Table, Button, Modal, Form, Input, InputNumber, message, Space, Tag, Popconfirm, Select } from 'antd'
 import { PlusOutlined, EditOutlined, DeleteOutlined, ReloadOutlined } from '@ant-design/icons'
 import type { ColumnsType } from 'antd/es/table'
@@ -80,10 +81,10 @@ export default function EvaluationTemplatePage() {
       if (data.success) {
         setTemplates(data.data.list)
       } else {
-        message.error(data.message || '加载失败')
+        showError(data.message || '加载失败')
       }
     } catch {
-      message.error('网络错误')
+      showError('网络错误')
     } finally {
       setLoading(false)
     }
@@ -118,13 +119,13 @@ export default function EvaluationTemplatePage() {
       const res = await fetch(`/api/evaluation-template/${id}`, { method: 'DELETE' })
       const data = await res.json()
       if (data.success) {
-        message.success('删除成功')
+        showSuccess('删除成功')
         loadData()
       } else {
-        message.error(data.message || '删除失败')
+        showError(data.message || '删除失败')
       }
     } catch {
-      message.error('网络错误')
+      showError('网络错误')
     }
   }
 
@@ -144,14 +145,14 @@ export default function EvaluationTemplatePage() {
       const data = await res.json()
 
       if (data.success) {
-        message.success(editingTemplate ? '更新成功' : '创建成功')
+        showSuccess(editingTemplate ? '更新成功' : '创建成功')
         setModalOpen(false)
         loadData()
       } else {
-        message.error(data.message || '操作失败')
+        showError(data.message || '操作失败')
       }
     } catch {
-      message.error('网络错误')
+      showError('网络错误')
     } finally {
       setSubmitting(false)
     }
@@ -177,13 +178,13 @@ export default function EvaluationTemplatePage() {
       const res = await fetch(`/api/evaluation-template/${templateId}/item/${itemId}`, { method: 'DELETE' })
       const data = await res.json()
       if (data.success) {
-        message.success('删除成功')
+        showSuccess('删除成功')
         loadData()
       } else {
-        message.error(data.message || '删除失败')
+        showError(data.message || '删除失败')
       }
     } catch {
-      message.error('网络错误')
+      showError('网络错误')
     }
   }
 
@@ -206,14 +207,14 @@ export default function EvaluationTemplatePage() {
       const data = await res.json()
 
       if (data.success) {
-        message.success(editingItem ? '更新成功' : '添加成功')
+        showSuccess(editingItem ? '更新成功' : '添加成功')
         setItemModalOpen(false)
         loadData()
       } else {
-        message.error(data.message || '操作失败')
+        showError(data.message || '操作失败')
       }
     } catch {
-      message.error('网络错误')
+      showError('网络错误')
     } finally {
       setSubmitting(false)
     }

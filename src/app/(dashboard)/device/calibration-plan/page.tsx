@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { showSuccess, showError } from '@/lib/confirm'
 import { Table, Button, Space, Modal, Form, Input, Select, DatePicker, message, Tag, Popconfirm, Row, Col, Descriptions, Drawer, Divider, InputNumber } from 'antd'
 import { PlusOutlined, EditOutlined, DeleteOutlined, CheckOutlined, FileTextOutlined, ExclamationCircleOutlined } from '@ant-design/icons'
 import { StatusTag } from '@/components/StatusTag'
@@ -122,10 +123,10 @@ export default function CalibrationPlanPage() {
     const res = await fetch(`/api/device/calibration-plan/${id}`, { method: 'DELETE' })
     const json = await res.json()
     if (res.ok && json.success) {
-      message.success('删除成功')
+      showSuccess('删除成功')
       fetchData()
     } else {
-      message.error(json.error?.message || '删除失败')
+      showError(json.error?.message || '删除失败')
     }
   }
 
@@ -143,7 +144,7 @@ export default function CalibrationPlanPage() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(data)
     })
-    message.success(editingId ? '更新成功' : '创建成功')
+    showSuccess(editingId ? '更新成功' : '创建成功')
     setModalOpen(false)
     fetchData()
   }
@@ -173,7 +174,7 @@ export default function CalibrationPlanPage() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(recordData)
     })
-    message.success('添加记录成功')
+    showSuccess('添加记录成功')
 
     // 刷新记录列表
     const res = await fetch(`/api/device/calibration-plan/${currentPlan!.id}/records`)

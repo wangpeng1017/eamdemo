@@ -6,6 +6,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { showSuccess, showError } from '@/lib/confirm'
 import { Modal, Form, Select, Input, message, Descriptions, Tag } from 'antd'
 
 const { TextArea } = Input
@@ -83,18 +84,18 @@ export default function AssessmentFeedbackModal({
       const json = await res.json()
 
       if (json.success) {
-        message.success(json.data.message || (mode === 'submit' ? '评估反馈已提交' : '评估反馈已更新'))
+        showSuccess(json.data.message || (mode === 'submit' ? '评估反馈已提交' : '评估反馈已更新'))
         form.resetFields()
         onSuccess()
       } else {
-        message.error(json.error?.message || '操作失败')
+        showError(json.error?.message || '操作失败')
       }
     } catch (error: any) {
       if (error.errorFields) {
         return
       }
       console.error('提交失败:', error)
-      message.error('操作失败')
+      showError('操作失败')
     } finally {
       setLoading(false)
     }

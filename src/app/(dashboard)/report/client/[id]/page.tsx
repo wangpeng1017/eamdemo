@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { showError } from '@/lib/confirm'
 import { Card, Descriptions, Table, Tag, Button, Space, message, Divider } from 'antd'
 import { ArrowLeftOutlined, PrinterOutlined, DownloadOutlined } from '@ant-design/icons'
 import { useParams, useRouter } from 'next/navigation'
@@ -67,10 +68,10 @@ export default function ClientReportDetailPage() {
             if (json.success) {
                 setReport(json.data)
             } else {
-                message.error('获取报告失败')
+                showError('获取报告失败')
             }
         } catch (error) {
-            message.error('获取报告失败')
+            showError('获取报告失败')
         } finally {
             setLoading(false)
         }

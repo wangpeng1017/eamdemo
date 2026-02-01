@@ -16,6 +16,7 @@
 'use client'
 
 import { Button, message, Tooltip } from 'antd'
+import { showWarningMessage } from '@/lib/confirm'
 import { PrinterOutlined, FilePdfOutlined } from '@ant-design/icons'
 
 type QuotationStatus = 'draft' | 'pending_sales' | 'pending_finance' | 'pending_lab' | 'approved' | 'rejected' | 'archived'
@@ -57,7 +58,7 @@ export function QuotationPDFButton({
   // 处理打印PDF
   const handlePrint = () => {
     if (!canPrint) {
-      message.warning(getStatusMessage())
+      showWarningMessage(getStatusMessage())
       return
     }
 

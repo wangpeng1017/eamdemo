@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { showSuccess, showError } from '@/lib/confirm'
 import { useParams, useRouter } from 'next/navigation'
 import { Card, Descriptions, Button, Modal, Form, Input, message, Tag, Space } from 'antd'
 import { CheckCircleOutlined, CloseCircleOutlined, ArrowLeftOutlined } from '@ant-design/icons'
@@ -63,7 +64,7 @@ export default function TaskReviewPage() {
                 }
             }
         } catch (error) {
-            message.error("获取任务失败")
+            showError("获取任务失败")
         } finally {
             setLoading(false)
         }
@@ -89,14 +90,14 @@ export default function TaskReviewPage() {
             })
 
             if (res.ok) {
-                message.success(reviewAction === 'approve' ? '审核通过，任务已完成' : '已驳回，请检测人员修改')
+                showSuccess(reviewAction === 'approve' ? '审核通过，任务已完成' : '已驳回，请检测人员修改')
                 router.push('/task/all')
             } else {
                 const data = await res.json()
-                message.error(data.error || '操作失败')
+                showError(data.error || '操作失败')
             }
         } catch (error) {
-            message.error('操作失败')
+            showError('操作失败')
         } finally {
             setLoading(false)
             setReviewModalOpen(false)

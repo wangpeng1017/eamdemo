@@ -1,7 +1,8 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Table, Button, Space, Tag, Modal, Form, Input, Select, message, Card } from 'antd'
+import { showSuccess, showError, showConfirm } from '@/lib/confirm'
+import { Table, Button, Space, Tag, Modal, Form, Input, Select, Card } from 'antd'
 import { PlusOutlined, EditOutlined, DeleteOutlined } from '@ant-design/icons'
 import type { ColumnsType } from 'antd/es/table'
 import dayjs from 'dayjs'
@@ -46,7 +47,7 @@ export default function ReportTemplatePage() {
         setData(json.data?.list || [])
       }
     } catch (error) {
-      message.error('获取模板列表失败')
+      showError('获取模板列表失败')
     } finally {
       setLoading(false)
     }
@@ -69,23 +70,23 @@ export default function ReportTemplatePage() {
   }
 
   const handleDelete = async (id: string) => {
-    Modal.confirm({
-      title: '确认删除',
-      content: '确定要删除这个模板吗？',
-      onOk: async () => {
+    showConfirm(
+      '确认删除',
+      '确定要删除这个模板吗？',
+      async () => {
         try {
           const res = await fetch(`/api/report-template/${id}`, { method: 'DELETE' })
           if (res.ok) {
-            message.success('删除成功')
+            showSuccess('删除成功')
             fetchData()
           } else {
-            message.error('删除失败')
+            showError('删除失败')
           }
         } catch (error) {
-          message.error('删除失败')
+          showError('删除失败')
         }
       }
-    })
+    )
   }
 
   const handleSubmit = async () => {
@@ -102,14 +103,14 @@ export default function ReportTemplatePage() {
 
       const json = await res.json()
       if (res.ok && json.success) {
-        message.success(editingId ? '更新成功' : '创建成功')
+        showSuccess(editingId ? '更新成功' : '创建成功')
         setModalOpen(false)
         fetchData()
       } else {
-        message.error(json.error || '操作失败')
+        showError(json.error || '操作失败')
       }
     } catch (error) {
-      message.error('操作失败')
+      showError('操作失败')
     }
   }
 

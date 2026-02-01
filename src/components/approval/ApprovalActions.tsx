@@ -6,6 +6,7 @@
 'use client'
 
 import { Button, Space, Modal, Form, Input, message } from 'antd'
+import { showSuccess, showError } from '@/lib/confirm'
 import { CheckOutlined, CloseOutlined, RollbackOutlined } from '@ant-design/icons'
 import { useState } from 'react'
 
@@ -49,15 +50,15 @@ export function ApprovalActions({
       const data = await res.json()
 
       if (data.success) {
-        message.success(action === 'approve' ? '审批通过' : '已驳回')
+        showSuccess(action === 'approve' ? '审批通过' : '已驳回')
         setActionModalOpen(false)
         form.resetFields()
         onSuccess?.()
       } else {
-        message.error(data.error?.message || '操作失败')
+        showError(data.error?.message || '操作失败')
       }
     } catch (err) {
-      message.error('网络错误')
+      showError('网络错误')
     } finally {
       setSubmitting(false)
     }
@@ -75,13 +76,13 @@ export function ApprovalActions({
       const data = await res.json()
 
       if (data.success) {
-        message.success('已撤回')
+        showSuccess('已撤回')
         onSuccess?.()
       } else {
-        message.error(data.error?.message || '操作失败')
+        showError(data.error?.message || '操作失败')
       }
     } catch (err) {
-      message.error('网络错误')
+      showError('网络错误')
     } finally {
       setSubmitting(false)
     }

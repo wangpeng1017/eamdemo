@@ -7,6 +7,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { showError } from '@/lib/confirm'
 import { Card, Table, Button, Space, Tag, Statistic, Row, Col, Modal, Timeline, message, Tooltip } from 'antd'
 import { EyeOutlined, CheckCircleOutlined, CloseCircleOutlined, ClockCircleOutlined } from '@ant-design/icons'
 import type { ColumnsType } from 'antd/es/table'
@@ -82,11 +83,11 @@ export default function SampleItemAssessmentDetailsTab({
       if (json.success && json.data) {
         setData(json.data)
       } else {
-        message.error(json.error || '获取评估详情失败')
+        showError(json.error || '获取评估详情失败')
       }
     } catch (error) {
       console.error('获取评估详情失败:', error)
-      message.error('获取评估详情失败')
+      showError('获取评估详情失败')
     } finally {
       setLoading(false)
     }

@@ -17,6 +17,7 @@
 'use client'
 
 import { useState } from 'react'
+import { showSuccess, showError } from '@/lib/confirm'
 import { Button, Space, message, Modal, Input } from 'antd'
 import { SendOutlined, CheckOutlined } from '@ant-design/icons'
 
@@ -75,16 +76,16 @@ export function ClientApprovalButtons({
       const result: ApprovalResponse = await response.json()
 
       if (result.success) {
-        message.success('提交审批成功')
+        showSuccess('提交审批成功')
         setComment('')
         setSubmitModalVisible(false)
         onSuccess?.()
       } else {
-        message.error(result.error || '提交失败')
+        showError(result.error || '提交失败')
       }
     } catch (error) {
       console.error('提交审批失败:', error)
-      message.error('提交失败，请重试')
+      showError('提交失败，请重试')
     } finally {
       setLoading(false)
     }
@@ -108,16 +109,16 @@ export function ClientApprovalButtons({
       const result: ApprovalResponse = await response.json()
 
       if (result.success) {
-        message.success('审批通过成功')
+        showSuccess('审批通过成功')
         setComment('')
         setApproveModalVisible(false)
         onSuccess?.()
       } else {
-        message.error(result.error || '审批失败')
+        showError(result.error || '审批失败')
       }
     } catch (error) {
       console.error('审批通过失败:', error)
-      message.error('审批失败，请重试')
+      showError('审批失败，请重试')
     } finally {
       setLoading(false)
     }

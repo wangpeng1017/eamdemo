@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { showSuccess, showError } from '@/lib/confirm'
 import { Table, Card, Tabs, Tag, Button, Space, Tooltip, message, Modal, Input } from 'antd'
 import { CheckCircleOutlined, CloseOutlined, EyeOutlined } from '@ant-design/icons'
 import type { ColumnsType } from 'antd/es/table'
@@ -126,14 +127,14 @@ export default function ApprovalPage() {
         }),
       })
       if (response.ok) {
-        message.success(action === 'approve' ? '审批通过' : '已驳回')
+        showSuccess(action === 'approve' ? '审批通过' : '已驳回')
         fetchApprovals()
       } else {
         const data = await response.json()
-        message.error(data.error || '操作失败')
+        showError(data.error || '操作失败')
       }
     } catch {
-      message.error('操作失败')
+      showError('操作失败')
     }
   }
 
@@ -376,7 +377,7 @@ export default function ApprovalPage() {
         open={rejectModalOpen}
         onOk={async () => {
           if (!rejectReason.trim()) {
-            message.error('请输入驳回原因')
+            showError('请输入驳回原因')
             return
           }
           await handleApprove(rejectItemId, 'reject', rejectReason)

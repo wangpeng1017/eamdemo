@@ -6,6 +6,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { showSuccess, showError } from '@/lib/confirm'
 import { Modal, Form, Select, message } from 'antd'
 
 interface User {
@@ -54,7 +55,7 @@ export default function ConsultationAssessmentModal({
       }
     } catch (error) {
       console.error('获取用户列表失败:', error)
-      message.error('获取用户列表失败')
+      showError('获取用户列表失败')
     } finally {
       setUsersLoading(false)
     }
@@ -83,11 +84,11 @@ export default function ConsultationAssessmentModal({
       const json = await res.json()
 
       if (json.success) {
-        message.success(json.data.message || `评估已发起，等待 ${assessors.length} 人反馈`)
+        showSuccess(json.data.message || `评估已发起，等待 ${assessors.length} 人反馈`)
         form.resetFields()
         onSuccess()
       } else {
-        message.error(json.error?.message || '发起评估失败')
+        showError(json.error?.message || '发起评估失败')
       }
     } catch (error: any) {
       if (error.errorFields) {
@@ -95,7 +96,7 @@ export default function ConsultationAssessmentModal({
         return
       }
       console.error('发起评估失败:', error)
-      message.error('发起评估失败')
+      showError('发起评估失败')
     } finally {
       setLoading(false)
     }

@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from 'react'
+import { showSuccess, showError, showWarningMessage } from '@/lib/confirm'
 import { Button, Card, Form, Input, Switch, InputNumber, Space, message, Modal, Dropdown, Menu, Select } from 'antd'
 import { PlusOutlined, DeleteOutlined, SettingOutlined } from '@ant-design/icons'
 import DataSheet from './DataSheet'
@@ -40,7 +41,7 @@ export default function TemplateEditor({ initialValue, onSave, onCancel }: Templ
         setInspectionStandards(data.list || [])
       })
       .catch(() => {
-        message.error('加载检测标准失败')
+        showError('加载检测标准失败')
       })
   }, [])
 
@@ -65,17 +66,17 @@ export default function TemplateEditor({ initialValue, onSave, onCancel }: Templ
     try {
       // 验证
       if (!schema.title || schema.title.trim() === '') {
-        message.error('请输入模版名称')
+        showError('请输入模版名称')
         return
       }
       if (schema.columns.length === 0) {
-        message.error('请至少添加一列')
+        showError('请至少添加一列')
         return
       }
 
       await onSave(schema)
     } catch (e) {
-      message.error('保存失败')
+      showError('保存失败')
     }
   }
 
@@ -130,7 +131,7 @@ export default function TemplateEditor({ initialValue, onSave, onCancel }: Templ
     }
 
     updateSchema({ columns: newColumns })
-    message.success('列已插入')
+    showSuccess('列已插入')
   }
 
   // 删除列
@@ -138,20 +139,20 @@ export default function TemplateEditor({ initialValue, onSave, onCancel }: Templ
     if (selectedColumn === null) return
 
     if (schema.columns.length <= 1) {
-      message.warning('至少保留一列')
+      showWarningMessage('至少保留一列')
       return
     }
 
     const newColumns = schema.columns.filter((_, idx) => idx !== selectedColumn)
     updateSchema({ columns: newColumns })
     setSelectedColumn(null)
-    message.success('列已删除')
+    showSuccess('列已删除')
   }
 
   // 添加统计列
   const addStatistic = (type: 'avg' | 'std' | 'cv') => {
     if (selectedColumn === null) {
-      message.warning('请先选择一列')
+      showWarningMessage('请先选择一列')
       return
     }
 
@@ -165,7 +166,7 @@ export default function TemplateEditor({ initialValue, onSave, onCancel }: Templ
     // 检查是否已存在
     const existing = schema.statistics.findIndex(s => s.column === column.dataIndex)
     if (existing >= 0) {
-      message.warning('该列已添加统计')
+      showWarningMessage('该列已添加统计')
       return
     }
 
@@ -179,14 +180,14 @@ export default function TemplateEditor({ initialValue, onSave, onCancel }: Templ
         }
       ]
     })
-    message.success(`已添加${labels[type]}统计`)
+    showSuccess(`已添加${labels[type]}统计`)
   }
 
   // 删除统计
   const removeStatistic = (index: number) => {
     const newStatistics = schema.statistics.filter((_, idx) => idx !== index)
     updateSchema({ statistics: newStatistics })
-    message.success('统计已删除')
+    showSuccess('统计已删除')
   }
 
   // 右键菜单

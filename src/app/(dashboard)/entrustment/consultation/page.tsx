@@ -7,7 +7,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Table, Button, Space, Modal, Form, Input, Select, DatePicker, message, Drawer, Row, Col, InputNumber, Divider, Tabs, Upload, Image } from 'antd'
+import { Table, Button, Space, Modal, Form, Input, Select, DatePicker, Drawer, Row, Col, InputNumber, Divider, Tabs, Upload, Image } from 'antd'
 import { PlusOutlined, EditOutlined, DeleteOutlined, EyeOutlined, FileTextOutlined, CloseCircleOutlined, TeamOutlined, SyncOutlined, PaperClipOutlined } from '@ant-design/icons'
 import { StatusTag } from '@/components/StatusTag'
 import UserSelect from '@/components/UserSelect'
@@ -18,6 +18,7 @@ import AssessmentResultTab from '@/components/AssessmentResultTab'
 import type { ColumnsType } from 'antd/es/table'
 import dayjs from 'dayjs'
 import { useRouter } from 'next/navigation'
+import { showConfirm, showWarning, showSuccess, showError, showWarningMessage, showLoading } from '@/lib/confirm'
 
 interface Client {
   id: string
@@ -118,7 +119,7 @@ export default function ConsultationPage() {
       const json = await res.json()
       setClients(json.list || [])
     } catch (error) {
-      message.error('获取客户列表失败')
+      showError('获取客户列表失败')
     } finally {
       setClientsLoading(false)
     }
@@ -135,7 +136,7 @@ export default function ConsultationPage() {
         setTestTemplates(json.list || [])
       }
     } catch (error) {
-      message.error('获取检测项目列表失败')
+      showError('获取检测项目列表失败')
     }
   }
 
@@ -173,7 +174,8 @@ export default function ConsultationPage() {
         setCurrentUser(json.data)
       }
     } catch (error) {
-      console.error('获取当前用户信息失败:', error)
+      console.error('[Consultation] 获取当前用户信息失败:', error)
+      showError('获取用户信息失败', '无法获取当前用户信息，部分功能可能受限')
     }
   }
 
@@ -205,7 +207,7 @@ export default function ConsultationPage() {
         setSampleTestItems([])
       }
     } catch (error) {
-      message.error('加载样品检测项失败')
+      showError('加载样品检测项失败')
       setSampleTestItems([])
     }
 
@@ -226,7 +228,7 @@ export default function ConsultationPage() {
         setFileList([])
       }
     } catch (error) {
-      message.error('加载附件失败')
+      showError('加载附件失败')
       setFileList([])
     }
 
@@ -253,10 +255,7 @@ export default function ConsultationPage() {
     if (record.status === 'quoted') {
       title = '无法删除'
       content = '该咨询单已生成报价，请先处理相关报价单后再尝试删除，或将状态更改为"已关闭"。'
-      modal.warning({
-        title,
-        content,
-      })
+      showWarning(title, content)
       return
     }
 
@@ -265,21 +264,21 @@ export default function ConsultationPage() {
       okType = 'danger'
     }
 
-    modal.confirm({
+    showConfirm(
       title,
       content,
-      okType,
-      onOk: async () => {
+      async () => {
         const res = await fetch(`/api/consultation/${record.id}`, { method: 'DELETE' })
         const json = await res.json()
         if (res.ok && json.success) {
-          message.success('删除成功')
+          showSuccess('删除成功')
           fetchData()
         } else {
-          message.error(json.error?.message || '删除失败')
+          showError(json.error?.message || '删除失败')
         }
       },
-    })
+      { okType }
+    )
   }
 
   const handleSubmit = async () => {
@@ -306,7 +305,7 @@ export default function ConsultationPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(submitData)
       })
-      message.success('更新成功')
+      showSuccess('更新成功')
     } else {
       const res = await fetch('/api/consultation', {
         method: 'POST',
@@ -315,7 +314,7 @@ export default function ConsultationPage() {
       })
       const json = await res.json()
       consultationId = json.data?.id || json.id
-      message.success('创建成功')
+      showSuccess('创建成功')
     }
 
     setModalOpen(false)
@@ -344,13 +343,13 @@ export default function ConsultationPage() {
     ]
 
     if (!validTypes.includes(file.type)) {
-      message.error('只能上传图片、PDF或Office文档！')
+      showError('只能上传图片、PDF或Office文档！')
       return false
     }
 
     const isLt5M = file.size / 1024 / 1024 < 5
     if (!isLt5M) {
-      message.error('文件大小不能超过5MB！')
+      showError('文件大小不能超过5MB！')
       return false
     }
 
@@ -370,7 +369,8 @@ export default function ConsultationPage() {
           method: 'DELETE',
         })
       } catch (error) {
-        console.error('删除文件失败:', error)
+        console.error('[Consultation] 删除文件失败:', error)
+        showError('删除文件失败', '无法删除附件，请重试')
       }
     }
     return true
@@ -379,7 +379,7 @@ export default function ConsultationPage() {
   // 打开生成报价单弹窗
   const handleOpenGenerateQuote = () => {
     if (selectedRows.length !== 1) {
-      message.warning('请选择一条咨询记录')
+      showWarningMessage('请选择一条咨询记录')
       return
     }
     const consultation = selectedRows[0]
@@ -424,7 +424,7 @@ export default function ConsultationPage() {
   // 生成报价单提交
   const handleGenerateQuote = async () => {
     const values = await generateQuoteForm.validateFields()
-    message.loading({ content: '正在创建报价单...', key: 'generate' })
+    showLoading('正在创建报价单...', 'generate')
 
     const res = await fetch('/api/quotation', {
       method: 'POST',
@@ -477,7 +477,7 @@ export default function ConsultationPage() {
       body: JSON.stringify({ status: 'quoted', quotationNo: json.quotationNo }),
     })
 
-    message.success({ content: `报价单 ${json.quotationNo} 创建成功`, key: 'generate' })
+    showSuccess(`报价单 ${json.quotationNo} 创建成功`)
     setGenerateQuoteModalOpen(false)
     setSelectedRowKeys([])
     setSelectedRows([])
@@ -488,7 +488,7 @@ export default function ConsultationPage() {
   // 打开关闭咨询弹窗
   const handleOpenCloseConsult = () => {
     if (selectedRows.length === 0) {
-      message.warning('请选择咨询记录')
+      showWarningMessage('请选择咨询记录')
       return
     }
     closeReasonForm.resetFields()
@@ -509,7 +509,7 @@ export default function ConsultationPage() {
       })
     }
 
-    message.success('咨询已关闭')
+    showSuccess('咨询已关闭')
     setCloseConsultModalOpen(false)
     setSelectedRowKeys([])
     setSelectedRows([])
@@ -577,7 +577,7 @@ export default function ConsultationPage() {
 
       if (!res.ok || !result.success) {
         console.error('❌ [生成报价单] 获取咨询详情失败')
-        message.error('获取咨询详情失败')
+        showError('获取咨询详情失败', '无法加载咨询单信息，请刷新页面重试')
         return
       }
 
@@ -597,10 +597,7 @@ export default function ConsultationPage() {
 
       if (unfinishedItems.length > 0) {
         console.warn('⚠️ [生成报价单] 存在未完成评估的项，弹出警告')
-        Modal.warning({
-          title: '评估未完成',
-          content: '请先完成所有样品检测项的评估后再生成报价单',
-        })
+        showWarning('评估未完成', '请先完成所有样品检测项的评估后再生成报价单')
         return
       }
 
@@ -640,7 +637,7 @@ export default function ConsultationPage() {
       setGenerateQuoteModalOpen(true)
     } catch (error) {
       console.error('❌ [生成报价单] 异常:', error)
-      message.error('操作失败，请重试')
+      showError('操作失败', '生成报价单失败，请重试')
     }
   }
 
@@ -654,10 +651,10 @@ export default function ConsultationPage() {
 
   // 关闭咨询单
   const handleCloseConsultation = async (consultation: Consultation) => {
-    Modal.confirm({
-      title: '确认关闭咨询单',
-      content: `确定要关闭咨询单 ${consultation.consultationNo} 吗？关闭后将无法继续评估。`,
-      onOk: async () => {
+    showConfirm(
+      '确认关闭咨询单',
+      `确定要关闭咨询单 ${consultation.consultationNo} 吗？关闭后将无法继续评估。`,
+      async () => {
         try {
           const res = await fetch(`/api/consultation/${consultation.id}/close`, {
             method: 'POST',
@@ -665,17 +662,17 @@ export default function ConsultationPage() {
           })
           const json = await res.json()
           if (json.success) {
-            message.success('咨询单已关闭')
+            showSuccess('咨询单已关闭')
             fetchData()
           } else {
-            message.error(json.error?.message || '关闭失败')
+            showError(json.error?.message || '关闭失败')
           }
         } catch (error) {
           console.error('关闭咨询单失败:', error)
-          message.error('关闭失败')
+          showError('关闭失败')
         }
       }
-    })
+    )
   }
 
   const columns: ColumnsType<Consultation> = [

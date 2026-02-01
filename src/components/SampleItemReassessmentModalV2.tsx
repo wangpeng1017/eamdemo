@@ -7,6 +7,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { showSuccess, showError } from '@/lib/confirm'
 import { Modal, Tabs, Form, Select, Input, InputNumber, message, Space, Descriptions } from 'antd'
 
 interface User {
@@ -80,13 +81,13 @@ export default function SampleItemReassessmentModal({
       const values = await directForm.validateFields()
 
       if (!sampleItem) {
-        message.error('样品检测项信息缺失')
+        showError('样品检测项信息缺失')
         return
       }
 
       const user = users.find((u) => u.id === values.assessorId)
       if (!user) {
-        message.error('评估人信息缺失')
+        showError('评估人信息缺失')
         return
       }
 
@@ -104,15 +105,15 @@ export default function SampleItemReassessmentModal({
       const json = await res.json()
 
       if (json.success) {
-        message.success('重新评估已发起')
+        showSuccess('重新评估已发起')
         directForm.resetFields()
         onSuccess()
       } else {
-        message.error(json.error || '重新评估失败')
+        showError(json.error || '重新评估失败')
       }
     } catch (error) {
       console.error('重新评估失败:', error)
-      message.error('重新评估失败')
+      showError('重新评估失败')
     } finally {
       setSubmitting(false)
     }
@@ -124,13 +125,13 @@ export default function SampleItemReassessmentModal({
       const values = await modifyForm.validateFields()
 
       if (!sampleItem) {
-        message.error('样品检测项信息缺失')
+        showError('样品检测项信息缺失')
         return
       }
 
       const user = users.find((u) => u.id === values.assessorId)
       if (!user) {
-        message.error('评估人信息缺失')
+        showError('评估人信息缺失')
         return
       }
 
@@ -154,15 +155,15 @@ export default function SampleItemReassessmentModal({
       const json = await res.json()
 
       if (json.success) {
-        message.success('样品信息已更新，重新评估已发起')
+        showSuccess('样品信息已更新，重新评估已发起')
         modifyForm.resetFields()
         onSuccess()
       } else {
-        message.error(json.error || '重新评估失败')
+        showError(json.error || '重新评估失败')
       }
     } catch (error) {
       console.error('重新评估失败:', error)
-      message.error('重新评估失败')
+      showError('重新评估失败')
     } finally {
       setSubmitting(false)
     }

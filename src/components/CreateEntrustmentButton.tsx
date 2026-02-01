@@ -19,6 +19,7 @@
 'use client'
 
 import { useState } from 'react'
+import { showError, showWarningMessage } from '@/lib/confirm'
 import { Button, message, Modal, Descriptions } from 'antd'
 import { FileTextOutlined } from '@ant-design/icons'
 import { useRouter } from 'next/navigation'
@@ -88,7 +89,7 @@ export function CreateEntrustmentButton({
   // 处理生成委托单
   const handleCreate = async () => {
     if (!canCreate) {
-      message.warning(getStatusTooltip())
+      showWarningMessage(getStatusTooltip())
       return
     }
 
@@ -118,11 +119,11 @@ export function CreateEntrustmentButton({
         // 调用成功回调
         onSuccess?.(result.data.entrustmentId, result.data.entrustmentNo)
       } else {
-        message.error(result.error || '生成委托单失败')
+        showError(result.error || '生成委托单失败')
       }
     } catch (error) {
       console.error('生成委托单失败:', error)
-      message.error('生成委托单失败，请重试')
+      showError('生成委托单失败，请重试')
     } finally {
       setLoading(false)
     }

@@ -8,6 +8,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { showError } from '@/lib/confirm'
 import { Card, List, Tag, Button, Space, Empty, Badge, message } from 'antd'
 import { FileTextOutlined, ClockCircleOutlined, RightOutlined } from '@ant-design/icons'
 import dayjs from 'dayjs'
@@ -53,7 +54,7 @@ export default function PendingAssessmentCard({ onViewAll }: PendingAssessmentCa
       if (json.success) {
         setAssessmentGroups(json.data || [])
       } else {
-        message.error(json.error?.message || '获取待评估列表失败')
+        showError(json.error?.message || '获取待评估列表失败')
       }
     } catch (error) {
       console.error('获取待评估列表失败:', error)

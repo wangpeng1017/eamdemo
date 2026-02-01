@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { showSuccess, showError } from '@/lib/confirm'
 import { Form, Input, Button, Card, message, Space, Divider } from 'antd'
 import { UserOutlined, LockOutlined } from '@ant-design/icons'
 import { signIn } from 'next-auth/react'
@@ -30,13 +31,13 @@ export default function LoginPage() {
       })
 
       if (result?.error) {
-        message.error('手机号或密码错误')
+        showError('手机号或密码错误')
       } else {
-        message.success('登录成功')
+        showSuccess('登录成功')
         router.push('/')
       }
     } catch {
-      message.error('登录失败，请重试')
+      showError('登录失败，请重试')
     } finally {
       setLoading(false)
     }

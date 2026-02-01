@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { showSuccess, showError } from '@/lib/confirm'
 import { Table, Button, Modal, Form, Input, Select, DatePicker, message, Space, Tag, Card } from 'antd'
 import { PlusOutlined, EditOutlined, ToolOutlined } from '@ant-design/icons'
 import type { ColumnsType } from 'antd/es/table'
@@ -61,7 +62,7 @@ export default function DeviceMaintenancePage() {
       setTotal(json.total || 0)
     }
     } catch (error) {
-      message.error('获取数据失败')
+      showError('获取数据失败')
     } finally {
       setLoading(false)
     }
@@ -100,14 +101,14 @@ export default function DeviceMaintenancePage() {
         }),
       })
       if (res.ok) {
-        message.success('添加成功')
+        showSuccess('添加成功')
         setModalOpen(false)
         fetchData()
       } else {
-        message.error('添加失败')
+        showError('添加失败')
       }
     } catch (error) {
-      message.error('添加失败')
+      showError('添加失败')
     }
   }
 

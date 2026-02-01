@@ -2,6 +2,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { showSuccess, showError } from '@/lib/confirm'
 import { Table, Button, Space, Modal, Select, Tag, message, Popconfirm } from 'antd'
 import { PlusOutlined, EditOutlined, DeleteOutlined, EyeOutlined } from '@ant-design/icons'
 import type { ColumnsType } from 'antd/es/table'
@@ -60,7 +61,7 @@ export default function TestTemplatesPage() {
         setTotal(json.total || 0)
       }
     } catch (e) {
-      message.error('加载数据失败')
+      showError('加载数据失败')
     }
     setLoading(false)
   }
@@ -88,13 +89,13 @@ export default function TestTemplatesPage() {
       })
       const json = await res.json()
       if (res.ok && json.success) {
-        message.success(currentStatus === 'active' ? '已禁用' : '已启用')
+        showSuccess(currentStatus === 'active' ? '已禁用' : '已启用')
         fetchData()
       } else {
-        message.error(json.error?.message || '操作失败')
+        showError(json.error?.message || '操作失败')
       }
     } catch (e) {
-      message.error('操作失败，请重试')
+      showError('操作失败，请重试')
     }
   }
 
@@ -103,13 +104,13 @@ export default function TestTemplatesPage() {
       const res = await fetch(`/api/test-template/${id}`, { method: 'DELETE' })
       const json = await res.json()
       if (res.ok && json.success) {
-        message.success('删除成功')
+        showSuccess('删除成功')
         fetchData()
       } else {
-        message.error(json.error?.message || '删除失败')
+        showError(json.error?.message || '删除失败')
       }
     } catch (e) {
-      message.error('删除失败，请重试')
+      showError('删除失败，请重试')
     }
   }
 
@@ -137,11 +138,11 @@ export default function TestTemplatesPage() {
         throw new Error(json.message || '保存失败')
       }
 
-      message.success(editingId ? '更新成功' : '创建成功')
+      showSuccess(editingId ? '更新成功' : '创建成功')
       setModalOpen(false)
       fetchData()
     } catch (e: any) {
-      message.error(e.message || '保存失败')
+      showError(e.message || '保存失败')
       throw e
     }
   }

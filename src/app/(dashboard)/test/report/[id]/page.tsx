@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { showSuccess, showError } from '@/lib/confirm'
 import { useParams, useRouter } from 'next/navigation'
 import { Card, Descriptions, Button, Table, message, Tag, Space, Modal, Form, Input, Timeline } from 'antd'
 import { ArrowLeftOutlined, PrinterOutlined, DownloadOutlined, CheckCircleOutlined, CloseCircleOutlined, SendOutlined, FileTextOutlined } from '@ant-design/icons'
@@ -93,11 +94,12 @@ export default function ReportDetailPage() {
                         : reportData.testResults
                     setTestData(Array.isArray(parsed) ? parsed : [])
                 } catch (e) {
-                    console.error('解析检测结果失败', e)
+                    console.error('[Report] 解析检测结果失败:', e)
+                    showError('检测结果解析失败', '无法解析检测结果，请检查数据格式')
                 }
             }
         } catch (error) {
-            message.error('获取报告失败')
+            showError('获取报告失败')
         } finally {
             setLoading(false)
         }
@@ -111,7 +113,8 @@ export default function ReportDetailPage() {
                 setApprovals(json.data || [])
             }
         } catch (error) {
-            console.error('获取审批历史失败', error)
+            console.error('[Report] 获取审批历史失败:', error)
+            // 静默失败，不影响主要功能
         }
     }
 
@@ -138,9 +141,9 @@ export default function ReportDetailPage() {
             window.URL.revokeObjectURL(url)
             document.body.removeChild(a)
 
-            message.success({ content: '导出成功', key: 'export' })
+            showSuccess({ content: '导出成功', key: 'export' })
         } catch (error) {
-            message.error({ content: '导出失败', key: 'export' })
+            showError({ content: '导出失败', key: 'export' })
         }
     }
 
@@ -165,16 +168,16 @@ export default function ReportDetailPage() {
 
             const json = await res.json()
             if (res.ok && json.success) {
-                message.success(json.message)
+                showSuccess(json.message)
                 setApprovalModalOpen(false)
                 form.resetFields()
                 fetchReport()
                 fetchApprovals()
             } else {
-                message.error(json.error || '操作失败')
+                showError(json.error || '操作失败')
             }
         } catch (error) {
-            message.error('操作失败')
+            showError('操作失败')
         } finally {
             setLoading(false)
         }
