@@ -564,32 +564,47 @@ export default function ConsultationPage() {
 
   // 针对单条记录生成报价单
   const handleOpenGenerateQuoteForRecord = async (consultation: Consultation) => {
+    console.log('🔵 [生成报价单] 开始执行, consultationId:', consultation.id)
+
     // ✅ 需求1：评估验证 - 检查所有样品检测项是否已评估通过
     try {
+      console.log('🔵 [生成报价单] 发起API请求...')
       const res = await fetch(`/api/consultation/${consultation.id}`)
+      console.log('🔵 [生成报价单] API响应状态:', res.status, res.ok)
+
       const result = await res.json()
+      console.log('🔵 [生成报价单] API返回数据:', result)
 
       if (!res.ok || !result.success) {
+        console.error('❌ [生成报价单] 获取咨询详情失败')
         message.error('获取咨询详情失败')
         return
       }
 
       // 正确解包: result.data 才是咨询单数据
       const data = result.data
+      console.log('🔵 [生成报价单] 解包后的数据:', data)
+
       const items = data.sampleTestItems || []
+      console.log('🔵 [生成报价单] sampleTestItems数量:', items.length)
+      console.log('🔵 [生成报价单] sampleTestItems详情:', items)
 
       // 检查是否有未评估或评估未通过的项
       const unfinishedItems = items.filter(
         (item: any) => item.assessmentStatus !== 'approved'
       )
+      console.log('🔵 [生成报价单] 未完成评估的项:', unfinishedItems.length, unfinishedItems)
 
       if (unfinishedItems.length > 0) {
+        console.warn('⚠️ [生成报价单] 存在未完成评估的项，弹出警告')
         Modal.warning({
           title: '评估未完成',
           content: '请先完成所有样品检测项的评估后再生成报价单',
         })
         return
       }
+
+      console.log('✅ [生成报价单] 评估验证通过，开始生成报价明细')
 
       // ✅ 需求3：从样品检测项直接生成报价明细（样品+检测项合并）
       const quoteItemsList = items.map((item: any) => ({
@@ -599,8 +614,10 @@ export default function ConsultationPage() {
         quantity: item.quantity || 1,
         unitPrice: 0
       }))
+      console.log('🔵 [生成报价单] 生成的报价明细:', quoteItemsList)
       setQuoteItems(quoteItemsList)
       generateQuoteForm.resetFields()
+      console.log('🔵 [生成报价单] 设置表单数据...')
       generateQuoteForm.setFieldsValue({
         consultationId: consultation.id,
         consultationNo: consultation.consultationNo,
@@ -619,9 +636,10 @@ export default function ConsultationPage() {
         follower: consultation.follower || '', // 从咨询单带入跟单人
         remark: '', // 备注
       })
+      console.log('✅ [生成报价单] 打开报价单弹窗')
       setGenerateQuoteModalOpen(true)
     } catch (error) {
-      console.error('生成报价单失败:', error)
+      console.error('❌ [生成报价单] 异常:', error)
       message.error('操作失败，请重试')
     }
   }
