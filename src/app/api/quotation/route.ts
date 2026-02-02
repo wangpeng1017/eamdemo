@@ -94,7 +94,6 @@ export const POST = withAuth(async (request: NextRequest, user) => {
   const discountTotal = data.finalAmount || taxTotal
 
   // 构造创建数据
-  // 构造创建数据
   const createData: any = {
     quotationNo,
     client: data.clientId ? { connect: { id: data.clientId } } : undefined,
@@ -125,23 +124,12 @@ export const POST = withAuth(async (request: NextRequest, user) => {
     },
   }
 
-  console.log('DEBUG: Creating quotation with data:', JSON.stringify(createData, null, 2))
-
-  let quotation;
-  try {
-    quotation = await prisma.quotation.create({
-      data: createData,
-      include: {
-        items: true,
-      }
-    })
-  } catch (err: any) {
-    console.error('CRITICAL ERROR creating quotation:', err)
-    console.error('Error code:', err.code)
-    console.error('Error message:', err.message)
-    console.error('Validation error details:', JSON.stringify(err, null, 2))
-    throw err
-  }
+  const quotation = await prisma.quotation.create({
+    data: createData,
+    include: {
+      items: true,
+    }
+  })
 
   // 回写咨询单
   if (consultationNo) {
