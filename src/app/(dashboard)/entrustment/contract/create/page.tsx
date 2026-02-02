@@ -2,7 +2,8 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { message } from 'antd'
+import { Button, message } from 'antd'
+import { ArrowLeftOutlined } from '@ant-design/icons'
 import ContractForm from '@/components/business/ContractForm'
 import { showSuccess, showError } from '@/lib/confirm'
 
@@ -60,9 +61,17 @@ export default function CreateContractPage() {
     }
 
     return (
-        <div style={{ padding: 24 }}>
-            <div style={{ marginBottom: 16 }}>
-                <h2 style={{ margin: 0 }}>新增合同</h2>
+        <div style={{ padding: '0 24px 24px', minHeight: '100vh', background: '#f0f2f5' }}>
+            <div style={{ marginBottom: 16, paddingTop: 16 }}>
+                <Button
+                    type="link"
+                    icon={<ArrowLeftOutlined />}
+                    onClick={() => router.back()}
+                    style={{ paddingLeft: 0, fontSize: 16, color: '#000' }}
+                >
+                    返回列表
+                </Button>
+                <span style={{ fontSize: 20, fontWeight: 500, marginLeft: 8 }}>新增合同</span>
             </div>
             <ContractForm mode="create" onSubmit={handleSubmit} loading={loading} />
         </div>

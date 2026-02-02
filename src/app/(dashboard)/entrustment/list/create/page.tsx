@@ -2,7 +2,8 @@
 
 import { useState, useEffect, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
-import { Card, Spin } from 'antd'
+import { Card, Spin, Button } from 'antd'
+import { ArrowLeftOutlined } from '@ant-design/icons'
 import EntrustmentForm from '@/components/business/EntrustmentForm'
 import { showSuccess, showError } from '@/lib/confirm'
 import dayjs from 'dayjs'
@@ -143,7 +144,18 @@ function CreateEntrustmentContent() {
     }
 
     return (
-        <div style={{ padding: 24 }}>
+        <div style={{ padding: '0 24px 24px', minHeight: '100vh', background: '#f0f2f5' }}>
+            <div style={{ marginBottom: 16, paddingTop: 16 }}>
+                <Button
+                    type="link"
+                    icon={<ArrowLeftOutlined />}
+                    onClick={() => router.back()}
+                    style={{ paddingLeft: 0, fontSize: 16, color: '#000' }}
+                >
+                    返回列表
+                </Button>
+                <span style={{ fontSize: 20, fontWeight: 500, marginLeft: 8 }}>新建委托单</span>
+            </div>
             <EntrustmentForm
                 mode="create"
                 initialValues={initialValues}
