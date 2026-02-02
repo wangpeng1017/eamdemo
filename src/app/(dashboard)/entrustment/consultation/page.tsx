@@ -78,14 +78,14 @@ export default function ConsultationPage() {
   const [loading, setLoading] = useState(false)
   const [total, setTotal] = useState(0)
   const [page, setPage] = useState(1)
-  const [modalOpen, setModalOpen] = useState(false)
+  // const [modalOpen, setModalOpen] = useState(false) // 移除
   const [viewDrawerOpen, setViewDrawerOpen] = useState(false)
-  const [editingId, setEditingId] = useState<string | null>(null)
+  // const [editingId, setEditingId] = useState<string | null>(null) // 移除
   const [currentConsultation, setCurrentConsultation] = useState<Consultation | null>(null)
-  const [clients, setClients] = useState<Client[]>([])
-  const [clientsLoading, setClientsLoading] = useState(false)
+  // const [clients, setClients] = useState<Client[]>([]) // 移除
+  // const [clientsLoading, setClientsLoading] = useState(false) // 移除
   const [testTemplates, setTestTemplates] = useState<TestTemplate[]>([])
-  const [form] = Form.useForm()
+  // const [form] = Form.useForm() // 移除
   const [filters, setFilters] = useState<any>({})
 
   // 行选择
@@ -100,30 +100,16 @@ export default function ConsultationPage() {
   const [quoteItems, setQuoteItems] = useState<any[]>([])
   const [quoteSamples, setQuoteSamples] = useState<any[]>([])
 
-  // 样品检测项
-  const [sampleTestItems, setSampleTestItems] = useState<SampleTestItemData[]>([])
+  // 样品检测项 - 移除，生成报价单时使用 API 获取的数据
+  // const [sampleTestItems, setSampleTestItems] = useState<SampleTestItemData[]>([])
 
   // 评估相关状态
   const [reassessmentModalOpen, setReassessmentModalOpen] = useState(false)
   const [currentUser, setCurrentUser] = useState<any>(null)
 
-  // 附件上传相关
-  const [fileList, setFileList] = useState<any[]>([])
-  const [uploading, setUploading] = useState(false)
-
-  // 获取客户列表
-  const fetchClients = async () => {
-    setClientsLoading(true)
-    try {
-      const res = await fetch('/api/entrustment/client?status=approved&pageSize=1000')
-      const json = await res.json()
-      setClients(json.list || [])
-    } catch (error) {
-      showError('获取客户列表失败')
-    } finally {
-      setClientsLoading(false)
-    }
-  }
+  // 附件上传相关 - 移除
+  // const [fileList, setFileList] = useState<any[]>([])
+  // const [uploading, setUploading] = useState(false)
 
   // 获取检测项目列表
   const fetchTestTemplates = async () => {
@@ -161,7 +147,7 @@ export default function ConsultationPage() {
 
   useEffect(() => {
     fetchData()
-    fetchClients()
+    // fetchClients() // 移除
     fetchTestTemplates()
     fetchCurrentUser()
   }, [page])
@@ -180,66 +166,11 @@ export default function ConsultationPage() {
   }
 
   const handleAdd = () => {
-    setEditingId(null)
-    setSampleTestItems([])
-    setFileList([])
-    form.resetFields()
-    setModalOpen(true)
+    router.push('/entrustment/consultation/create')
   }
 
   const handleEdit = async (record: Consultation) => {
-    setEditingId(record.id)
-
-    // 加载样品检测项数据
-    try {
-      const res = await fetch(`/api/sample-test-item?bizType=consultation&bizId=${record.id}`)
-      const json = await res.json()
-      if (json.success && json.data) {
-        const loadedItems = json.data.map((item: any) => ({
-          ...item,
-          key: item.id || `temp_${Date.now()}_${Math.random()}`,
-          // 字段映射: currentAssessorId → assessorId
-          assessorId: item.currentAssessorId,
-          assessorName: item.currentAssessorName,
-        }))
-        setSampleTestItems(loadedItems)
-      } else {
-        setSampleTestItems([])
-      }
-    } catch (error) {
-      showError('加载样品检测项失败')
-      setSampleTestItems([])
-    }
-
-    // 加载附件数据
-    try {
-      const res = await fetch(`/api/consultation/${record.id}`)
-      const json = await res.json()
-      if (json.success && json.data && json.data.attachments) {
-        const loadedFiles = json.data.attachments.map((att: Attachment) => ({
-          uid: att.id,
-          name: att.originalName,
-          status: 'done',
-          url: att.fileUrl,
-          response: att,
-        }))
-        setFileList(loadedFiles)
-      } else {
-        setFileList([])
-      }
-    } catch (error) {
-      showError('加载附件失败')
-      setFileList([])
-    }
-
-    const formData = {
-      ...record,
-      clientId: record.clientId || record.client?.id,
-      expectedDeadline: record.expectedDeadline ? dayjs(record.expectedDeadline) : undefined,
-      testItems: record.testItems || [],
-    }
-    form.setFieldsValue(formData)
-    setModalOpen(true)
+    router.push(`/entrustment/consultation/edit/${record.id}`)
   }
 
   const handleView = async (record: Consultation) => {
@@ -281,101 +212,6 @@ export default function ConsultationPage() {
     )
   }
 
-  const handleSubmit = async () => {
-    const values = await form.validateFields()
-
-    // 提取附件信息
-    const attachments = fileList
-      .filter(file => file.status === 'done' && file.response)
-      .map(file => file.response)
-
-    const submitData = {
-      ...values,
-      expectedDeadline: values.expectedDeadline ? values.expectedDeadline.toISOString() : null,
-      attachments: attachments,
-      // 直接包含样品检测项数据
-      sampleTestItems: sampleTestItems,
-    }
-
-    let consultationId = editingId
-
-    if (editingId) {
-      await fetch(`/api/consultation/${editingId}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(submitData)
-      })
-      showSuccess('更新成功')
-    } else {
-      const res = await fetch('/api/consultation', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(submitData)
-      })
-      const json = await res.json()
-      consultationId = json.data?.id || json.id
-      showSuccess('创建成功')
-    }
-
-    setModalOpen(false)
-    fetchData()
-  }
-
-  // 客户选择变化时自动填充联系人
-  const handleClientChange = (clientId: string) => {
-    const client = clients.find(c => c.id === clientId)
-    if (client) {
-      form.setFieldsValue({
-        clientContactPerson: client.contact || '',
-      })
-    }
-  }
-
-  // 附件上传前验证
-  const beforeUpload = (file: File) => {
-    const validTypes = [
-      'image/jpeg', 'image/png', 'image/gif',
-      'application/pdf',
-      'application/msword',
-      'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-      'application/vnd.ms-excel',
-      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
-    ]
-
-    if (!validTypes.includes(file.type)) {
-      showError('只能上传图片、PDF或Office文档！')
-      return false
-    }
-
-    const isLt5M = file.size / 1024 / 1024 < 5
-    if (!isLt5M) {
-      showError('文件大小不能超过5MB！')
-      return false
-    }
-
-    return true
-  }
-
-  // 文件上传变化处理
-  const handleUploadChange = ({ fileList: newFileList }: any) => {
-    setFileList(newFileList)
-  }
-
-  // 文件删除处理
-  const handleRemove = async (file: any) => {
-    if (file.response && editingId) {
-      try {
-        await fetch(`/api/upload/consultation/${file.response.id}?consultationId=${editingId}`, {
-          method: 'DELETE',
-        })
-      } catch (error) {
-        console.error('[Consultation] 删除文件失败:', error)
-        showError('删除文件失败', '无法删除附件，请重试')
-      }
-    }
-    return true
-  }
-
   // 打开生成报价单弹窗
   const handleOpenGenerateQuote = () => {
     if (selectedRows.length !== 1) {
@@ -386,15 +222,7 @@ export default function ConsultationPage() {
 
     // 初始化样品数据（从样品检测项获取）
     let initSamples: any[] = []
-    if (sampleTestItems.length > 0) {
-      initSamples = sampleTestItems.map(item => ({
-        name: item.sampleName,
-        model: '',
-        material: item.material,
-        quantity: item.quantity,
-        remark: ''
-      }))
-    }
+    // sampleTestItems状态已移除，这里置空即可，因为该功能主要是列表操作，没法获取详情里的样品
     setQuoteSamples(initSamples)
 
     const items = (consultation.testItems || []).map(item => {
@@ -856,103 +684,7 @@ export default function ConsultationPage() {
         pagination={{ current: page, total, pageSize: 10, onChange: setPage, showSizeChanger: false }}
       />
 
-      {/* 新增/编辑模态框 */}
-      <Modal
-        title={editingId ? '编辑咨询' : '新增咨询'}
-        open={modalOpen}
-        onOk={handleSubmit}
-        onCancel={() => setModalOpen(false)}
-        width={800}
-        footer={[
-          <Button key="cancel" onClick={() => setModalOpen(false)}>取消</Button>,
-          <Button key="submit" type="primary" onClick={handleSubmit}>{editingId ? '更新' : '创建'}</Button>,
-        ]}
-      >
-        <Form form={form} layout="vertical">
-          <Row gutter={16}>
-            <Col span={12}>
-              <Form.Item name="clientId" label="客户" rules={[{ required: true, message: '请选择客户' }]}>
-                <Select
-                  showSearch
-                  allowClear
-                  placeholder="选择客户"
-                  loading={clientsLoading}
-                  optionFilterProp="label"
-                  options={clients.map(c => ({ value: c.id, label: c.name }))}
-                  onChange={handleClientChange}
-                />
-              </Form.Item>
-            </Col>
-            <Col span={12}>
-              <Form.Item name="clientContactPerson" label="联系人" rules={[{ required: true, message: '请输入联系人' }]}>
-                <Input placeholder="请输入联系人姓名" />
-              </Form.Item>
-            </Col>
-          </Row>
 
-          {/* 样品检测项表格 */}
-          <div style={{ marginBottom: 16 }}>
-            <SampleTestItemTable
-              bizType="consultation"
-              bizId={editingId || undefined}
-              value={sampleTestItems}
-              onChange={setSampleTestItems}
-              showAssessment={true}
-            />
-          </div>
-
-          <Form.Item name="testItems" label="检测项目（多选）" style={{ display: 'none' }}>
-            <Select
-              mode="multiple"
-              placeholder="请选择检测项目"
-              showSearch
-              optionFilterProp="label"
-              options={testTemplates.map(t => ({ value: t.name, label: t.name }))}
-            />
-          </Form.Item>
-
-          <Divider orientationMargin="0">其他信息</Divider>
-
-          <Row gutter={16}>
-            <Col span={8}>
-              <Form.Item name="expectedDeadline" label="报告时间">
-                <DatePicker style={{ width: '100%' }} />
-              </Form.Item>
-            </Col>
-            <Col span={8}>
-              <Form.Item name="follower" label="跟单人">
-                <UserSelect placeholder="请选择跟单人" />
-              </Form.Item>
-            </Col>
-          </Row>
-
-          <Row gutter={16}>
-            <Col span={12}>
-              <Form.Item name="budgetRange" label="预算范围">
-                <Input placeholder="例如：5000-10000元" />
-              </Form.Item>
-            </Col>
-          </Row>
-
-          <Form.Item
-            label="附件上传"
-            extra="支持图片、PDF、Word、Excel，单个文件最大5MB，最多5个文件"
-          >
-            <Upload
-              action="/api/upload/consultation"
-              listType="picture"
-              fileList={fileList}
-              maxCount={5}
-              accept="image/*,.pdf,.doc,.docx,.xls,.xlsx"
-              beforeUpload={beforeUpload}
-              onChange={handleUploadChange}
-              onRemove={handleRemove}
-            >
-              <Button icon={<PlusOutlined />}>上传附件</Button>
-            </Upload>
-          </Form.Item>
-        </Form>
-      </Modal>
 
       {/* 查看详情抽屉 */}
       <Drawer
