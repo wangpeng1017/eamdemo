@@ -214,12 +214,105 @@ export default function EntrustmentListPage() {
     router.push(`/entrustment/list/edit/${record.id}`)
   }
 
-  // 删除委托单 (handleDelete logic remains)
-  // handleGenerateExternalLink remains
+  // 删除委托单
+  const handleDelete = async (id: string) => {
+    const res = await fetch(`/api/entrustment/${id}`, { method: 'DELETE' })
+    const json = await res.json()
+    if (res.ok && json.success) {
+      showSuccess('删除成功')
+      fetchData()
+    } else {
+      showError(json.error?.message || '删除失败')
+    }
+  }
 
-  // (handleSubmit logic removed)
+  const handleGenerateExternalLink = (record: Entrustment) => {
+    const link = `${window.location.origin}/entrustment/external/${record.id}`
+    navigator.clipboard.writeText(link)
+    showSuccess('外部链接已复制到剪贴板')
+  }
 
-  // handleAssign, handleSubcontract, handleAssignSubmit, handleSubcontractSubmit remain
+  // 打开分配弹窗
+  const handleAssign = (entrustmentId: string, project: EntrustmentProject) => {
+    setCurrentProject({ entrustmentId, project })
+    assignForm.resetFields()
+    // 回显已有数据
+    if (project.status === 'assigned') {
+      assignForm.setFieldsValue({
+        assignTo: project.assignTo,
+        deviceId: project.deviceId,
+        deadline: project.deadline ? dayjs(project.deadline) : undefined
+      })
+    }
+    setAssignModalOpen(true)
+  }
+
+  // 打开分包弹窗
+  const handleSubcontract = (entrustmentId: string, project: EntrustmentProject) => {
+    setCurrentProject({ entrustmentId, project })
+    subcontractForm.resetFields()
+    if (project.status === 'subcontracted') {
+      subcontractForm.setFieldsValue({
+        subcontractor: project.subcontractor,
+        // subcontractor field in form matches standard?
+      })
+    }
+    setSubcontractModalOpen(true)
+  }
+
+  // 提交分配
+  const handleAssignSubmit = async () => {
+    if (!currentProject) return
+    try {
+      const values = await assignForm.validateFields()
+      const res = await fetch(`/api/entrustment/${currentProject.entrustmentId}/project/${currentProject.project.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'assign',
+          ...values,
+          deadline: values.deadline ? values.deadline.format('YYYY-MM-DD') : null
+        })
+      })
+      const json = await res.json()
+      if (res.ok && json.success) {
+        showSuccess('任务分配成功')
+        setAssignModalOpen(false)
+        fetchData()
+      } else {
+        showError(json.error?.message || '分配失败')
+      }
+    } catch (e) {
+      console.error(e)
+    }
+  }
+
+  // 提交分包
+  const handleSubcontractSubmit = async () => {
+    if (!currentProject) return
+    try {
+      const values = await subcontractForm.validateFields()
+      const res = await fetch(`/api/entrustment/${currentProject.entrustmentId}/project/${currentProject.project.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'subcontract',
+          ...values,
+          deadline: values.deadline ? values.deadline.format('YYYY-MM-DD') : null
+        })
+      })
+      const json = await res.json()
+      if (res.ok && json.success) {
+        showSuccess('分包成功')
+        setSubcontractModalOpen(false)
+        fetchData()
+      } else {
+        showError(json.error?.message || '分包失败')
+      }
+    } catch (e) {
+      console.error(e)
+    }
+  }
 
 
   // 检测项目子表格列
