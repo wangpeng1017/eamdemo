@@ -14,6 +14,7 @@ import {
     Divider,
     Card,
     Table,
+    Alert,
 } from 'antd'
 import { PlusOutlined, DeleteOutlined } from '@ant-design/icons'
 import dayjs from 'dayjs'
@@ -352,6 +353,23 @@ export default function QuotationForm({
 
     return (
         <Card bordered={false}>
+            {initialValues?.status === 'rejected' && (
+                <Alert
+                    message="报价单已被驳回"
+                    description={
+                        <div>
+                            <p><strong>驳回原因：</strong>{initialValues.lastRejectReason || '无'}</p>
+                            <p style={{ fontSize: 12, color: '#666', marginTop: 4 }}>
+                                驳回人：{initialValues.lastRejectBy || '-'} | 驳回时间：{initialValues.lastRejectAt ? dayjs(initialValues.lastRejectAt).format('YYYY-MM-DD HH:mm:ss') : '-'}
+                            </p>
+                            <p style={{ marginTop: 8, fontWeight: 'bold' }}>温馨提示：请根据驳回意见修改后，重新提交审批。</p>
+                        </div>
+                    }
+                    type="error"
+                    showIcon
+                    style={{ marginBottom: 24 }}
+                />
+            )}
             <Form form={form} layout="vertical">
                 <Row gutter={24}>
                     <Col span={8}>

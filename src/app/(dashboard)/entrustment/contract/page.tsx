@@ -179,7 +179,7 @@ export default function ContractPage() {
         }
       } catch (e) {
         console.error('[Contract] 获取报价单失败:', e)
-        showError('获取报价单失败', '无法加载报价单数据，请重试')
+        showError('获取报价单失败：无法加载报价单数据，请重试')
       }
     }
 
@@ -229,6 +229,23 @@ export default function ContractPage() {
       dataIndex: 'createdAt',
       width: 160,
       render: (t: string) => t ? dayjs(t).format('YYYY-MM-DD HH:mm:ss') : '-',
+    },
+    {
+      title: '报告时间',
+      dataIndex: 'clientReportDeadline',
+      width: 120,
+      render: (t: string) => {
+        if (!t) return '-'
+        const deadline = dayjs(t)
+        const now = dayjs()
+        const daysUntil = deadline.diff(now, 'day')
+
+        let color = '#52c41a' // 绿色 - 正常
+        if (daysUntil < 0) color = '#f5222d' // 红色 - 过期
+        else if (daysUntil <= 7) color = '#fa8c16' // 橙色 - 7天内
+
+        return <span style={{ color, fontWeight: daysUntil < 0 ? 'bold' : 'normal' }}>{deadline.format('YYYY-MM-DD')}</span>
+      },
     },
     {
       title: '合同期限',

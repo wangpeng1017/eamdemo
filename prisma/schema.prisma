@@ -132,8 +132,13 @@ model Client {
   createdById    String?
   createdBy      User?    @relation("CreatedClient", fields: [createdById], references: [id])
 
-  // 新增：审批相关字段
   approvalStatus   String?   @default("pending") // pending/approved/rejected/cancelled
+
+  // 新增：驳回记录
+  rejectedCount    Int       @default(0)
+  lastRejectReason String?   @db.Text
+  lastRejectBy     String?   @db.VarChar(50)
+  lastRejectAt     DateTime?
   approvalStep     Int?      @default(0) // 当前审批步骤
   approvalInstanceId String?  @unique
   approvalInstance ApprovalInstance? @relation(fields: [approvalInstanceId], references: [id])
@@ -143,12 +148,6 @@ model Client {
   submittedBy   String?   @db.VarChar(50) // 提交人
   approvedAt    DateTime? // 审批通过时间
   approvedBy    String?   @db.VarChar(50) // 审批人
-
-  // 驳回记录字段（模块2）
-  rejectedCount     Int      @default(0) // 驳回次数
-  lastRejectReason  String?  @db.Text // 最后一次驳回原因
-  lastRejectBy      String?  @db.VarChar(50) // 最后一次驳回人
-  lastRejectAt      DateTime? // 最后一次驳回时间
 
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
@@ -327,6 +326,12 @@ model Quotation {
   approvalStatus   String?   @default("pending") // pending/approved/rejected/cancelled
   approvalStep     Int?      @default(0) // 当前审批步骤
   
+  // 新增：驳回记录 (Module 2)
+  rejectedCount    Int       @default(0)
+  lastRejectReason String?   @db.Text
+  lastRejectBy     String?   @db.VarChar(50)
+  lastRejectAt     DateTime?
+  
   createdById    String?
   createdBy      User?    @relation("CreatedQuotation", fields: [createdById], references: [id])
   
@@ -382,6 +387,13 @@ model Contract {
   effectiveDate DateTime? // 生效日期
   expiryDate    DateTime? // 到期日期
   clientReportDeadline DateTime? // 客户报告截止日期
+
+  // 兼容旧字段
+  sampleName     String?   @db.VarChar(200)
+  sampleModel    String?   @db.VarChar(100)
+  sampleMaterial String?   @db.VarChar(100)
+  sampleQuantity Int?
+
   status        String    @default("draft") // draft/signed/executing/completed/terminated
 
   // 新增：审批相关字段
@@ -389,6 +401,12 @@ model Contract {
   approvalStep     Int?      @default(0) // 当前审批步骤
   approvalInstanceId String?  @unique
   approvalInstance ApprovalInstance? @relation(fields: [approvalInstanceId], references: [id])
+
+  // 新增：驳回记录
+  rejectedCount    Int       @default(0)
+  lastRejectReason String?   @db.Text
+  lastRejectBy     String?   @db.VarChar(50)
+  lastRejectAt     DateTime?
 
   // 合同条款 JSON
   termsPaymentTerms         String? @db.Text // 付款条款
@@ -486,6 +504,12 @@ model Entrustment {
   createdBy   User?    @relation("CreatedBy", fields: [createdById], references: [id])
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
+
+  // 新增：驳回记录
+  rejectedCount    Int       @default(0)
+  lastRejectReason String?   @db.Text
+  lastRejectBy     String?   @db.VarChar(50)
+  lastRejectAt     DateTime?
 
   projects    EntrustmentProject[]
   samples     Sample[]

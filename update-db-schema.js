@@ -107,6 +107,18 @@ async function main() {
         }
     }
 
+    try {
+        console.log('Adding sampleName column to biz_contract...')
+        await prisma.$executeRawUnsafe(`ALTER TABLE biz_contract ADD COLUMN sampleName VARCHAR(200);`)
+        console.log('✅ sampleName column added to biz_contract.')
+    } catch (e) {
+        if (e.message.includes('Duplicate column name')) {
+            console.log('ℹ️ sampleName column already exists in biz_contract.')
+        } else {
+            console.error('❌ Error adding sampleName column to biz_contract:', e.message)
+        }
+    }
+
     // ==================== ContractItem 表创建 ====================
     try {
         console.log('Creating biz_contract_item table...')
@@ -249,6 +261,69 @@ async function main() {
         }
     }
 
+    // ==================== Quotation Rejection Fields ====================
+    try {
+        console.log('Adding rejection fields to biz_quotation...')
+        await prisma.$executeRawUnsafe(`ALTER TABLE biz_quotation ADD COLUMN rejectedCount INT DEFAULT 0;`)
+        await prisma.$executeRawUnsafe(`ALTER TABLE biz_quotation ADD COLUMN lastRejectReason TEXT;`)
+        await prisma.$executeRawUnsafe(`ALTER TABLE biz_quotation ADD COLUMN lastRejectBy VARCHAR(50);`)
+        await prisma.$executeRawUnsafe(`ALTER TABLE biz_quotation ADD COLUMN lastRejectAt DATETIME(3);`)
+        console.log('✅ Rejection fields added to biz_quotation.')
+    } catch (e) {
+        if (e.message.includes('Duplicate column name')) {
+            console.log('ℹ️ Rejection fields already exist in biz_quotation.')
+        } else {
+            console.error('❌ Error adding rejection fields to biz_quotation:', e.message)
+        }
+    }
+
+    // ==================== Contract Rejection Fields ====================
+    try {
+        console.log('Adding rejection fields to biz_contract...')
+        await prisma.$executeRawUnsafe(`ALTER TABLE biz_contract ADD COLUMN rejectedCount INT DEFAULT 0;`)
+        await prisma.$executeRawUnsafe(`ALTER TABLE biz_contract ADD COLUMN lastRejectReason TEXT;`)
+        await prisma.$executeRawUnsafe(`ALTER TABLE biz_contract ADD COLUMN lastRejectBy VARCHAR(50);`)
+        await prisma.$executeRawUnsafe(`ALTER TABLE biz_contract ADD COLUMN lastRejectAt DATETIME(3);`)
+        console.log('✅ Rejection fields added to biz_contract.')
+    } catch (e) {
+        if (e.message.includes('Duplicate column name')) {
+            console.log('ℹ️ Rejection fields already exist in biz_contract.')
+        } else {
+            console.error('❌ Error adding rejection fields to biz_contract:', e.message)
+        }
+    }
+
+    // ==================== Entrustment Rejection Fields ====================
+    try {
+        console.log('Adding rejection fields to biz_entrustment...')
+        await prisma.$executeRawUnsafe(`ALTER TABLE biz_entrustment ADD COLUMN rejectedCount INT DEFAULT 0;`)
+        await prisma.$executeRawUnsafe(`ALTER TABLE biz_entrustment ADD COLUMN lastRejectReason TEXT;`)
+        await prisma.$executeRawUnsafe(`ALTER TABLE biz_entrustment ADD COLUMN lastRejectBy VARCHAR(50);`)
+        await prisma.$executeRawUnsafe(`ALTER TABLE biz_entrustment ADD COLUMN lastRejectAt DATETIME(3);`)
+        console.log('✅ Rejection fields added to biz_entrustment.')
+    } catch (e) {
+        if (e.message.includes('Duplicate column name')) {
+            console.log('ℹ️ Rejection fields already exist in biz_entrustment.')
+        } else {
+            console.error('❌ Error adding rejection fields to biz_entrustment:', e.message)
+        }
+    }
+
+    // ==================== Client Rejection Fields ====================
+    try {
+        console.log('Adding rejection fields to biz_client...')
+        await prisma.$executeRawUnsafe(`ALTER TABLE biz_client ADD COLUMN rejectedCount INT DEFAULT 0;`)
+        await prisma.$executeRawUnsafe(`ALTER TABLE biz_client ADD COLUMN lastRejectReason TEXT;`)
+        await prisma.$executeRawUnsafe(`ALTER TABLE biz_client ADD COLUMN lastRejectBy VARCHAR(50);`)
+        await prisma.$executeRawUnsafe(`ALTER TABLE biz_client ADD COLUMN lastRejectAt DATETIME(3);`)
+        console.log('✅ Rejection fields added to biz_client.')
+    } catch (e) {
+        if (e.message.includes('Duplicate column name')) {
+            console.log('ℹ️ Rejection fields already exist in biz_client.')
+        } else {
+            console.error('❌ Error adding rejection fields to biz_client:', e.message)
+        }
+    }
 }
 
 

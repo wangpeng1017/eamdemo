@@ -55,10 +55,22 @@ export const GET = withErrorHandler(async (request: NextRequest) => {
         // 管理员可以看到所有
         if (userRoles.includes('admin')) return true
 
-        // 根据当前审批步骤和用户角色匹配
-        if (item.currentStep === 1 && userRoles.includes('sales_manager')) return true
+        // 根据当前审批步骤和用户角色匹配（兼容新旧角色）
+        // 步骤1：业务经理审批
+        if (item.currentStep === 1 && (
+            userRoles.includes('sales_manager') ||
+            userRoles.includes('BUSINESS_MANAGER') ||
+            userRoles.includes('TEST_DIRECTOR')
+        )) return true
+        // 步骤2：财务审批
         if (item.currentStep === 2 && userRoles.includes('finance')) return true
-        if (item.currentStep === 3 && userRoles.includes('lab_director')) return true
+        // 步骤3：实验室负责人审批
+        if (item.currentStep === 3 && (
+            userRoles.includes('lab_director') ||
+            userRoles.includes('TEST_DIRECTOR') ||
+            userRoles.includes('MATERIAL_TEST_MANAGER') ||
+            userRoles.includes('PRODUCT_TEST_MANAGER')
+        )) return true
 
         return false
     })

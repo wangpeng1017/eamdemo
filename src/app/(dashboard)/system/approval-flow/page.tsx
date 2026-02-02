@@ -33,6 +33,7 @@ const businessTypes = [
   { value: 'payment', label: '付款审批' },
   { value: 'purchase', label: '采购审批' },
   { value: 'leave', label: '请假审批' },
+  { value: 'client', label: '客户单位审批' },
 ]
 
 const nodeTypes = [
@@ -334,7 +335,7 @@ export default function ApprovalFlowPage() {
     },
     {
       title: '操作', fixed: 'right',
-      
+
       render: (_, record) => (
         <Space style={{ whiteSpace: 'nowrap' }}>
           <Button size="small" onClick={() => handleAddNode(record.id)}>添加节点</Button>
@@ -371,8 +372,7 @@ export default function ApprovalFlowPage() {
       },
       { title: '审批人/角色', dataIndex: 'targetName' },
       {
-        title: '操作', fixed: 'right',
-        
+        title: '操作', fixed: 'right', width: 120,
         render: (_, node) => (
           <Space style={{ whiteSpace: 'nowrap' }}>
             <Button size="small" icon={<EditOutlined />} onClick={() => handleEditNode(record.id, node)} />
@@ -487,8 +487,8 @@ export default function ApprovalFlowPage() {
                     value: role.code,
                     label: role.name,
                   }))}
-                  onChange={(value, option) => {
-                    nodeForm.setFieldsValue({ targetName: option.label })
+                  onChange={(value, option: any) => {
+                    nodeForm.setFieldsValue({ targetName: option?.label || '' })
                   }}
                 />
               </Form.Item>
@@ -506,8 +506,8 @@ export default function ApprovalFlowPage() {
                     value: user.id,
                     label: `${user.name} (${user.phone || user.email || '无联系方式'})`,
                   }))}
-                  onChange={(value, option) => {
-                    nodeForm.setFieldsValue({ targetName: option.label })
+                  onChange={(value, option: any) => {
+                    nodeForm.setFieldsValue({ targetName: option?.label || '' })
                   }}
                 />
               </Form.Item>
@@ -525,8 +525,8 @@ export default function ApprovalFlowPage() {
                     value: dept.id,
                     label: dept.name,
                   }))}
-                  onChange={(value, option) => {
-                    nodeForm.setFieldsValue({ targetName: `${option.label}负责人` })
+                  onChange={(value, option: any) => {
+                    nodeForm.setFieldsValue({ targetName: `${option?.label || ''}负责人` })
                   }}
                 />
               </Form.Item>

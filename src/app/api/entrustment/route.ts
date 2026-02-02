@@ -151,7 +151,7 @@ export const POST = withErrorHandler(async (request: NextRequest) => {
   const createData: any = {
     entrustmentNo,
     contractNo: data.contractNo || null,
-    clientId: data.clientId || null,
+    client: data.clientId ? { connect: { id: data.clientId } } : undefined,
     contactPerson: data.contactPerson || null,
     sampleDate: data.sampleDate ? new Date(data.sampleDate) : new Date(),
     follower: data.follower || null,
@@ -159,7 +159,7 @@ export const POST = withErrorHandler(async (request: NextRequest) => {
     sourceType: data.sourceType || null,
     status: data.status || 'pending',
     remark: data.remark || null,
-    createdById: session?.user?.id,
+    createdBy: session?.user?.id ? { connect: { id: session.user.id } } : undefined,
   }
 
   console.log('[Entrustment Create] createData:', JSON.stringify(createData, null, 2))

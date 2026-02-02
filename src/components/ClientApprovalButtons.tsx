@@ -19,7 +19,8 @@
 import { useState } from 'react'
 import { showSuccess, showError } from '@/lib/confirm'
 import { Button, Space, message, Modal, Input } from 'antd'
-import { SendOutlined, CheckOutlined } from '@ant-design/icons'
+import { SendOutlined, CheckOutlined, CloseCircleOutlined } from '@ant-design/icons'
+import { RejectModal } from './RejectModal'
 
 type ClientStatus = 'draft' | 'pending' | 'approved' | 'rejected'
 
@@ -50,6 +51,7 @@ export function ClientApprovalButtons({
   const [loading, setLoading] = useState(false)
   const [submitModalVisible, setSubmitModalVisible] = useState(false)
   const [approveModalVisible, setApproveModalVisible] = useState(false)
+  const [rejectModalVisible, setRejectModalVisible] = useState(false)
   const [comment, setComment] = useState('')
 
   // 检查是否可以提交审批
@@ -138,17 +140,7 @@ export function ClientApprovalButtons({
           </Button>
         )}
 
-        {/* 审批通过按钮 */}
-        {canApprove && (
-          <Button
-            type="primary"
-            icon={<CheckOutlined />}
-            onClick={() => setApproveModalVisible(true)}
-            style={{ backgroundColor: '#52c41a', borderColor: '#52c41a' }}
-          >
-            {showLabel ? '审批通过' : '通过'}
-          </Button>
-        )}
+        {/* 审批操作（通过/驳回）已移至"工作台-审批中心"统一处理 */}
       </Space>
 
       {/* 提交审批Modal */}

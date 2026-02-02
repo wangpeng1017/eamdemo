@@ -52,3 +52,12 @@
 {"message":"prisma:error \nInvalid `prisma.user.findUnique()` invocation:\n\n\nCan't reach database server at `8.130.182.148:3308`\n\nPlease make sure your database server is running at `8.130.182.148:3308`.\n","timestamp":"2026-02-01 20:00:29 +08:00","type":"out","process_id":0,"app_name":"lims-next"}
 {"message":"prisma:error \nInvalid `prisma.user.findUnique()` invocation:\n\n\nCan't reach database server at `8.130.182.148:3308`\n\nPlease make sure your database server is running at `8.130.182.148:3308`.\n","timestamp":"2026-02-01 20:05:41 +08:00","type":"out","process_id":0,"app_name":"lims-next"}
 {"message":"prisma:error \nInvalid `prisma.user.findUnique()` invocation:\n\n\nServer has closed the connection.\n","timestamp":"2026-02-02 00:06:16 +08:00","type":"out","process_id":0,"app_name":"lims-next"}
+{"message":"   ▲ Next.js 15.1.0\n","timestamp":"2026-02-02 13:57:49 +08:00","type":"out","process_id":0,"app_name":"lims-next"}
+{"message":"   - Local:        http://localhost:3000\n   - Network:      http://0.0.0.0:3000\n\n ✓ Starting...\n","timestamp":"2026-02-02 13:57:49 +08:00","type":"out","process_id":0,"app_name":"lims-next"}
+{"message":" ✓ Ready in 43ms\n","timestamp":"2026-02-02 13:57:49 +08:00","type":"out","process_id":0,"app_name":"lims-next"}
+{"message":"   ▲ Next.js 15.1.0\n","timestamp":"2026-02-02 14:17:52 +08:00","type":"out","process_id":0,"app_name":"lims-next"}
+{"message":"   - Local:        http://localhost:3000\n   - Network:      http://0.0.0.0:3000\n\n ✓ Starting...\n","timestamp":"2026-02-02 14:17:52 +08:00","type":"out","process_id":0,"app_name":"lims-next"}
+{"message":" ✓ Ready in 42ms\n","timestamp":"2026-02-02 14:17:52 +08:00","type":"out","process_id":0,"app_name":"lims-next"}
+{"message":"   ▲ Next.js 15.1.0\n","timestamp":"2026-02-02 14:27:50 +08:00","type":"out","process_id":0,"app_name":"lims-next"}
+{"message":"   - Local:        http://localhost:3000\n   - Network:      http://0.0.0.0:3000\n\n ✓ Starting...\n","timestamp":"2026-02-02 14:27:50 +08:00","type":"out","process_id":0,"app_name":"lims-next"}
+{"message":" ✓ Ready in 36ms\n","timestamp":"2026-02-02 14:27:51 +08:00","type":"out","process_id":0,"app_name":"lims-next"}

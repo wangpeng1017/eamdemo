@@ -412,8 +412,17 @@ export default function QuotationPage() {
     {
       title: '状态',
       dataIndex: 'status',
-      width: 120,
-      render: (s: string) => <StatusTag type="quotation" status={s} />,
+      width: 150,
+      render: (s: string, record: any) => (
+        <div>
+          <StatusTag type="quotation" status={s} />
+          {s === 'rejected' && record.lastRejectReason && (
+            <div style={{ fontSize: 11, color: '#f5222d', marginTop: 4, maxWidth: 120 }} className="truncate" title={record.lastRejectReason}>
+              原因: {record.lastRejectReason}
+            </div>
+          )}
+        </div>
+      ),
     },
     {
       title: '报告时间',
@@ -468,18 +477,11 @@ export default function QuotationPage() {
             {record.status === 'draft' && (
               <Button size="small" icon={<SendOutlined />} onClick={() => handleSubmitApprovalForRecord(record)}>提交审批</Button>
             )}
-            {canAudit && (
-              <Button type="primary" size="small" onClick={() => {
-                setCurrentQuotation(record)
-                approvalForm.resetFields()
-                setApprovalModalOpen(true)
-              }}>审核</Button>
-            )}
 
-            {/* 🆕 新功能：生成委托单按钮（只对approved状态） */}
+            {/* 生成委托单按钮（只对approved状态） */}
             <CreateEntrustmentButton
               quotationId={record.id}
-              quotationStatus={record.status}
+              quotationStatus={record.status as any}
               onSuccess={() => {
                 showSuccess('委托单创建成功')
                 fetchData()
@@ -490,28 +492,16 @@ export default function QuotationPage() {
               type="default"
             />
 
-            {/* 🆕 新功能：PDF打印按钮（带状态控制，替换原来的生成PDF按钮） */}
+            {/* PDF打印按钮 */}
             <QuotationPDFButton
               quotationId={record.id}
-              quotationStatus={record.status}
+              quotationStatus={record.status as any}
               buttonType="default"
               size="small"
               showLabel={true}
             />
 
-            {/* 🆕 新功能：驳回按钮（只对pending状态） */}
-            {isPending && (
-              <Button
-                size="small"
-                danger
-                onClick={() => {
-                  setSelectedQuotationForReject(record)
-                  setRejectModalVisible(true)
-                }}
-              >
-                驳回
-              </Button>
-            )}
+            {/* 审批操作已移至"工作台-审批中心"统一处理 */}
 
             {record.status === 'approved' && (
               <Button size="small" icon={<FolderOutlined />} onClick={() => handleOpenContractForRecord(record)}>生成合同</Button>

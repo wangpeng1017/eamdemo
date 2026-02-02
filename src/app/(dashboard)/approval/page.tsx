@@ -74,9 +74,21 @@ export default function ApprovalPage() {
 
         const myPending = allPending.filter((item: ApprovalInstance) => {
           if (userRoles.includes('admin')) return true
-          if (item.currentStep === 1 && userRoles.includes('sales_manager')) return true
+          // 步骤1：业务经理审批（兼容新旧角色）
+          if (item.currentStep === 1 && (
+            userRoles.includes('sales_manager') ||
+            userRoles.includes('BUSINESS_MANAGER') ||
+            userRoles.includes('TEST_DIRECTOR')
+          )) return true
+          // 步骤2：财务审批
           if (item.currentStep === 2 && userRoles.includes('finance')) return true
-          if (item.currentStep === 3 && userRoles.includes('lab_director')) return true
+          // 步骤3：实验室负责人审批（兼容新旧角色）
+          if (item.currentStep === 3 && (
+            userRoles.includes('lab_director') ||
+            userRoles.includes('TEST_DIRECTOR') ||
+            userRoles.includes('MATERIAL_TEST_MANAGER') ||
+            userRoles.includes('PRODUCT_TEST_MANAGER')
+          )) return true
           return false
         })
 
@@ -215,7 +227,7 @@ export default function ApprovalPage() {
     {
       title: '操作', fixed: 'right',
       key: 'action',
-      
+
       render: (_, record) => (
         <Space style={{ whiteSpace: 'nowrap' }}>
           {record.status === 'pending' && (
@@ -274,7 +286,7 @@ export default function ApprovalPage() {
     {
       title: '操作', fixed: 'right',
       key: 'action',
-      
+
       render: (_: unknown, record: ApprovalInstance) => (
         <Space style={{ whiteSpace: 'nowrap' }}>
           <Tooltip title="查看详情">
