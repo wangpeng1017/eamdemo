@@ -2,8 +2,9 @@
 
 import { useState, useEffect } from 'react'
 import { showSuccess, showError } from '@/lib/confirm'
-import { Table, Button, Space, Tag, Modal, Form, Input, Select, DatePicker, message } from 'antd'
-import { PlusOutlined, EditOutlined, DeleteOutlined } from '@ant-design/icons'
+import { Table, Button, Space, Tag, Modal, Form, Input, Select, DatePicker, Drawer, Descriptions } from 'antd'
+import { PlusOutlined, EditOutlined, DeleteOutlined, EyeOutlined } from '@ant-design/icons'
+import { useRouter } from 'next/navigation'
 import type { ColumnsType } from 'antd/es/table'
 import dayjs from 'dayjs'
 
@@ -14,9 +15,11 @@ interface Sample {
   type: string | null
   specification: string | null
   quantity: string | null
+  unit: string | null
   storageLocation: string | null
   status: string
   receivedDate: string | null
+  remark: string | null
   createdAt: string
 }
 
@@ -28,12 +31,17 @@ const statusMap: Record<string, { text: string; color: string }> = {
 }
 
 export default function SampleListPage() {
+  const router = useRouter()
   const [data, setData] = useState<Sample[]>([])
   const [loading, setLoading] = useState(false)
   const [total, setTotal] = useState(0)
   const [page, setPage] = useState(1)
   const [modalOpen, setModalOpen] = useState(false)
-  const [editingId, setEditingId] = useState<string | null>(null)
+
+  // 查看抽屉状态
+  const [viewDrawerOpen, setViewDrawerOpen] = useState(false)
+  const [currentSample, setCurrentSample] = useState<Sample | null>(null)
+
   const [form] = Form.useForm()
 
   const fetchData = async (p = page) => {
@@ -53,18 +61,16 @@ export default function SampleListPage() {
   useEffect(() => { fetchData() }, [page])
 
   const handleAdd = () => {
-    setEditingId(null)
-    form.resetFields()
-    setModalOpen(true)
+    router.push('/sample/list/create')
+  }
+
+  const handleView = (record: Sample) => {
+    setCurrentSample(record)
+    setViewDrawerOpen(true)
   }
 
   const handleEdit = (record: Sample) => {
-    setEditingId(record.id)
-    form.setFieldsValue({
-      ...record,
-      receivedDate: record.receivedDate ? dayjs(record.receivedDate) : null
-    })
-    setModalOpen(true)
+    router.push(`/sample/list/edit/${record.id}`)
   }
 
   const handleDelete = async (id: string) => {
@@ -84,14 +90,12 @@ export default function SampleListPage() {
       ...values,
       receivedDate: values.receivedDate?.toISOString()
     }
-    const url = editingId ? `/api/sample/${editingId}` : '/api/sample'
-    const method = editingId ? 'PUT' : 'POST'
-    await fetch(url, {
-      method,
+    await fetch('/api/sample', {
+      method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(data)
     })
-    showSuccess(editingId ? '更新成功' : '创建成功')
+    showSuccess('创建成功')
     setModalOpen(false)
     fetchData()
   }
@@ -116,9 +120,10 @@ export default function SampleListPage() {
       render: (t: string) => t ? dayjs(t).format('YYYY-MM-DD HH:mm:ss') : '-'
     },
     {
-      title: '操作', fixed: 'right', 
+      title: '操作', fixed: 'right',
       render: (_, record) => (
         <Space style={{ whiteSpace: 'nowrap' }}>
+          <Button size="small" icon={<EyeOutlined />} onClick={() => handleView(record)} />
           <Button size="small" icon={<EditOutlined />} onClick={() => handleEdit(record)} />
           <Button size="small" danger icon={<DeleteOutlined />} onClick={() => handleDelete(record.id)} />
         </Space>
@@ -139,8 +144,44 @@ export default function SampleListPage() {
         loading={loading}
         pagination={{ current: page, total, onChange: setPage }}
       />
+
+      {/* 查看抽屉 */}
+      <Drawer
+        title="样品详情"
+        placement="right"
+        width={800}
+        open={viewDrawerOpen}
+        onClose={() => setViewDrawerOpen(false)}
+      >
+        {currentSample && (
+          <Descriptions column={2} bordered size="small">
+            <Descriptions.Item label="样品编号">{currentSample.sampleNo}</Descriptions.Item>
+            <Descriptions.Item label="样品名称">{currentSample.name}</Descriptions.Item>
+            <Descriptions.Item label="样品类型">{currentSample.type || '-'}</Descriptions.Item>
+            <Descriptions.Item label="规格型号">{currentSample.specification || '-'}</Descriptions.Item>
+            <Descriptions.Item label="数量">{currentSample.quantity || '-'}</Descriptions.Item>
+            <Descriptions.Item label="单位">{currentSample.unit || '-'}</Descriptions.Item>
+            <Descriptions.Item label="存放位置">{currentSample.storageLocation || '-'}</Descriptions.Item>
+            <Descriptions.Item label="状态">
+              <Tag color={statusMap[currentSample.status]?.color}>
+                {statusMap[currentSample.status]?.text || currentSample.status}
+              </Tag>
+            </Descriptions.Item>
+            <Descriptions.Item label="接收日期">
+              {currentSample.receivedDate ? dayjs(currentSample.receivedDate).format('YYYY-MM-DD HH:mm:ss') : '-'}
+            </Descriptions.Item>
+            <Descriptions.Item label="创建时间">
+              {dayjs(currentSample.createdAt).format('YYYY-MM-DD HH:mm:ss')}
+            </Descriptions.Item>
+            <Descriptions.Item label="备注" span={2}>
+              {currentSample.remark || '-'}
+            </Descriptions.Item>
+          </Descriptions>
+        )}
+      </Drawer>
+
       <Modal
-        title={editingId ? '编辑样品' : '新增样品'}
+        title="新增样品"
         open={modalOpen}
         onOk={handleSubmit}
         onCancel={() => setModalOpen(false)}
@@ -173,16 +214,6 @@ export default function SampleListPage() {
           <Form.Item name="receivedDate" label="接收日期">
             <DatePicker style={{ width: '100%' }} />
           </Form.Item>
-          {editingId && (
-            <Form.Item name="status" label="状态">
-              <Select options={[
-                { value: 'received', label: '已接收' },
-                { value: 'testing', label: '检测中' },
-                { value: 'completed', label: '已完成' },
-                { value: 'returned', label: '已归还' },
-              ]} />
-            </Form.Item>
-          )}
           <Form.Item name="remark" label="备注">
             <Input.TextArea rows={2} />
           </Form.Item>

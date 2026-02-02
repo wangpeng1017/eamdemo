@@ -2,8 +2,9 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import { showSuccess, showError } from '@/lib/confirm'
-import { Card, Table, Button, Modal, Form, Input, InputNumber, Select, message, Space, Tag, Popconfirm, Row, Col, Statistic } from 'antd'
-import { PlusOutlined, EditOutlined, DeleteOutlined, WarningOutlined, ReloadOutlined } from '@ant-design/icons'
+import { Card, Table, Button, Form, Input, InputNumber, Select, Space, Tag, Popconfirm, Row, Col, Statistic, Drawer, Descriptions } from 'antd'
+import { PlusOutlined, EditOutlined, DeleteOutlined, WarningOutlined, ReloadOutlined, EyeOutlined } from '@ant-design/icons'
+import { useRouter } from 'next/navigation'
 import type { ColumnsType, TablePaginationConfig } from 'antd/es/table'
 
 interface Consumable {
@@ -30,30 +31,20 @@ interface Category {
   name: string
 }
 
-const unitOptions = [
-  { value: '瓶', label: '瓶' },
-  { value: '盒', label: '盒' },
-  { value: '个', label: '个' },
-  { value: '支', label: '支' },
-  { value: 'ml', label: 'ml' },
-  { value: 'g', label: 'g' },
-  { value: 'kg', label: 'kg' },
-  { value: '套', label: '套' },
-]
-
 export default function ConsumableInfoPage() {
+  const router = useRouter()
   const [consumables, setConsumables] = useState<Consumable[]>([])
   const [categories, setCategories] = useState<Category[]>([])
   const [loading, setLoading] = useState(false)
-  const [modalOpen, setModalOpen] = useState(false)
-  const [editingId, setEditingId] = useState<string | null>(null)
-  const [submitting, setSubmitting] = useState(false)
   const [categoryFilter, setCategoryFilter] = useState<string | null>(null)
   const [statusFilter, setStatusFilter] = useState<string | null>(null)
   const [keyword, setKeyword] = useState('')
   const [pagination, setPagination] = useState({ current: 1, pageSize: 10, total: 0 })
   const [stats, setStats] = useState<Record<string, number>>({})
-  const [form] = Form.useForm()
+
+  // 查看抽屉状态
+  const [viewDrawerOpen, setViewDrawerOpen] = useState(false)
+  const [currentConsumable, setCurrentConsumable] = useState<Consumable | null>(null)
 
   // 加载分类列表
   const loadCategories = useCallback(async () => {
@@ -105,19 +96,16 @@ export default function ConsumableInfoPage() {
   }, [loadData])
 
   const handleAdd = () => {
-    setEditingId(null)
-    form.resetFields()
-    form.setFieldsValue({ minStock: 10, maxStock: 100, currentStock: 0, unitPrice: 0 })
-    setModalOpen(true)
+    router.push('/consumable/info/create')
+  }
+
+  const handleView = (record: Consumable) => {
+    setCurrentConsumable(record)
+    setViewDrawerOpen(true)
   }
 
   const handleEdit = (record: Consumable) => {
-    setEditingId(record.id)
-    form.setFieldsValue({
-      ...record,
-      expiryDate: record.expiryDate ? record.expiryDate.split('T')[0] : null,
-    })
-    setModalOpen(true)
+    router.push(`/consumable/info/edit/${record.id}`)
   }
 
   const handleDelete = async (id: string) => {
@@ -132,35 +120,6 @@ export default function ConsumableInfoPage() {
       }
     } catch {
       showError('网络错误')
-    }
-  }
-
-  const handleSubmit = async () => {
-    const values = await form.validateFields()
-    setSubmitting(true)
-
-    try {
-      const url = editingId ? `/api/consumable/${editingId}` : '/api/consumable'
-      const method = editingId ? 'PUT' : 'POST'
-
-      const res = await fetch(url, {
-        method,
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(values),
-      })
-      const data = await res.json()
-
-      if (data.success) {
-        showSuccess(editingId ? '更新成功' : '创建成功')
-        setModalOpen(false)
-        loadData()
-      } else {
-        showError(data.message || '操作失败')
-      }
-    } catch {
-      showError('网络错误')
-    } finally {
-      setSubmitting(false)
     }
   }
 
@@ -241,9 +200,9 @@ export default function ConsumableInfoPage() {
     },
     {
       title: '操作', fixed: 'right',
-      
       render: (_, record) => (
         <Space style={{ whiteSpace: 'nowrap' }}>
+          <Button size="small" icon={<EyeOutlined />} onClick={() => handleView(record)} />
           <Button size="small" icon={<EditOutlined />} onClick={() => handleEdit(record)} />
           <Popconfirm title="确认删除?" onConfirm={() => handleDelete(record.id)}>
             <Button size="small" danger icon={<DeleteOutlined />} />
@@ -346,92 +305,37 @@ export default function ConsumableInfoPage() {
         />
       </Card>
 
-      <Modal
-        title={editingId ? '编辑易耗品' : '新增易耗品'}
-        open={modalOpen}
-        onOk={handleSubmit}
-        onCancel={() => setModalOpen(false)}
-        confirmLoading={submitting}
-        width={700}
+      {/* 查看抽屉 */}
+      <Drawer
+        title="易耗品详情"
+        placement="right"
+        width={800}
+        open={viewDrawerOpen}
+        onClose={() => setViewDrawerOpen(false)}
       >
-        <Form form={form} layout="vertical">
-          <Row gutter={16}>
-            <Col span={8}>
-              <Form.Item name="code" label="编码" rules={[{ required: true }]}>
-                <Input placeholder="如: HX001" />
-              </Form.Item>
-            </Col>
-            <Col span={8}>
-              <Form.Item name="name" label="名称" rules={[{ required: true }]}>
-                <Input />
-              </Form.Item>
-            </Col>
-            <Col span={8}>
-              <Form.Item name="categoryId" label="分类">
-                <Select
-                  allowClear
-                  placeholder="选择分类"
-                  options={categories.map(c => ({ value: c.id, label: c.name }))}
-                />
-              </Form.Item>
-            </Col>
-          </Row>
-          <Row gutter={16}>
-            <Col span={8}>
-              <Form.Item name="specification" label="规格">
-                <Input placeholder="如: 500ml/瓶" />
-              </Form.Item>
-            </Col>
-            <Col span={8}>
-              <Form.Item name="unit" label="单位" rules={[{ required: true }]}>
-                <Select options={unitOptions} />
-              </Form.Item>
-            </Col>
-            <Col span={8}>
-              <Form.Item name="unitPrice" label="单价 (元)" rules={[{ required: true }]}>
-                <InputNumber min={0} style={{ width: '100%' }} />
-              </Form.Item>
-            </Col>
-          </Row>
-          <Row gutter={16}>
-            <Col span={8}>
-              <Form.Item name="currentStock" label="当前库存" rules={[{ required: true }]}>
-                <InputNumber min={0} style={{ width: '100%' }} />
-              </Form.Item>
-            </Col>
-            <Col span={8}>
-              <Form.Item name="minStock" label="最低库存" rules={[{ required: true }]}>
-                <InputNumber min={0} style={{ width: '100%' }} />
-              </Form.Item>
-            </Col>
-            <Col span={8}>
-              <Form.Item name="maxStock" label="最高库存" rules={[{ required: true }]}>
-                <InputNumber min={0} style={{ width: '100%' }} />
-              </Form.Item>
-            </Col>
-          </Row>
-          <Row gutter={16}>
-            <Col span={8}>
-              <Form.Item name="supplier" label="供应商">
-                <Input />
-              </Form.Item>
-            </Col>
-            <Col span={8}>
-              <Form.Item name="location" label="存放位置">
-                <Input placeholder="如: A-1-1" />
-              </Form.Item>
-            </Col>
-            <Col span={8}>
-              <Form.Item name="expiryDate" label="有效期">
-                <Input type="date" />
-              </Form.Item>
-            </Col>
-          </Row>
-          <Form.Item name="remark" label="备注">
-            <Input.TextArea rows={2} />
-          </Form.Item>
-        </Form>
-      </Modal>
+        {currentConsumable && (
+          <Descriptions column={2} bordered size="small">
+            <Descriptions.Item label="编码">{currentConsumable.code}</Descriptions.Item>
+            <Descriptions.Item label="名称">{currentConsumable.name}</Descriptions.Item>
+            <Descriptions.Item label="分类">{currentConsumable.category?.name || '-'}</Descriptions.Item>
+            <Descriptions.Item label="规格">{currentConsumable.specification || '-'}</Descriptions.Item>
+            <Descriptions.Item label="当前库存">{currentConsumable.currentStock} {currentConsumable.unit}</Descriptions.Item>
+            <Descriptions.Item label="安全库存">{currentConsumable.minStock} - {currentConsumable.maxStock}</Descriptions.Item>
+            <Descriptions.Item label="单价">¥{currentConsumable.unitPrice}</Descriptions.Item>
+            <Descriptions.Item label="供应商">{currentConsumable.supplier || '-'}</Descriptions.Item>
+            <Descriptions.Item label="存放位置">{currentConsumable.location || '-'}</Descriptions.Item>
+            <Descriptions.Item label="有效期">{currentConsumable.expiryDate ? currentConsumable.expiryDate.split('T')[0] : '-'}</Descriptions.Item>
+            <Descriptions.Item label="状态">
+              <Tag color={statusMap[currentConsumable.status]?.color}>
+                {statusMap[currentConsumable.status]?.text}
+              </Tag>
+            </Descriptions.Item>
+            <Descriptions.Item label="备注" span={2}>
+              {currentConsumable.remark || '-'}
+            </Descriptions.Item>
+          </Descriptions>
+        )}
+      </Drawer>
     </div>
   )
 }

@@ -2,7 +2,8 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { Spin } from 'antd'
+import { Spin, Button } from 'antd'
+import { ArrowLeftOutlined } from '@ant-design/icons'
 import EntrustmentForm from '@/components/business/EntrustmentForm'
 import { showSuccess, showError } from '@/lib/confirm'
 import dayjs from 'dayjs'
@@ -56,25 +57,6 @@ export default function EditEntrustmentPageClient({ id }: EditPageClientProps) {
             const submitData = {
                 ...values,
                 sampleDate: values.sampleDate?.toISOString() || null,
-                projects: [], // See logic in Create Page. Projects are likely handled by SampleTestItemTable now.
-                // Or if we need to preserve existing projects?
-                // If we send empty projects, will backend delete existing projects?
-                // Let's check api/entrustment/[id]/route.ts (mental check).
-                // Usually update logic updates fields provided.
-                // If projects is [], it might clear them.
-                // However, EntrustmentForm does not manage 'projects'.
-                // This is a potential risk if we are dropping 'projects' data.
-                // But since SampleTestItemTable is the new way, maybe it's fine.
-                // Wait, if I am replacing the form, I must ensure I don't break existing 'projects' if they are used.
-                // In EntrustmentListPage, handleSubmit sends:
-                // projects: values.projects?.filter...
-                // Form.setFieldsValue(formData) sets projects from record.projects.
-                // But the previous Form (in ListPage) didn't have a visible Projects field!
-                // So values.projects comes from initialValues (via form.getFieldsValue implicitly?)
-                // If the user doesn't touch it, it sends back the same projects?
-                // In EntrustmentForm, if I don't include <Form.Item name="projects">, then values.projects will be undefined (or missing).
-                // If I send undefined projects, checking backend: usually ignores undefined.
-                // So safe to omit 'projects' here if we don't want to change them.
             }
             // Remove projects from submitData to avoid clearing them if we don't manage them
             delete submitData.projects
@@ -111,16 +93,37 @@ export default function EditEntrustmentPageClient({ id }: EditPageClientProps) {
         }
     }
 
+    const handleCancel = () => {
+        router.back()
+    }
+
     if (!initialValues) {
-        return <Spin />
+        return (
+            <div style={{ padding: '24px', display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '100vh' }}>
+                <Spin size="large" />
+            </div>
+        )
     }
 
     return (
-        <div style={{ padding: 24 }}>
+        <div style={{ padding: '0 24px 24px', minHeight: '100vh', background: '#f0f2f5' }}>
+            <div style={{ marginBottom: 16, paddingTop: 16 }}>
+                <Button
+                    type="link"
+                    icon={<ArrowLeftOutlined />}
+                    onClick={() => router.back()}
+                    style={{ paddingLeft: 0, fontSize: 16, color: '#000' }}
+                >
+                    返回列表
+                </Button>
+                <span style={{ fontSize: 20, fontWeight: 500, marginLeft: 8 }}>编辑检测委托单</span>
+            </div>
+
             <EntrustmentForm
                 mode="edit"
                 initialValues={initialValues}
                 onSubmit={handleSubmit}
+                onCancel={handleCancel}
                 loading={loading}
             />
         </div>

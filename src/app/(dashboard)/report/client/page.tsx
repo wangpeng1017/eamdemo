@@ -4,12 +4,13 @@ import { useState, useEffect } from 'react'
 import { showSuccess, showError } from '@/lib/confirm'
 import {
   Table, Button, Space, Tag, Modal, Form, Input, Select, message,
-  Card, Row, Col, Statistic, Descriptions, Timeline, Popconfirm
+  Card, Row, Col, Statistic, Descriptions, Timeline, Popconfirm, Drawer, Tabs
 } from 'antd'
 import {
   PlusOutlined, EditOutlined, DeleteOutlined, EyeOutlined,
   SendOutlined, CheckOutlined, CloseOutlined
 } from '@ant-design/icons'
+import { useRouter } from 'next/navigation'
 import type { ColumnsType } from 'antd/es/table'
 import dayjs from 'dayjs'
 
@@ -64,6 +65,7 @@ const actionTextMap: Record<string, string> = {
 }
 
 export default function ClientReportPage() {
+  const router = useRouter()
   const [data, setData] = useState<ClientReport[]>([])
   const [loading, setLoading] = useState(false)
   const [total, setTotal] = useState(0)
@@ -72,14 +74,13 @@ export default function ClientReportPage() {
   const [statusFilter, setStatusFilter] = useState<string | null>(null)
   const [keyword, setKeyword] = useState('')
 
-  const [modalOpen, setModalOpen] = useState(false)
-  const [detailOpen, setDetailOpen] = useState(false)
   const [approvalOpen, setApprovalOpen] = useState(false)
-  const [editingId, setEditingId] = useState<string | null>(null)
   const [currentReport, setCurrentReport] = useState<ClientReport | null>(null)
   const [approvalAction, setApprovalAction] = useState<string>('')
 
-  const [form] = Form.useForm()
+  // 查看抽屉状态
+  const [viewDrawerOpen, setViewDrawerOpen] = useState(false)
+
   const [approvalForm] = Form.useForm()
 
   const fetchData = async (p = page) => {
@@ -109,27 +110,16 @@ export default function ClientReportPage() {
   }
 
   const handleAdd = () => {
-    setEditingId(null)
-    form.resetFields()
-    setModalOpen(true)
+    router.push('/report/client/create')
   }
 
   const handleEdit = (record: ClientReport) => {
-    setEditingId(record.id)
-    form.setFieldsValue({
-      ...record,
-      receivedDate: record.receivedDate ? dayjs(record.receivedDate).format('YYYY-MM-DD HH:mm:ss') : null,
-    })
-    setModalOpen(true)
+    router.push(`/report/client/edit/${record.id}`)
   }
 
-  const handleView = async (id: string) => {
-    const res = await fetch(`/api/report/client/${id}`)
-    const json = await res.json()
-    if (json.success) {
-      setCurrentReport(json.data)
-      setDetailOpen(true)
-    }
+  const handleView = async (record: ClientReport) => {
+    setCurrentReport(record)
+    setViewDrawerOpen(true)
   }
 
   const handleDelete = async (id: string) => {
@@ -140,27 +130,6 @@ export default function ClientReportPage() {
       fetchData()
     } else {
       showError(json.error?.message || '删除失败')
-    }
-  }
-
-  const handleSubmit = async () => {
-    const values = await form.validateFields()
-    const url = editingId ? `/api/report/client/${editingId}` : '/api/report/client'
-    const method = editingId ? 'PUT' : 'POST'
-
-    const res = await fetch(url, {
-      method,
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(values),
-    })
-    const json = await res.json()
-
-    if (json.success) {
-      showSuccess(editingId ? '更新成功' : '创建成功')
-      setModalOpen(false)
-      fetchData()
-    } else {
-      showError(json.error?.message || '操作失败')
     }
   }
 
@@ -199,7 +168,7 @@ export default function ClientReportPage() {
     const actions = []
 
     actions.push(
-      <Button key="view" size="small" icon={<EyeOutlined />} onClick={() => handleView(record.id)} />
+      <Button key="view" size="small" icon={<EyeOutlined />} onClick={() => handleView(record)} />
     )
 
     if (record.status === 'draft') {
@@ -348,121 +317,72 @@ export default function ClientReportPage() {
         scroll={{ x: 1200 }}
       />
 
-      {/* 新增/编辑弹窗 */}
-      <Modal
-        title={editingId ? '编辑报告' : '新增报告'}
-        open={modalOpen}
-        onOk={handleSubmit}
-        onCancel={() => setModalOpen(false)}
-        width={800}
-      >
-        <Form form={form} layout="vertical">
-          <Row gutter={16}>
-            <Col span={12}>
-              <Form.Item name="clientName" label="客户名称" rules={[{ required: true }]}>
-                <Input />
-              </Form.Item>
-            </Col>
-            <Col span={12}>
-              <Form.Item name="clientAddress" label="客户地址">
-                <Input />
-              </Form.Item>
-            </Col>
-          </Row>
-          <Row gutter={16}>
-            <Col span={12}>
-              <Form.Item name="sampleName" label="样品名称" rules={[{ required: true }]}>
-                <Input />
-              </Form.Item>
-            </Col>
-            <Col span={12}>
-              <Form.Item name="sampleNo" label="样品编号">
-                <Input />
-              </Form.Item>
-            </Col>
-          </Row>
-          <Row gutter={16}>
-            <Col span={12}>
-              <Form.Item name="specification" label="规格型号">
-                <Input />
-              </Form.Item>
-            </Col>
-            <Col span={12}>
-              <Form.Item name="sampleQuantity" label="样品数量">
-                <Input />
-              </Form.Item>
-            </Col>
-          </Row>
-          <Row gutter={16}>
-            <Col span={12}>
-              <Form.Item name="projectName" label="检测项目">
-                <Input />
-              </Form.Item>
-            </Col>
-            <Col span={12}>
-              <Form.Item name="preparer" label="编制人">
-                <Input />
-              </Form.Item>
-            </Col>
-          </Row>
-          <Form.Item name="overallConclusion" label="总体结论">
-            <Input.TextArea rows={4} />
-          </Form.Item>
-        </Form>
-      </Modal>
-
-      {/* 详情弹窗 */}
-      <Modal
+      {/* 查看抽屉 */}
+      <Drawer
         title="报告详情"
-        open={detailOpen}
-        onCancel={() => setDetailOpen(false)}
-        footer={null}
+        placement="right"
         width={800}
+        open={viewDrawerOpen}
+        onClose={() => setViewDrawerOpen(false)}
       >
         {currentReport && (
-          <>
-            <Descriptions column={2} bordered size="small">
-              <Descriptions.Item label="报告编号">{currentReport.reportNo}</Descriptions.Item>
-              <Descriptions.Item label="状态">
-                <Tag color={statusMap[currentReport.status]?.color}>
-                  {statusMap[currentReport.status]?.text}
-                </Tag>
-              </Descriptions.Item>
-              <Descriptions.Item label="客户名称">{currentReport.clientName}</Descriptions.Item>
-              <Descriptions.Item label="客户地址">{currentReport.clientAddress || '-'}</Descriptions.Item>
-              <Descriptions.Item label="样品名称">{currentReport.sampleName}</Descriptions.Item>
-              <Descriptions.Item label="样品编号">{currentReport.sampleNo || '-'}</Descriptions.Item>
-              <Descriptions.Item label="规格型号">{currentReport.specification || '-'}</Descriptions.Item>
-              <Descriptions.Item label="样品数量">{currentReport.sampleQuantity || '-'}</Descriptions.Item>
-              <Descriptions.Item label="检测项目">{currentReport.projectName || '-'}</Descriptions.Item>
-              <Descriptions.Item label="编制人">{currentReport.preparer || '-'}</Descriptions.Item>
-              <Descriptions.Item label="审核人">{currentReport.reviewer || '-'}</Descriptions.Item>
-              <Descriptions.Item label="批准人">{currentReport.approver || '-'}</Descriptions.Item>
-              <Descriptions.Item label="总体结论" span={2}>
-                {currentReport.overallConclusion || '-'}
-              </Descriptions.Item>
-            </Descriptions>
-
-            <div style={{ marginTop: 24 }}>
-              <h4>审批流程</h4>
-              <Timeline
-                items={currentReport.approvalFlow?.map((item) => ({
-                  children: (
-                    <div>
-                      <strong>{actionTextMap[item.action] || item.action}</strong>
-                      <span style={{ marginLeft: 8, color: '#999' }}>
-                        {item.operator} - {dayjs(item.timestamp).format('YYYY-MM-DD HH:mm')}
-                      </span>
-                      {item.comment && <div style={{ color: '#666' }}>{item.comment}</div>}
-                    </div>
-                  ),
-                })) || []
+          <Tabs
+            defaultActiveKey="basic"
+            items={[
+              {
+                key: 'basic',
+                label: '基本信息',
+                children: (
+                  <Descriptions column={2} bordered size="small">
+                    <Descriptions.Item label="报告编号">{currentReport.reportNo}</Descriptions.Item>
+                    <Descriptions.Item label="状态">
+                      <Tag color={statusMap[currentReport.status]?.color}>
+                        {statusMap[currentReport.status]?.text}
+                      </Tag>
+                    </Descriptions.Item>
+                    <Descriptions.Item label="客户名称">{currentReport.clientName}</Descriptions.Item>
+                    <Descriptions.Item label="客户地址">{currentReport.clientAddress || '-'}</Descriptions.Item>
+                    <Descriptions.Item label="样品名称">{currentReport.sampleName}</Descriptions.Item>
+                    <Descriptions.Item label="样品编号">{currentReport.sampleNo || '-'}</Descriptions.Item>
+                    <Descriptions.Item label="规格型号">{currentReport.specification || '-'}</Descriptions.Item>
+                    <Descriptions.Item label="样品数量">{currentReport.sampleQuantity || '-'}</Descriptions.Item>
+                    <Descriptions.Item label="检测项目">{currentReport.projectName || '-'}</Descriptions.Item>
+                    <Descriptions.Item label="编制人">{currentReport.preparer || '-'}</Descriptions.Item>
+                    <Descriptions.Item label="审核人">{currentReport.reviewer || '-'}</Descriptions.Item>
+                    <Descriptions.Item label="批准人">{currentReport.approver || '-'}</Descriptions.Item>
+                    <Descriptions.Item label="创建时间">
+                      {dayjs(currentReport.createdAt).format('YYYY-MM-DD HH:mm:ss')}
+                    </Descriptions.Item>
+                    <Descriptions.Item label="总体结论" span={2}>
+                      {currentReport.overallConclusion || '-'}
+                    </Descriptions.Item>
+                  </Descriptions>
+                )
+              },
+              {
+                key: 'approval',
+                label: '审批流程',
+                children: (
+                  <Timeline
+                    items={currentReport.approvalFlow?.map((item) => ({
+                      children: (
+                        <div>
+                          <strong>{actionTextMap[item.action] || item.action}</strong>
+                          <span style={{ marginLeft: 8, color: '#999' }}>
+                            {item.operator} - {dayjs(item.timestamp).format('YYYY-MM-DD HH:mm')}
+                          </span>
+                          {item.comment && <div style={{ color: '#666' }}>{item.comment}</div>}
+                        </div>
+                      ),
+                    })) || []
+                    }
+                  />
+                )
               }
-              />
-            </div>
-          </>
+            ]}
+          />
         )}
-      </Modal>
+      </Drawer>
 
       {/* 审批弹窗 */}
       <Modal

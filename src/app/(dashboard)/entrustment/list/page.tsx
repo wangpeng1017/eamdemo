@@ -8,8 +8,8 @@
 
 import { useState, useEffect } from 'react'
 import { showSuccess, showError } from '@/lib/confirm'
-import { Table, Button, Space, Modal, Form, Input, InputNumber, DatePicker, Select, message, Row, Col, Divider, Popconfirm, Tag, Radio } from 'antd'
-import { PlusOutlined, EditOutlined, DeleteOutlined, MinusCircleOutlined, TeamOutlined, ShareAltOutlined, EyeOutlined } from '@ant-design/icons'
+import { Table, Button, Space, Modal, Form, Input, InputNumber, DatePicker, Select, message, Row, Col, Divider, Popconfirm, Tag, Radio, Drawer, Tabs, Descriptions } from 'antd'
+import { PlusOutlined, EditOutlined, DeleteOutlined, MinusCircleOutlined, TeamOutlined, ShareAltOutlined, EyeOutlined, ArrowLeftOutlined } from '@ant-design/icons'
 import { StatusTag } from '@/components/StatusTag'
 import type { ColumnsType } from 'antd/es/table'
 import dayjs from 'dayjs'
@@ -97,23 +97,16 @@ interface Contract {
 export default function EntrustmentListPage() {
   const router = useRouter()
   const searchParams = useSearchParams()
-  const [modalOpen, setModalOpen] = useState(false) // Keeping it for Assign/Subcontract modals? No, those have their own states. This was for Create/Edit.
-  // Wait, I should verify assignModalOpen logic. It uses assignForm.
-  // The state I removed was 'modalOpen' (create/edit).
-  // I should remove 'modalOpen', 'editingId', 'form', 'sampleTestItems'.
-  // But wait! assignForm/subcontractForm use Form.useForm().
-  // And I see `const [form] = Form.useForm()` was likely for the create/edit modal.
-  // So I can remove `form`.
-  // Assign modal uses `assignForm`.
-  // Subcontract modal uses `subcontractForm`.
-  // SampleTestItemTable was used in Create/Edit modal. So `sampleTestItems` state can be removed.
 
-  // Cleaned up states:
+  // 基础状态
   const [data, setData] = useState<Entrustment[]>([])
   const [loading, setLoading] = useState(false)
   const [total, setTotal] = useState(0)
   const [page, setPage] = useState(1)
 
+  // 查看抽屉状态
+  const [viewDrawerOpen, setViewDrawerOpen] = useState(false)
+  const [currentEntrustment, setCurrentEntrustment] = useState<Entrustment | null>(null)
 
   // 行选择
   const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([])
@@ -182,11 +175,6 @@ export default function EntrustmentListPage() {
     setTestTemplates(getUsers(templatesJson))
   }
 
-  // 获取委托单列表 (fetchData logic remains)
-  // fetchOptions remains
-
-  // (Removed handleContractChange logic as it is moved to dedicated page)
-
   useEffect(() => {
     fetchData()
     fetchOptions()
@@ -207,6 +195,12 @@ export default function EntrustmentListPage() {
   // 新增委托单
   const handleAdd = () => {
     router.push('/entrustment/list/create')
+  }
+
+  // 查看委托单
+  const handleView = (record: Entrustment) => {
+    setCurrentEntrustment(record)
+    setViewDrawerOpen(true)
   }
 
   // 编辑委托单
@@ -276,7 +270,7 @@ export default function EntrustmentListPage() {
       })
       const json = await res.json()
       if (res.ok && json.success) {
-        showSuccess('任务分配成功')
+        showSuccess('任务分配成��')
         setAssignModalOpen(false)
         fetchData()
       } else {
@@ -494,7 +488,7 @@ export default function EntrustmentListPage() {
             <Button size="small" icon={<ShareAltOutlined />} onClick={() => handleGenerateExternalLink(record)}>生成外部链接</Button>
           )}
           {/* 通用按钮（仅图标） */}
-          <Button size="small" icon={<EyeOutlined />} onClick={() => handleEdit(record)} />
+          <Button size="small" icon={<EyeOutlined />} onClick={() => handleView(record)} />
           <Button size="small" icon={<EditOutlined />} onClick={() => handleEdit(record)} />
           <Popconfirm title="确认删除？" onConfirm={() => handleDelete(record.id)}>
             <Button size="small" danger icon={<DeleteOutlined />} />
@@ -541,7 +535,73 @@ export default function EntrustmentListPage() {
         }}
       />
 
+      {/* 查看抽屉 */}
+      <Drawer
+        title="委托单详情"
+        placement="right"
+        width={800}
+        open={viewDrawerOpen}
+        onClose={() => setViewDrawerOpen(false)}
+      >
+        {currentEntrustment && (
+          <Tabs
+            defaultActiveKey="basic"
+            items={[
+              {
+                key: 'basic',
+                label: '基本信息',
+                children: (
+                  <div>
+                    <Descriptions title="委托信息" column={2} bordered size="small">
+                      <Descriptions.Item label="委托编号">{currentEntrustment.entrustmentNo}</Descriptions.Item>
+                      <Descriptions.Item label="合同编号">{currentEntrustment.contractNo || '-'}</Descriptions.Item>
+                      <Descriptions.Item label="委托单位">{currentEntrustment.clientName || '-'}</Descriptions.Item>
+                      <Descriptions.Item label="联系人">{currentEntrustment.contactPerson || '-'}</Descriptions.Item>
+                      <Descriptions.Item label="联系电话">{currentEntrustment.client?.phone || '-'}</Descriptions.Item>
+                      <Descriptions.Item label="跟单人">{currentEntrustment.follower || '-'}</Descriptions.Item>
+                      <Descriptions.Item label="状态">
+                        <StatusTag type="entrustment" status={currentEntrustment.status} />
+                      </Descriptions.Item>
+                      <Descriptions.Item label="创建时间">
+                        {dayjs(currentEntrustment.createdAt).format('YYYY-MM-DD HH:mm:ss')}
+                      </Descriptions.Item>
+                    </Descriptions>
 
+                    <Divider />
+
+                    <Descriptions title="样品信息" column={2} bordered size="small">
+                      <Descriptions.Item label="样品名称">{currentEntrustment.sampleName || '-'}</Descriptions.Item>
+                      <Descriptions.Item label="样品型号">{currentEntrustment.sampleModel || '-'}</Descriptions.Item>
+                      <Descriptions.Item label="样品材质">{currentEntrustment.sampleMaterial || '-'}</Descriptions.Item>
+                      <Descriptions.Item label="样品数量">{currentEntrustment.sampleQuantity || '-'}</Descriptions.Item>
+                      <Descriptions.Item label="样品退回">
+                        {currentEntrustment.isSampleReturn ? '是' : '否'}
+                      </Descriptions.Item>
+                      <Descriptions.Item label="来源类型">{currentEntrustment.sourceType || '-'}</Descriptions.Item>
+                      <Descriptions.Item label="到样日期">
+                        {currentEntrustment.sampleDate ? dayjs(currentEntrustment.sampleDate).format('YYYY-MM-DD') : '-'}
+                      </Descriptions.Item>
+                    </Descriptions>
+                  </div>
+                )
+              },
+              {
+                key: 'projects',
+                label: '检测项目',
+                children: (
+                  <Table
+                    rowKey="id"
+                    columns={projectColumns}
+                    dataSource={currentEntrustment.projects || []}
+                    pagination={false}
+                    size="small"
+                  />
+                )
+              }
+            ]}
+          />
+        )}
+      </Drawer>
 
       {/* 分配弹窗 */}
       <Modal

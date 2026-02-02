@@ -2,8 +2,9 @@
 
 import { useState, useEffect } from 'react'
 import { showSuccess, showError } from '@/lib/confirm'
-import { Table, Button, Space, Tag, Modal, Form, Input, Select, DatePicker, message } from 'antd'
-import { PlusOutlined, EditOutlined, DeleteOutlined } from '@ant-design/icons'
+import { Table, Button, Space, Tag, Form, Input, Select, DatePicker, Drawer, Descriptions } from 'antd'
+import { PlusOutlined, EditOutlined, DeleteOutlined, EyeOutlined } from '@ant-design/icons'
+import { useRouter } from 'next/navigation'
 import type { ColumnsType } from 'antd/es/table'
 import dayjs from 'dayjs'
 
@@ -13,10 +14,12 @@ interface Device {
   name: string
   model: string | null
   manufacturer: string | null
+  serialNumber: string | null
   location: string | null
   status: string
   calibrationDate: string | null
   nextCalibration: string | null
+  remark: string | null
   createdAt: string
 }
 
@@ -27,13 +30,15 @@ const statusMap: Record<string, { text: string; color: string }> = {
 }
 
 export default function DevicePage() {
+  const router = useRouter()
   const [data, setData] = useState<Device[]>([])
   const [loading, setLoading] = useState(false)
   const [total, setTotal] = useState(0)
   const [page, setPage] = useState(1)
-  const [modalOpen, setModalOpen] = useState(false)
-  const [editingId, setEditingId] = useState<string | null>(null)
-  const [form] = Form.useForm()
+
+  // 查看抽屉状态
+  const [viewDrawerOpen, setViewDrawerOpen] = useState(false)
+  const [currentDevice, setCurrentDevice] = useState<Device | null>(null)
 
   const fetchData = async (p = page) => {
     setLoading(true)
@@ -43,13 +48,8 @@ export default function DevicePage() {
       setData(json.data.list || [])
       setTotal(json.data.total || 0)
     } else {
-      if (json.success && json.data) {
-      setData(json.data.list || [])
-      setTotal(json.data.total || 0)
-    } else {
       setData(json.list || [])
       setTotal(json.total || 0)
-    }
     }
     setLoading(false)
   }
@@ -57,19 +57,16 @@ export default function DevicePage() {
   useEffect(() => { fetchData() }, [page])
 
   const handleAdd = () => {
-    setEditingId(null)
-    form.resetFields()
-    setModalOpen(true)
+    router.push('/device/create')
+  }
+
+  const handleView = (record: Device) => {
+    setCurrentDevice(record)
+    setViewDrawerOpen(true)
   }
 
   const handleEdit = (record: Device) => {
-    setEditingId(record.id)
-    form.setFieldsValue({
-      ...record,
-      calibrationDate: record.calibrationDate ? dayjs(record.calibrationDate) : null,
-      nextCalibration: record.nextCalibration ? dayjs(record.nextCalibration) : null,
-    })
-    setModalOpen(true)
+    router.push(`/device/edit/${record.id}`)
   }
 
   const handleDelete = async (id: string) => {
@@ -81,25 +78,6 @@ export default function DevicePage() {
     } else {
       showError(json.error?.message || '删除失败')
     }
-  }
-
-  const handleSubmit = async () => {
-    const values = await form.validateFields()
-    const data = {
-      ...values,
-      calibrationDate: values.calibrationDate?.toISOString(),
-      nextCalibration: values.nextCalibration?.toISOString(),
-    }
-    const url = editingId ? `/api/device/${editingId}` : '/api/device'
-    const method = editingId ? 'PUT' : 'POST'
-    await fetch(url, {
-      method,
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(data)
-    })
-    showSuccess(editingId ? '更新成功' : '创建成功')
-    setModalOpen(false)
-    fetchData()
   }
 
   const columns: ColumnsType<Device> = [
@@ -114,16 +92,17 @@ export default function DevicePage() {
     },
     {
       title: '下次校准', dataIndex: 'nextCalibration', width: 120,
-      render: (t: string) => t ? dayjs(t).format('YYYY-MM-DD HH:mm:ss') : '-'
+      render: (t: string) => t ? dayjs(t).format('YYYY-MM-DD') : '-'
     },
     {
       title: '创建时间', dataIndex: 'createdAt', width: 170,
       render: (t: string) => t ? dayjs(t).format('YYYY-MM-DD HH:mm:ss') : '-'
     },
     {
-      title: '操作', fixed: 'right', 
+      title: '操作', fixed: 'right',
       render: (_, record) => (
         <Space style={{ whiteSpace: 'nowrap' }}>
+          <Button size="small" icon={<EyeOutlined />} onClick={() => handleView(record)} />
           <Button size="small" icon={<EditOutlined />} onClick={() => handleEdit(record)} />
           <Button size="small" danger icon={<DeleteOutlined />} onClick={() => handleDelete(record.id)} />
         </Space>
@@ -144,49 +123,43 @@ export default function DevicePage() {
         loading={loading}
         pagination={{ current: page, total, onChange: setPage }}
       />
-      <Modal
-        title={editingId ? '编辑设备' : '新增设备'}
-        open={modalOpen}
-        onOk={handleSubmit}
-        onCancel={() => setModalOpen(false)}
-        width={600}
+
+      {/* 查看抽屉 */}
+      <Drawer
+        title="设备详情"
+        placement="right"
+        width={800}
+        open={viewDrawerOpen}
+        onClose={() => setViewDrawerOpen(false)}
       >
-        <Form form={form} layout="vertical">
-          <Form.Item name="name" label="设备名称" rules={[{ required: true }]}>
-            <Input />
-          </Form.Item>
-          <Form.Item name="model" label="型号">
-            <Input />
-          </Form.Item>
-          <Form.Item name="manufacturer" label="制造商">
-            <Input />
-          </Form.Item>
-          <Form.Item name="serialNumber" label="出厂编号">
-            <Input />
-          </Form.Item>
-          <Form.Item name="location" label="存放位置">
-            <Input />
-          </Form.Item>
-          <Form.Item name="calibrationDate" label="上次校准日期">
-            <DatePicker style={{ width: '100%' }} />
-          </Form.Item>
-          <Form.Item name="nextCalibration" label="下次校准日期">
-            <DatePicker style={{ width: '100%' }} />
-          </Form.Item>
-          {editingId && (
-            <Form.Item name="status" label="状态">
-              <Select options={[
-                { value: 'normal', label: '正常' },
-                { value: 'maintenance', label: '维护中' },
-                { value: 'scrapped', label: '已报废' },
-              ]} />
-            </Form.Item>
-          )}
-          <Form.Item name="remark" label="备注">
-            <Input.TextArea rows={2} />
-          </Form.Item>
-        </Form>
-      </Modal>
+        {currentDevice && (
+          <Descriptions column={2} bordered size="small">
+            <Descriptions.Item label="设备编号">{currentDevice.deviceNo}</Descriptions.Item>
+            <Descriptions.Item label="设备名称">{currentDevice.name}</Descriptions.Item>
+            <Descriptions.Item label="型号">{currentDevice.model || '-'}</Descriptions.Item>
+            <Descriptions.Item label="制造商">{currentDevice.manufacturer || '-'}</Descriptions.Item>
+            <Descriptions.Item label="出厂编号">{currentDevice.serialNumber || '-'}</Descriptions.Item>
+            <Descriptions.Item label="存放位置">{currentDevice.location || '-'}</Descriptions.Item>
+            <Descriptions.Item label="状态">
+              <Tag color={statusMap[currentDevice.status]?.color}>
+                {statusMap[currentDevice.status]?.text || currentDevice.status}
+              </Tag>
+            </Descriptions.Item>
+            <Descriptions.Item label="上次校准日期">
+              {currentDevice.calibrationDate ? dayjs(currentDevice.calibrationDate).format('YYYY-MM-DD') : '-'}
+            </Descriptions.Item>
+            <Descriptions.Item label="下次校准日期">
+              {currentDevice.nextCalibration ? dayjs(currentDevice.nextCalibration).format('YYYY-MM-DD') : '-'}
+            </Descriptions.Item>
+            <Descriptions.Item label="创建时间">
+              {dayjs(currentDevice.createdAt).format('YYYY-MM-DD HH:mm:ss')}
+            </Descriptions.Item>
+            <Descriptions.Item label="备注" span={2}>
+              {currentDevice.remark || '-'}
+            </Descriptions.Item>
+          </Descriptions>
+        )}
+      </Drawer>
     </div>
   )
 }
