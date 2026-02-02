@@ -21,6 +21,8 @@ const STATUS_TEXT_MAP: Record<string, Record<string, string>> = {
   consultation: {
     following: '跟进中',
     assessing: '评估中',
+    assessment_passed: '评估通过',
+    assessment_failed: '评估不可行',
     quoted: '已报价',
     rejected: '已拒绝',
     closed: '已关闭',
@@ -123,6 +125,8 @@ const STATUS_COLOR_MAP: Record<string, Record<string, string>> = {
   consultation: {
     following: 'processing',
     assessing: 'processing',
+    assessment_passed: 'success',
+    assessment_failed: 'error',
     quoted: 'success',
     rejected: 'error',
     closed: 'default',
