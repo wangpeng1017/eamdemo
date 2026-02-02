@@ -276,6 +276,7 @@ model QuotationItem {
   id             String    @id @default(cuid())
   quotationId    String
   quotation      Quotation @relation(fields: [quotationId], references: [id], onDelete: Cascade)
+  sampleName     String?   @db.VarChar(200) // 样品名称
   serviceItem    String    @db.VarChar(200) // 检测项目
   methodStandard String    @db.VarChar(200) // 依据标准
   quantity       Int       @default(1)

@@ -116,8 +116,9 @@ export const POST = withAuth(async (request: NextRequest, user) => {
     createdById: user?.id,
     items: {
       create: items.map((item: any) => ({
-        serviceItem: item.serviceItem,
-        methodStandard: item.methodStandard,
+        sampleName: item.sampleName || '',
+        serviceItem: item.serviceItem || '',
+        methodStandard: item.methodStandard || '',
         quantity: item.quantity || 1,
         unitPrice: item.unitPrice || 0,
         totalPrice: (item.quantity || 1) * (item.unitPrice || 0),
