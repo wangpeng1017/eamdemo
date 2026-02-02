@@ -84,5 +84,15 @@ export const POST = withAuth(async (request: NextRequest, user) => {
     }
   })
 
+  // 处理角色关联
+  if (validated.roleIds && Array.isArray(validated.roleIds) && validated.roleIds.length > 0) {
+    await prisma.userRole.createMany({
+      data: validated.roleIds.map((roleId: string) => ({
+        userId: newUser.id,
+        roleId: roleId
+      }))
+    })
+  }
+
   return success(newUser)
 })

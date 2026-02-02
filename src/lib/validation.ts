@@ -29,9 +29,10 @@ export const createUserSchema = z.object({
   username: z.string().min(2, '用户名至少2个字符').max(50, '用户名最多50个字符'),
   name: z.string().min(1, '姓名不能为空').max(50, '姓名最多50个字符'),
   password: z.string().min(6, '密码至少6个字符').max(100).optional(),
-  phone: z.string().regex(/^1[3-9]\d{9}$/, '手机号格式不正确').optional().nullable(),
+  phone: z.string().regex(/^\d{11}$/, '手机号必须是11位数字').optional().nullable(),
   email: z.string().email('邮箱格式不正确').optional().nullable(),
   deptId: z.string().optional().nullable(),
+  roleIds: z.array(z.string()).optional(),
   status: z.coerce.number().int().min(0).max(1).default(1),
 })
 
