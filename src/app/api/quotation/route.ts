@@ -126,12 +126,23 @@ export const POST = withAuth(async (request: NextRequest, user) => {
     },
   }
 
-  const quotation = await prisma.quotation.create({
-    data: createData,
-    include: {
-      items: true,
-    }
-  })
+  console.log('DEBUG: Creating quotation with data:', JSON.stringify(createData, null, 2))
+
+  let quotation;
+  try {
+    quotation = await prisma.quotation.create({
+      data: createData,
+      include: {
+        items: true,
+      }
+    })
+  } catch (err: any) {
+    console.error('CRITICAL ERROR creating quotation:', err)
+    console.error('Error code:', err.code)
+    console.error('Error message:', err.message)
+    console.error('Validation error details:', JSON.stringify(err, null, 2))
+    throw err
+  }
 
   // 回写咨询单
   if (consultationNo) {
