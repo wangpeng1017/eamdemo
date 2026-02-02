@@ -65,11 +65,26 @@ export const GET = withAuth(async (request: NextRequest, user) => {
 export const POST = withAuth(async (request: NextRequest, user) => {
   const data = await request.json()
 
-  const today = new Date().toISOString().slice(0, 10).replace(/-/g, '')
-  const count = await prisma.consultation.count({
-    where: { consultationNo: { startsWith: `ZX${today}` } }
+  const todayStr = new Date().toISOString().slice(0, 10).replace(/-/g, '')
+  const prefix = `ZX${todayStr}`
+
+  // 查找当天最后一个单号
+  const lastConsultation = await prisma.consultation.findFirst({
+    where: { consultationNo: { startsWith: prefix } },
+    orderBy: { consultationNo: 'desc' },
+    select: { consultationNo: true }
   })
-  const consultationNo = `ZX${today}${String(count + 1).padStart(4, '0')}`
+
+  let seq = 1
+  if (lastConsultation?.consultationNo) {
+    // 提取最后4位数字
+    const lastSeq = parseInt(lastConsultation.consultationNo.slice(-4))
+    if (!isNaN(lastSeq)) {
+      seq = lastSeq + 1
+    }
+  }
+
+  const consultationNo = `${prefix}${String(seq).padStart(4, '0')}`
 
   // 提取样品检测项数据
   const sampleTestItems = data.sampleTestItems || []
