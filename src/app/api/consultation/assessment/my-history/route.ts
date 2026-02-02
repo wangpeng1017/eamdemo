@@ -24,12 +24,23 @@ export async function GET(request: NextRequest) {
         const userId = session.user.id
 
         // 根据状态查询当前用户评估过的记录
+        // 评估完成后状态是 passed/failed，不是 assessed
+        const statusFilter = status === 'assessed'
+            ? { in: ['passed', 'failed'] as string[] }
+            : status
+
         // SampleTestItem使用多态关联(bizType/bizId)
         const items = await prisma.sampleTestItem.findMany({
             where: {
                 currentAssessorId: userId,
-                assessmentStatus: status,
-                bizType: 'consultation', // 只查咨询单的样品
+                assessmentStatus: statusFilter,
+                bizType: 'consultation',
+            },
+            include: {
+                assessments: {
+                    where: { isLatest: true },
+                    take: 1,
+                },
             },
             orderBy: {
                 updatedAt: 'desc',
@@ -54,6 +65,7 @@ export async function GET(request: NextRequest) {
         // 格式化返回数据
         const formattedItems = items.map(item => {
             const consultation = consultationMap.get(item.bizId)
+            const latestAssessment = item.assessments?.[0]
             return {
                 id: item.id,
                 sampleName: item.sampleName,
@@ -64,10 +76,9 @@ export async function GET(request: NextRequest) {
                 assessmentStatus: item.assessmentStatus,
                 currentAssessorId: item.currentAssessorId,
                 currentAssessorName: item.currentAssessorName,
-                // 评估结果从关联的assessment表获取，这里先用null
-                feasibility: null,
-                feasibilityNote: null,
-                assessedAt: item.updatedAt,
+                feasibility: latestAssessment?.feasibility || null,
+                feasibilityNote: latestAssessment?.feasibilityNote || null,
+                assessedAt: latestAssessment?.assessedAt || item.updatedAt,
                 consultationId: item.bizId,
                 consultationNo: consultation?.consultationNo || '-',
                 clientName: consultation?.client?.name || '-',

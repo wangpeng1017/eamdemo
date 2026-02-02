@@ -47,7 +47,6 @@ export default function AssessmentCenterPage() {
     // 数据状态
     const [pendingItems, setPendingItems] = useState<SampleTestItem[]>([])
     const [assessedItems, setAssessedItems] = useState<SampleTestItem[]>([])
-    const [rejectedItems, setRejectedItems] = useState<SampleTestItem[]>([])
 
     // 评估弹窗状态
     const [assessmentModalOpen, setAssessmentModalOpen] = useState(false)
@@ -86,13 +85,6 @@ export default function AssessmentCenterPage() {
                 const json = await assessedRes.json()
                 setAssessedItems(json.data || [])
             }
-
-            // 获取已驳回数据
-            const rejectedRes = await fetch('/api/consultation/assessment/my-history?status=rejected')
-            if (rejectedRes.ok) {
-                const json = await rejectedRes.json()
-                setRejectedItems(json.data || [])
-            }
         } catch (error) {
             console.error('获取评估数据失败:', error)
         } finally {
@@ -104,8 +96,8 @@ export default function AssessmentCenterPage() {
         const statusMap: Record<string, { color: string; text: string }> = {
             pending: { color: 'default', text: '待评估' },
             assessing: { color: 'processing', text: '评估中' },
-            assessed: { color: 'success', text: '已评估' },
-            rejected: { color: 'error', text: '已驳回' },
+            passed: { color: 'success', text: '已通过' },
+            failed: { color: 'error', text: '不可行' },
         }
         const info = statusMap[status || ''] || { color: 'default', text: status || '-' }
         return <Tag color={info.color}>{info.text}</Tag>
@@ -281,20 +273,6 @@ export default function AssessmentCenterPage() {
                 <Table
                     columns={historyColumns}
                     dataSource={assessedItems}
-                    loading={loading}
-                    rowKey="id"
-                    pagination={{ pageSize: 10 }}
-                    scroll={{ x: 1100 }}
-                />
-            ),
-        },
-        {
-            key: 'rejected',
-            label: `已驳回 (${rejectedItems.length})`,
-            children: (
-                <Table
-                    columns={historyColumns}
-                    dataSource={rejectedItems}
                     loading={loading}
                     rowKey="id"
                     pagination={{ pageSize: 10 }}
