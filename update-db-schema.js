@@ -236,6 +236,19 @@ async function main() {
         }
     }
 
+    // ==================== Quotation Item Update ====================
+    try {
+        console.log('Adding sampleName column to biz_quotation_item...')
+        await prisma.$executeRawUnsafe(`ALTER TABLE biz_quotation_item ADD COLUMN sampleName VARCHAR(200);`)
+        console.log('✅ sampleName column added to biz_quotation_item.')
+    } catch (e) {
+        if (e.message.includes('Duplicate column name')) {
+            console.log('ℹ️ sampleName column already exists in biz_quotation_item.')
+        } else {
+            console.error('❌ Error adding sampleName column to biz_quotation_item:', e.message)
+        }
+    }
+
 }
 
 
