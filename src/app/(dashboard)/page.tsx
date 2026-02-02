@@ -375,7 +375,7 @@ export default function DashboardPage() {
 
         {/* 待我评估 */}
         <Col xs={24} lg={8}>
-          <PendingAssessmentCard />
+          <PendingAssessmentCard onViewAll={() => router.push('/entrustment/consultation')} />
         </Col>
 
         {/* 我的任务 */}
