@@ -3,6 +3,7 @@
 import { ConfigProvider, App } from 'antd'
 import zhCN from 'antd/locale/zh_CN'
 import { SessionProvider } from 'next-auth/react'
+import NextTopLoader from 'nextjs-toploader'
 
 export function Providers({ children }: { children: React.ReactNode }) {
   return (
@@ -15,7 +16,10 @@ export function Providers({ children }: { children: React.ReactNode }) {
           },
         }}
       >
-        <App>{children}</App>
+        <App>
+          <NextTopLoader />
+          {children}
+        </App>
       </ConfigProvider>
     </SessionProvider>
   )

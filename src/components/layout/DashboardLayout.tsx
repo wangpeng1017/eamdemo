@@ -21,23 +21,23 @@ import {
   CheckCircleOutlined,
 } from '@ant-design/icons'
 import Link from 'next/link'
-import { usePathname } from 'next/navigation'
+import { usePathname, useRouter } from 'next/navigation'
 import { signOut, useSession } from 'next-auth/react'
 
 const { Header, Sider, Content } = Layout
 
 const menuItems = [
-  { key: '/', icon: <DashboardOutlined />, label: <Link href="/">工作台</Link> },
+  { key: '/', icon: <DashboardOutlined />, label: '工作台' },
   {
     key: '/entrustment',
     icon: <FileTextOutlined />,
     label: '业务管理',
     children: [
-      { key: '/entrustment/consultation', label: <Link href="/entrustment/consultation">业务咨询</Link> },
-      { key: '/entrustment/quotation', label: <Link href="/entrustment/quotation">检测报价</Link> },
-      { key: '/entrustment/contract', label: <Link href="/entrustment/contract">检测合同</Link> },
-      { key: '/entrustment/list', label: <Link href="/entrustment/list">检测委托单</Link> },
-      { key: '/entrustment/client', label: <Link href="/entrustment/client">业务单位</Link> },
+      { key: '/entrustment/consultation', label: '业务咨询' },
+      { key: '/entrustment/quotation', label: '检测报价' },
+      { key: '/entrustment/contract', label: '检测合同' },
+      { key: '/entrustment/list', label: '检测委托单' },
+      { key: '/entrustment/client', label: '业务单位' },
     ],
   },
   {
@@ -45,9 +45,9 @@ const menuItems = [
     icon: <ExperimentOutlined />,
     label: '样品管理',
     children: [
-      { key: '/sample/receipt', label: <Link href="/sample/receipt">收样登记</Link> },
-      { key: '/sample/details', label: <Link href="/sample/details">样品明细</Link> },
-      { key: '/sample/my', label: <Link href="/sample/my">我的样品</Link> },
+      { key: '/sample/receipt', label: '收样登记' },
+      { key: '/sample/details', label: '样品明细' },
+      { key: '/sample/my', label: '我的样品' },
     ],
   },
   {
@@ -55,8 +55,8 @@ const menuItems = [
     icon: <ExperimentOutlined />,
     label: '检测任务',
     children: [
-      { key: '/task/all', label: <Link href="/task/all">全部任务</Link> },
-      { key: '/task/my', label: <Link href="/task/my">我的任务</Link> },
+      { key: '/task/all', label: '全部任务' },
+      { key: '/task/my', label: '我的任务' },
     ],
   },
   {
@@ -64,9 +64,9 @@ const menuItems = [
     icon: <FileTextOutlined />,
     label: '报告管理',
     children: [
-      { key: '/report/task-generate', label: <Link href="/report/task-generate">任务报告生成</Link> },
-      { key: '/report/client-generate', label: <Link href="/report/client-generate">客户报告生成</Link> },
-      { key: '/report/client-template', label: <Link href="/report/client-template">客户报告模板</Link> },
+      { key: '/report/task-generate', label: '任务报告生成' },
+      { key: '/report/client-generate', label: '客户报告生成' },
+      { key: '/report/client-template', label: '客户报告模板' },
     ],
   },
   {
@@ -74,10 +74,10 @@ const menuItems = [
     icon: <ToolOutlined />,
     label: '设备管理',
     children: [
-      { key: '/device', label: <Link href="/device">设备台账</Link> },
-      { key: '/device/maintenance-plan', label: <Link href="/device/maintenance-plan">保养计划</Link> },
-      { key: '/device/calibration-plan', label: <Link href="/device/calibration-plan">定检计划</Link> },
-      { key: '/device/maintenance', label: <Link href="/device/maintenance">维护记录</Link> },
+      { key: '/device', label: '设备台账' },
+      { key: '/device/maintenance-plan', label: '保养计划' },
+      { key: '/device/calibration-plan', label: '定检计划' },
+      { key: '/device/maintenance', label: '维护记录' },
     ],
   },
   {
@@ -85,8 +85,8 @@ const menuItems = [
     icon: <BankOutlined />,
     label: '外包管理',
     children: [
-      { key: '/outsource/supplier', label: <Link href="/outsource/supplier">供应商</Link> },
-      { key: '/outsource/order', label: <Link href="/outsource/order">外包订单</Link> },
+      { key: '/outsource/supplier', label: '供应商' },
+      { key: '/outsource/order', label: '外包订单' },
     ],
   },
   {
@@ -94,25 +94,25 @@ const menuItems = [
     icon: <AuditOutlined />,
     label: '财务管理',
     children: [
-      { key: '/finance/receivable', label: <Link href="/finance/receivable">应收款</Link> },
-      { key: '/finance/invoice', label: <Link href="/finance/invoice">发票管理</Link> },
+      { key: '/finance/receivable', label: '应收款' },
+      { key: '/finance/invoice', label: '发票管理' },
     ],
   },
   {
     key: '/statistics',
     icon: <BarChartOutlined />,
-    label: <Link href="/statistics">统计报表</Link>,
+    label: '统计报表',
   },
   {
     key: '/basic-data',
     icon: <DatabaseOutlined />,
     label: '基础数据配置',
     children: [
-      { key: '/basic-data/test-templates', label: <Link href="/basic-data/test-templates">检测项目</Link> },
-      { key: '/basic-data/inspection-standards', label: <Link href="/basic-data/inspection-standards">检查标准/依据</Link> },
-      { key: '/basic-data/report-categories', label: <Link href="/basic-data/report-categories">报告分类</Link> },
-      { key: '/basic-data/personnel-capability', label: <Link href="/basic-data/personnel-capability">人员资质</Link> },
-      { key: '/basic-data/capability-review', label: <Link href="/basic-data/capability-review">能力评审</Link> },
+      { key: '/basic-data/test-templates', label: '检测项目' },
+      { key: '/basic-data/inspection-standards', label: '检查标准/依据' },
+      { key: '/basic-data/report-categories', label: '报告分类' },
+      { key: '/basic-data/personnel-capability', label: '人员资质' },
+      { key: '/basic-data/capability-review', label: '能力评审' },
     ],
   },
   {
@@ -120,16 +120,17 @@ const menuItems = [
     icon: <SettingOutlined />,
     label: '系统设置',
     children: [
-      { key: '/system/user', label: <Link href="/system/user">用户管理</Link> },
-      { key: '/system/role', label: <Link href="/system/role">角色管理</Link> },
-      { key: '/system/approval-flow', label: <Link href="/system/approval-flow">审批流程</Link> },
-      { key: '/system/permission', label: <Link href="/system/permission">权限配置</Link> },
+      { key: '/system/user', label: '用户管理' },
+      { key: '/system/role', label: '角色管理' },
+      { key: '/system/approval-flow', label: '审批流程' },
+      { key: '/system/permission', label: '权限配置' },
     ],
   },
 ]
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const session = useSession()
+  const router = useRouter()
   const [collapsed, setCollapsed] = useState(false)
   const pathname = usePathname()
   const { token: { colorBgContainer, borderRadiusLG } } = theme.useToken()
@@ -204,6 +205,9 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           defaultOpenKeys={getOpenKeys()}
           items={menuItems}
           style={{ borderRight: 0 }}
+          onClick={({ key }) => {
+            router.push(key)
+          }}
         />
       </Sider>
       <Layout>

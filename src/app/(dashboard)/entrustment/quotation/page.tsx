@@ -8,7 +8,7 @@
 
 import { useState, useEffect } from 'react'
 import { showSuccess, showError, showWarningMessage } from '@/lib/confirm'
-import { Table, Button, Space, Modal, Form, Input, Select, DatePicker, Drawer, Row, Col, Divider, Popconfirm, Radio, Upload, Descriptions } from 'antd'
+import { Table, Button, Space, Modal, Form, Input, Select, DatePicker, Drawer, Row, Col, Divider, Popconfirm, Radio, Upload, Descriptions, Tabs } from 'antd'
 import { PlusOutlined, EditOutlined, DeleteOutlined, EyeOutlined, SendOutlined, FolderOutlined, UploadOutlined, FileTextOutlined } from '@ant-design/icons'
 import { StatusTag } from '@/components/StatusTag'
 import { ApprovalTimeline } from '@/components/ApprovalTimeline'
@@ -597,95 +597,112 @@ export default function QuotationPage() {
         }
       >
         {currentQuotation && (
-          <div>
-            <Descriptions column={2} bordered size="small">
-              <Descriptions.Item label="报价单号">{currentQuotation.quotationNo}</Descriptions.Item>
-              <Descriptions.Item label="客户名称">{currentQuotation.client?.name || '-'}</Descriptions.Item>
-              <Descriptions.Item label="联系人">{currentQuotation.clientContactPerson || '-'}</Descriptions.Item>
-              <Descriptions.Item label="联系电话">{currentQuotation.client?.phone || '-'}</Descriptions.Item>
-              <Descriptions.Item label="客户邮箱">{currentQuotation.client?.email || '-'}</Descriptions.Item>
-              <Descriptions.Item label="客户地址">{currentQuotation.client?.address || '-'}</Descriptions.Item>
-              <Descriptions.Item label="创建日期">
-                {dayjs(currentQuotation.createdAt).format('YYYY-MM-DD HH:mm:ss')}
-              </Descriptions.Item>
-              <Descriptions.Item label="有效期">{currentQuotation.validDays}天</Descriptions.Item>
-              <Descriptions.Item label="报价合计">¥{Number(currentQuotation.totalAmount || 0).toFixed(2)}</Descriptions.Item>
-              <Descriptions.Item label="税额">¥{Number(currentQuotation.taxAmount || 0).toFixed(2)}</Descriptions.Item>
-              <Descriptions.Item label="含税合计">¥{Number(currentQuotation.totalWithTax || 0).toFixed(2)}</Descriptions.Item>
-              <Descriptions.Item label="优惠金额">
-                {currentQuotation.discountAmount ? `¥${currentQuotation.discountAmount}` : '-'}
-              </Descriptions.Item>
-              <Descriptions.Item label="最终金额" style={{ fontWeight: 'bold', color: '#f5222d' }}>
-                ¥{Number(currentQuotation.finalAmount || 0).toFixed(2)}
-              </Descriptions.Item>
-              <Descriptions.Item label="状态">
-                <StatusTag type="quotation" status={currentQuotation.status} />
-              </Descriptions.Item>
-              <Descriptions.Item label="客户反馈">
-                <StatusTag type="quotation_client" status={currentQuotation.clientResponse} />
-              </Descriptions.Item>
-            </Descriptions>
+          <Tabs
+            defaultActiveKey="1"
+            items={[
+              {
+                key: '1',
+                label: '报价详情',
+                children: (
+                  <div style={{ maxHeight: 'calc(100vh - 200px)', overflowY: 'auto', paddingRight: 8 }}>
+                    <Descriptions column={2} bordered size="small">
+                      <Descriptions.Item label="报价单号">{currentQuotation.quotationNo}</Descriptions.Item>
+                      <Descriptions.Item label="客户名称">{currentQuotation.client?.name || '-'}</Descriptions.Item>
+                      <Descriptions.Item label="联系人">{currentQuotation.clientContactPerson || '-'}</Descriptions.Item>
+                      <Descriptions.Item label="联系电话">{currentQuotation.client?.phone || '-'}</Descriptions.Item>
+                      <Descriptions.Item label="客户邮箱">{currentQuotation.client?.email || '-'}</Descriptions.Item>
+                      <Descriptions.Item label="客户地址">{currentQuotation.client?.address || '-'}</Descriptions.Item>
+                      <Descriptions.Item label="创建日期">
+                        {dayjs(currentQuotation.createdAt).format('YYYY-MM-DD HH:mm:ss')}
+                      </Descriptions.Item>
+                      <Descriptions.Item label="有效期">{currentQuotation.validDays}天</Descriptions.Item>
+                      <Descriptions.Item label="报价合计">¥{Number(currentQuotation.totalAmount || 0).toFixed(2)}</Descriptions.Item>
+                      <Descriptions.Item label="税额">¥{Number(currentQuotation.taxAmount || 0).toFixed(2)}</Descriptions.Item>
+                      <Descriptions.Item label="含税合计">¥{Number(currentQuotation.totalWithTax || 0).toFixed(2)}</Descriptions.Item>
+                      <Descriptions.Item label="优惠金额">
+                        {currentQuotation.discountAmount ? `¥${currentQuotation.discountAmount}` : '-'}
+                      </Descriptions.Item>
+                      <Descriptions.Item label="最终金额" style={{ fontWeight: 'bold', color: '#f5222d' }}>
+                        ¥{Number(currentQuotation.finalAmount || 0).toFixed(2)}
+                      </Descriptions.Item>
+                      <Descriptions.Item label="状态">
+                        <StatusTag type="quotation" status={currentQuotation.status} />
+                      </Descriptions.Item>
+                      <Descriptions.Item label="客户反馈">
+                        <StatusTag type="quotation_client" status={currentQuotation.clientResponse} />
+                      </Descriptions.Item>
+                    </Descriptions>
 
-            <Divider orientationMargin="0">报价明细</Divider>
-            <Table
-              columns={[
-                { title: '检测项目', dataIndex: 'serviceItem' },
-                { title: '方法/标准', dataIndex: 'methodStandard' },
-                { title: '数量', dataIndex: 'quantity' },
-                { title: '单价', dataIndex: 'unitPrice', render: (v) => `¥${v}` },
-                { title: '小计', dataIndex: 'totalPrice', render: (v) => `¥${Number(v || 0).toFixed(2)}` },
-              ]}
-              dataSource={currentQuotation.items}
-              rowKey="id"
-              pagination={false}
-              size="small"
-            />
+                    <Divider orientationMargin="0">报价明细</Divider>
+                    <Table
+                      columns={[
+                        { title: '检测项目', dataIndex: 'serviceItem' },
+                        { title: '方法/标准', dataIndex: 'methodStandard' },
+                        { title: '数量', dataIndex: 'quantity' },
+                        { title: '单价', dataIndex: 'unitPrice', render: (v: number) => `¥${v}` },
+                        { title: '小计', dataIndex: 'totalPrice', render: (v: number) => `¥${Number(v || 0).toFixed(2)}` },
+                      ]}
+                      dataSource={currentQuotation.items}
+                      rowKey="id"
+                      pagination={false}
+                      size="small"
+                    />
 
-            {currentQuotation.paymentTerms && (
-              <>
-                <Divider orientationMargin="0">付款与交付</Divider>
-                <p><strong>付款方式：</strong>{currentQuotation.paymentTerms}</p>
-                {currentQuotation.deliveryTerms && <p><strong>交付方式：</strong>{currentQuotation.deliveryTerms}</p>}
-              </>
-            )}
+                    {currentQuotation.paymentTerms && (
+                      <>
+                        <Divider orientationMargin="0">付款与交付</Divider>
+                        <p><strong>付款方式：</strong>{currentQuotation.paymentTerms}</p>
+                        {currentQuotation.deliveryTerms && <p><strong>交付方式：</strong>{currentQuotation.deliveryTerms}</p>}
+                      </>
+                    )}
 
-            {currentQuotation.remark && (
-              <>
-                <Divider orientationMargin="0">备注</Divider>
-                <p>{currentQuotation.remark}</p>
-              </>
-            )}
-
-            <Divider orientationMargin="0">审批记录</Divider>
-            <ApprovalTimeline
-              nodes={[
-                { step: 1, name: '销售审批', role: '销售经理' },
-                { step: 2, name: '财务审批', role: '财务经理' }
-              ]}
-              currentStep={
-                currentQuotation.status === 'pending_sales' ? 1
-                  : currentQuotation.status === 'pending_finance' ? 2
-                    : currentQuotation.status === 'approved' ? 3
-                      : 1 // fallback
+                    {currentQuotation.remark && (
+                      <>
+                        <Divider orientationMargin="0">备注</Divider>
+                        <p>{currentQuotation.remark}</p>
+                      </>
+                    )}
+                  </div>
+                )
+              },
+              {
+                key: '2',
+                label: '审批记录',
+                children: (
+                  <div style={{ maxHeight: 'calc(100vh - 200px)', overflowY: 'auto' }}>
+                    <ApprovalTimeline
+                      nodes={[
+                        { step: 1, name: '销售审批', role: '销售经理' },
+                        { step: 2, name: '财务审批', role: '财务经理' }
+                      ]}
+                      currentStep={
+                        currentQuotation.status === 'pending_sales' ? 1
+                          : currentQuotation.status === 'pending_finance' ? 2
+                            : currentQuotation.status === 'approved' ? 3
+                              : 1 // fallback
+                      }
+                      status={
+                        currentQuotation.status === 'approved' ? 'approved'
+                          : currentQuotation.status === 'rejected' ? 'rejected'
+                            : 'pending'
+                      }
+                      submitterName={currentQuotation.approvals?.find(r => r.role === 'submitter')?.approver || '申请人'}
+                      submittedAt={currentQuotation.createdAt}
+                      records={currentQuotation.approvals?.filter(r => r.role !== 'submitter').map(r => ({
+                        id: r.id,
+                        step: r.level,
+                        action: r.action as 'approve' | 'reject',
+                        approverId: '', // not available in frontend model
+                        approverName: r.approver,
+                        comment: r.comment,
+                        createdAt: r.timestamp
+                      }))}
+                    />
+                  </div>
+                )
               }
-              status={
-                currentQuotation.status === 'approved' ? 'approved'
-                  : currentQuotation.status === 'rejected' ? 'rejected'
-                    : 'pending'
-              }
-              submitterName={currentQuotation.approvals?.find(r => r.role === 'submitter')?.approver || '申请人'}
-              submittedAt={currentQuotation.createdAt}
-              records={currentQuotation.approvals?.filter(r => r.role !== 'submitter').map(r => ({
-                id: r.id,
-                step: r.level,
-                action: r.action as 'approve' | 'reject',
-                approverId: '', // not available in frontend model
-                approverName: r.approver,
-                comment: r.comment,
-                createdAt: r.timestamp
-              }))}
-            />
-          </div>
+            ]}
+          />
         )}
       </Drawer>
 

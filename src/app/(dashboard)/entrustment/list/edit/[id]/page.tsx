@@ -4,6 +4,7 @@ export async function generateStaticParams() {
     return []
 }
 
-export default function EditEntrustmentPage({ params }: { params: { id: string } }) {
-    return <EditEntrustmentPageClient id={params.id} />
+export default async function EditEntrustmentPage({ params }: { params: Promise<{ id: string }> }) {
+    const { id } = await params
+    return <EditEntrustmentPageClient id={id} />
 }

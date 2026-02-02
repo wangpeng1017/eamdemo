@@ -59,9 +59,6 @@ export const GET = withAuth(async (
     ...quotation,
     // 客户信息从关联对象获取
     clientResponse: quotation.clientStatus,
-    sampleModel: quotation.sampleModel,
-    sampleMaterial: quotation.sampleMaterial,
-    sampleQuantity: quotation.sampleQuantity,
     follower: quotation.follower,
   }
 
@@ -219,103 +216,61 @@ export const PATCH = withAuth(async (
     notFound('报价单不存在')
   }
 
-  let newStatus = quotation.status
-  let shouldCreateApprovalRecord = false  // 是否创建旧的审批记录
-  let approvalLevel = 0
-  let approvalRole = ''
+  const { approvalEngine } = await import('@/lib/approval/engine')
 
-  switch (action) {
-    case 'submit':
-      // 提交审批：使用统一审批引擎
-      if (quotation.status !== 'draft') {
-        badRequest('只有草稿状态的报价单可以提交审批')
-      }
+  if (action === 'submit') {
+    if (quotation.status !== 'draft') {
+      badRequest('只有草稿状态的报价单可以提交审批')
+    }
 
-      if (!approver) {
-        badRequest('提交人信息缺失')
-      }
+    if (!approver) {
+      badRequest('提交人信息缺失')
+    }
 
-      const { approvalEngine } = await import('@/lib/approval/engine')
-      await approvalEngine.submit({
+    await approvalEngine.submit({
+      bizType: 'quotation',
+      bizId: id,
+      flowCode: 'QUOTATION_APPROVAL',
+      submitterId: approver,
+      submitterName: submitterName || '未知用户',
+    })
+  }
+  else if (action === 'approve' || action === 'reject') {
+    // 查找当前进行中的审批实例
+    const instance = await prisma.approvalInstance.findFirst({
+      where: {
         bizType: 'quotation',
         bizId: id,
-        flowCode: 'QUOTATION_APPROVAL',
-        submitterId: approver,
-        submitterName: submitterName || '未知用户',
-      })
+        status: 'pending'
+      },
+      orderBy: { submittedAt: 'desc' }
+    })
 
-      // ✅ 修复：submit操作由审批引擎负责创建ApprovalInstance和更新status
-      //    这里不需要创建旧的QuotationApproval记录，也不需要重复更新status
-      //    直接返回更新后的报价单数据
-      const updatedQuotation = await prisma.quotation.findUnique({
-        where: { id },
-        include: {
-          items: true,
-          approvals: {
-            orderBy: { timestamp: 'desc' },
-          },
-        },
-      })
+    if (!instance) {
+      badRequest('未找到进行中的审批实例')
+    }
 
-      return success(updatedQuotation)
-
-    case 'approve':
-      // 审批通过：根据当前状态流转到下一状态
-      if (!['pending_sales', 'pending_finance', 'pending_lab'].includes(quotation.status)) {
-        badRequest(`当前状态 ${quotation.status} 不能执行审批操作`)
-      }
-
-      const currentConfig = STATUS_APPROVAL_CONFIG[quotation.status as keyof typeof STATUS_APPROVAL_CONFIG]
-      approvalLevel = currentConfig.level
-      approvalRole = currentConfig.role
-      newStatus = STATUS_FLOW[quotation.status as keyof typeof STATUS_FLOW]
-      shouldCreateApprovalRecord = true
-      break
-
-    case 'reject':
-      // 审批驳回
-      if (!['pending_sales', 'pending_finance', 'pending_lab'].includes(quotation.status)) {
-        badRequest(`当前状态 ${quotation.status} 不能执行驳回操作`)
-      }
-
-      const rejectConfig = STATUS_APPROVAL_CONFIG[quotation.status as keyof typeof STATUS_APPROVAL_CONFIG]
-      approvalLevel = rejectConfig.level
-      approvalRole = rejectConfig.role
-      newStatus = 'rejected'
-      shouldCreateApprovalRecord = true
-      break
+    await approvalEngine.approve({
+      instanceId: instance!.id,
+      action: action,
+      approverId: approver,
+      approverName: submitterName || '未知用户',
+      comment,
+    })
   }
-
-  // ✅ 修复：只有approve/reject操作才创建旧的审批记录并更新status
-  if (!shouldCreateApprovalRecord) {
+  else {
     badRequest('无效的操作')
   }
 
-  // 使用事务确保数据一致性
-  const updated = await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
-    // 创建审批记录（仅approve/reject操作）
-    await tx.quotationApproval.create({
-      data: {
-        quotationId: id,
-        level: approvalLevel,
-        role: approvalRole,
-        approver: approver || '当前用户',
-        action: action,
-        comment: comment || '',
+  // 返回最新数据
+  const updated = await prisma.quotation.findUnique({
+    where: { id },
+    include: {
+      items: true,
+      approvals: {
+        orderBy: { timestamp: 'desc' },
       },
-    })
-
-    // 更新状态
-    return tx.quotation.update({
-      where: { id },
-      data: { status: newStatus },
-      include: {
-        items: true,
-        approvals: {
-          orderBy: { timestamp: 'desc' },
-        },
-      },
-    })
+    },
   })
 
   return success(updated)

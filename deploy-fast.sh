@@ -39,10 +39,19 @@ tar -czf public.tar.gz public
 
 # 3. 上传到服务器
 echo ""
-echo "[3/5] 上传到服务器..."
-sshpass -p "$SERVER_PASS" scp -o StrictHostKeyChecking=no -o ServerAliveInterval=60 .next/standalone.tar.gz "$SERVER:$REMOTE_DIR/"
-sshpass -p "$SERVER_PASS" scp -o StrictHostKeyChecking=no -o ServerAliveInterval=60 public.tar.gz "$SERVER:$REMOTE_DIR/"
-sshpass -p "$SERVER_PASS" scp -o StrictHostKeyChecking=no -o ServerAliveInterval=60 update-db-schema.js "$SERVER:$REMOTE_DIR/"
+echo "[3/5] 上传到服务器 (使用 rsync)..."
+if command -v rsync &> /dev/null; then
+    # 使用 rsync 上传 (支持断点续传)
+    rsync -avz --progress -e "sshpass -p '$SERVER_PASS' ssh -o StrictHostKeyChecking=no" .next/standalone.tar.gz "$SERVER:$REMOTE_DIR/"
+    rsync -avz --progress -e "sshpass -p '$SERVER_PASS' ssh -o StrictHostKeyChecking=no" public.tar.gz "$SERVER:$REMOTE_DIR/"
+    rsync -avz --progress -e "sshpass -p '$SERVER_PASS' ssh -o StrictHostKeyChecking=no" update-db-schema.js "$SERVER:$REMOTE_DIR/"
+else
+    # 回退到 scp
+    echo "警告: 未找到 rsync，回退到 scp..."
+    sshpass -p "$SERVER_PASS" scp -o StrictHostKeyChecking=no -o ServerAliveInterval=60 .next/standalone.tar.gz "$SERVER:$REMOTE_DIR/"
+    sshpass -p "$SERVER_PASS" scp -o StrictHostKeyChecking=no -o ServerAliveInterval=60 public.tar.gz "$SERVER:$REMOTE_DIR/"
+    sshpass -p "$SERVER_PASS" scp -o StrictHostKeyChecking=no -o ServerAliveInterval=60 update-db-schema.js "$SERVER:$REMOTE_DIR/"
+fi
 
 # 4. 服务器解压并配置
 echo ""
