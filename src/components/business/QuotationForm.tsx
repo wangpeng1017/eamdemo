@@ -475,7 +475,7 @@ export default function QuotationForm({
                         </Form.Item>
                     </Col>
                     <Col span={8}>
-                        <Form.Item name="clientReportDeadline" label="客户要求报告时间">
+                        <Form.Item name="clientReportDeadline" label="报告时间">
                             <DatePicker style={{ width: '100%' }} />
                         </Form.Item>
                     </Col>
