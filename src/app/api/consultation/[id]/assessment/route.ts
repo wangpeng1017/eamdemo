@@ -81,7 +81,7 @@ export const POST = withAuth(async (
 
 /**
  * GET /api/consultation/[id]/assessment
- * 查询评估详情
+ * 查询评估详情 - 同时查询新旧两种评估记录
  */
 export const GET = withAuth(async (
   request: NextRequest,
@@ -90,32 +90,79 @@ export const GET = withAuth(async (
 ) => {
   const { id } = await context!.params
 
-  // 查询咨询单及其评估记录
+  // 查询咨询单
   const consultation = await prisma.consultation.findUnique({
     where: { id },
-    include: {
-      assessments: {
-        orderBy: [
-          { round: 'desc' },
-          { requestedAt: 'asc' }
-        ]
-      }
-    }
   })
 
   if (!consultation) {
     notFound('咨询单不存在')
   }
 
+  // 查询新版评估记录（ConsultationSampleAssessment）
+  const sampleAssessments = await prisma.consultationSampleAssessment.findMany({
+    where: { consultationId: id },
+    include: {
+      sampleTestItem: {
+        select: {
+          sampleName: true,
+          testItemName: true,
+          testStandard: true,
+        }
+      }
+    },
+    orderBy: [
+      { round: 'desc' },
+      { assessedAt: 'asc' }
+    ]
+  })
+
+  // 查询旧版评估记录（ConsultationAssessment）
+  const oldAssessments = await prisma.consultationAssessment.findMany({
+    where: { consultationId: id },
+    orderBy: [
+      { round: 'desc' },
+      { requestedAt: 'asc' }
+    ]
+  })
+
+  // 合并评估记录，优先使用新版数据
+  // 将新版评估记录格式化为与旧版兼容的格式
+  const formattedSampleAssessments = sampleAssessments.map(a => ({
+    id: a.id,
+    assessorId: a.assessorId,
+    assessorName: a.assessorName || '',
+    conclusion: a.feasibility,
+    feedback: a.feasibilityNote,
+    round: a.round,
+    status: 'completed', // 新版记录都是已完成的
+    requestedAt: a.createdAt,
+    completedAt: a.assessedAt,
+    requestedBy: '-',
+    // 额外信息
+    sampleName: a.sampleTestItem?.sampleName || '-',
+    testItemName: a.sampleTestItem?.testItemName || '-',
+    testStandard: a.sampleTestItem?.testStandard || '-',
+  }))
+
   // 获取最大轮次
-  const maxRound = consultation.assessments.length > 0
-    ? Math.max(...consultation.assessments.map(a => a.round))
+  const newMaxRound = sampleAssessments.length > 0
+    ? Math.max(...sampleAssessments.map(a => a.round))
     : 0
+  const oldMaxRound = oldAssessments.length > 0
+    ? Math.max(...oldAssessments.map(a => a.round))
+    : 0
+  const maxRound = Math.max(newMaxRound, oldMaxRound)
+
+  // 如果有新版记录，返回新版；否则返回旧版
+  const assessments = formattedSampleAssessments.length > 0
+    ? formattedSampleAssessments
+    : oldAssessments
 
   return success({
     consultationId: id,
     status: consultation.status,
     maxRound,
-    assessments: consultation.assessments
+    assessments
   })
 })
