@@ -94,16 +94,15 @@ export const POST = withAuth(async (request: NextRequest, user) => {
   const discountTotal = data.finalAmount || taxTotal
 
   // 构造创建数据
+  // 构造创建数据
   const createData: any = {
     quotationNo,
-    clientId: data.clientId,
+    client: data.clientId ? { connect: { id: data.clientId } } : undefined,
     clientContactPerson: data.clientContactPerson,
-    consultationNo: data.consultationNo || data.consultationId,
-    // 兼容旧字段，取第一个样品或手动输入
-    sampleName: data.sampleName || (data.samples?.[0]?.name),
-    sampleModel: data.sampleModel || (data.samples?.[0]?.model),
-    sampleMaterial: data.sampleMaterial || (data.samples?.[0]?.material),
-    sampleQuantity: data.sampleQuantity ? Number(data.sampleQuantity) : (data.samples?.[0]?.quantity ? Number(data.samples[0].quantity) : null),
+    consultationNo: data.consultationNo || data.consultationId || undefined,
+
+    // 注意：Quotation 模型不再包含 sampleName 等扁平化字段，这些信息在 items 或 samples 中
+
     follower: data.follower,
     clientRemark: data.paymentTerms,
     subtotal,
@@ -113,15 +112,15 @@ export const POST = withAuth(async (request: NextRequest, user) => {
     clientStatus: data.clientResponse || 'pending',
     // 优先使用手动提供的值，否则继承咨询单的值
     clientReportDeadline: data.clientReportDeadline ? new Date(data.clientReportDeadline) : (inheritedDeadline || null),
-    createdById: user?.id,
+    createdBy: user?.id ? { connect: { id: user.id } } : undefined,
     items: {
       create: items.map((item: any) => ({
         sampleName: item.sampleName || '',
         serviceItem: item.serviceItem || '',
         methodStandard: item.methodStandard || '',
-        quantity: item.quantity || 1,
+        quantity: Number(item.quantity) || 1,
         unitPrice: item.unitPrice || 0,
-        totalPrice: (item.quantity || 1) * (item.unitPrice || 0),
+        totalPrice: (Number(item.quantity) || 1) * (item.unitPrice || 0),
       })),
     },
   }
