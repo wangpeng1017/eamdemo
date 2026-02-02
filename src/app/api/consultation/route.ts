@@ -193,6 +193,10 @@ export const POST = withAuth(async (request: NextRequest, user) => {
 
     const updatedAttachments = await Promise.all(
       attachments.map(async (file: any) => {
+        if (!file || !file.fileName) {
+          console.warn('[Consultation API] 跳过无效附件:', file)
+          return null
+        }
         const tempPath = path.join(tempDir, file.fileName)
         const finalPath = path.join(finalDir, file.fileName)
 
@@ -207,7 +211,7 @@ export const POST = withAuth(async (request: NextRequest, user) => {
           fileUrl: `/uploads/consultation/${consultation.id}/${file.fileName}`,
         }
       })
-    )
+    ).then(results => results.filter(item => item !== null))
 
     // 更新数据库中的附件信息
     await prisma.consultation.update({

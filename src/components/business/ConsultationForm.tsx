@@ -166,7 +166,14 @@ export default function ConsultationForm({
             // 提取附件信息
             const attachments = fileList
                 .filter(file => file.status === 'done' && file.response)
-                .map(file => file.response)
+                .map(file => {
+                    // 新上传的文件响应结构为 { success: true, data: { ... } }
+                    // 回显的文件响应结构直接为 { ... }
+                    if (file.response?.data) {
+                        return file.response.data
+                    }
+                    return file.response
+                })
 
             const submitData = {
                 ...values,
