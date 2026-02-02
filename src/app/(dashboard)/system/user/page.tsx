@@ -21,6 +21,12 @@ interface Dept {
   children?: Dept[]
 }
 
+interface Role {
+  id: string
+  name: string
+  code: string
+}
+
 interface User {
   id: string
   username: string
@@ -31,7 +37,7 @@ interface User {
   deptId: string | null
   dept?: { name: string }
   createdAt: string
-  roles: { role: { name: string } }[]
+  roles: { role: { id: string, name: string } }[]
 }
 
 export default function UserPage() {
@@ -51,6 +57,9 @@ export default function UserPage() {
   const [editingDeptId, setEditingDeptId] = useState<string | null>(null)
   const [parentDeptId, setParentDeptId] = useState<string | null>(null)
 
+  // Role State
+  const [roleList, setRoleList] = useState<Role[]>([])
+
   const [userForm] = Form.useForm()
   const [deptForm] = Form.useForm()
 
@@ -58,6 +67,7 @@ export default function UserPage() {
   useEffect(() => {
     fetchDeptTree()
     fetchUsers()
+    fetchRoles()
   }, [])
 
   useEffect(() => {
@@ -129,6 +139,19 @@ export default function UserPage() {
     }
   }
 
+  // --- Role Actions ---
+  const fetchRoles = async () => {
+    try {
+      const res = await fetch('/api/role?pageSize=100')
+      const json = await res.json()
+      if (json.success) {
+        setRoleList(json.data?.list || json.list || [])
+      }
+    } catch (e) {
+      console.error('获取角色列表失败:', e)
+    }
+  }
+
   // --- User Actions ---
   const fetchUsers = async () => {
     setUserLoading(true)
@@ -158,7 +181,13 @@ export default function UserPage() {
 
   const handleEditUser = (record: User) => {
     setEditingUserId(record.id)
-    userForm.setFieldsValue({ ...record, password: '' })
+    // 提取用户当前角色ID
+    const roleIds = record.roles?.map(r => r.role.id) || []
+    userForm.setFieldsValue({
+      ...record,
+      password: '',
+      roleIds // 设置角色ID数组
+    })
     setUserModalOpen(true)
   }
 
@@ -350,13 +379,21 @@ export default function UserPage() {
             <Input placeholder="请输入用户姓名" />
           </Form.Item>
           <Form.Item name="phone" label="手机号" rules={[{ required: true, message: '请输入手机号' }]}>
-            <Input placeholder="请输入手机号（用于登录）" />
+            <Input placeholder="请输入手机号(用于登录)" />
           </Form.Item>
           <Form.Item name="deptId" label="所属部门">
             <Select
               allowClear
               placeholder="请选择部门"
               options={flattenTree(deptTree)}
+            />
+          </Form.Item>
+          <Form.Item name="roleIds" label="角色">
+            <Select
+              mode="multiple"
+              allowClear
+              placeholder="请选择角色"
+              options={roleList.map(r => ({ label: r.name, value: r.id }))}
             />
           </Form.Item>
           <Form.Item name="password" label="密码" rules={editingUserId ? [] : [{ required: true, message: '请输入密码' }]}>

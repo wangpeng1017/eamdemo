@@ -51,7 +51,28 @@ export const PUT = withAuth(async (
     updateData.password = await bcrypt.hash(data.password, 10)
   }
 
-  const updatedUser = await prisma.user.update({ where: { id }, data: updateData })
+  // 更新用户基本信息
+  const updatedUser = await prisma.user.update({
+    where: { id },
+    data: updateData
+  })
+
+  // 处理角色关联
+  if (data.roleIds !== undefined) {
+    // 删除旧的角色关联
+    await prisma.userRole.deleteMany({ where: { userId: id } })
+
+    // 创建新的角色关联
+    if (Array.isArray(data.roleIds) && data.roleIds.length > 0) {
+      await prisma.userRole.createMany({
+        data: data.roleIds.map((roleId: string) => ({
+          userId: id,
+          roleId: roleId
+        }))
+      })
+    }
+  }
+
   return success(updatedUser)
 })
 
