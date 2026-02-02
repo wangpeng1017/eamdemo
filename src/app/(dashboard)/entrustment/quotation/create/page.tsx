@@ -58,6 +58,16 @@ function CreateQuotationContent() {
                             bizType: 'quotation', // 准备变为 quotation 类型
                             bizId: undefined
                         }))
+
+                        // 自动从样品检测项生成报价明细
+                        values.items = values.sampleTestItems.map((item: any) => ({
+                            sampleName: item.sampleName || '',
+                            serviceItem: item.testItemName || '',
+                            methodStandard: item.testStandard || '',
+                            quantity: item.quantity || 1,
+                            unitPrice: 0,
+                            totalPrice: 0,
+                        }))
                     }
                 } catch (e) {
                     console.error('Failed to fetch sample test items', e)
