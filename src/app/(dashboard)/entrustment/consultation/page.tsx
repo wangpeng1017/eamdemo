@@ -7,7 +7,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Table, Button, Space, Modal, Form, Input, Select, DatePicker, Drawer, Row, Col, InputNumber, Divider, Tabs, Upload, Image } from 'antd'
+import { Table, Button, Space, Modal, Form, Input, Select, DatePicker, Drawer, Row, Col, InputNumber, Divider, Tabs, Upload, Image, Tag, Alert } from 'antd'
 import { PlusOutlined, EditOutlined, DeleteOutlined, EyeOutlined, FileTextOutlined, CloseCircleOutlined, TeamOutlined, SyncOutlined, PaperClipOutlined } from '@ant-design/icons'
 import { StatusTag } from '@/components/StatusTag'
 import UserSelect from '@/components/UserSelect'
@@ -596,8 +596,51 @@ export default function ConsultationPage() {
       console.log('🔵 [生成报价单] 未完成评估的项:', unfinishedItems.length, unfinishedItems)
 
       if (unfinishedItems.length > 0) {
-        console.warn('⚠️ [生成报价单] 存在未完成评估的项，弹出警告')
-        showWarning('评估未完成', '请先完成所有样品检测项的评估后再生成报价单')
+        console.warn('⚠️ [生成报价单] 存在未完成评估的项，弹出详细Modal')
+        // ✅ 需求1改进：显示详细的未完成评估项表格
+        // 使用 modal 实例（来自 useModal hook）而非静态 Modal.warning
+        modal.warning({
+          title: '评估未完成',
+          width: 700,
+          centered: true,
+          content: (
+            <div>
+              <p>以下 <strong>{unfinishedItems.length}</strong> 个样品检测项尚未完成评估：</p>
+              <Table
+                dataSource={unfinishedItems}
+                rowKey="id"
+                pagination={false}
+                size="small"
+                bordered
+                columns={[
+                  { title: '样品名称', dataIndex: 'sampleName', width: 120 },
+                  { title: '检测项目', dataIndex: 'testItemName', width: 150 },
+                  { title: '检测标准', dataIndex: 'testStandard', width: 150 },
+                  {
+                    title: '评估状态',
+                    dataIndex: 'assessmentStatus',
+                    width: 100,
+                    render: (s: string) => ({
+                      'pending': <Tag color="default">待评估</Tag>,
+                      'assessing': <Tag color="processing">评估中</Tag>,
+                      'rejected': <Tag color="error">已驳回</Tag>,
+                    } as Record<string, React.ReactNode>)[s] || <Tag>{s}</Tag>
+                  },
+                  { title: '评估人', dataIndex: 'assessorName', width: 100 },
+                ]}
+                scroll={{ y: 300 }}
+              />
+              <Alert
+                message="💡 提示"
+                description="请先完成以上项目的评估后再生成报价单"
+                type="info"
+                showIcon
+                style={{ marginTop: 16 }}
+              />
+            </div>
+          ),
+          okText: '我知道了'
+        })
         return
       }
 

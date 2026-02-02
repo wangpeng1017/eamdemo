@@ -1,4 +1,5 @@
-
+# -*- coding: utf-8 -*-
+content = """
 import { prisma } from '@/lib/prisma'
 import { NextRequest } from 'next/server'
 import { withErrorHandler, success, ApiError, ErrorCodes } from '@/lib/api-handler'
@@ -175,3 +176,8 @@ export const POST = withErrorHandler(async (
     expiresAt: expiresAt.toISOString(),
   })
 })
+"""
+
+with open(r'/Users/wangpeng/Downloads/limsnext/src/app/api/entrustment/[id]/external-link/route.ts', 'w', encoding='utf-8') as f:
+    f.write(content)
+print('OK')
