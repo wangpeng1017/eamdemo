@@ -42,6 +42,8 @@ function CreateQuotationContent() {
                     validDays: 30,
                     taxRate: 0.06,
                     discountAmount: 0,
+                    // 自动带入业务咨询的报告时间到客户要求报告时间
+                    clientRequiredReportDate: data.expectedDeadline ? dayjs(data.expectedDeadline) : undefined,
                 }
 
                 // 2. 也是最重要的，样品检测项

@@ -294,16 +294,7 @@ export default function ClientPage() {
               <Input placeholder="如: 1307023009022100123" />
             </Form.Item>
           </div>
-          {/* 状态字段仅在编辑时显示,新增时状态由审批流程控制 */}
-          {editingId && (
-            <Form.Item name="status" label="状态">
-              <Select options={[
-                { value: 'approved', label: '已批准' },
-                { value: 'pending', label: '待审批' },
-                { value: 'rejected', label: '已拒绝' },
-              ]} />
-            </Form.Item>
-          )}
+          {/* 状态由审批流程自动控制，编辑时不允许手动修改 */}
         </Form>
       </Modal>
     </div>

@@ -136,9 +136,9 @@ export const GET = withAuth(async (
     feedback: a.feasibilityNote,
     round: a.round,
     status: 'completed', // 新版记录都是已完成的
-    requestedAt: a.createdAt,
+    requestedAt: a.requestedAt || a.createdAt, // 使用新增的 requestedAt 字段
     completedAt: a.assessedAt,
-    requestedBy: '-',
+    requestedBy: a.requestedBy || '-', // 直接从评估记录获取发起人
     // 额外信息
     sampleName: a.sampleTestItem?.sampleName || '-',
     testItemName: a.sampleTestItem?.testItemName || '-',

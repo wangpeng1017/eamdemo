@@ -258,6 +258,10 @@ model ConsultationSampleAssessment {
   round                 Int      @default(1)      // 第几轮评估
   isLatest              Boolean  @default(true)   // 是否是最新记录
 
+  // 新增：发起人信息（与旧版评估系统保持一致）
+  requestedBy           String?  @db.VarChar(50) // 发起人
+  requestedAt           DateTime @default(now()) // 发起时间
+
   consultation          Consultation @relation(fields: [consultationId], references: [id], onDelete: Cascade)
   sampleTestItem        SampleTestItem @relation(fields: [sampleTestItemId], references: [id], onDelete: Cascade)
 

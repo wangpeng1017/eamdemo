@@ -10,11 +10,11 @@
 Environment variables loaded from .env
 Prisma schema loaded from prisma/schema.prisma
 
-✔ Generated Prisma Client (v5.22.0) to ./node_modules/@prisma/client in 357ms
+✔ Generated Prisma Client (v5.22.0) to ./node_modules/@prisma/client in 340ms
 
 Start by importing your Prisma Client (See: https://pris.ly/d/importing-client)
 
-Tip: Curious about the SQL queries Prisma ORM generates? Optimize helps you enhance your visibility: https://pris.ly/tip-2-optimize
+Tip: Want to react to database changes in your app as they happen? Discover how with Pulse: https://pris.ly/tip-1-pulse
 
    ▲ Next.js 15.1.0
    - Environments: .env
@@ -24,274 +24,235 @@ Tip: Curious about the SQL queries Prisma ORM generates? Optimize helps you enha
    Skipping validation of types
    Skipping linting
    Collecting page data ...
-   Generating static pages (0/121) ...
-   Generating static pages (30/121) 
-   Generating static pages (60/121) 
-   Generating static pages (90/121) 
- ✓ Generating static pages (121/121)
+   Generating static pages (0/129) ...
+   Generating static pages (32/129) 
+   Generating static pages (64/129) 
+   Generating static pages (96/129) 
+ ✓ Generating static pages (129/129)
    Finalizing page optimization ...
    Collecting build traces ...
 
-Route (app)                                         Size     First Load JS
-┌ ƒ /                                               14.3 kB         329 kB
-├ ○ /_not-found                                     990 B           107 kB
-├ ƒ /api/approval                                   436 B           106 kB
-├ ƒ /api/approval-flow                              436 B           106 kB
-├ ƒ /api/approval-flow/[id]                         436 B           106 kB
-├ ƒ /api/approval/[id]                              436 B           106 kB
-├ ƒ /api/auth/[...nextauth]                         436 B           106 kB
-├ ƒ /api/capability-review                          436 B           106 kB
-├ ƒ /api/capability-review/[id]                     436 B           106 kB
-├ ƒ /api/client                                     436 B           106 kB
-├ ƒ /api/client-report                              436 B           106 kB
-├ ƒ /api/client-report/[id]                         436 B           106 kB
-├ ƒ /api/client-report/generate                     436 B           106 kB
-├ ƒ /api/client/[id]                                436 B           106 kB
-├ ƒ /api/client/[id]/approval                       436 B           106 kB
-├ ƒ /api/client/[id]/relations                      436 B           106 kB
-├ ƒ /api/consultation                               436 B           106 kB
-├ ƒ /api/consultation/[id]                          436 B           106 kB
-├ ƒ /api/consultation/[id]/assessment               436 B           106 kB
-├ ƒ /api/consultation/[id]/close                    436 B           106 kB
-├ ƒ /api/consultation/[id]/follow-ups               436 B           106 kB
-├ ƒ /api/consultation/[id]/follow-ups/[followUpId]  436 B           106 kB
-├ ƒ /api/consultation/[id]/reassess                 436 B           106 kB
-├ ƒ /api/consultation/assessment/[id]               436 B           106 kB
-├ ƒ /api/consultation/assessment/[id]/submit        436 B           106 kB
-├ ƒ /api/consultation/assessment/my-pending         436 B           106 kB
-├ ƒ /api/consumable                                 436 B           106 kB
-├ ƒ /api/consumable-transaction                     436 B           106 kB
-├ ƒ /api/consumable/[id]                            436 B           106 kB
-├ ƒ /api/contract                                   436 B           106 kB
-├ ƒ /api/contract/[id]                              436 B           106 kB
-├ ƒ /api/contract/[id]/approval                     436 B           106 kB
-├ ƒ /api/contract/[id]/pdf                          436 B           106 kB
-├ ƒ /api/dashboard/approvals                        436 B           106 kB
-├ ƒ /api/dashboard/my-tasks                         436 B           106 kB
-├ ƒ /api/dept                                       436 B           106 kB
-├ ƒ /api/dept/[id]                                  436 B           106 kB
-├ ƒ /api/device                                     436 B           106 kB
-├ ƒ /api/device/[id]                                436 B           106 kB
-├ ƒ /api/device/calibration-plan                    436 B           106 kB
-├ ƒ /api/device/calibration-plan/[id]               436 B           106 kB
-├ ƒ /api/device/list                                436 B           106 kB
-├ ƒ /api/device/maintenance                         436 B           106 kB
-├ ƒ /api/device/maintenance-plan                    436 B           106 kB
-├ ƒ /api/device/maintenance-plan/[id]               436 B           106 kB
-├ ƒ /api/device/repair                              436 B           106 kB
-├ ƒ /api/device/repair/[id]                         436 B           106 kB
-├ ƒ /api/entrustment                                436 B           106 kB
-├ ƒ /api/entrustment/[id]                           436 B           106 kB
-├ ƒ /api/entrustment/[id]/external-link             436 B           106 kB
-├ ƒ /api/entrustment/[id]/projects/[projectId]      436 B           106 kB
-├ ƒ /api/entrustment/client                         436 B           106 kB
-├ ƒ /api/entrustment/client/[id]                    436 B           106 kB
-├ ƒ /api/evaluation-template                        436 B           106 kB
-├ ƒ /api/evaluation-template/[id]                   436 B           106 kB
-├ ƒ /api/external/entrustment/submit                436 B           106 kB
-├ ƒ /api/external/entrustment/validate              436 B           106 kB
-├ ƒ /api/finance/invoice                            436 B           106 kB
-├ ƒ /api/finance/invoice/[id]                       436 B           106 kB
-├ ƒ /api/finance/payment                            436 B           106 kB
-├ ƒ /api/finance/payment/[id]                       436 B           106 kB
-├ ƒ /api/finance/receivable                         436 B           106 kB
-├ ƒ /api/finance/receivable/[id]                    436 B           106 kB
-├ ƒ /api/inspection-standard                        436 B           106 kB
-├ ƒ /api/inspection-standard/[id]                   436 B           106 kB
-├ ƒ /api/migrate-roles                              436 B           106 kB
-├ ƒ /api/migrate-roles-public                       436 B           106 kB
-├ ƒ /api/outsource-order                            436 B           106 kB
-├ ƒ /api/outsource-order/[id]                       436 B           106 kB
-├ ƒ /api/permission                                 436 B           106 kB
-├ ƒ /api/permission/[id]                            436 B           106 kB
-├ ƒ /api/personnel-capability                       436 B           106 kB
-├ ƒ /api/personnel-capability/[id]                  436 B           106 kB
-├ ƒ /api/quotation                                  436 B           106 kB
-├ ƒ /api/quotation/[id]                             436 B           106 kB
-├ ƒ /api/quotation/[id]/pdf                         436 B           106 kB
-├ ƒ /api/recent-activities                          436 B           106 kB
-├ ƒ /api/report-category                            436 B           106 kB
-├ ƒ /api/report-category/[id]                       436 B           106 kB
-├ ƒ /api/report-template                            436 B           106 kB
-├ ƒ /api/report-template/[id]                       436 B           106 kB
-├ ƒ /api/report/[id]/approval                       436 B           106 kB
-├ ƒ /api/report/[id]/export                         436 B           106 kB
-├ ƒ /api/report/client                              436 B           106 kB
-├ ƒ /api/report/client/[id]                         436 B           106 kB
-├ ƒ /api/report/generate                            436 B           106 kB
-├ ƒ /api/report/template                            436 B           106 kB
-├ ƒ /api/report/template/[id]                       436 B           106 kB
-├ ƒ /api/role                                       436 B           106 kB
-├ ƒ /api/role/[id]                                  436 B           106 kB
-├ ƒ /api/sample                                     436 B           106 kB
-├ ƒ /api/sample-test-item                           436 B           106 kB
-├ ƒ /api/sample-test-item/[id]                      436 B           106 kB
-├ ƒ /api/sample-test-item/copy                      436 B           106 kB
-├ ƒ /api/sample/[id]                                436 B           106 kB
-├ ƒ /api/sample/available                           436 B           106 kB
-├ ƒ /api/sample/details                             436 B           106 kB
-├ ƒ /api/sample/my                                  436 B           106 kB
-├ ƒ /api/sample/requisition                         436 B           106 kB
-├ ƒ /api/sample/requisition/[id]                    436 B           106 kB
-├ ƒ /api/statistics                                 436 B           106 kB
-├ ƒ /api/statistics/dashboard                       436 B           106 kB
-├ ƒ /api/supplier                                   436 B           106 kB
-├ ƒ /api/supplier-category                          436 B           106 kB
-├ ƒ /api/supplier-category/[id]                     436 B           106 kB
-├ ƒ /api/supplier-performance                       436 B           106 kB
-├ ƒ /api/supplier-performance/[id]                  436 B           106 kB
-├ ƒ /api/supplier/[id]                              436 B           106 kB
-├ ƒ /api/task/[id]                                  436 B           106 kB
-├ ƒ /api/task/[id]/data                             436 B           106 kB
-├ ƒ /api/task/all                                   436 B           106 kB
-├ ƒ /api/task/my                                    436 B           106 kB
-├ ƒ /api/test-report                                436 B           106 kB
-├ ƒ /api/test-report/[id]                           436 B           106 kB
-├ ƒ /api/test-task                                  436 B           106 kB
-├ ƒ /api/test-task/[id]                             436 B           106 kB
-├ ƒ /api/test-template                              436 B           106 kB
-├ ƒ /api/test-template/[id]                         436 B           106 kB
-├ ƒ /api/test-template/by-method                    436 B           106 kB
-├ ƒ /api/test-template/seed                         436 B           106 kB
-├ ƒ /api/test-template/seed-composite-materials     436 B           106 kB
-├ ƒ /api/todo                                       436 B           106 kB
-├ ƒ /api/user                                       436 B           106 kB
-├ ƒ /api/user/[id]                                  436 B           106 kB
-├ ƒ /approval                                       3.75 kB         375 kB
-├ ƒ /basic-data/capability-review                   6.65 kB         369 kB
-├ ƒ /basic-data/inspection-standards                6.35 kB         369 kB
-├ ƒ /basic-data/personnel-capability                3.27 kB         402 kB
-├ ƒ /basic-data/report-categories                   7.21 kB         382 kB
-├ ƒ /basic-data/test-templates                      11 kB           990 kB
-├ ƒ /consumable/info                                6.7 kB          397 kB
-├ ƒ /consumable/transaction                         8.98 kB         395 kB
-├ ƒ /device                                         2.7 kB          402 kB
-├ ƒ /device/calibration-plan                        5.6 kB          427 kB
-├ ƒ /device/maintenance                             2.4 kB          417 kB
-├ ƒ /device/maintenance-plan                        5 kB            416 kB
-├ ƒ /device/repair                                  6.08 kB         436 kB
-├ ƒ /entrustment/client                             7.53 kB         370 kB
-├ ƒ /entrustment/consultation                       8.52 kB         426 kB
-├ ƒ /entrustment/contract                           8.83 kB         442 kB
-├ ƒ /entrustment/list                               11.4 kB         422 kB
-├ ƒ /entrustment/quotation                          30.4 kB         485 kB
-├ ƒ /external/entrustment/[token]                   7.42 kB         282 kB
-├ ƒ /finance/invoice                                2.55 kB         401 kB
-├ ƒ /finance/payment                                5.67 kB         429 kB
-├ ƒ /finance/receivable                             2.59 kB         410 kB
-├ ○ /login                                          7.84 kB         266 kB
-├ ƒ /outsource/my                                   7.18 kB         387 kB
-├ ƒ /outsource/order                                2.65 kB         410 kB
-├ ƒ /outsource/supplier                             6.16 kB         368 kB
-├ ƒ /personnel/capability                           3.27 kB         402 kB
-├ ƒ /personnel/review                               6.65 kB         369 kB
-├ ƒ /report/approval                                7.69 kB         392 kB
-├ ƒ /report/client                                  8.95 kB         397 kB
-├ ƒ /report/client-generate                         8.45 kB         386 kB
-├ ƒ /report/client-template                         6.37 kB         384 kB
-├ ƒ /report/client/[id]                             3.96 kB         362 kB
-├ ƒ /report/generate                                137 kB          518 kB
-├ ƒ /report/task-generate                           9.32 kB         369 kB
-├ ƒ /report/task/[id]                               4.42 kB         395 kB
-├ ƒ /report/template                                6.39 kB         384 kB
-├ ƒ /sample/details                                 4.7 kB          427 kB
-├ ƒ /sample/list                                    2.79 kB         402 kB
-├ ƒ /sample/my                                      5.08 kB         419 kB
-├ ƒ /sample/receipt                                 22 kB           452 kB
-├ ƒ /sample/requisition                             4.32 kB         419 kB
-├ ƒ /statistics                                     8.57 kB         354 kB
-├ ƒ /supplier/category                              3.95 kB         386 kB
-├ ƒ /supplier/evaluation                            6.24 kB         395 kB
-├ ƒ /supplier/template                              4.18 kB         394 kB
-├ ƒ /system/approval-flow                           5.24 kB         387 kB
-├ ƒ /system/dept                                    2.93 kB         373 kB
-├ ƒ /system/permission                              4.81 kB         387 kB
-├ ƒ /system/role                                    3.21 kB         369 kB
-├ ƒ /system/user                                    4.74 kB         387 kB
-├ ƒ /task/all                                       1.86 kB         401 kB
-├ ƒ /task/data/[id]                                 6.81 kB         897 kB
-├ ƒ /task/my                                        8.75 kB         378 kB
-├ ƒ /task/review/[id]                               6.91 kB         869 kB
-├ ƒ /test/report                                    9.31 kB         369 kB
-├ ƒ /test/report/[id]                               4.42 kB         395 kB
-└ ƒ /test/task                                      2.59 kB         401 kB
-+ First Load JS shared by all                       106 kB
-  ├ chunks/1517-e83b6f4bb2d93023.js                 50.7 kB
-  ├ chunks/4bd1b696-8ccad4c7c6ecb2dd.js             53 kB
-  └ other shared chunks (total)                     2.11 kB
+Route (app)                                                        Size     First Load JS
+┌ ƒ /                                                              22.3 kB         352 kB
+├ ○ /_not-found                                                    990 B           107 kB
+├ ƒ /api/approval                                                  467 B           106 kB
+├ ƒ /api/approval-flow                                             467 B           106 kB
+├ ƒ /api/approval-flow/[id]                                        467 B           106 kB
+├ ƒ /api/approval/[id]                                             467 B           106 kB
+├ ƒ /api/auth/[...nextauth]                                        467 B           106 kB
+├ ƒ /api/auth/me                                                   467 B           106 kB
+├ ƒ /api/capability-review                                         467 B           106 kB
+├ ƒ /api/capability-review/[id]                                    467 B           106 kB
+├ ƒ /api/client                                                    467 B           106 kB
+├ ƒ /api/client-report                                             467 B           106 kB
+├ ƒ /api/client-report/[id]                                        467 B           106 kB
+├ ƒ /api/client-report/generate                                    467 B           106 kB
+├ ƒ /api/client/[id]                                               467 B           106 kB
+├ ƒ /api/client/[id]/approval                                      467 B           106 kB
+├ ƒ /api/client/[id]/approve                                       467 B           106 kB
+├ ƒ /api/client/[id]/relations                                     467 B           106 kB
+├ ƒ /api/client/[id]/submit                                        467 B           106 kB
+├ ƒ /api/consultation                                              467 B           106 kB
+├ ƒ /api/consultation/[id]                                         467 B           106 kB
+├ ƒ /api/consultation/[id]/assessment                              467 B           106 kB
+├ ƒ /api/consultation/[id]/assessment/details                      467 B           106 kB
+├ ƒ /api/consultation/[id]/close                                   467 B           106 kB
+├ ƒ /api/consultation/[id]/follow-ups                              467 B           106 kB
+├ ƒ /api/consultation/[id]/follow-ups/[followUpId]                 467 B           106 kB
+├ ƒ /api/consultation/[id]/reassess                                467 B           106 kB
+├ ƒ /api/consultation/assessment/[id]                              467 B           106 kB
+├ ƒ /api/consultation/assessment/[id]/submit                       467 B           106 kB
+├ ƒ /api/consultation/assessment/item/[sampleTestItemId]/reassess  467 B           106 kB
+├ ƒ /api/consultation/assessment/item/[sampleTestItemId]/submit    467 B           106 kB
+├ ƒ /api/consultation/assessment/my-history                        467 B           106 kB
+├ ƒ /api/consultation/assessment/my-pending                        467 B           106 kB
+├ ƒ /api/consumable                                                467 B           106 kB
+├ ƒ /api/consumable-transaction                                    467 B           106 kB
+├ ƒ /api/consumable/[id]                                           467 B           106 kB
+├ ƒ /api/contract                                                  467 B           106 kB
+├ ƒ /api/contract/[id]                                             467 B           106 kB
+├ ƒ /api/contract/[id]/approval                                    467 B           106 kB
+├ ƒ /api/contract/[id]/pdf                                         467 B           106 kB
+├ ƒ /api/dashboard/approvals                                       467 B           106 kB
+├ ƒ /api/dashboard/my-tasks                                        467 B           106 kB
+├ ƒ /api/dept                                                      467 B           106 kB
+├ ƒ /api/dept/[id]                                                 467 B           106 kB
+├ ƒ /api/device                                                    467 B           106 kB
+├ ƒ /api/device/[id]                                               467 B           106 kB
+├ ƒ /api/device/calibration-plan                                   467 B           106 kB
+├ ƒ /api/device/calibration-plan/[id]                              467 B           106 kB
+├ ƒ /api/device/list                                               467 B           106 kB
+├ ƒ /api/device/maintenance                                        467 B           106 kB
+├ ƒ /api/device/maintenance-plan                                   467 B           106 kB
+├ ƒ /api/device/maintenance-plan/[id]                              467 B           106 kB
+├ ƒ /api/device/repair                                             467 B           106 kB
+├ ƒ /api/device/repair/[id]                                        467 B           106 kB
+├ ƒ /api/entrustment                                               467 B           106 kB
+├ ƒ /api/entrustment/[id]                                          467 B           106 kB
+├ ƒ /api/entrustment/[id]/external-link                            467 B           106 kB
+├ ƒ /api/entrustment/[id]/projects                                 467 B           106 kB
+├ ƒ /api/entrustment/[id]/projects/[projectId]                     467 B           106 kB
+├ ƒ /api/entrustment/client                                        467 B           106 kB
+├ ƒ /api/entrustment/client/[id]                                   467 B           106 kB
+├ ƒ /api/evaluation-template                                       467 B           106 kB
+├ ƒ /api/evaluation-template/[id]                                  467 B           106 kB
+├ ƒ /api/external/entrustment/submit                               467 B           106 kB
+├ ƒ /api/external/entrustment/validate                             467 B           106 kB
+├ ƒ /api/finance/invoice                                           467 B           106 kB
+├ ƒ /api/finance/invoice/[id]                                      467 B           106 kB
+├ ƒ /api/finance/payment                                           467 B           106 kB
+├ ƒ /api/finance/payment/[id]                                      467 B           106 kB
+├ ƒ /api/finance/receivable                                        467 B           106 kB
+├ ƒ /api/finance/receivable/[id]                                   467 B           106 kB
+├ ƒ /api/health                                                    467 B           106 kB
+├ ƒ /api/inspection-standard                                       467 B           106 kB
+├ ƒ /api/inspection-standard/[id]                                  467 B           106 kB
+├ ƒ /api/migrate-roles                                             467 B           106 kB
+├ ƒ /api/migrate-roles-public                                      467 B           106 kB
+├ ƒ /api/outsource-order                                           467 B           106 kB
+├ ƒ /api/outsource-order/[id]                                      467 B           106 kB
+├ ƒ /api/permission                                                467 B           106 kB
+├ ƒ /api/permission/[id]                                           467 B           106 kB
+├ ƒ /api/personnel-capability                                      467 B           106 kB
+├ ƒ /api/personnel-capability/[id]                                 467 B           106 kB
+├ ƒ /api/quotation                                                 467 B           106 kB
+├ ƒ /api/quotation/[id]                                            467 B           106 kB
+├ ƒ /api/quotation/[id]/create-entrustment                         467 B           106 kB
+├ ƒ /api/quotation/[id]/pdf                                        467 B           106 kB
+├ ƒ /api/quotation/[id]/reject                                     467 B           106 kB
+├ ƒ /api/recent-activities                                         467 B           106 kB
+├ ƒ /api/report-category                                           467 B           106 kB
+├ ƒ /api/report-category/[id]                                      467 B           106 kB
+├ ƒ /api/report-template                                           467 B           106 kB
+├ ƒ /api/report-template/[id]                                      467 B           106 kB
+├ ƒ /api/report/[id]/approval                                      467 B           106 kB
+├ ƒ /api/report/[id]/export                                        467 B           106 kB
+├ ƒ /api/report/client                                             467 B           106 kB
+├ ƒ /api/report/client/[id]                                        467 B           106 kB
+├ ƒ /api/report/generate                                           467 B           106 kB
+├ ƒ /api/report/template                                           467 B           106 kB
+├ ƒ /api/report/template/[id]                                      467 B           106 kB
+├ ƒ /api/role                                                      467 B           106 kB
+├ ƒ /api/role/[id]                                                 467 B           106 kB
+├ ƒ /api/sample                                                    467 B           106 kB
+├ ƒ /api/sample-test-item                                          467 B           106 kB
+├ ƒ /api/sample-test-item/[id]                                     467 B           106 kB
+├ ƒ /api/sample-test-item/copy                                     467 B           106 kB
+├ ƒ /api/sample/[id]                                               467 B           106 kB
+├ ƒ /api/sample/available                                          467 B           106 kB
+├ ƒ /api/sample/details                                            467 B           106 kB
+├ ƒ /api/sample/my                                                 467 B           106 kB
+├ ƒ /api/sample/requisition                                        467 B           106 kB
+├ ƒ /api/sample/requisition/[id]                                   467 B           106 kB
+├ ƒ /api/statistics                                                467 B           106 kB
+├ ƒ /api/statistics/dashboard                                      467 B           106 kB
+├ ƒ /api/supplier                                                  467 B           106 kB
+├ ƒ /api/supplier-category                                         467 B           106 kB
+├ ƒ /api/supplier-category/[id]                                    467 B           106 kB
+├ ƒ /api/supplier-performance                                      467 B           106 kB
+├ ƒ /api/supplier-performance/[id]                                 467 B           106 kB
+├ ƒ /api/supplier/[id]                                             467 B           106 kB
+├ ƒ /api/task/[id]                                                 467 B           106 kB
+├ ƒ /api/task/[id]/data                                            467 B           106 kB
+├ ƒ /api/task/all                                                  467 B           106 kB
+├ ƒ /api/task/my                                                   467 B           106 kB
+├ ƒ /api/test-report                                               467 B           106 kB
+├ ƒ /api/test-report/[id]                                          467 B           106 kB
+├ ƒ /api/test-task                                                 467 B           106 kB
+├ ƒ /api/test-task/[id]                                            467 B           106 kB
+├ ƒ /api/test-template                                             467 B           106 kB
+├ ƒ /api/test-template/[id]                                        467 B           106 kB
+├ ƒ /api/test-template/by-method                                   467 B           106 kB
+├ ƒ /api/test-template/seed                                        467 B           106 kB
+├ ƒ /api/test-template/seed-composite-materials                    467 B           106 kB
+├ ƒ /api/todo                                                      467 B           106 kB
+├ ƒ /api/upload/consultation                                       467 B           106 kB
+├ ƒ /api/upload/consultation/[fileId]                              467 B           106 kB
+├ ƒ /api/user                                                      467 B           106 kB
+├ ƒ /api/user/[id]                                                 467 B           106 kB
+├ ƒ /approval                                                      3.43 kB         375 kB
+├ ƒ /assessment                                                    7.17 kB         392 kB
+├ ƒ /basic-data/capability-review                                  6.26 kB         369 kB
+├ ƒ /basic-data/inspection-standards                               5.96 kB         369 kB
+├ ƒ /basic-data/personnel-capability                               3.63 kB         402 kB
+├ ƒ /basic-data/report-categories                                  7.56 kB         382 kB
+├ ƒ /basic-data/test-templates                                     11.3 kB         990 kB
+├ ƒ /consumable/info                                               6.34 kB         397 kB
+├ ƒ /consumable/transaction                                        8.94 kB         395 kB
+├ ƒ /device                                                        3.07 kB         402 kB
+├ ƒ /device/calibration-plan                                       6.08 kB         427 kB
+├ ƒ /device/maintenance                                            2.75 kB         417 kB
+├ ƒ /device/maintenance-plan                                       5.41 kB         416 kB
+├ ƒ /device/repair                                                 3.88 kB         436 kB
+├ ƒ /entrustment/client                                            8.04 kB         371 kB
+├ ƒ /entrustment/consultation                                      18.5 kB         418 kB
+├ ƒ /entrustment/consultation/create                               3.78 kB         451 kB
+├ ƒ /entrustment/consultation/edit/[id]                            3.95 kB         462 kB
+├ ƒ /entrustment/contract                                          9.49 kB         398 kB
+├ ƒ /entrustment/contract/create                                   1.47 kB         434 kB
+├ ● /entrustment/contract/edit/[id]                                1.1 kB          433 kB
+├ ƒ /entrustment/list                                              7.05 kB         401 kB
+├ ƒ /entrustment/list/create                                       1.79 kB         435 kB
+├ ● /entrustment/list/edit/[id]                                    1.06 kB         434 kB
+├ ƒ /entrustment/quotation                                         12.7 kB         442 kB
+├ ƒ /entrustment/quotation/create                                  4.96 kB         438 kB
+├ ƒ /entrustment/quotation/edit/[id]                               5.08 kB         471 kB
+├ ƒ /external/entrustment/[token]                                  5.08 kB         293 kB
+├ ƒ /finance/invoice                                               2.93 kB         401 kB
+├ ƒ /finance/payment                                               6.54 kB         429 kB
+├ ƒ /finance/receivable                                            2.96 kB         410 kB
+├ ○ /login                                                         5.9 kB          277 kB
+├ ƒ /outsource/my                                                  9.5 kB          387 kB
+├ ƒ /outsource/order                                               3.11 kB         410 kB
+├ ƒ /outsource/supplier                                            5.79 kB         368 kB
+├ ƒ /personnel/capability                                          3.63 kB         402 kB
+├ ƒ /personnel/review                                              6.26 kB         369 kB
+├ ƒ /report/approval                                               10 kB           391 kB
+├ ƒ /report/client                                                 11.3 kB         397 kB
+├ ƒ /report/client-generate                                        8.43 kB         387 kB
+├ ƒ /report/client-template                                        6 kB            384 kB
+├ ƒ /report/client/[id]                                            3.82 kB         373 kB
+├ ƒ /report/generate                                               136 kB          518 kB
+├ ƒ /report/task-generate                                          9.14 kB         369 kB
+├ ƒ /report/task/[id]                                              3.43 kB         395 kB
+├ ƒ /report/template                                               6.03 kB         384 kB
+├ ƒ /sample/details                                                5.08 kB         427 kB
+├ ƒ /sample/list                                                   3.17 kB         402 kB
+├ ƒ /sample/my                                                     5.43 kB         420 kB
+├ ƒ /sample/receipt                                                21.5 kB         454 kB
+├ ƒ /sample/requisition                                            4.64 kB         419 kB
+├ ƒ /statistics                                                    7.93 kB         355 kB
+├ ƒ /supplier/category                                             3.55 kB         386 kB
+├ ƒ /supplier/evaluation                                           6.08 kB         396 kB
+├ ƒ /supplier/template                                             3.8 kB          394 kB
+├ ƒ /system/approval-flow                                          4.88 kB         387 kB
+├ ƒ /system/dept                                                   2.56 kB         373 kB
+├ ƒ /system/permission                                             4.38 kB         387 kB
+├ ƒ /system/role                                                   2.81 kB         369 kB
+├ ƒ /system/user                                                   4.48 kB         387 kB
+├ ƒ /task/all                                                      2.24 kB         401 kB
+├ ƒ /task/data/[id]                                                4.74 kB         897 kB
+├ ƒ /task/my                                                       6.05 kB         379 kB
+├ ƒ /task/review/[id]                                              4.27 kB         868 kB
+├ ƒ /test/report                                                   9.14 kB         369 kB
+├ ƒ /test/report/[id]                                              3.48 kB         395 kB
+├ ƒ /test/task                                                     2.96 kB         402 kB
+└ ƒ /uploads/consultation/[consultationId]/[fileName]              467 B           106 kB
++ First Load JS shared by all                                      106 kB
+  ├ chunks/1517-222d11e2f5545c69.js                                50.7 kB
+  ├ chunks/4bd1b696-f2d56684ccc300ed.js                            53 kB
+  └ other shared chunks (total)                                    2.11 kB
 
 
 ○  (Static)   prerendered as static content
+●  (SSG)      prerendered as static HTML (uses generateStaticParams)
 ƒ  (Dynamic)  server-rendered on demand
 
 
 [2/5] 打包构建产物...
 
-[3/5] 上传到服务器...
-
-[4/5] 服务器解压并配置...
-Start updating database schema...
-Adding sheetData column to biz_test_task...
-ℹ️ sheetData column already exists.
-Adding submittedAt column to biz_test_task...
-ℹ️ submittedAt column already exists.
-Adding submittedBy column to biz_test_task...
-ℹ️ submittedBy column already exists.
-Adding summary column to biz_test_task...
-ℹ️ summary column already exists.
-Adding conclusion column to biz_test_task...
-ℹ️ conclusion column already exists.
-Adding sampleModel column to biz_contract...
-ℹ️ sampleModel column already exists.
-Adding sampleMaterial column to biz_contract...
-ℹ️ sampleMaterial column already exists.
-Adding sampleQuantity column to biz_contract...
-ℹ️ sampleQuantity column already exists.
-Creating biz_contract_item table...
-✅ biz_contract_item table checked/created.
-Adding material column to biz_sample...
-ℹ️ material column already exists in biz_sample.
-Creating biz_consultation_sample table...
-✅ biz_consultation_sample table checked/created.
-Creating biz_quotation_sample table...
-✅ biz_quotation_sample table checked/created.
-Creating biz_contract_sample table...
-✅ biz_contract_sample table checked/created.
-Adding FK to biz_test_task for projectId...
-❌ Error adding FK (ignoring): 
-Invalid `prisma.$executeRawUnsafe()` invocation:
-
-
-Raw query failed. Code: `1452`. Message: `Cannot add or update a child row: a foreign key constraint fails (`lims`.`#sql-1_53`, CONSTRAINT `biz_test_task_projectId_fkey` FOREIGN KEY (`projectId`) REFERENCES `biz_entrustment_project` (`id`) ON DELETE SET NULL ON UPDATE CASCADE)`
-
-[5/5] 重启服务...
-[PM2] Applying action deleteProcessId on app [lims-next](ids: [ 228 ])
-[PM2] [lims-next](228) ✓
-┌─────┬──────────────────┬─────────────┬─────────┬─────────┬──────────┬────────┬──────┬───────────┬──────────┬──────────┬──────────┬──────────┐
-│ id  │ name             │ namespace   │ version │ mode    │ pid      │ uptime │ ↺    │ status    │ cpu      │ mem      │ user     │ watching │
-├─────┼──────────────────┼─────────────┼─────────┼─────────┼──────────┼────────┼──────┼───────────┼──────────┼──────────┼──────────┼──────────┤
-│ 2   │ fai-api          │ default     │ N/A     │ fork    │ 1178713  │ 18h    │ 237  │ online    │ 0%       │ 151.3mb  │ root     │ disabled │
-│ 220 │ guanwu-system    │ default     │ N/A     │ fork    │ 1154835  │ 40h    │ 130  │ online    │ 0%       │ 45.6mb   │ root     │ disabled │
-│ 206 │ npi-demo         │ default     │ 16.1.1  │ fork    │ 1178723  │ 18h    │ 3    │ online    │ 0%       │ 130.7mb  │ root     │ disabled │
-│ 208 │ pps-proxy        │ default     │ 1.0.0   │ fork    │ 0        │ 0      │ 1    │ stopped   │ 0%       │ 0b       │ root     │ disabled │
-│ 0   │ word-app         │ default     │ N/A     │ fork    │ 1168941  │ 29h    │ 2326 │ online    │ 0%       │ 43.2mb   │ root     │ disabled │
-└─────┴──────────────────┴─────────────┴─────────┴─────────┴──────────┴────────┴──────┴───────────┴──────────┴──────────┴──────────┴──────────┘
-[PM2] Starting /root/lims-next/.next/standalone/server.js in fork_mode (1 instance)
-[PM2] Done.
-┌─────┬──────────────────┬─────────────┬─────────┬─────────┬──────────┬────────┬──────┬───────────┬──────────┬──────────┬──────────┬──────────┐
-│ id  │ name             │ namespace   │ version │ mode    │ pid      │ uptime │ ↺    │ status    │ cpu      │ mem      │ user     │ watching │
-├─────┼──────────────────┼─────────────┼─────────┼─────────┼──────────┼────────┼──────┼───────────┼──────────┼──────────┼──────────┼──────────┤
-│ 2   │ fai-api          │ default     │ N/A     │ fork    │ 1178713  │ 18h    │ 237  │ online    │ 0%       │ 151.3mb  │ root     │ disabled │
-│ 220 │ guanwu-system    │ default     │ N/A     │ fork    │ 1154835  │ 40h    │ 130  │ online    │ 0%       │ 45.6mb   │ root     │ disabled │
-│ 229 │ lims-next        │ default     │ 0.1.0   │ fork    │ 1203096  │ 0s     │ 0    │ online    │ 0%       │ 37.9mb   │ root     │ disabled │
-│ 206 │ npi-demo         │ default     │ 16.1.1  │ fork    │ 1178723  │ 18h    │ 3    │ online    │ 0%       │ 130.7mb  │ root     │ disabled │
-│ 208 │ pps-proxy        │ default     │ 1.0.0   │ fork    │ 0        │ 0      │ 1    │ stopped   │ 0%       │ 0b       │ root     │ disabled │
-│ 0   │ word-app         │ default     │ N/A     │ fork    │ 1168941  │ 29h    │ 2326 │ online    │ 0%       │ 43.2mb   │ root     │ disabled │
-└─────┴──────────────────┴─────────────┴─────────┴─────────┴──────────┴────────┴──────┴───────────┴──────────┴──────────┴──────────┴──────────┘
-[PM2] Saving current process list...
-[PM2] Successfully saved in /root/.pm2/dump.pm2
-
-==========================================
-  部署完成！
-==========================================
-访问地址: http://8.130.182.148:3001
+[3/5] 上传到服务器 (使用 rsync)...
+kex_exchange_identification: Connection closed by remote host
+Connection closed by 8.130.182.148 port 22
+rsync: connection unexpectedly closed (0 bytes received so far) [sender]
+rsync error: unexplained error (code 255) at /System/Volumes/Data/SWE/macOS/BuildRoots/533514bb11/Library/Caches/com.apple.xbs/Sources/rsync/rsync-55/rsync/io.c(453) [sender=2.6.9]
