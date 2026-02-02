@@ -55,6 +55,7 @@ interface Consultation {
   clientId?: string
   client?: Client
   clientContactPerson?: string
+  clientRequirement?: string | null // Added
   estimatedQuantity?: string | null
   testItems?: string[]
   expectedDeadline?: string | null
@@ -91,16 +92,9 @@ export default function ConsultationPage() {
   // 行选择
   const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([])
   const [selectedRows, setSelectedRows] = useState<Consultation[]>([])
-
   // 弹窗
-  const [generateQuoteModalOpen, setGenerateQuoteModalOpen] = useState(false)
   const [closeConsultModalOpen, setCloseConsultModalOpen] = useState(false)
-  const [generateQuoteForm] = Form.useForm()
   const [closeReasonForm] = Form.useForm()
-  const [quoteItems, setQuoteItems] = useState<any[]>([])
-  const [quoteSamples, setQuoteSamples] = useState<any[]>([])
-
-  // 样品检测项 - 移除，生成报价单时使用 API 获取的数据
   // const [sampleTestItems, setSampleTestItems] = useState<SampleTestItemData[]>([])
 
   // 评估相关状态
@@ -161,7 +155,7 @@ export default function ConsultationPage() {
       }
     } catch (error) {
       console.error('[Consultation] 获取当前用户信息失败:', error)
-      showError('获取用户信息失败', '无法获取当前用户信息，部分功能可能受限')
+      showError('获取用户信息失败：无法获取当前用户信息')
     }
   }
 
@@ -216,106 +210,7 @@ export default function ConsultationPage() {
     })
   }
 
-  // 打开生成报价单弹窗
-  const handleOpenGenerateQuote = () => {
-    if (selectedRows.length !== 1) {
-      showWarningMessage('请选择一条咨询记录')
-      return
-    }
-    const consultation = selectedRows[0]
 
-    // 初始化样品数据（从样品检测项获取）
-    let initSamples: any[] = []
-    // sampleTestItems状态已移除，这里置空即可，因为该功能主要是列表操作，没法获取详情里的样品
-    setQuoteSamples(initSamples)
-
-    const items = (consultation.testItems || []).map(item => {
-      const template = testTemplates.find(t => t.name === item)
-      return {
-        name: item,
-        standard: template?.method || '',
-        quantity: 10,
-        unitPrice: 0,
-      }
-    })
-    setQuoteItems(items)
-    generateQuoteForm.setFieldsValue({
-      consultationId: consultation.id,
-      consultationNo: consultation.consultationNo,
-      clientId: consultation.clientId,
-      clientName: consultation.client?.name,
-      contact: consultation.clientContactPerson,
-      phone: consultation.client?.phone,
-      email: consultation.client?.email,
-      address: consultation.client?.address,
-      clientReportDeadline: consultation.expectedDeadline,
-    })
-    setGenerateQuoteModalOpen(true)
-  }
-
-  // 生成报价单提交
-  const handleGenerateQuote = async () => {
-    const values = await generateQuoteForm.validateFields()
-    showLoading('正在创建报价单...', 'generate')
-
-    const res = await fetch('/api/quotation', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        consultationNo: values.consultationNo,
-        clientId: values.clientId,
-        clientContactPerson: values.clientContactPerson,
-        // ✅ 需求2：提交新增的字段
-        clientReportDeadline: values.clientReportDeadline ? dayjs(values.clientReportDeadline).format('YYYY-MM-DD') : undefined,
-        quotationDate: values.quotationDate ? dayjs(values.quotationDate).format('YYYY-MM-DD') : undefined,
-        validDays: values.validDays,
-        paymentTerms: values.paymentTerms,
-        deliveryTerms: values.deliveryTerms,
-        follower: values.follower,
-        remark: values.remark,
-        clientRemark: values.clientRemark,
-        // ✅ 需求3：提交样品检测项格式的报价明细（包含样品名）
-        items: quoteItems.map((item: any) => ({
-          sampleName: item.sampleName || '',
-          serviceItem: item.name,
-          methodStandard: item.standard,
-          quantity: item.quantity,
-          unitPrice: item.unitPrice,
-          totalPrice: item.quantity * item.unitPrice,
-        })),
-      }),
-    })
-
-    const json = await res.json()
-
-    // 复制样品检测项数据到报价单
-    if (json.id) {
-      await fetch('/api/sample-test-item/copy', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          sourceBizType: 'consultation',
-          sourceBizId: values.consultationId,
-          targetBizType: 'quotation',
-          targetBizId: json.id,
-        })
-      })
-    }
-
-    // 更新咨询单状态为已报价
-    await fetch(`/api/consultation/${values.consultationId}`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ status: 'quoted', quotationNo: json.quotationNo }),
-    })
-
-    showSuccess(`报价单 ${json.quotationNo} 创建成功`)
-    setGenerateQuoteModalOpen(false)
-    setSelectedRowKeys([])
-    setSelectedRows([])
-    fetchData()
-    router.push('/entrustment/quotation')
-  }
 
   // 打开关闭咨询弹窗
   const handleOpenCloseConsult = () => {
@@ -348,88 +243,29 @@ export default function ConsultationPage() {
     fetchData()
   }
 
-  // 添加报价项
-  const handleAddQuoteItem = () => {
-    setQuoteItems([...quoteItems, { name: '', standard: '', quantity: 1, unitPrice: 0 }])
-  }
 
-  // 更新报价项
-  const handleUpdateQuoteItem = (index: number, field: string, value: any) => {
-    const newItems = [...quoteItems]
-    newItems[index] = { ...newItems[index], [field]: value }
-
-    // 如果选择了检测项目，自动带出检测标准
-    if (field === 'name') {
-      const template = testTemplates.find(t => t.name === value)
-      if (template?.method) {
-        newItems[index].standard = template.method
-      }
-    }
-
-    setQuoteItems(newItems)
-  }
-
-  // 删除报价项
-  const handleRemoveQuoteItem = (index: number) => {
-    setQuoteItems(quoteItems.filter((_, i) => i !== index))
-  }
-
-  // 报价单样品操作
-  const handleAddQuoteSample = () => {
-    setQuoteSamples([...quoteSamples, { name: '', quantity: 1 }])
-  }
-
-  const handleUpdateQuoteSample = (index: number, field: string, value: any) => {
-    const newSamples = [...quoteSamples]
-    newSamples[index] = { ...newSamples[index], [field]: value }
-    setQuoteSamples(newSamples)
-  }
-
-  const handleRemoveQuoteSample = (index: number) => {
-    setQuoteSamples(quoteSamples.filter((_, i) => i !== index))
-  }
-
-  // 计算报价金额
-  const totalAmount = quoteItems.reduce((sum, item) => sum + (item.quantity || 0) * (item.unitPrice || 0), 0)
-  const taxAmount = totalAmount * 0.06
-  const totalWithTax = totalAmount + taxAmount
 
   // 针对单条记录生成报价单
   const handleOpenGenerateQuoteForRecord = async (consultation: Consultation) => {
-    console.log('🔵 [生成报价单] 开始执行, consultationId:', consultation.id)
-
     // ✅ 需求1：评估验证 - 检查所有样品检测项是否已评估通过
     try {
-      console.log('🔵 [生成报价单] 发起API请求...')
       const res = await fetch(`/api/consultation/${consultation.id}`)
-      console.log('🔵 [生成报价单] API响应状态:', res.status, res.ok)
-
       const result = await res.json()
-      console.log('🔵 [生成报价单] API返回数据:', result)
 
       if (!res.ok || !result.success) {
-        console.error('❌ [生成报价单] 获取咨询详情失败')
-        showError('获取咨询详情失败', '无法加载咨询单信息，请刷新页面重试')
+        showError('获取咨询详情失败：无法加载咨询单信息')
         return
       }
 
-      // 正确解包: result.data 才是咨询单数据
       const data = result.data
-      console.log('🔵 [生成报价单] 解包后的数据:', data)
-
       const items = data.sampleTestItems || []
-      console.log('🔵 [生成报价单] sampleTestItems数量:', items.length)
-      console.log('🔵 [生成报价单] sampleTestItems详情:', items)
 
       // 检查是否有未评估或评估未通过的项
       const unfinishedItems = items.filter(
         (item: any) => item.assessmentStatus !== 'passed'
       )
-      console.log('🔵 [生成报价单] 未完成评估的项:', unfinishedItems.length, unfinishedItems)
 
       if (unfinishedItems.length > 0) {
-        console.warn('⚠️ [生成报价单] 存在未完成评估的项，弹出详细Modal')
-        // ✅ 需求1改进：显示详细的未完成评估项表格
         // 使用 modal 实例（来自 useModal hook）而非静态 Modal.warning
         modal.warning({
           title: '评估未完成',
@@ -478,48 +314,12 @@ export default function ConsultationPage() {
         return
       }
 
-      console.log('✅ [生成报价单] 评估验证通过，开始生成报价明细')
+      // ✅ 验证通过，跳转到新建报价单页面
+      router.push(`/entrustment/quotation/create?consultationId=${consultation.id}`)
 
-      // ✅ 需求3：从样品检测项直接生成报价明细（样品+检测项合并）
-      const quoteItemsList = items.map((item: any) => ({
-        sampleName: item.sampleName || '',
-        name: item.testItemName || '', // 检测项目名称
-        standard: item.testStandard || '', // 检测标准
-        quantity: item.quantity || 1,
-        unitPrice: 0
-      }))
-      console.log('🔵 [生成报价单] 生成的报价明细:', quoteItemsList)
-      setQuoteItems(quoteItemsList)
-      generateQuoteForm.resetFields()
-      console.log('🔵 [生成报价单] 设置表单数据...')
-      generateQuoteForm.setFieldsValue({
-        consultationId: consultation.id,
-        consultationNo: consultation.consultationNo,
-        clientId: consultation.clientId,
-        clientName: consultation.client?.name,
-        // 修复：字段名应与表单Item name一致 (contact, phone, email, address)
-        // 需求1：优先从客户档案(client)带出信息
-        contact: consultation.client?.contact || consultation.clientContactPerson,
-        phone: consultation.client?.phone,
-        email: consultation.client?.email,
-        address: consultation.client?.address,
-        clientReportDeadline: consultation.expectedDeadline ? dayjs(consultation.expectedDeadline) : undefined,
-        // ✅ 需求2：补充主报价单表单的字段
-        quotationDate: dayjs(), // 默认今天
-        validDays: 30,
-        taxRate: 6,
-        discountAmount: 0,
-        paymentTerms: '', // 可选
-        deliveryTerms: '', // 可选
-        // 需求2确认：明确使用咨询单的跟单人
-        follower: consultation.follower || '',
-        remark: '', // 备注
-      })
-      console.log('✅ [生成报价单] 打开报价单弹窗')
-      setGenerateQuoteModalOpen(true)
     } catch (error) {
       console.error('❌ [生成报价单] 异常:', error)
-      showError('操作失败', '生成报价单失败，请重试')
+      showError('生成报价单失败，请重试')
     }
   }
 
@@ -734,210 +534,7 @@ export default function ConsultationPage() {
         )}
       </Drawer>
 
-      {/* 生成报价单弹窗 */}
-      <Modal
-        title="新建报价单"
-        open={generateQuoteModalOpen}
-        onOk={handleGenerateQuote}
-        onCancel={() => setGenerateQuoteModalOpen(false)}
-        width={900}
-        okText="保存"
-      >
-        <Form form={generateQuoteForm} layout="vertical">
-          <h4>委托方信息</h4>
-          <Row gutter={16}>
-            <Col span={24}>
-              <Form.Item name="clientName" label="委托方公司" rules={[{ required: true }]}>
-                <Input disabled />
-              </Form.Item>
-            </Col>
-          </Row>
-          <Row gutter={16}>
-            <Col span={12}>
-              <Form.Item name="contact" label="联系人" rules={[{ required: true }]}>
-                <Input />
-              </Form.Item>
-            </Col>
-            <Col span={12}>
-              <Form.Item name="phone" label="联系电话" rules={[{ required: true }]}>
-                <Input />
-              </Form.Item>
-            </Col>
-          </Row>
-          <Row gutter={16}>
-            <Col span={12}>
-              <Form.Item name="email" label="邮箱">
-                <Input />
-              </Form.Item>
-            </Col>
-            <Col span={12}>
-              <Form.Item name="address" label="地址">
-                <Input />
-              </Form.Item>
-            </Col>
-          </Row>
 
-          {/* ✅ 需求2：添加报价信息字段，与主报价单表单一致 */}
-          <Divider>报价信息</Divider>
-          <Row gutter={16}>
-            <Col span={12}>
-              <Form.Item name="quotationDate" label="报价日期" rules={[{ required: true, message: '请选择报价日期' }]}>
-                <DatePicker style={{ width: '100%' }} placeholder="选择报价日期" />
-              </Form.Item>
-            </Col>
-            <Col span={12}>
-              <Form.Item name="validDays" label="有效期（天）">
-                <InputNumber min={1} style={{ width: '100%' }} placeholder="如：30" />
-              </Form.Item>
-            </Col>
-          </Row>
-          <Row gutter={16}>
-            <Col span={12}>
-              <Form.Item name="clientReportDeadline" label="客户报告截止日期">
-                <DatePicker style={{ width: '100%' }} placeholder="选择报告截止日期" />
-              </Form.Item>
-            </Col>
-            <Col span={12}>
-              <Form.Item name="follower" label="跟单人">
-                <UserSelect placeholder="请选择跟单人" />
-              </Form.Item>
-            </Col>
-          </Row>
-          <Row gutter={16}>
-            <Col span={12}>
-              <Form.Item name="paymentTerms" label="付款方式">
-                <Input placeholder="如：预付50%" />
-              </Form.Item>
-            </Col>
-            <Col span={12}>
-              <Form.Item name="deliveryTerms" label="交付方式">
-                <Input placeholder="如：检测完成后3个工作日内出具报告" />
-              </Form.Item>
-            </Col>
-          </Row>
-
-          <Divider>样品检测项</Divider>
-
-          <Table
-            dataSource={quoteItems}
-            rowKey={(r, i) => i || 0}
-            pagination={false}
-            size="small"
-            bordered
-            scroll={{ x: 'max-content' }}
-            locale={{ emptyText: '暂无检测项' }}
-            columns={[
-              {
-                title: '样品名称',
-                dataIndex: 'sampleName',
-                width: 150,
-                render: (val, record, index) => (
-                  <Input
-                    value={val}
-                    onChange={e => handleUpdateQuoteItem(index, 'sampleName', e.target.value)}
-                    placeholder="样品名称"
-                  />
-                )
-              },
-              {
-                title: '检测项目',
-                dataIndex: 'name',
-                width: 150,
-                render: (val, record, index) => (
-                  <Select
-                    placeholder="检测项目"
-                    value={val}
-                    onChange={(v) => handleUpdateQuoteItem(index, 'name', v)}
-                    showSearch
-                    optionFilterProp="label"
-                    options={testTemplates.map(t => ({ value: t.name, label: t.name }))}
-                    style={{ width: '100%' }}
-                  />
-                )
-              },
-              {
-                title: '检测标准',
-                dataIndex: 'standard',
-                width: 150,
-                render: (val, record, index) => (
-                  <Input
-                    placeholder="检测标准"
-                    value={val}
-                    onChange={(e) => handleUpdateQuoteItem(index, 'standard', e.target.value)}
-                  />
-                )
-              },
-              {
-                title: '数量',
-                dataIndex: 'quantity',
-                width: 100,
-                render: (val, record, index) => (
-                  <InputNumber
-                    placeholder="数量"
-                    value={val}
-                    onChange={(v) => handleUpdateQuoteItem(index, 'quantity', v)}
-                    min={1}
-                    style={{ width: '100%' }}
-                  />
-                )
-              },
-              {
-                title: '单价(¥)',
-                dataIndex: 'unitPrice',
-                width: 120,
-                render: (val, record, index) => (
-                  <InputNumber
-                    placeholder="单价"
-                    value={val}
-                    onChange={(v) => handleUpdateQuoteItem(index, 'unitPrice', v)}
-                    min={0}
-                    precision={2}
-                    style={{ width: '100%' }}
-                  />
-                )
-              },
-              {
-                title: '总价(¥)',
-                dataIndex: 'totalPrice',
-                width: 100,
-                render: (_, record) => (
-                  <span>¥{((record.quantity || 0) * (record.unitPrice || 0)).toFixed(2)}</span>
-                )
-              },
-              {
-                title: '操作',
-                fixed: 'right',
-                width: 80,
-                render: (_, __, index) => (
-                  <Button
-                    danger
-                    size="small"
-                    icon={<DeleteOutlined />}
-                    onClick={() => handleRemoveQuoteItem(index)}
-                  />
-                )
-              }
-            ]}
-          />
-
-
-          <div style={{ background: '#f5f5f5', padding: 12, marginTop: 16 }}>
-            <div>报价合计: ¥{totalAmount.toFixed(2)}</div>
-            <div>含税合计(6%): ¥{totalWithTax.toFixed(2)}</div>
-            <div style={{ fontWeight: 'bold' }}>优惠后合计: ¥{totalWithTax.toFixed(2)}</div>
-          </div>
-
-          <Form.Item name="clientRemark" label="客户要求备注" style={{ marginTop: 16 }}>
-            <Input.TextArea rows={3} placeholder="请输入客户要求备注" />
-          </Form.Item>
-          <Form.Item name="remark" label="备注">
-            <Input.TextArea rows={3} placeholder="请输入备注" />
-          </Form.Item>
-          <Form.Item name="consultationId" hidden><Input /></Form.Item>
-          <Form.Item name="consultationNo" hidden><Input /></Form.Item>
-          <Form.Item name="clientId" hidden><Input /></Form.Item>
-        </Form>
-      </Modal>
 
       {/* 关闭咨询弹窗 */}
       <Modal
@@ -964,7 +561,7 @@ export default function ConsultationPage() {
         open={reassessmentModalOpen}
         consultationId={currentConsultation?.id || null}
         consultationNo={currentConsultation?.consultationNo}
-        currentRequirement={currentConsultation?.clientRequirement}
+        currentRequirement={currentConsultation?.clientRequirement || undefined}
         onCancel={() => {
           setReassessmentModalOpen(false)
           setCurrentConsultation(null)

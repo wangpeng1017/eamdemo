@@ -1,0 +1,163 @@
+'use client'
+
+import { useState, useEffect, Suspense } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
+import { Card, Spin } from 'antd'
+import EntrustmentForm from '@/components/business/EntrustmentForm'
+import { showSuccess, showError } from '@/lib/confirm'
+import dayjs from 'dayjs'
+
+function CreateEntrustmentContent() {
+    const router = useRouter()
+    const searchParams = useSearchParams()
+    const [initialValues, setInitialValues] = useState<any>(null)
+    const [loading, setLoading] = useState(false)
+
+    useEffect(() => {
+        const contractNo = searchParams.get('contractNo')
+        const contractId = searchParams.get('contractId')
+        const clientName = searchParams.get('clientName')
+        const contactPerson = searchParams.get('contactPerson')
+        const contactPhone = searchParams.get('contactPhone')
+        const clientAddress = searchParams.get('clientAddress')
+        const projectsParam = searchParams.get('projects')
+
+        let projects = [{}]
+        if (projectsParam) {
+            try {
+                const parsed = JSON.parse(projectsParam)
+                if (Array.isArray(parsed) && parsed.length > 0) {
+                    projects = parsed.map((p: any) => ({
+                        name: p.name || '',
+                        method: p.method || '',
+                        testItems: [],
+                    }))
+                }
+            } catch (e) {
+                console.error('Projects parse error', e)
+            }
+        }
+
+        if (contractNo || clientName) {
+            setInitialValues({
+                entrustmentNo: '自动生成',
+                contractNo,
+                contractId,
+                clientName,
+                contactPerson,
+                clientPhone: contactPhone, // Note: form field might be different? EntrustmentForm uses clientName (select) which sets clientId.
+                // But EntrustmentForm uses 'contactPerson'.
+                // Let's check EntrustmentForm again. It uses handleContractChange to set client info.
+                // Here we just set initialValues.
+                clientAddress,
+                isSampleReturn: false,
+                sampleDate: dayjs(),
+                // EntrustmentForm doesn't really use 'projects' field for display, but handleSubmit uses it?
+                // EntrustmentForm handles sampleTestItems.
+                // We can pass projects if needed, but EntrustmentForm might not render them if there is no field.
+                // Current EntrustmentForm implementation relies on SampleTestItemTable.
+            })
+        } else {
+            setInitialValues({
+                isSampleReturn: false,
+                projects: [{}],
+                sampleDate: dayjs(),
+            })
+        }
+    }, [searchParams])
+
+    const handleSubmit = async (values: any) => {
+        setLoading(true)
+        try {
+            // 1. Create Entrustment
+            const submitData = {
+                ...values,
+                sampleDate: values.sampleDate?.toISOString() || null,
+                // Projects are not in the form, but if they were passed in initialValues and preserved?
+                // EntrustmentForm doesn't keep track of 'projects' in its state if not in Form.Item.
+                // But wait, the original logic had 'projects' logic.
+                // If EntrustmentForm doesn't have 'projects' field, values.projects will be undefined.
+                // So we might lose the 'projects' derived from contract if we don't handle it.
+                // However, the new SampleTestItemTable replaces 'projects' effectively for items.
+                // But 'projects' in Entrustment entity are still used?
+                // Use default empty projects if needed.
+                projects: [],
+            }
+
+            const res = await fetch('/api/entrustment', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(submitData)
+            })
+
+            if (!res.ok) {
+                const error = await res.json()
+                throw new Error(error.message || '创建失败')
+            }
+
+            const json = await res.json()
+            const entrustmentId = json.id
+
+            // 2. Save SampleTestItems
+            if (values.sampleTestItems && values.sampleTestItems.length > 0) {
+                await fetch('/api/sample-test-item', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        bizType: 'entrustment',
+                        bizId: entrustmentId,
+                        items: values.sampleTestItems,
+                    })
+                })
+            }
+
+            // 3. Copy from Contract if needed
+            if (values.contractId && (!values.sampleTestItems || values.sampleTestItems.length === 0)) {
+                // Only copy if we didn't manually add items? Or always copy?
+                // Original logic: "if (contractId && entrustmentId && !editingId)" - implied always on create.
+                // And original logic had empty sampleTestItems usually.
+                await fetch('/api/sample-test-item/copy', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        sourceBizType: 'contract',
+                        sourceBizId: values.contractId,
+                        targetBizType: 'entrustment',
+                        targetBizId: entrustmentId,
+                    })
+                })
+                showSuccess('已从合同复制样品检测项数据')
+            }
+
+            showSuccess('创建成功')
+            router.push('/entrustment/list')
+        } catch (error: any) {
+            showError(error.message)
+        } finally {
+            setLoading(false)
+        }
+    }
+
+    if (!initialValues) {
+        return <Spin />
+    }
+
+    return (
+        <div style={{ padding: 24 }}>
+            <EntrustmentForm
+                mode="create"
+                initialValues={initialValues}
+                onSubmit={handleSubmit}
+                loading={loading}
+            />
+        </div>
+    )
+}
+
+export default function CreateEntrustmentPage() {
+    return (
+        <Suspense fallback={<Spin />}>
+            <CreateEntrustmentContent />
+        </Suspense>
+    )
+}

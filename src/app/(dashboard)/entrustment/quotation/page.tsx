@@ -8,12 +8,10 @@
 
 import { useState, useEffect } from 'react'
 import { showSuccess, showError, showWarningMessage } from '@/lib/confirm'
-import { Table, Button, Space, Modal, Form, Input, InputNumber, Select, DatePicker, message, Drawer, Tag, Row, Col, Divider, Popconfirm, Tabs, Descriptions, Card, Radio, Upload } from 'antd'
-import { PlusOutlined, EditOutlined, DeleteOutlined, EyeOutlined, CheckOutlined, CloseOutlined, SendOutlined, FilePdfOutlined, FolderOutlined, FileAddOutlined, MessageOutlined, UploadOutlined, FileTextOutlined } from '@ant-design/icons'
+import { Table, Button, Space, Modal, Form, Input, Select, DatePicker, Drawer, Row, Col, Divider, Popconfirm, Radio, Upload, Descriptions } from 'antd'
+import { PlusOutlined, EditOutlined, DeleteOutlined, EyeOutlined, SendOutlined, FolderOutlined, UploadOutlined, FileTextOutlined } from '@ant-design/icons'
 import { StatusTag } from '@/components/StatusTag'
 import { ApprovalTimeline } from '@/components/ApprovalTimeline'
-import UserSelect from '@/components/UserSelect'
-import SampleTestItemTable, { SampleTestItemData } from '@/components/SampleTestItemTable'
 import { RejectModal } from '@/components/RejectModal'
 import { CreateEntrustmentButton } from '@/components/CreateEntrustmentButton'
 import { QuotationPDFButton } from '@/components/QuotationPDFButton'
@@ -95,15 +93,6 @@ const CLIENT_RESPONSE_OPTIONS = [
   { value: 'ng', label: '拒绝' },
 ]
 
-interface TestTemplate {
-  id: string
-  name: string
-  method?: string
-  unit?: string
-  schema?: any
-}
-
-
 export default function QuotationPage() {
   const router = useRouter()
   const { data: session } = useSession()
@@ -111,16 +100,12 @@ export default function QuotationPage() {
   const [loading, setLoading] = useState(false)
   const [total, setTotal] = useState(0)
   const [page, setPage] = useState(1)
-  const [modalOpen, setModalOpen] = useState(false)
+
   const [viewDrawerOpen, setViewDrawerOpen] = useState(false)
   const [approvalModalOpen, setApprovalModalOpen] = useState(false)
-  const [editingId, setEditingId] = useState<string | null>(null)
+
   const [currentQuotation, setCurrentQuotation] = useState<Quotation | null>(null)
-  // const [items, setItems] = useState<QuotationItem[]>([])
-  const [clients, setClients] = useState<Client[]>([])
-  const [clientsLoading, setClientsLoading] = useState(false)
-  const [testTemplates, setTestTemplates] = useState<TestTemplate[]>([])
-  const [form] = Form.useForm()
+
   const [approvalForm] = Form.useForm()
   const [filters, setFilters] = useState<any>({})
 
@@ -130,95 +115,11 @@ export default function QuotationPage() {
 
   // 新功能弹窗
   const [feedbackModalOpen, setFeedbackModalOpen] = useState(false)
-  const [contractModalOpen, setContractModalOpen] = useState(false)
   const [feedbackForm] = Form.useForm()
-  const [contractForm] = Form.useForm()
 
   // 🆕 新功能：驳回对话框状态
   const [rejectModalVisible, setRejectModalVisible] = useState(false)
   const [selectedQuotationForReject, setSelectedQuotationForReject] = useState<Quotation | null>(null)
-
-
-
-  const [contractSamples, setContractSamples] = useState<any[]>([])
-
-
-  // 样品检测项（新）
-  const [sampleTestItems, setSampleTestItems] = useState<SampleTestItemData[]>([])
-  // const [contractSampleTestItems, setContractSampleTestItems] = useState<SampleTestItemData[]>([])
-
-  // 移除旧的 samples, items 相关函数
-
-
-  // 获取客户列表（仅已审批通过）
-  const fetchClients = async () => {
-    setClientsLoading(true)
-    try {
-      const res = await fetch('/api/entrustment/client?status=approved&pageSize=1000')
-      const json = await res.json()
-      setClients(json.list || [])
-    } catch (error) {
-      console.error('[Quotation] 获取客户列表失败:', error)
-      showError('获取客户列表失败', '无法加载客户列表，请刷新页面重试')
-    } finally {
-      setClientsLoading(false)
-    }
-  }
-
-  // 获取检测项目列表
-  const fetchTestTemplates = async () => {
-    try {
-      const res = await fetch('/api/test-template?pageSize=1000')
-      const json = await res.json()
-      const templates = json.list || []
-      setTestTemplates(templates)
-    } catch (error) {
-      console.error('[Quotation] 获取检测项目列表失败:', error)
-      showError('获取检测项目失败', '无法加载检测项目列表，请刷新页面重试')
-    }
-  }
-
-  const [contractItems, setContractItems] = useState<any[]>([])
-
-
-  const updateContractItem = (index: number, field: string, value: any) => {
-    const newItems = [...contractItems]
-    const item = { ...newItems[index] }
-    // @ts-ignore
-    item[field] = value
-    item.totalPrice = (item.quantity || 1) * (item.unitPrice || 0)
-    newItems[index] = item
-    setContractItems(newItems)
-
-    // 自动计算合同总额
-    const total = newItems.reduce((sum, i) => sum + (i.totalPrice || 0), 0)
-    contractForm.setFieldsValue({ amount: total })
-
-    // Recalculate prepayment amount
-    const ratio = contractForm.getFieldValue('prepaymentRatio') || 0
-    contractForm.setFieldsValue({
-      prepaymentAmount: total ? (total * ratio / 100) : 0
-    })
-  }
-
-  const removeContractItem = (index: number) => {
-    const newItems = contractItems.filter((_, i) => i !== index)
-    setContractItems(newItems)
-    const total = newItems.reduce((sum, i) => sum + (i.totalPrice || 0), 0)
-    contractForm.setFieldsValue({ amount: total })
-
-    // Recalculate prepayment amount
-    const ratio = contractForm.getFieldValue('prepaymentRatio') || 0
-    contractForm.setFieldsValue({
-      prepaymentAmount: total ? (total * ratio / 100) : 0
-    })
-  }
-
-  const handleAddContractItem = () => {
-    setContractItems([...contractItems, { serviceItem: '', methodStandard: '', quantity: 1, unitPrice: 0, totalPrice: 0 }])
-  }
-
-
 
   const fetchData = async (p = page, f = filters) => {
     setLoading(true)
@@ -246,13 +147,7 @@ export default function QuotationPage() {
 
   useEffect(() => {
     fetchData()
-    fetchClients()
-    fetchTestTemplates()
   }, [page])
-
-  // ... inside component ...
-
-  // ... (保留其他 state)
 
   const handleAdd = () => {
     router.push('/entrustment/quotation/create')
@@ -261,9 +156,6 @@ export default function QuotationPage() {
   const handleEdit = async (record: Quotation) => {
     router.push(`/entrustment/quotation/edit/${record.id}`)
   }
-
-  // ... (保留 handleView, handleDelete, handleApproval 等)
-
 
   const handleView = (record: Quotation) => {
     setCurrentQuotation(record)
@@ -280,21 +172,6 @@ export default function QuotationPage() {
       showError(json.error?.message || '删除失败')
     }
   }
-
-
-
-  // 客户选择变化时自动填充联系人
-  const handleClientChange = (clientId: string) => {
-    const client = clients.find(c => c.id === clientId)
-    if (client) {
-      form.setFieldsValue({
-        clientContactPerson: client.contact || '',
-      })
-    }
-  }
-
-  // items handler removed
-
 
   const handleApproval = async () => {
     const values = await approvalForm.validateFields()
@@ -448,7 +325,7 @@ export default function QuotationPage() {
     fetchData()
   }
 
-  // 打开生成合同弹窗
+  // 打开生成合同页面
   const handleOpenContract = () => {
     if (selectedRows.length !== 1) {
       showWarningMessage('请选择一条报价单')
@@ -459,128 +336,8 @@ export default function QuotationPage() {
       showWarningMessage('只有已批准的报价单可以生成合同')
       return
     }
-    contractForm.resetFields()
-    contractForm.setFieldsValue({
-      quotationId: quotation.id,
-      quotationNo: quotation.quotationNo,
-      clientName: quotation.client?.name,
-      clientContact: quotation.clientContactPerson,
-      clientPhone: quotation.client?.phone,
-      clientAddress: quotation.client?.address,
-      sampleName: quotation.sampleName,
-      amount: quotation.finalAmount,
-      contractName: `${quotation.sampleName || '检测'}委托合同`,
-      signDate: dayjs(),
-      startDate: dayjs(),
-      endDate: dayjs().add(1, 'year'),
-      prepaymentRatio: 30,
-      prepaymentAmount: quotation.finalAmount ? (quotation.finalAmount * 30 / 100) : 0,
-    })
-
-    // 初始化合同明细
-    setContractItems(quotation.items?.map(item => ({
-      serviceItem: item.serviceItem,
-      methodStandard: item.methodStandard,
-      quantity: item.quantity,
-      unitPrice: item.unitPrice,
-      totalPrice: item.totalPrice,
-    })) || [])
-
-    // 初始化合同样品
-    let initSamples: any[] = []
-    if (quotation.quotationSamples && quotation.quotationSamples.length > 0) {
-      initSamples = quotation.quotationSamples.map(s => ({
-        name: s.name,
-        model: s.model,
-        material: s.material,
-        quantity: s.quantity,
-        remark: s.remark
-      }))
-    } else if (quotation.sampleName) {
-      initSamples = [{
-        name: quotation.sampleName,
-        model: quotation.sampleModel,
-        material: quotation.sampleMaterial,
-        quantity: quotation.sampleQuantity || 1
-      }]
-    }
-    setContractSamples(initSamples)
-
-    setContractModalOpen(true)
+    router.push(`/entrustment/contract/create?quotationId=${quotation.id}`)
   }
-
-  // 合同样品操作
-  const handleAddContractSample = () => {
-    setContractSamples([...contractSamples, { name: '', quantity: 1 }])
-  }
-
-  const handleUpdateContractSample = (index: number, field: string, value: any) => {
-    const newSamples = [...contractSamples]
-    newSamples[index] = { ...newSamples[index], [field]: value }
-    setContractSamples(newSamples)
-  }
-
-  const handleRemoveContractSample = (index: number) => {
-    setContractSamples(contractSamples.filter((_, i) => i !== index))
-  }
-
-  // 提交生成合同
-  const handleContractSubmit = async () => {
-    const values = await contractForm.validateFields()
-    const contractData = {
-      clientId: selectedRows[0].clientId || selectedRows[0].client?.id, // 关键：添加 clientId
-      quotationId: values.quotationId,
-      contractName: values.contractName,
-      clientName: values.clientName,
-      clientContact: values.clientContact,
-      clientPhone: values.clientPhone,
-      clientAddress: values.clientAddress,
-      amount: values.amount,
-      prepaymentRatio: values.prepaymentRatio,
-      prepaymentAmount: values.prepaymentAmount,
-      signDate: values.signDate?.toISOString(),
-      startDate: values.startDate?.toISOString(),
-      endDate: values.endDate?.toISOString(),
-      paymentTerms: values.paymentTerms,
-      deliveryTerms: values.deliveryTerms,
-      items: contractItems,
-      samples: contractSamples,
-    }
-    const res = await fetch('/api/contract', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(contractData),
-    })
-    const json = await res.json()
-    if (res.ok && (json.success || json.id)) {
-      // 复制样品检测项数据到合同
-      if (json.id) {
-        await fetch('/api/sample-test-item/copy', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            sourceBizType: 'quotation',
-            sourceBizId: values.quotationId,
-            targetBizType: 'contract',
-            targetBizId: json.id,
-          })
-        })
-      }
-
-      showSuccess(`合同创建成功`)
-      setContractModalOpen(false)
-      router.push('/entrustment/contract')
-    } else {
-      showError(json.error?.message || '创建合同失败')
-    }
-  }
-
-  // 计算金额
-  const totalAmount = items.reduce((sum, item) => sum + (Number(item.totalPrice) || 0), 0)
-  const taxAmount = totalAmount * 0.06
-  const totalWithTax = totalAmount + taxAmount
-  const discountAmount = Number(form.getFieldValue('discountAmount')) || 0
-  const finalAmount = totalWithTax - discountAmount
 
   // 针对单条记录的处理函数
   const handleSubmitApprovalForRecord = async (record: Quotation) => {
@@ -611,60 +368,12 @@ export default function QuotationPage() {
     }
   }
 
-  const handleGeneratePDFForRecord = (record: Quotation) => {
-    window.open(`/api/quotation/${record.id}/pdf`, '_blank')
-  }
-
   const handleOpenContractForRecord = (record: Quotation) => {
     if (record.status !== 'approved') {
       showWarningMessage('只有已批准的报价单可以生成合同')
       return
     }
-    contractForm.resetFields()
-    contractForm.setFieldsValue({
-      quotationId: record.id,
-      quotationNo: record.quotationNo,
-      clientName: record.client?.name,
-      clientContact: record.clientContactPerson,
-      clientPhone: record.client?.phone,
-      clientAddress: record.client?.address,
-      sampleName: record.sampleName,
-      amount: record.finalAmount,
-      contractName: `${record.sampleName || '检测'}委托合同`,
-      signDate: dayjs(),
-      startDate: dayjs(),
-      endDate: dayjs().add(1, 'year'),
-      prepaymentRatio: 30,
-      prepaymentAmount: record.finalAmount ? (record.finalAmount * 30 / 100) : 0,
-    })
-    // 设置合同明细
-    const cItems = (record.items || []).map(item => ({
-      serviceItem: item.serviceItem,
-      methodStandard: item.methodStandard,
-      quantity: item.quantity,
-      unitPrice: item.unitPrice,
-      totalPrice: item.totalPrice,
-    }))
-    setContractItems(cItems)
-    // 设置样品
-    let samples: any[] = []
-    if (record.quotationSamples && record.quotationSamples.length > 0) {
-      samples = record.quotationSamples.map(s => ({
-        name: s.name,
-        model: s.model,
-        material: s.material,
-        quantity: s.quantity,
-      }))
-    } else if (record.sampleName) {
-      samples = [{
-        name: record.sampleName,
-        model: record.sampleModel,
-        material: record.sampleMaterial,
-        quantity: record.sampleQuantity || 1,
-      }]
-    }
-    setContractSamples(samples)
-    setContractModalOpen(true)
+    router.push(`/entrustment/contract/create?quotationId=${record.id}`)
   }
 
   const columns: ColumnsType<Quotation> = [
@@ -698,7 +407,7 @@ export default function QuotationPage() {
       title: '客户反馈',
       dataIndex: 'clientResponse',
       width: 100,
-      render: (r: string) => <StatusTag type="quotation_client" status={r} />,
+      render: (s: string) => <StatusTag type="quotation_client" status={s} />,
     },
     {
       title: '状态',
@@ -871,157 +580,6 @@ export default function QuotationPage() {
         pagination={{ current: page, total, pageSize: 10, onChange: setPage, showSizeChanger: false }}
       />
 
-      {/* 新增/编辑模态框 */}
-      <Modal
-        title={editingId ? '编辑报价' : '新增报价'}
-        open={modalOpen}
-        onOk={handleSubmit}
-        onCancel={() => setModalOpen(false)}
-        width={1000}
-        footer={[
-          <Button key="cancel" onClick={() => setModalOpen(false)}>取消</Button>,
-          <Button key="submit" type="primary" onClick={handleSubmit}>{editingId ? '更新' : '创建'}</Button>,
-        ]}
-      >
-        <Form form={form} layout="vertical">
-          <Row gutter={16}>
-            <Col span={12}>
-              <Form.Item name="clientId" label="客户" rules={[{ required: true, message: '请选择客户' }]}>
-                <Select
-                  showSearch
-                  allowClear
-                  placeholder="选择客户"
-                  loading={clientsLoading}
-                  optionFilterProp="label"
-                  options={clients.map(c => ({ value: c.id, label: c.name }))}
-                  onChange={handleClientChange}
-                />
-              </Form.Item>
-            </Col>
-            <Col span={12}>
-              <Form.Item name="clientContactPerson" label="联系人" rules={[{ required: true, message: '请输入联系人' }]}>
-                <Input placeholder="请输入联系人" />
-              </Form.Item>
-            </Col>
-          </Row>
-          <Row gutter={16}>
-            <Col span={12}>
-              <Form.Item name="clientReportDeadline" label="客户报告截止日期">
-                <DatePicker style={{ width: '100%' }} placeholder="选择报告截止日期" />
-              </Form.Item>
-            </Col>
-            <Col span={12}>
-              {/* 预留空间，可以放其他字段 */}
-            </Col>
-          </Row>
-
-          {/* 新的样品检测项表格 */}
-          <div style={{ marginTop: 16 }}>
-            <SampleTestItemTable
-              bizType="quotation"
-              bizId={editingId || undefined}
-              value={sampleTestItems}
-              onChange={(newItems) => {
-                setSampleTestItems(newItems)
-                syncSampleTestItemsToQuotationItems(newItems)
-              }}
-            />
-          </div>
-
-          <Divider orientationMargin="0">报价明细</Divider>
-
-          <Table
-            columns={itemColumns}
-            dataSource={items}
-            rowKey={(record, index) => record.id || `item-${index}`}
-            pagination={false}
-            size="small"
-            footer={() => (
-              <Button type="dashed" onClick={handleAddItem} block icon={<PlusOutlined />}>
-                添加明细项
-              </Button>
-            )}
-          />
-
-          <div style={{ marginTop: 16, textAlign: 'right' }}>
-            <Space direction="vertical" style={{ width: 300 }} style={{ whiteSpace: 'nowrap' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                <span>报价合计：</span>
-                <span>¥{totalAmount.toFixed(2)}</span>
-              </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                <span>税额（6%）：</span>
-                <span>¥{taxAmount.toFixed(2)}</span>
-              </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                <span>含税合计：</span>
-                <span>¥{totalWithTax.toFixed(2)}</span>
-              </div>
-              <Form.Item name="discountAmount" label="优惠金额" style={{ marginBottom: 8 }}>
-                <InputNumber
-                  min={0}
-                  precision={2}
-                  placeholder="请输入优惠金额"
-                  style={{ width: '100%' }}
-                  prefix="¥"
-                />
-              </Form.Item>
-              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 16, fontWeight: 'bold' }}>
-                <span>最终金额：</span>
-                <span style={{ color: '#f5222d' }}>¥{finalAmount.toFixed(2)}</span>
-              </div>
-            </Space>
-          </div>
-
-          <Divider orientationMargin="0">其他信息</Divider>
-
-          <Row gutter={16}>
-            <Col span={8}>
-              <Form.Item name="quotationDate" label="报价日期" rules={[{ required: true }]}>
-                <DatePicker style={{ width: '100%' }} />
-              </Form.Item>
-            </Col>
-            <Col span={8}>
-              <Form.Item name="validDays" label="有效期（天）">
-                <InputNumber min={1} style={{ width: '100%' }} />
-              </Form.Item>
-            </Col>
-            <Col span={8}>
-              <Form.Item name="paymentTerms" label="付款方式">
-                <Input placeholder="如：预付50%" />
-              </Form.Item>
-            </Col>
-          </Row>
-
-          <Row gutter={16}>
-            <Col span={12}>
-              <Form.Item name="deliveryTerms" label="交付方式">
-                <Input placeholder="如：检测完成后3个工作日内出具报告" />
-              </Form.Item>
-            </Col>
-            <Col span={12}>
-              <Form.Item name="follower" label="跟单人">
-                <UserSelect placeholder="请选择跟单人" />
-              </Form.Item>
-            </Col>
-          </Row>
-
-          <Row gutter={16}>
-            <Col span={12}>
-              {editingId && (
-                <Form.Item name="status" label="状态">
-                  <Select options={STATUS_OPTIONS} />
-                </Form.Item>
-              )}
-            </Col>
-          </Row>
-
-          <Form.Item name="remark" label="备注">
-            <Input.TextArea rows={3} placeholder="请输入备注" />
-          </Form.Item>
-        </Form>
-      </Modal>
-
       {/* 查看详情抽屉 */}
       <Drawer
         title="报价详情"
@@ -1049,115 +607,98 @@ export default function QuotationPage() {
         }
       >
         {currentQuotation && (
-          <Tabs
-            items={[
-              {
-                key: 'detail',
-                label: '基本信息',
-                children: (
-                  <div>
-                    <Descriptions column={2} bordered size="small">
-                      <Descriptions.Item label="报价单号">{currentQuotation.quotationNo}</Descriptions.Item>
-                      <Descriptions.Item label="客户名称">{currentQuotation.client?.name || '-'}</Descriptions.Item>
-                      <Descriptions.Item label="联系人">{currentQuotation.clientContactPerson || '-'}</Descriptions.Item>
-                      <Descriptions.Item label="联系电话">{currentQuotation.client?.phone || '-'}</Descriptions.Item>
-                      <Descriptions.Item label="客户邮箱">{currentQuotation.client?.email || '-'}</Descriptions.Item>
-                      <Descriptions.Item label="客户地址">{currentQuotation.client?.address || '-'}</Descriptions.Item>
-                      <Descriptions.Item label="创建日期">
-                        {dayjs(currentQuotation.createdAt).format('YYYY-MM-DD HH:mm:ss')}
-                      </Descriptions.Item>
-                      <Descriptions.Item label="有效期">{currentQuotation.validDays}天</Descriptions.Item>
-                      <Descriptions.Item label="报价合计">¥{Number(currentQuotation.totalAmount || 0).toFixed(2)}</Descriptions.Item>
-                      <Descriptions.Item label="税额">¥{Number(currentQuotation.taxAmount || 0).toFixed(2)}</Descriptions.Item>
-                      <Descriptions.Item label="含税合计">¥{Number(currentQuotation.totalWithTax || 0).toFixed(2)}</Descriptions.Item>
-                      <Descriptions.Item label="优惠金额">
-                        {currentQuotation.discountAmount ? `¥${currentQuotation.discountAmount}` : '-'}
-                      </Descriptions.Item>
-                      <Descriptions.Item label="最终金额" style={{ fontWeight: 'bold', color: '#f5222d' }}>
-                        ¥{Number(currentQuotation.finalAmount || 0).toFixed(2)}
-                      </Descriptions.Item>
-                      <Descriptions.Item label="状态">
-                        <StatusTag type="quotation" status={currentQuotation.status} />
-                      </Descriptions.Item>
-                      <Descriptions.Item label="客户反馈">
-                        <StatusTag type="quotation_client" status={currentQuotation.clientResponse} />
-                      </Descriptions.Item>
-                    </Descriptions>
+          <div>
+            <Descriptions column={2} bordered size="small">
+              <Descriptions.Item label="报价单号">{currentQuotation.quotationNo}</Descriptions.Item>
+              <Descriptions.Item label="客户名称">{currentQuotation.client?.name || '-'}</Descriptions.Item>
+              <Descriptions.Item label="联系人">{currentQuotation.clientContactPerson || '-'}</Descriptions.Item>
+              <Descriptions.Item label="联系电话">{currentQuotation.client?.phone || '-'}</Descriptions.Item>
+              <Descriptions.Item label="客户邮箱">{currentQuotation.client?.email || '-'}</Descriptions.Item>
+              <Descriptions.Item label="客户地址">{currentQuotation.client?.address || '-'}</Descriptions.Item>
+              <Descriptions.Item label="创建日期">
+                {dayjs(currentQuotation.createdAt).format('YYYY-MM-DD HH:mm:ss')}
+              </Descriptions.Item>
+              <Descriptions.Item label="有效期">{currentQuotation.validDays}天</Descriptions.Item>
+              <Descriptions.Item label="报价合计">¥{Number(currentQuotation.totalAmount || 0).toFixed(2)}</Descriptions.Item>
+              <Descriptions.Item label="税额">¥{Number(currentQuotation.taxAmount || 0).toFixed(2)}</Descriptions.Item>
+              <Descriptions.Item label="含税合计">¥{Number(currentQuotation.totalWithTax || 0).toFixed(2)}</Descriptions.Item>
+              <Descriptions.Item label="优惠金额">
+                {currentQuotation.discountAmount ? `¥${currentQuotation.discountAmount}` : '-'}
+              </Descriptions.Item>
+              <Descriptions.Item label="最终金额" style={{ fontWeight: 'bold', color: '#f5222d' }}>
+                ¥{Number(currentQuotation.finalAmount || 0).toFixed(2)}
+              </Descriptions.Item>
+              <Descriptions.Item label="状态">
+                <StatusTag type="quotation" status={currentQuotation.status} />
+              </Descriptions.Item>
+              <Descriptions.Item label="客户反馈">
+                <StatusTag type="quotation_client" status={currentQuotation.clientResponse} />
+              </Descriptions.Item>
+            </Descriptions>
 
-                    <Divider orientationMargin="0">报价明细</Divider>
-                    <Table
-                      columns={[
-                        { title: '检测项目', dataIndex: 'serviceItem' },
-                        { title: '方法/标准', dataIndex: 'methodStandard' },
-                        { title: '数量', dataIndex: 'quantity' },
-                        { title: '单价', dataIndex: 'unitPrice', render: (v) => `¥${v}` },
-                        { title: '小计', dataIndex: 'totalPrice', render: (v) => `¥${Number(v || 0).toFixed(2)}` },
-                      ]}
-                      dataSource={currentQuotation.items}
-                      rowKey="id"
-                      pagination={false}
-                      size="small"
-                    />
+            <Divider orientationMargin="0">报价明细</Divider>
+            <Table
+              columns={[
+                { title: '检测项目', dataIndex: 'serviceItem' },
+                { title: '方法/标准', dataIndex: 'methodStandard' },
+                { title: '数量', dataIndex: 'quantity' },
+                { title: '单价', dataIndex: 'unitPrice', render: (v) => `¥${v}` },
+                { title: '小计', dataIndex: 'totalPrice', render: (v) => `¥${Number(v || 0).toFixed(2)}` },
+              ]}
+              dataSource={currentQuotation.items}
+              rowKey="id"
+              pagination={false}
+              size="small"
+            />
 
-                    {currentQuotation.paymentTerms && (
-                      <>
-                        <Divider orientationMargin="0">付款与交付</Divider>
-                        <p><strong>付款方式：</strong>{currentQuotation.paymentTerms}</p>
-                        {currentQuotation.deliveryTerms && <p><strong>交付方式：</strong>{currentQuotation.deliveryTerms}</p>}
-                      </>
-                    )}
+            {currentQuotation.paymentTerms && (
+              <>
+                <Divider orientationMargin="0">付款与交付</Divider>
+                <p><strong>付款方式：</strong>{currentQuotation.paymentTerms}</p>
+                {currentQuotation.deliveryTerms && <p><strong>交付方式：</strong>{currentQuotation.deliveryTerms}</p>}
+              </>
+            )}
 
-                    {currentQuotation.remark && (
-                      <>
-                        <Divider orientationMargin="0">备注</Divider>
-                        <p>{currentQuotation.remark}</p>
-                      </>
-                    )}
-                  </div>
-                ),
-              },
-              {
-                key: 'approval',
-                label: '审批记录',
-                children: (
-                  <div>
-                    <ApprovalTimeline
-                      nodes={[
-                        { step: 1, name: '销售审批', role: '销售经理' },
-                        { step: 2, name: '财务审批', role: '财务经理' }
-                      ]}
-                      currentStep={
-                        currentQuotation.status === 'pending_sales' ? 1
-                          : currentQuotation.status === 'pending_finance' ? 2
-                            : currentQuotation.status === 'approved' ? 3
-                              : 1 // fallback
-                      }
-                      status={
-                        currentQuotation.status === 'approved' ? 'approved'
-                          : currentQuotation.status === 'rejected' ? 'rejected'
-                            : 'pending'
-                      }
-                      submitterName={currentQuotation.approvals?.find(r => r.role === 'submitter')?.approver || '申请人'}
-                      submittedAt={currentQuotation.createdAt}
-                      records={currentQuotation.approvals?.filter(r => r.role !== 'submitter').map(r => ({
-                        id: r.id,
-                        step: r.level,
-                        action: r.action as 'approve' | 'reject',
-                        approverId: '', // not available in frontend model
-                        approverName: r.approver,
-                        comment: r.comment,
-                        createdAt: r.timestamp
-                      }))}
-                    />
-                  </div>
-                ),
-              },
-            ]}
-          />
+            {currentQuotation.remark && (
+              <>
+                <Divider orientationMargin="0">备注</Divider>
+                <p>{currentQuotation.remark}</p>
+              </>
+            )}
+
+            <Divider orientationMargin="0">审批记录</Divider>
+            <ApprovalTimeline
+              nodes={[
+                { step: 1, name: '销售审批', role: '销售经理' },
+                { step: 2, name: '财务审批', role: '财务经理' }
+              ]}
+              currentStep={
+                currentQuotation.status === 'pending_sales' ? 1
+                  : currentQuotation.status === 'pending_finance' ? 2
+                    : currentQuotation.status === 'approved' ? 3
+                      : 1 // fallback
+              }
+              status={
+                currentQuotation.status === 'approved' ? 'approved'
+                  : currentQuotation.status === 'rejected' ? 'rejected'
+                    : 'pending'
+              }
+              submitterName={currentQuotation.approvals?.find(r => r.role === 'submitter')?.approver || '申请人'}
+              submittedAt={currentQuotation.createdAt}
+              records={currentQuotation.approvals?.filter(r => r.role !== 'submitter').map(r => ({
+                id: r.id,
+                step: r.level,
+                action: r.action as 'approve' | 'reject',
+                approverId: '', // not available in frontend model
+                approverName: r.approver,
+                comment: r.comment,
+                createdAt: r.timestamp
+              }))}
+            />
+          </div>
         )}
       </Drawer>
 
-      {/* 审批模态框 */}
       {/* 审批模态框 */}
       <Modal
         title="审批"
@@ -1204,209 +745,6 @@ export default function QuotationPage() {
               支持PDF、JPG、PNG格式，文件大小不超过10MB
             </div>
           </Form.Item>
-        </Form>
-      </Modal>
-
-      {/* 生成合同弹窗 */}
-      <Modal
-        title="生成委托合同"
-        open={contractModalOpen}
-        onOk={handleContractSubmit}
-        onCancel={() => setContractModalOpen(false)}
-        width={900}
-        okText="生成"
-      >
-        <Form form={contractForm} layout="vertical">
-          <Form.Item name="quotationId" hidden>
-            <Input />
-          </Form.Item>
-          <Form.Item name="quotationNo" hidden>
-            <Input />
-          </Form.Item>
-          <Form.Item name="clientName" hidden>
-            <Input />
-          </Form.Item>
-
-          <Row gutter={16}>
-            <Col span={12}>
-              <Form.Item name="contractName" label="合同名称" rules={[{ required: true }]}>
-                <Input />
-              </Form.Item>
-            </Col>
-            <Col span={12}>
-              <Form.Item name="clientContact" label="联系人" rules={[{ required: true }]}>
-                <Input />
-              </Form.Item>
-            </Col>
-          </Row>
-
-          <Row gutter={16}>
-            <Col span={12}>
-              <Form.Item name="clientPhone" label="联系电话" rules={[{ required: true }]}>
-                <Input />
-              </Form.Item>
-            </Col>
-            <Col span={12}>
-              <Form.Item name="clientAddress" label="客户地址">
-                <Input />
-              </Form.Item>
-            </Col>
-          </Row>
-
-          <Divider orientationMargin="0">
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <span>报价明细</span>
-              <Button type="dashed" size="small" onClick={handleAddContractItem} icon={<PlusOutlined />}>添加项目</Button>
-            </div>
-          </Divider>
-
-          <Table
-            dataSource={contractItems}
-            rowKey={(record, index) => index!.toString()}
-            pagination={false}
-            size="small"
-            columns={[
-              {
-                title: '检测项目',
-                dataIndex: 'serviceItem',
-                render: (text, record, index) => (
-                  <Select
-                    showSearch
-                    optionFilterProp="label"
-                    style={{ width: '100%' }}
-                    value={text}
-                    onChange={(val, option) => {
-                      updateContractItem(index, 'serviceItem', val)
-                      const method = (option as any)?.method
-                      if (method) updateContractItem(index, 'methodStandard', method)
-                    }}
-                    options={testTemplates.map(t => ({
-                      value: t.name,
-                      label: t.name,
-                      method: t.schema ? (JSON.parse(typeof t.schema === 'string' ? t.schema : JSON.stringify(t.schema)).header?.methodBasis || t.method) : t.method
-                    }))}
-                  />
-                )
-              },
-              {
-                title: '方法/标准',
-                dataIndex: 'methodStandard',
-                render: (text, record, index) => (
-                  <Input value={text} onChange={e => updateContractItem(index, 'methodStandard', e.target.value)} />
-                )
-              },
-              {
-                title: '数量',
-                dataIndex: 'quantity',
-                width: 80,
-                render: (val, record, index) => (
-                  <InputNumber min={1} value={val} onChange={v => updateContractItem(index, 'quantity', v)} />
-                )
-              },
-              {
-                title: '单价',
-                dataIndex: 'unitPrice',
-                width: 100,
-                render: (val, record, index) => (
-                  <InputNumber min={0} value={val} prefix="¥" onChange={v => updateContractItem(index, 'unitPrice', v)} />
-                )
-              },
-              {
-                title: '总价',
-                dataIndex: 'totalPrice',
-                width: 100,
-                render: (val) => `¥${Number(val || 0).toFixed(2)}`
-              },
-              {
-                title: '操作',
-                key: 'action',
-                fixed: 'right',
-                render: (_, record, index) => (
-                  <Button danger type="text" icon={<DeleteOutlined />} onClick={() => removeContractItem(index)} />
-                )
-              }
-            ]}
-          />
-
-          <Divider orientationMargin="0">合同基本信息</Divider>
-
-          <Row gutter={16}>
-            <Col span={8}>
-              <Form.Item name="amount" label="合同金额" rules={[{ required: true, message: '请输入合同金额' }]}>
-                <InputNumber
-                  style={{ width: '100%' }}
-                  min={0}
-                  precision={2}
-                  prefix="¥"
-                  placeholder="请输入合同金额"
-                  onChange={(val) => {
-                    const ratio = contractForm.getFieldValue('prepaymentRatio') || 0
-                    contractForm.setFieldsValue({
-                      prepaymentAmount: val ? (val * ratio / 100) : 0,
-                    })
-                  }}
-                />
-              </Form.Item>
-            </Col>
-            <Col span={8}>
-              <Form.Item name="prepaymentRatio" label="预付款比例（%）">
-                <InputNumber
-                  style={{ width: '100%' }}
-                  min={0}
-                  max={100}
-                  placeholder="30"
-                  onChange={(val) => {
-                    const amount = contractForm.getFieldValue('amount')
-                    if (amount) {
-                      contractForm.setFieldsValue({
-                        prepaymentAmount: amount * (val || 0) / 100,
-                      })
-                    }
-                  }}
-                />
-              </Form.Item>
-            </Col>
-            <Col span={8}>
-              <Form.Item name="prepaymentAmount" label="预付款金额">
-                <InputNumber
-                  style={{ width: '100%' }}
-                  min={0}
-                  precision={2}
-                  prefix="¥"
-                  placeholder="自动计算"
-                />
-              </Form.Item>
-            </Col>
-          </Row>
-
-          <Row gutter={16}>
-            <Col span={8}>
-              <Form.Item name="signDate" label="签订日期" rules={[{ required: true }]}>
-                <DatePicker style={{ width: '100%' }} />
-              </Form.Item>
-            </Col>
-            <Col span={8}>
-              <Form.Item name="startDate" label="合同开始日期" rules={[{ required: true }]}>
-                <DatePicker style={{ width: '100%' }} />
-              </Form.Item>
-            </Col>
-            <Col span={8}>
-              <Form.Item name="endDate" label="合同结束日期" rules={[{ required: true }]}>
-                <DatePicker style={{ width: '100%' }} />
-              </Form.Item>
-            </Col>
-          </Row>
-
-          <Divider orientationMargin="0">合同条款（可选）</Divider>
-
-          <Form.Item name="paymentTerms" label="付款条款">
-            <Input.TextArea rows={2} placeholder="留空使用默认条款" />
-          </Form.Item>
-          <Form.Item name="deliveryTerms" label="交付条款">
-            <Input.TextArea rows={2} placeholder="留空使用默认条款" />
-          </Form.Item>
-
-
         </Form>
       </Modal>
 
