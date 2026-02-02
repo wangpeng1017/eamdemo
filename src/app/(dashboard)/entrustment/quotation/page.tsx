@@ -116,7 +116,7 @@ export default function QuotationPage() {
   const [approvalModalOpen, setApprovalModalOpen] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
   const [currentQuotation, setCurrentQuotation] = useState<Quotation | null>(null)
-  const [items, setItems] = useState<QuotationItem[]>([])
+  // const [items, setItems] = useState<QuotationItem[]>([])
   const [clients, setClients] = useState<Client[]>([])
   const [clientsLoading, setClientsLoading] = useState(false)
   const [testTemplates, setTestTemplates] = useState<TestTemplate[]>([])
@@ -142,135 +142,13 @@ export default function QuotationPage() {
 
   const [contractSamples, setContractSamples] = useState<any[]>([])
 
+
   // 样品检测项（新）
   const [sampleTestItems, setSampleTestItems] = useState<SampleTestItemData[]>([])
-  const [contractSampleTestItems, setContractSampleTestItems] = useState<SampleTestItemData[]>([])
+  // const [contractSampleTestItems, setContractSampleTestItems] = useState<SampleTestItemData[]>([])
 
-  // 样品操作
-  const handleAddSample = () => {
-    setSamples([...samples, { name: '', quantity: 1 }])
-  }
+  // 移除旧的 samples, items 相关函数
 
-  const handleUpdateSample = (index: number, field: string, value: any) => {
-    const newSamples = [...samples]
-    newSamples[index] = { ...newSamples[index], [field]: value }
-    setSamples(newSamples)
-  }
-
-  const handleRemoveSample = (index: number) => {
-    setSamples(samples.filter((_, i) => i !== index))
-  }
-
-  const updateItem = (index: number, field: string, value: any) => {
-    const newItems = [...items]
-    const item = { ...newItems[index] }
-    // @ts-ignore - 动态字段更新
-    item[field] = value
-    // 重新计算小计
-    item.totalPrice = (item.quantity || 1) * (item.unitPrice || 0)
-    newItems[index] = item
-    setItems(newItems)
-  }
-
-  const removeItem = (index: number) => {
-    setItems(items.filter((_, i) => i !== index))
-  }
-
-  // 明细项表格列定义
-  const itemColumns: ColumnsType<QuotationItem> = [
-    {
-      title: '样品名称',
-      dataIndex: 'sampleName',
-      width: 120,
-      render: (value, record, index) => (
-        <Input
-          value={value}
-          onChange={(e) => updateItem(index, 'sampleName', e.target.value)}
-          placeholder="请输入样品名称"
-        />
-      ),
-    },
-    {
-      title: '检测项目',
-      dataIndex: 'serviceItem',
-      width: 150,
-      render: (value, record, index) => (
-        <Select
-          showSearch
-          optionFilterProp="label"
-          options={testTemplates.map(t => ({ value: t.name, label: t.name, method: t.method || '' }))}
-          value={value || undefined}
-          onChange={(val, option) => {
-            updateItem(index, 'serviceItem', val)
-            const method = (option as any)?.method || ''
-            if (method) {
-              updateItem(index, 'methodStandard', method)
-            }
-          }}
-          style={{ width: '100%' }}
-          placeholder="选择检测项目"
-        />
-      ),
-    },
-    {
-      title: '检测标准',
-      dataIndex: 'methodStandard',
-      width: 180,
-      render: (value, record, index) => (
-        <Input
-          value={value}
-          onChange={(e) => updateItem(index, 'methodStandard', e.target.value)}
-          placeholder="如：GB/T 228.1-2021"
-        />
-      ),
-    },
-    {
-      title: '数量',
-      dataIndex: 'quantity',
-      width: 80,
-      render: (value, record, index) => (
-        <InputNumber
-          min={1}
-          value={value}
-          onChange={(val) => updateItem(index, 'quantity', val || 1)}
-          style={{ width: '100%' }}
-        />
-      ),
-    },
-    {
-      title: '单价(元)',
-      dataIndex: 'unitPrice',
-      width: 100,
-      render: (value, record, index) => (
-        <InputNumber
-          min={0}
-          precision={2}
-          value={value}
-          onChange={(val) => updateItem(index, 'unitPrice', val || 0)}
-          style={{ width: '100%' }}
-        />
-      ),
-    },
-    {
-      title: '小计(元)',
-      dataIndex: 'totalPrice',
-      width: 100,
-      render: (value) => `¥${Number(value || 0).toFixed(2)}`,
-    },
-    {
-      title: '操作',
-      key: 'action',
-      fixed: 'right',
-      render: (_, record, index) => (
-        <Button
-          size="small"
-          danger
-          icon={<DeleteOutlined />}
-          onClick={() => removeItem(index)}
-        />
-      ),
-    },
-  ]
 
   // 获取客户列表（仅已审批通过）
   const fetchClients = async () => {
@@ -374,117 +252,18 @@ export default function QuotationPage() {
 
   // ... inside component ...
 
+  // ... (保留其他 state)
+
   const handleAdd = () => {
-    setEditingId(null)
-    setItems([{ sampleName: '', serviceItem: '', methodStandard: '', quantity: 1, unitPrice: 0, totalPrice: 0 }])
-    setSampleTestItems([]) // 清空样品检测项
-    form.resetFields()
-    form.setFieldsValue({
-      quotationDate: dayjs(),
-      validDays: 30,
-      taxRate: 0.06,
-    })
-    setModalOpen(true)
+    router.push('/entrustment/quotation/create')
   }
 
   const handleEdit = async (record: Quotation) => {
-    setEditingId(record.id)
-    const safeItems = (record.items || []).map(item => ({
-      ...item,
-      quantity: Number(item.quantity) || 0,
-      unitPrice: Number(item.unitPrice) || 0,
-      totalPrice: Number(item.totalPrice) || 0,
-    }))
-    setItems(safeItems)
-
-    // 加载样品检测项数据
-    try {
-      const res = await fetch(`/api/sample-test-item?bizType=quotation&bizId=${record.id}`)
-      const json = await res.json()
-      if (json.success && json.data) {
-        const loadedItems = json.data.map((item: any) => ({
-          ...item,
-          key: item.id || `temp_${Date.now()}_${Math.random()}`,
-        }))
-        setSampleTestItems(loadedItems)
-      } else {
-        setSampleTestItems([])
-      }
-    } catch (error) {
-      console.error('[Quotation] 加载样品检测项失败:', error)
-      showError('加载检测项失败', '无法加载样品检测项，请重试')
-      setSampleTestItems([])
-    }
-
-    const formData = {
-      ...record,
-      clientId: record.clientId || record.client?.id,
-      quotationDate: dayjs(record.quotationDate),
-      clientReportDeadline: record.clientReportDeadline ? dayjs(record.clientReportDeadline) : null,
-      discountAmount: Number((record as any).discountAmount) || 0,
-    }
-    form.setFieldsValue(formData)
-    setModalOpen(true)
+    router.push(`/entrustment/quotation/edit/${record.id}`)
   }
 
-  // ... handleView, handleDelete ...
+  // ... (保留 handleView, handleDelete, handleApproval 等)
 
-  const handleSubmit = async () => {
-    const values = await form.validateFields()
-    const submitData = {
-      ...values,
-      quotationDate: values.quotationDate.toISOString(),
-      clientReportDeadline: values.clientReportDeadline?.toISOString() || null,
-      items,
-      finalAmount: form.getFieldValue('finalAmount'),
-    }
-
-    let quotationId = editingId
-
-    if (editingId) {
-      await fetch(`/api/quotation/${editingId}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(submitData),
-      })
-      showSuccess('更新成功')
-    } else {
-      const res = await fetch('/api/quotation', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(submitData),
-      })
-      const json = await res.json()
-      quotationId = json.id
-      showSuccess('创建成功')
-    }
-
-    // 保存样品检测项数据
-    if (quotationId) {
-      try {
-        const res = await fetch('/api/sample-test-item', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            bizType: 'quotation',
-            bizId: quotationId,
-            items: sampleTestItems,
-          })
-        })
-        if (!res.ok) {
-          const json = await res.json()
-          showError(`保存样品检测项失败: ${json.error?.message || '未知错误'}`)
-          return // 不关闭弹窗
-        }
-      } catch (error) {
-        showError('保存样品检测项失败，请重试')
-        return // 不关闭弹窗
-      }
-    }
-
-    setModalOpen(false)
-    fetchData()
-  }
 
   const handleView = (record: Quotation) => {
     setCurrentQuotation(record)
@@ -514,43 +293,8 @@ export default function QuotationPage() {
     }
   }
 
-  const handleAddItem = () => {
-    setItems([...items, { sampleName: '', serviceItem: '', methodStandard: '', quantity: 1, unitPrice: 0, totalPrice: 0 }])
-  }
+  // items handler removed
 
-  // 当样品检测项变化时,自动填充报价明细
-  const syncSampleTestItemsToQuotationItems = (sampleItems: SampleTestItemData[]) => {
-    if (sampleItems.length === 0) return
-
-    // 从样品检测项生成报价明细
-    const newItems: QuotationItem[] = sampleItems.map(item => ({
-      sampleName: item.sampleName || '',
-      serviceItem: item.testItemName || '',
-      methodStandard: item.testStandard || '',
-      quantity: item.quantity || 1,
-      unitPrice: 0,
-      totalPrice: 0,
-    }))
-
-    // 合并现有的报价明细(保留单价和用户修改的数量)
-    const mergedItems = newItems.map(newItem => {
-      const existingItem = items.find(
-        item =>
-          item.sampleName === newItem.sampleName &&
-          item.serviceItem === newItem.serviceItem
-      )
-      return existingItem
-        ? {
-          ...newItem,
-          quantity: existingItem.quantity,      // 保留用户修改的数量
-          unitPrice: existingItem.unitPrice,
-          totalPrice: existingItem.totalPrice
-        }
-        : newItem
-    })
-
-    setItems(mergedItems)
-  }
 
   const handleApproval = async () => {
     const values = await approvalForm.validateFields()

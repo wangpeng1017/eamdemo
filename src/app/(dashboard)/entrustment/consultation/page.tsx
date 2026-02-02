@@ -195,21 +195,25 @@ export default function ConsultationPage() {
       okType = 'danger'
     }
 
-    showConfirm(
+    modal.confirm({
       title,
       content,
-      async () => {
-        const res = await fetch(`/api/consultation/${record.id}`, { method: 'DELETE' })
-        const json = await res.json()
-        if (res.ok && json.success) {
-          showSuccess('删除成功')
-          fetchData()
-        } else {
-          showError(json.error?.message || '删除失败')
+      okType,
+      onOk: async () => {
+        try {
+          const res = await fetch(`/api/consultation/${record.id}`, { method: 'DELETE' })
+          const json = await res.json()
+          if (res.ok && json.success) {
+            showSuccess('删除成功')
+            fetchData()
+          } else {
+            showError(json.error?.message || '删除失败')
+          }
+        } catch (error) {
+          showError('删除异常')
         }
-      },
-      { okType }
-    )
+      }
+    })
   }
 
   // 打开生成报价单弹窗

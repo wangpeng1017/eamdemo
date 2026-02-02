@@ -172,7 +172,16 @@ export default function ConsultationForm({
                 ...values,
                 expectedDeadline: values.expectedDeadline ? values.expectedDeadline.toISOString() : null,
                 attachments: attachments,
-                sampleTestItems: sampleTestItems,
+                sampleTestItems: sampleTestItems.map(item => ({
+                    ...item,
+                    // 确保 ID 为空字符串时转为 undefined/null，防止外键错误
+                    testTemplateId: item.testTemplateId || undefined,
+                    assessorId: item.assessorId || undefined,
+                    // 确保数量是数字
+                    quantity: Number(item.quantity) || 1,
+                    // 确保必填字段有默认值
+                    sampleName: item.sampleName || '未命名样品',
+                })),
             }
 
             await onFinish(submitData)
@@ -242,7 +251,7 @@ export default function ConsultationForm({
                         bizId={bizId || undefined}
                         value={sampleTestItems}
                         onChange={setSampleTestItems}
-                        showAssessment={Boolean(bizId)} // 只有编辑模式下显示评估信息，或者根据需求
+                        showAssessment={true} // 始终显示评估功能
                     />
                 </Card>
 
