@@ -184,8 +184,7 @@ model Consultation {
   client             Client?   @relation(fields: [clientId], references: [id])
   clientContactPerson String?  @db.VarChar(50) // 联系人
   testItems          String?   @db.Text // JSON 数组 检测项目列表
-  expectedDeadline   DateTime? // 期望完成时间
-  clientReportDeadline DateTime? // 客户报告截止日期
+  clientReportDeadline DateTime? // 报告时间（客户要求的报告截止日期）
   budgetRange        String?   @db.VarChar(50) // 预算范围
   status             String    @default("following") // following/assessing/assessment_passed/assessment_failed/quoted/rejected/closed
   follower           String?   @db.VarChar(50) // 跟进人

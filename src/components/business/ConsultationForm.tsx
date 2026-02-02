@@ -55,7 +55,7 @@ export default function ConsultationForm({
             // 这里的 initialValues 应该是处理好的表单数据
             form.setFieldsValue({
                 ...initialValues,
-                expectedDeadline: initialValues.expectedDeadline ? dayjs(initialValues.expectedDeadline) : undefined,
+                clientReportDeadline: initialValues.clientReportDeadline ? dayjs(initialValues.clientReportDeadline) : undefined,
             })
 
             // 如果有初始化的样品检测项（主要用于编辑回显，但通常编辑时需要异步加载，或者由父组件传入）
@@ -177,7 +177,7 @@ export default function ConsultationForm({
 
             const submitData = {
                 ...values,
-                expectedDeadline: values.expectedDeadline ? values.expectedDeadline.toISOString() : null,
+                clientReportDeadline: values.clientReportDeadline ? values.clientReportDeadline.toISOString() : null,
                 attachments: attachments,
                 sampleTestItems: sampleTestItems.map(item => ({
                     ...item,
@@ -224,7 +224,7 @@ export default function ConsultationForm({
 
                     <Row gutter={24}>
                         <Col span={12}>
-                            <Form.Item name="expectedDeadline" label="报告时间">
+                            <Form.Item name="clientReportDeadline" label="报告时间">
                                 <DatePicker style={{ width: '100%' }} />
                             </Form.Item>
                         </Col>

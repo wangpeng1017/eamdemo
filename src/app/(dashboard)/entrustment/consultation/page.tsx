@@ -385,7 +385,7 @@ export default function ConsultationPage() {
     },
     {
       title: '报告时间',
-      dataIndex: 'expectedDeadline',
+      dataIndex: 'clientReportDeadline',
       width: 160,
       render: (t: string) => t ? dayjs(t).format('YYYY-MM-DD HH:mm:ss') : '-'
     },
