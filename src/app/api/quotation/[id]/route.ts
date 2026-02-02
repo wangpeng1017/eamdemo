@@ -54,12 +54,37 @@ export const GET = withAuth(async (
     notFound('报价单不存在')
   }
 
+  // 查询审批实例和记录
+  const approvalInstance = await prisma.approvalInstance.findFirst({
+    where: {
+      bizType: 'quotation',
+      bizId: id,
+    },
+    orderBy: { submittedAt: 'desc' },
+    include: {
+      records: {
+        orderBy: { createdAt: 'asc' },
+      },
+    },
+  })
+
+  // 如果有审批实例，查询审批流配置获取节点信息
+  let approvalFlow = null
+  if (approvalInstance) {
+    approvalFlow = await prisma.approvalFlow.findUnique({
+      where: { code: approvalInstance.flowCode },
+    })
+  }
+
   // 格式化数据以匹配前端期望的字段名
   const formatted = {
     ...quotation,
     // 客户信息从关联对象获取
     clientResponse: quotation.clientStatus,
     follower: quotation.follower,
+    // 审批实例信息
+    approvalInstance,
+    approvalFlow,
   }
 
   return success(formatted)

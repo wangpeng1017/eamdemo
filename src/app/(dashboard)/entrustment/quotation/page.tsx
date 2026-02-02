@@ -578,20 +578,7 @@ export default function QuotationPage() {
         open={viewDrawerOpen}
         onClose={() => setViewDrawerOpen(false)}
         footer={
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <Space style={{ whiteSpace: 'nowrap' }}>
-              {currentQuotation?.status === 'approved' && (
-                <>
-                  <Button onClick={() => handleClientResponse('ok')}>客户接受</Button>
-                  <Button danger onClick={() => handleClientResponse('ng')}>客户拒绝</Button>
-                </>
-              )}
-              {(currentQuotation?.status === 'draft' || currentQuotation?.status === 'pending_sales') && (
-                <Button type="primary" onClick={() => { setViewDrawerOpen(false); setApprovalModalOpen(true) }}>
-                  提交审批
-                </Button>
-              )}
-            </Space>
+          <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center' }}>
             <Button onClick={() => setViewDrawerOpen(false)}>关闭</Button>
           </div>
         }
@@ -670,34 +657,64 @@ export default function QuotationPage() {
                 label: '审批记录',
                 children: (
                   <div style={{ maxHeight: 'calc(100vh - 200px)', overflowY: 'auto' }}>
-                    <ApprovalTimeline
-                      nodes={[
-                        { step: 1, name: '销售审批', role: '销售经理' },
-                        { step: 2, name: '财务审批', role: '财务经理' }
-                      ]}
-                      currentStep={
-                        currentQuotation.status === 'pending_sales' ? 1
-                          : currentQuotation.status === 'pending_finance' ? 2
-                            : currentQuotation.status === 'approved' ? 3
-                              : 1 // fallback
+                    {/* 动态从审批实例中读取审批节点 */}
+                    {(() => {
+                      const approvalInstance = (currentQuotation as any).approvalInstance
+                      const approvalFlow = (currentQuotation as any).approvalFlow
+
+                      // 如果没有审批实例，显示提示信息
+                      if (!approvalInstance) {
+                        return <div style={{ textAlign: 'center', padding: '40px 0', color: '#999' }}>暂无审批记录</div>
                       }
-                      status={
-                        currentQuotation.status === 'approved' ? 'approved'
-                          : currentQuotation.status === 'rejected' ? 'rejected'
-                            : 'pending'
+
+                      // 解析审批流节点
+                      let nodes: Array<{ step: number; name: string; role: string }> = []
+                      try {
+                        if (approvalFlow?.nodes) {
+                          const parsedNodes = JSON.parse(approvalFlow.nodes)
+                          nodes = parsedNodes.map((node: any, index: number) => ({
+                            step: index + 1,
+                            name: node.name || `审批节点${index + 1}`,
+                            role: node.assigneeType === 'user'
+                              ? (node.assigneeNames?.[0] || node.assigneeIds?.[0] || '指定审批人')
+                              : (node.assigneeIds?.[0] || '角色审批'),
+                          }))
+                        }
+                      } catch (e) {
+                        console.error('解析审批节点失败:', e)
+                        nodes = [{ step: 1, name: '审批', role: '审批人' }]
                       }
-                      submitterName={currentQuotation.approvals?.find(r => r.role === 'submitter')?.approver || '申请人'}
-                      submittedAt={currentQuotation.createdAt}
-                      records={currentQuotation.approvals?.filter(r => r.role !== 'submitter').map(r => ({
-                        id: r.id,
-                        step: r.level,
-                        action: r.action as 'approve' | 'reject',
-                        approverId: '', // not available in frontend model
-                        approverName: r.approver,
-                        comment: r.comment,
-                        createdAt: r.timestamp
-                      }))}
-                    />
+
+                      // 获取当前步骤
+                      const currentStep = approvalInstance.currentStep || 1
+
+                      // 获取状态
+                      const status = approvalInstance.status === 'approved' ? 'approved'
+                        : approvalInstance.status === 'rejected' ? 'rejected'
+                        : 'pending'
+
+                      // 转换审批记录格式
+                      const records = (approvalInstance.records || []).map((record: any) => ({
+                        id: record.id,
+                        step: record.step,
+                        action: record.action as 'approve' | 'reject',
+                        approverId: record.approverId || '',
+                        approverName: record.approverName || '未知',
+                        comment: record.comment,
+                        createdAt: record.createdAt,
+                      }))
+
+                      return (
+                        <ApprovalTimeline
+                          nodes={nodes}
+                          currentStep={currentStep}
+                          status={status}
+                          submitterName={approvalInstance.submitterName || '申请人'}
+                          submittedAt={approvalInstance.submittedAt || currentQuotation.createdAt}
+                          records={records}
+                        />
+                      )
+                    })()}
                   </div>
                 )
               }
