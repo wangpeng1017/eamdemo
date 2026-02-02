@@ -497,8 +497,12 @@ export default function ConsultationPage() {
         consultationNo: consultation.consultationNo,
         clientId: consultation.clientId,
         clientName: consultation.client?.name,
-        clientContactPerson: consultation.clientContactPerson,
-        clientPhone: consultation.client?.phone,
+        // 修复：字段名应与表单Item name一致 (contact, phone, email, address)
+        // 需求1：优先从客户档案(client)带出信息
+        contact: consultation.client?.contact || consultation.clientContactPerson,
+        phone: consultation.client?.phone,
+        email: consultation.client?.email,
+        address: consultation.client?.address,
         clientReportDeadline: consultation.expectedDeadline ? dayjs(consultation.expectedDeadline) : undefined,
         // ✅ 需求2：补充主报价单表单的字段
         quotationDate: dayjs(), // 默认今天
@@ -507,7 +511,8 @@ export default function ConsultationPage() {
         discountAmount: 0,
         paymentTerms: '', // 可选
         deliveryTerms: '', // 可选
-        follower: consultation.follower || '', // 从咨询单带入跟单人
+        // 需求2确认：明确使用咨询单的跟单人
+        follower: consultation.follower || '',
         remark: '', // 备注
       })
       console.log('✅ [生成报价单] 打开报价单弹窗')
