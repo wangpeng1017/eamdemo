@@ -591,7 +591,7 @@ export default function ConsultationPage() {
 
       // 检查是否有未评估或评估未通过的项
       const unfinishedItems = items.filter(
-        (item: any) => item.assessmentStatus !== 'approved'
+        (item: any) => item.assessmentStatus !== 'passed'
       )
       console.log('🔵 [生成报价单] 未完成评估的项:', unfinishedItems.length, unfinishedItems)
 
@@ -623,6 +623,8 @@ export default function ConsultationPage() {
                     render: (s: string) => ({
                       'pending': <Tag color="default">待评估</Tag>,
                       'assessing': <Tag color="processing">评估中</Tag>,
+                      'passed': <Tag color="success">评估通过</Tag>,
+                      'failed': <Tag color="error">评估不可行</Tag>,
                       'rejected': <Tag color="error">已驳回</Tag>,
                     } as Record<string, React.ReactNode>)[s] || <Tag>{s}</Tag>
                   },
