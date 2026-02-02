@@ -12,14 +12,17 @@ import { showError } from '@/lib/confirm'
 import { Card, List, Tag, Button, Space, Empty, Badge, message } from 'antd'
 import { FileTextOutlined, ClockCircleOutlined, RightOutlined } from '@ant-design/icons'
 import dayjs from 'dayjs'
-import AssessmentFeedbackModal from './AssessmentFeedbackModal'
+import SampleItemAssessmentModal from './SampleItemAssessmentModal'
 
 interface SampleTestItemPending {
   id: string
-  sampleName: string
-  testItemName: string
+  sampleName: string | null
+  testItemName: string | null
   testStandard?: string
-  assessmentStatus: string
+  assessmentStatus: string | null
+  quantity: number | null
+  material: string | null
+  currentAssessor: string | null
 }
 
 interface PendingAssessmentGroup {
@@ -38,8 +41,8 @@ interface PendingAssessmentCardProps {
 export default function PendingAssessmentCard({ onViewAll }: PendingAssessmentCardProps) {
   const [loading, setLoading] = useState(false)
   const [assessmentGroups, setAssessmentGroups] = useState<PendingAssessmentGroup[]>([])
-  const [feedbackModalOpen, setFeedbackModalOpen] = useState(false)
-  const [currentAssessment, setCurrentAssessment] = useState<any>(null)
+  const [assessmentModalOpen, setAssessmentModalOpen] = useState(false)
+  const [currentSampleItem, setCurrentSampleItem] = useState<SampleTestItemPending | null>(null)
 
   useEffect(() => {
     fetchPendingAssessments()
@@ -64,8 +67,11 @@ export default function PendingAssessmentCard({ onViewAll }: PendingAssessmentCa
   }
 
   const handleAssess = (group: PendingAssessmentGroup) => {
-    setCurrentAssessment(group)
-    setFeedbackModalOpen(true)
+    // 取第一条待评估的样品检测项进行评估
+    if (group.sampleTestItems.length > 0) {
+      setCurrentSampleItem(group.sampleTestItems[0])
+      setAssessmentModalOpen(true)
+    }
   }
 
   // 计算总的待评估样品检测项数量
@@ -161,17 +167,16 @@ export default function PendingAssessmentCard({ onViewAll }: PendingAssessmentCa
         )}
       </Card>
 
-      <AssessmentFeedbackModal
-        open={feedbackModalOpen}
-        assessment={currentAssessment}
-        mode="submit"
+      <SampleItemAssessmentModal
+        open={assessmentModalOpen}
+        sampleItem={currentSampleItem}
         onCancel={() => {
-          setFeedbackModalOpen(false)
-          setCurrentAssessment(null)
+          setAssessmentModalOpen(false)
+          setCurrentSampleItem(null)
         }}
         onSuccess={() => {
-          setFeedbackModalOpen(false)
-          setCurrentAssessment(null)
+          setAssessmentModalOpen(false)
+          setCurrentSampleItem(null)
           fetchPendingAssessments()
         }}
       />
