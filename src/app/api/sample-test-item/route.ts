@@ -131,6 +131,10 @@ export const POST = withAuth(async (req: NextRequest, session) => {
           testItemName: item.testItemName.trim(),
           testStandard: item.testStandard?.trim() || null,
           judgmentStandard: item.judgmentStandard?.trim() || null,
+          // 评估相关字段
+          assessmentStatus: item.assessmentStatus || 'pending',
+          currentAssessorId: item.currentAssessorId || null,
+          currentAssessorName: item.currentAssessorName || null,
           sortOrder: index,
         }))
 

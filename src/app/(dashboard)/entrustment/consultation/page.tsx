@@ -626,7 +626,7 @@ export default function ConsultationPage() {
                       'rejected': <Tag color="error">已驳回</Tag>,
                     } as Record<string, React.ReactNode>)[s] || <Tag>{s}</Tag>
                   },
-                  { title: '评估人', dataIndex: 'assessorName', width: 100 },
+                  { title: '评估人', dataIndex: 'currentAssessorName', width: 100 },
                 ]}
                 scroll={{ y: 300 }}
               />
