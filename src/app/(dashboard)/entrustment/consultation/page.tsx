@@ -790,8 +790,6 @@ export default function ConsultationPage() {
             icon={<FileTextOutlined />}
             onClick={(e) => {
               e.stopPropagation()
-              console.log('🔴 [按钮点击] 按钮被点击了!', record)
-              alert('按钮点击成功! consultationId: ' + record.id)
               handleOpenGenerateQuoteForRecord(record)
             }}
           >
