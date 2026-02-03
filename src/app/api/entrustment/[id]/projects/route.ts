@@ -42,27 +42,51 @@ export const GET = withAuth(async (
   for (const project of entrustment.projects) {
     try {
       // 解析 testItems JSON
-      const items = JSON.parse(project.testItems) as TestItem[]
+      let items: string[] | TestItem[]
+
+      if (typeof project.testItems === 'string') {
+        items = JSON.parse(project.testItems)
+      } else if (Array.isArray(project.testItems)) {
+        items = project.testItems
+      } else {
+        continue
+      }
 
       // 跳过空数组
       if (!Array.isArray(items) || items.length === 0) {
         continue
       }
 
-      // 转换每个检测项
-      for (const item of items) {
-        testItems.push({
-          key: `${project.id}-${item.name}`,
-          sampleName: project.name,
-          testItemName: item.name,
-          testStandard: item.standard || project.method,
-          testTemplateId: project.testTemplateId,
-          quantity: 1,
-        })
+      // 判断是字符串数组还是对象数组
+      if (items.length > 0 && typeof items[0] === 'string') {
+        // 字符串数组格式: ["抗拉强度", "屈服强度"]
+        for (const itemName of items) {
+          testItems.push({
+            key: `${project.id}-${itemName}`,
+            sampleName: project.name,
+            testItemName: itemName,
+            testStandard: project.method,
+            testTemplateId: project.testTemplateId,
+            quantity: 1,
+          })
+        }
+      } else {
+        // 对象数组格式: [{ name, standard }]
+        for (const item of items as TestItem[]) {
+          testItems.push({
+            key: `${project.id}-${item.name}`,
+            sampleName: project.name,
+            testItemName: item.name,
+            testStandard: item.standard || project.method,
+            testTemplateId: project.testTemplateId,
+            quantity: 1,
+          })
+        }
       }
     } catch (e) {
-      // JSON解析失败
-      return error('JSON_PARSE_ERROR', `JSON解析失败: ${(e as Error).message}`, 400)
+      // JSON解析失败，记录错误但继续处理下一个项目
+      console.error(`解析项目 ${project.id} 的检测项失败:`, e)
+      continue
     }
   }
 
