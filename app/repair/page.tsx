@@ -1,6 +1,6 @@
 'use client';
 
-import Link from 'next/link';
+import MainLayout from '@/components/MainLayout';
 import { repairData } from '../../public/data/test-data';
 import { useState } from 'react';
 
@@ -35,27 +35,12 @@ export default function RepairPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50">
-      <header className="bg-white shadow-md border-b border-slate-200">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-          <div className="flex items-center justify-between">
-            <Link href="/" className="flex items-center space-x-3">
-              <div className="w-10 h-10 bg-blue-600 rounded-lg flex items-center justify-center">
-                <span className="text-white font-bold text-xl">E</span>
-              </div>
-              <div>
-                <h1 className="text-2xl font-bold text-slate-800">维修管理</h1>
-                <p className="text-sm text-slate-500">Repair Management</p>
-              </div>
-            </Link>
-            <div className="flex items-center space-x-4">
-              <Link href="/" className="text-sm text-slate-600 hover:text-blue-600">返回首页</Link>
-            </div>
-          </div>
-        </div>
-      </header>
-
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <MainLayout>
+      {/* 页面标题 */}
+      <div className="mb-8">
+        <h1 className="text-3xl font-bold text-slate-800">维修管理</h1>
+        <p className="text-slate-500 mt-2">设备维修工单管理</p>
+      </div>
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
           <div className="bg-white rounded-lg shadow-sm p-4 border border-slate-200">
             <p className="text-sm text-slate-500">工单总数</p>
@@ -145,10 +130,9 @@ export default function RepairPage() {
         </div>
 
         <div className="mt-6 bg-white rounded-lg shadow-sm p-6 border border-slate-200">
-          <h3 className="text-lg font-bold text-slate-800 mb-4">维修工单</h3>
+          <h3 className="text-lg font-bold text-slate-800 mb-2">维修工单</h3>
           <p className="text-sm text-slate-500">共 {filteredData.length} 条记录</p>
         </div>
-      </main>
-    </div>
+    </MainLayout>
   );
 }
