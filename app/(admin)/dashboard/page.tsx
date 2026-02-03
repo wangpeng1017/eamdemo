@@ -12,7 +12,7 @@ import {
   CheckCircleOutlined,
   ExclamationCircleOutlined,
 } from '@ant-design/icons'
-import { mockEquipments, mockRepairOrders } from '../../../data/mock-data'
+import { mockEquipments, mockRepairOrders } from '@/data/mock-data'
 
 export default function DashboardPage() {
   // 设备统计

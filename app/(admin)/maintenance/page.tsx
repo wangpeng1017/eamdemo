@@ -25,8 +25,8 @@ import {
   CheckCircleOutlined,
 } from '@ant-design/icons'
 import Link from 'next/link'
-import { mockMaintenancePlans, mockMaintenanceTasks } from '../../../data/maintenance-data'
-import { MaintenancePlan, MaintenanceTask, maintenanceStatusMap, maintenanceTypeMap, maintenancePeriodMap, maintenancePriorityMap } from '../../../lib/maintenance-types'
+import { mockMaintenancePlans, mockMaintenanceTasks } from '@/data/maintenance-data'
+import { MaintenancePlan, MaintenanceTask, maintenanceStatusMap, maintenanceTypeMap, maintenancePeriodMap, maintenancePriorityMap } from '@/lib/maintenance-types'
 import dayjs from 'dayjs'
 
 const { Search } = Input

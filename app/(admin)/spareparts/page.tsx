@@ -28,8 +28,8 @@ import {
   EyeOutlined,
 } from '@ant-design/icons'
 import Link from 'next/link'
-import { mockSpareParts } from '../../../data/spareparts-data'
-import { SparePart, sparePartStatusMap, sparePartCategoryMap, sparePartUnitMap } from '../../../lib/spareparts-types'
+import { mockSpareParts } from '@/data/spareparts-data'
+import { SparePart, sparePartStatusMap, sparePartCategoryMap, sparePartUnitMap } from '@/lib/spareparts-types'
 import dayjs from 'dayjs'
 
 const { Search } = Input

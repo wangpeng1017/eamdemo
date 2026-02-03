@@ -28,8 +28,8 @@ import {
   EyeOutlined,
 } from '@ant-design/icons'
 import Link from 'next/link'
-import { mockEquipments } from '../../../data/mock-data'
-import { Equipment, equipmentStatusMap, criticalityMap } from '../../../lib/types'
+import { mockEquipments } from '@/data/mock-data'
+import { Equipment, equipmentStatusMap, criticalityMap } from '@/lib/types'
 import dayjs from 'dayjs'
 
 const { Search } = Input

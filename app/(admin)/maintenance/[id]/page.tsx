@@ -19,8 +19,8 @@ import {
   CheckCircleOutlined,
   ClockCircleOutlined,
 } from '@ant-design/icons'
-import { mockMaintenanceTasks, mockMaintenancePlans } from '../../../data/maintenance-data'
-import { maintenanceTypeMap, maintenanceStatusMap, maintenancePriorityMap } from '../../../lib/maintenance-types'
+import { mockMaintenanceTasks, mockMaintenancePlans } from '@/data/maintenance-data'
+import { maintenanceTypeMap, maintenanceStatusMap, maintenancePriorityMap } from '@/lib/maintenance-types'
 import dayjs from 'dayjs'
 
 export default function MaintenanceTaskDetailPage() {

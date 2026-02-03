@@ -21,8 +21,8 @@ import {
   EditOutlined,
   DeleteOutlined,
 } from '@ant-design/icons'
-import { mockEquipments, mockRepairOrders } from '../../../data/mock-data'
-import { equipmentStatusMap, criticalityMap } from '../../../lib/types'
+import { mockEquipments, mockRepairOrders } from '@/data/mock-data'
+import { equipmentStatusMap, criticalityMap } from '@/lib/types'
 import dayjs from 'dayjs'
 
 export default function EquipmentDetailPage() {

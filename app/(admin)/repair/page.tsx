@@ -29,8 +29,8 @@ import {
   CheckCircleOutlined,
 } from '@ant-design/icons'
 import Link from 'next/link'
-import { mockRepairOrders } from '../../../data/mock-data'
-import { RepairOrder, repairStatusMap, repairPriorityMap, faultTypeMap } from '../../../lib/types'
+import { mockRepairOrders } from '@/data/mock-data'
+import { RepairOrder, repairStatusMap, repairPriorityMap, faultTypeMap } from '@/lib/types'
 import dayjs from 'dayjs'
 
 const { Search } = Input

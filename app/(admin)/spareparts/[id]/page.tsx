@@ -23,8 +23,8 @@ import {
   ExportOutlined,
   EditOutlined,
 } from '@ant-design/icons'
-import { mockSpareParts, mockStockInRecords, mockStockOutRecords } from '../../../data/spareparts-data'
-import { sparePartCategoryMap, sparePartUnitMap, stockInTypeMap, stockOutTypeMap } from '../../../lib/spareparts-types'
+import { mockSpareParts, mockStockInRecords, mockStockOutRecords } from '@/data/spareparts-data'
+import { sparePartCategoryMap, sparePartUnitMap, stockInTypeMap, stockOutTypeMap } from '@/lib/spareparts-types'
 import dayjs from 'dayjs'
 
 export default function SparePartDetailPage() {

@@ -25,8 +25,8 @@ import {
   CheckCircleOutlined,
   UserOutlined,
 } from '@ant-design/icons'
-import { mockRepairOrders, mockEquipments } from '../../../data/mock-data'
-import { repairStatusMap, repairPriorityMap, faultTypeMap } from '../../../lib/types'
+import { mockRepairOrders, mockEquipments } from '@/data/mock-data'
+import { repairStatusMap, repairPriorityMap, faultTypeMap } from '@/lib/types'
 import dayjs from 'dayjs'
 
 const { TextArea } = Input
