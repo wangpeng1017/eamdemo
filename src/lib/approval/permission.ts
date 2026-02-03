@@ -58,6 +58,8 @@ export function canViewApproval(
   user: User,
   flowNodes?: ApprovalNode[]
 ): boolean {
+  console.log(`[DEBUG] canViewApproval - user: ${user.username || 'undefined'}, flowCode: ${instance.flowCode}, step: ${instance.currentStep}, flowNodes: ${flowNodes?.length || 0} 个节点`)
+
   // 管理员可以看到所有审批
   const userRoleCodes = user.roles.map(r => r.role.code)
   if (user.username === 'admin' || userRoleCodes.includes('admin')) {
@@ -149,15 +151,21 @@ export async function filterViewableApprovals(
   // 如果没有提供流程节点映射，查询所有相关的流程
   if (!flowNodesMap) {
     const flowCodes = [...new Set(instances.map(i => i.flowCode))]
+    console.log(`[DEBUG] 查询审批流程，flowCodes:`, flowCodes)
+
     const flows = await prisma.approvalFlow.findMany({
       where: { code: { in: flowCodes } },
       select: { code: true, nodes: true }
     })
 
+    console.log(`[DEBUG] 查询到 ${flows.length} 个审批流程`)
+
     flowNodesMap = {}
     flows.forEach(flow => {
       try {
-        flowNodesMap[flow.code] = JSON.parse(flow.nodes)
+        const nodes = JSON.parse(flow.nodes)
+        flowNodesMap[flow.code] = nodes
+        console.log(`[DEBUG] 流程 ${flow.code} 有 ${nodes.length} 个节点`)
       } catch (e) {
         console.error(`解析审批流节点失败: ${flow.code}`, e)
         flowNodesMap[flow.code] = []
