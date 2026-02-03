@@ -1,6 +1,6 @@
 'use client';
 
-import Link from 'next/link';
+import MainLayout from '@/components/MainLayout';
 import { sparePartsData } from '../../public/data/test-data';
 import { useState } from 'react';
 
@@ -16,9 +16,9 @@ export default function SparePartsPage() {
   });
 
   const getStatusColor = (stock: number, safetyStock: number) => {
-    if (stock === 0) return 'bg-red-100 text-red-700';
-    if (stock < safetyStock) return 'bg-orange-100 text-orange-700';
-    return 'bg-green-100 text-green-700';
+    if (stock === 0) return 'bg-error/10 text-error';
+    if (stock < safetyStock) return 'bg-warning/10 text-warning';
+    return 'bg-success/10 text-success';
   };
 
   const getStatusText = (stock: number, safetyStock: number) => {
@@ -28,49 +28,36 @@ export default function SparePartsPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50">
-      <header className="bg-white shadow-md border-b border-slate-200">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-          <div className="flex items-center justify-between">
-            <Link href="/" className="flex items-center space-x-3">
-              <div className="w-10 h-10 bg-blue-600 rounded-lg flex items-center justify-center">
-                <span className="text-white font-bold text-xl">E</span>
-              </div>
-              <div>
-                <h1 className="text-2xl font-bold text-slate-800">备品备件管理</h1>
-                <p className="text-sm text-slate-500">Spare Parts Management</p>
-              </div>
-            </Link>
-            <div className="flex items-center space-x-4">
-              <Link href="/" className="text-sm text-slate-600 hover:text-blue-600">返回首页</Link>
-            </div>
-          </div>
-        </div>
-      </header>
+    <MainLayout>
+      {/* 页面标题 */}
+      <div className="mb-8">
+        <h1 className="text-3xl font-bold text-gray-700">备品备件管理</h1>
+        <p className="text-gray-500 mt-2">备件库存与采购管理</p>
+      </div>
 
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-          <div className="bg-white rounded-lg shadow-sm p-4 border border-slate-200">
-            <p className="text-sm text-slate-500">备件总数</p>
-            <p className="text-2xl font-bold text-slate-800">{sparePartsData.length}</p>
+      {/* 统计卡片 */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+          <div className="bg-white rounded-lg shadow-sm p-4 border border-gray-200">
+            <p className="text-sm text-gray-500">备件总数</p>
+            <p className="text-2xl font-bold text-gray-700">{sparePartsData.length}</p>
           </div>
-          <div className="bg-white rounded-lg shadow-sm p-4 border border-slate-200">
-            <p className="text-sm text-slate-500">库存充足</p>
-            <p className="text-2xl font-bold text-green-600">{sparePartsData.filter(s => s.stock >= s.safetyStock).length}</p>
+          <div className="bg-white rounded-lg shadow-sm p-4 border border-gray-200">
+            <p className="text-sm text-gray-500">库存充足</p>
+            <p className="text-2xl font-bold text-success">{sparePartsData.filter(s => s.stock >= s.safetyStock).length}</p>
           </div>
-          <div className="bg-white rounded-lg shadow-sm p-4 border border-slate-200">
-            <p className="text-sm text-slate-500">库存短缺</p>
-            <p className="text-2xl font-bold text-orange-600">{sparePartsData.filter(s => s.stock < s.safetyStock && s.stock > 0).length}</p>
+          <div className="bg-white rounded-lg shadow-sm p-4 border border-gray-200">
+            <p className="text-sm text-gray-500">库存短缺</p>
+            <p className="text-2xl font-bold text-warning">{sparePartsData.filter(s => s.stock < s.safetyStock && s.stock > 0).length}</p>
           </div>
-          <div className="bg-white rounded-lg shadow-sm p-4 border border-slate-200">
-            <p className="text-sm text-slate-500">总价值</p>
-            <p className="text-2xl font-bold text-slate-800">
+          <div className="bg-white rounded-lg shadow-sm p-4 border border-gray-200">
+            <p className="text-sm text-gray-500">总价值</p>
+            <p className="text-2xl font-bold text-gray-700">
               ¥{sparePartsData.reduce((sum, s) => sum + s.unitPrice * s.stock, 0).toLocaleString()}
             </p>
           </div>
         </div>
 
-        <div className="bg-white rounded-lg shadow-sm p-4 mb-6 border border-slate-200">
+        <div className="bg-white rounded-lg shadow-sm p-4 mb-6 border border-gray-200">
           <div className="flex flex-col md:flex-row gap-4">
             <div className="flex-1">
               <input
@@ -78,14 +65,14 @@ export default function SparePartsPage() {
                 placeholder="搜索备件名称、编码..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
             </div>
             <div>
               <select
                 value={filterCategory}
                 onChange={(e) => setFilterCategory(e.target.value)}
-                className="px-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
               >
                 <option value="全部">全部分类</option>
                 <option value="机械件">机械件</option>
@@ -97,35 +84,35 @@ export default function SparePartsPage() {
           </div>
         </div>
 
-        <div className="bg-white rounded-lg shadow-sm border border-slate-200 overflow-hidden">
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full">
-              <thead className="bg-slate-50 border-b border-slate-200">
+              <thead className="bg-gray-50 border-b border-gray-200">
                 <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">备件编码</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">备件名称</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">型号</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">分类</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">库存</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">安全库存</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">单价</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">货位</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">供应商</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">状态</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">备件编码</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">备件名称</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">型号</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">分类</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">库存</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">安全库存</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">单价</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">货位</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">供应商</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">状态</th>
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-slate-200">
                 {filteredData.map((item) => (
-                  <tr key={item.id} className="hover:bg-slate-50 transition-colors">
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-blue-600">{item.code}</td>
-                    <td className="px-6 py-4 text-sm text-slate-900">{item.name}</td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500">{item.model}</td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500">{item.category}</td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-slate-900">{item.stock}</td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500">{item.safetyStock}</td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500">¥{item.unitPrice.toFixed(2)}</td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500">{item.location}</td>
-                    <td className="px-6 py-4 text-sm text-slate-500">{item.supplier}</td>
+                  <tr key={item.id} className="hover:bg-gray-50 transition-colors">
+                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-info">{item.code}</td>
+                    <td className="px-6 py-4 text-sm text-gray-900">{item.name}</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{item.model}</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{item.category}</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{item.stock}</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{item.safetyStock}</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">¥{item.unitPrice.toFixed(2)}</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{item.location}</td>
+                    <td className="px-6 py-4 text-sm text-gray-500">{item.supplier}</td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <span className={`px-2 py-1 text-xs font-medium rounded-full ${getStatusColor(item.stock, item.safetyStock)}`}>
                         {getStatusText(item.stock, item.safetyStock)}
@@ -138,11 +125,10 @@ export default function SparePartsPage() {
           </div>
         </div>
 
-        <div className="mt-6 bg-white rounded-lg shadow-sm p-6 border border-slate-200">
-          <h3 className="text-lg font-bold text-slate-800 mb-4">备件信息</h3>
-          <p className="text-sm text-slate-500">共 {filteredData.length} 条记录</p>
+        <div className="mt-6 bg-white rounded-lg shadow-sm p-6 border border-gray-200">
+          <h3 className="text-lg font-bold text-gray-700 mb-4">备件信息</h3>
+          <p className="text-sm text-gray-500">共 {filteredData.length} 条记录</p>
         </div>
-      </main>
-    </div>
+      </MainLayout>
   );
 }
