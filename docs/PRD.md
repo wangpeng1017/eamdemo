@@ -1,7 +1,7 @@
 
 # 慧新 EAM 系统产品需求文档 (PRD)
 
-> 最后更新: 2026-02-03 | 版本: 1.0
+> 最后更新: 2026-02-03 | 版本: 1.1
 
 ---
 
@@ -43,6 +43,9 @@
 | F007 | 维修管理 | 工单详情查看 | 🟢 | P0 | app/(admin)/repair/[id]/page.tsx |
 | F008 | 维修管理 | 工单派工 | 🟡 | P1 | app/(admin)/repair/[id]/page.tsx |
 | F009 | 维修管理 | 维修验收 | 🟡 | P1 | app/(admin)/repair/[id]/page.tsx |
+| F010 | 备品备件 | 备件库存查询 | 🟢 | P0 | app/(admin)/spareparts/page.tsx |
+| F011 | 备品备件 | 备件详情查看 | 🟢 | P0 | app/(admin)/spareparts/[id]/page.tsx |
+| F012 | 备品备件 | 入库/出库记录 | 🟢 | P0 | app/(admin)/spareparts/[id]/page.tsx |
 
 ---
 
@@ -127,6 +130,33 @@
   - [ ] 更新工单状态为已关闭
 - **关联页面**: /admin/repair/[id] (UI已就位，待实现逻辑)
 
+### F010: 备件库存查询
+- **用户故事**: 作为库管员，我希望查看所有备件的库存情况，包括库存预警信息
+- **验收标准**:
+  - [x] 表格展示备件信息（编码、名称、型号、分类、库存等）
+  - [x] 显示库存状态（正常/预警/缺货）
+  - [x] 库存进度条显示
+  - [x] 支持按名称/编码/型号搜索
+  - [x] 支持按分类筛选
+  - [x] 显示库存统计卡片（总数、正常、预警、缺货、总价值）
+- **关联页面**: /admin/spareparts
+
+### F011: 备件详情查看
+- **用户故事**: 作为库管员，我希望查看备件的详细信息，包括入库出库记录
+- **验收标准**:
+  - [x] 展示备件完整信息
+  - [x] 显示库存状态和进度条
+  - [x] 显示入库记录列表
+  - [x] 显示出库记录列表
+- **关联页面**: /admin/spareparts/[id]
+
+### F012: 入库/出库记录
+- **用户故事**: 作为库管员，我希望查看备件的出入库历史记录
+- **验收标准**:
+  - [x] 表格展示入库记录（单号、类型、数量、单价、总价、供应商等）
+  - [x] 表格展示出库记录（单号、类型、数量、关联单据、领用人等）
+- **关联页面**: /admin/spareparts/[id]
+
 ---
 
 ## 四、数据模型概览
@@ -135,6 +165,9 @@
 |------|------|----------|
 | Equipment | 设备表 | id, code, name, model, manufacturer, category, location, department, status, criticality, purchaseDate, originalValue, responsiblePerson |
 | RepairOrder | 维修工单表 | id, orderNo, equipmentId, equipmentName, faultType, faultDescription, priority, status, reporter, reportTime, assignee, assignTime, startTime, endTime, repairDescription, spareParts, laborHours, cost |
+| SparePart | 备品备件表 | id, code, name, model, category, unit, manufacturer, supplier, unitPrice, safetyStock, reorderPoint, currentStock, reservedStock, location, warehouse |
+| StockInRecord | 入库记录表 | id, orderNo, sparePartId, type, quantity, unitPrice, totalPrice, supplier, warehouse, location, operator, createdAt |
+| StockOutRecord | 出库记录表 | id, orderNo, sparePartId, type, quantity, requestId, requestNo, department, operator, receiver, createdAt |
 
 ### 设备状态枚举
 - `running`: 运行中
@@ -198,3 +231,4 @@
 | 日期 | 版本 | 变更内容 | 操作人 |
 |------|------|----------|--------|
 | 2026-02-03 | 1.0 | 初始版本，完成设备台账和维修管理基础功能 | AI |
+| 2026-02-03 | 1.1 | 新增备品备件管理模块：库存查询、详情查看、出入库记录 | AI |
