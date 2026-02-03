@@ -28,6 +28,7 @@ interface EntrustmentProject {
   status: string
   assignTo: string | null
   subcontractor: string | null
+  subcontractAssignee: string | null
   deviceId: string | null
   deadline: string | null
 }
@@ -320,7 +321,8 @@ export default function EntrustmentListPage() {
     if (project.status === 'subcontracted') {
       subcontractForm.setFieldsValue({
         subcontractor: project.subcontractor,
-        // subcontractor field in form matches standard?
+        subcontractAssignee: project.subcontractAssignee,
+        deadline: project.deadline ? dayjs(project.deadline) : undefined
       })
     }
     setSubcontractModalOpen(true)
