@@ -75,15 +75,25 @@ export const GET = withErrorHandler(async (request: NextRequest) => {
             contractNo: true,
             contractName: true,
             status: true,
-            clientReportDeadline: true, // Included
+            clientReportDeadline: true,
+            sampleName: true,
+            sampleModel: true,
+            sampleMaterial: true,
+            sampleQuantity: true,
           },
         },
         quotation: {
           select: {
             id: true,
             quotationNo: true,
-            clientReportDeadline: true, // Included
-            follower: true, // Included
+            clientReportDeadline: true,
+            follower: true,
+            items: {
+              select: {
+                sampleName: true,
+                serviceItem: true,
+              }
+            }
           },
         },
         projects: {

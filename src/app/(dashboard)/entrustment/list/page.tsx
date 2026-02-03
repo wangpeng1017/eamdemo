@@ -75,16 +75,21 @@ interface Entrustment {
     contractName: string | null
     partyACompany: string | null
     clientReportDeadline: string | null
+    sampleName?: string | null
+    sampleModel?: string | null
+    sampleMaterial?: string | null
+    sampleQuantity?: number | null
   }
   quotation?: {
     id: string
     quotationNo: string
     clientReportDeadline: string | null
     follower: string | null
+    items?: QuotationItem[]
   }
-}
-
-interface User {
+  projects: EntrustmentProject[]
+  samples: Sample[]
+  client?: {
   id: string
   name: string
   username: string
@@ -107,6 +112,19 @@ interface Client {
   name: string
   shortName: string | null
   contact: string | null
+}
+
+interface Quotation {
+  id: string
+  quotationNo: string
+  clientReportDeadline: string | null
+  follower: string | null
+  items?: QuotationItem[]
+}
+
+interface QuotationItem {
+  sampleName: string | null
+  serviceItem: string
 }
 
 interface Contract {
@@ -170,6 +188,51 @@ export default function EntrustmentListPage() {
   const [expandedRowKeys, setExpandedRowKeys] = useState<string[]>([])
 
   // 获取委托单列表
+  // 获取样品名称：优先从 Sample 表，否则从 Contract/Quotation
+  const getSampleName = () => {
+    if (currentEntrustment.samples && currentEntrustment.samples.length > 0) {
+      return currentEntrustment.samples.map(s => s.name).join(', ')
+    }
+    if (currentEntrustment.contract?.sampleName) {
+      return currentEntrustment.contract.sampleName
+    }
+    if (currentEntrustment.quotation?.items && currentEntrustment.quotation.items.length > 0) {
+      const names = currentEntrustment.quotation.items.map(item => item.sampleName).filter(Boolean)
+      return names.length > 0 ? names.join(', ') : '-'
+    }
+    return '-'
+  }
+
+  const getSampleModel = () => {
+    if (currentEntrustment.samples && currentEntrustment.samples.length > 0) {
+      return currentEntrustment.samples.map(s => s.specification || '-').join(', ')
+    }
+    if (currentEntrustment.contract?.sampleModel) {
+      return currentEntrustment.contract.sampleModel
+    }
+    return '-'
+  }
+
+  const getSampleMaterial = () => {
+    if (currentEntrustment.samples && currentEntrustment.samples.length > 0) {
+      return currentEntrustment.samples.map(s => s.material || '-').join(', ')
+    }
+    if (currentEntrustment.contract?.sampleMaterial) {
+      return currentEntrustment.contract.sampleMaterial
+    }
+    return '-'
+  }
+
+  const getSampleQuantity = () => {
+    if (currentEntrustment.samples && currentEntrustment.samples.length > 0) {
+      return currentEntrustment.samples.map(s => s.quantity || '-').join(', ')
+    }
+    if (currentEntrustment.contract?.sampleQuantity) {
+      return currentEntrustment.contract.sampleQuantity.toString()
+    }
+    return '-'
+  }
+
   const fetchData = async (p = page) => {
     setLoading(true)
     const res = await fetch(`/api/entrustment?page=${p}&pageSize=10`)
@@ -685,24 +748,16 @@ export default function EntrustmentListPage() {
 
                     <Descriptions title="样品信息" column={2} bordered size="small">
                       <Descriptions.Item label="样品名称">
-                        {currentEntrustment.samples && currentEntrustment.samples.length > 0
-                          ? currentEntrustment.samples.map(s => s.name).join(', ')
-                          : currentEntrustment.sampleName || '-'}
+                        {getSampleName()}
                       </Descriptions.Item>
                       <Descriptions.Item label="样品型号">
-                        {currentEntrustment.samples && currentEntrustment.samples.length > 0
-                          ? currentEntrustment.samples.map(s => s.specification || '-').join(', ')
-                          : currentEntrustment.sampleModel || '-'}
+                        {getSampleModel()}
                       </Descriptions.Item>
                       <Descriptions.Item label="样品材质">
-                        {currentEntrustment.samples && currentEntrustment.samples.length > 0
-                          ? currentEntrustment.samples.map(s => s.material || '-').join(', ')
-                          : currentEntrustment.sampleMaterial || '-'}
+                        {getSampleMaterial()}
                       </Descriptions.Item>
                       <Descriptions.Item label="样品数量">
-                        {currentEntrustment.samples && currentEntrustment.samples.length > 0
-                          ? currentEntrustment.samples.map(s => s.quantity || '-').join(', ')
-                          : (currentEntrustment.sampleQuantity?.toString() || '-')}
+                        {getSampleQuantity()}
                       </Descriptions.Item>
                       <Descriptions.Item label="样品退回">
                         {currentEntrustment.isSampleReturn ? '是' : '否'}
