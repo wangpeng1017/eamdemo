@@ -1,10 +1,10 @@
 'use client';
 
+import MainLayout from '@/components/MainLayout';
 import Link from 'next/link';
 import { equipmentData, maintenanceData, repairData, sparePartsData, assetData, monitoringData } from '../public/data/test-data';
 
 export default function Home() {
-  // 统计数据
   const stats = {
     totalEquipment: equipmentData.length,
     runningEquipment: equipmentData.filter(e => e.status === '运行中').length,
@@ -14,154 +14,191 @@ export default function Home() {
     alertCount: monitoringData.filter(m => m.status === '预警').length,
   };
 
-  const menuItems = [
-    { key: 'equipment', title: '设备台账', icon: '🔧', count: stats.totalEquipment, link: '/equipment', desc: '设备档案管理' },
-    { key: 'maintenance', title: '维护保养', icon: '🔍', count: stats.maintenancePlan, link: '/maintenance', desc: '保养计划管理' },
-    { key: 'repair', title: '维修管理', icon: '🛠️', count: stats.repairOrder, link: '/repair', desc: '维修工单管理' },
-    { key: 'spareparts', title: '备品备件', icon: '📦', count: sparePartsData.length, link: '/spareparts', desc: '库存管理' },
-    { key: 'asset', title: '资产管理', icon: '💰', count: assetData.length, link: '/asset', desc: '资产全生命周期' },
-    { key: 'monitoring', title: '状态监测', icon: '📊', count: stats.alertCount, link: '/monitoring', desc: '实时监控预警' },
+  const quickActions = [
+    { title: '设备列表', desc: '查看所有设备', icon: '🔧', link: '/equipment', color: 'from-blue-500 to-blue-600' },
+    { title: '报修申请', desc: '提交维修工单', icon: '🚨', link: '/repair', color: 'from-red-500 to-red-600' },
+    { title: '保养计划', desc: '查看保养任务', icon: '📅', link: '/maintenance', color: 'from-green-500 to-green-600' },
+    { title: '实时监控', desc: '设备状态监控', icon: '📈', link: '/monitoring', color: 'from-purple-500 to-purple-600' },
+  ];
+
+  const recentActivities = [
+    { type: '维修', content: '空压机主机异响', time: '10分钟前', status: '待处理' },
+    { type: '保养', content: '注塑机润滑保养', time: '30分钟前', status: '已完成' },
+    { type: '预警', content: '空压机振动值超标', time: '1小时前', status: '预警中' },
+    { type: '维修', content: '冲压机滑块卡死', time: '2小时前', status: '维修中' },
+    { type: '保养', content: '数控车床周检查', time: '3小时前', status: '执行中' },
   ];
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50">
-      {/* 顶部导航栏 */}
-      <header className="bg-white shadow-md border-b border-slate-200">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+    <MainLayout>
+      {/* 页面标题 */}
+      <div className="mb-8">
+        <h1 className="text-3xl font-bold text-slate-800">系统概览</h1>
+        <p className="text-slate-500 mt-2">欢迎回来，管理员！这是今天的系统概况。</p>
+      </div>
+
+      {/* 统计卡片 */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+        <div className="bg-white rounded-xl shadow-sm p-6 border border-slate-200 hover:shadow-md transition-shadow">
           <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-3">
-              <div className="w-10 h-10 bg-blue-600 rounded-lg flex items-center justify-center">
-                <span className="text-white font-bold text-xl">E</span>
-              </div>
-              <div>
-                <h1 className="text-2xl font-bold text-slate-800">EAM系统</h1>
-                <p className="text-sm text-slate-500">企业资产管理平台</p>
-              </div>
+            <div>
+              <p className="text-sm text-slate-500 mb-1">设备总数</p>
+              <p className="text-3xl font-bold text-slate-800">{stats.totalEquipment}</p>
+              <p className="text-xs text-slate-500 mt-2">运行中: {stats.runningEquipment}</p>
             </div>
-            <div className="flex items-center space-x-4">
-              <div className="text-right">
-                <p className="text-sm font-medium text-slate-700">管理员</p>
-                <p className="text-xs text-slate-500">系统管理员</p>
-              </div>
-              <div className="w-10 h-10 bg-slate-200 rounded-full flex items-center justify-center">
-                <span className="text-slate-600">👤</span>
-              </div>
-            </div>
-          </div>
-        </div>
-      </header>
-
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* 统计卡片 */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-          <div className="bg-white rounded-xl shadow-sm p-6 border border-slate-200">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-slate-500 mb-1">设备总数</p>
-                <p className="text-3xl font-bold text-slate-800">{stats.totalEquipment}</p>
-                <p className="text-xs text-slate-500 mt-2">运行中: {stats.runningEquipment}</p>
-              </div>
-              <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
-                <span className="text-2xl">🔧</span>
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-white rounded-xl shadow-sm p-6 border border-slate-200">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-slate-500 mb-1">待执行保养</p>
-                <p className="text-3xl font-bold text-orange-600">{stats.maintenancePlan}</p>
-                <p className="text-xs text-slate-500 mt-2">计划总数: {maintenanceData.length}</p>
-              </div>
-              <div className="w-12 h-12 bg-orange-100 rounded-lg flex items-center justify-center">
-                <span className="text-2xl">🔍</span>
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-white rounded-xl shadow-sm p-6 border border-slate-200">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-slate-500 mb-1">待处理维修</p>
-                <p className="text-3xl font-bold text-red-600">{stats.repairOrder}</p>
-                <p className="text-xs text-slate-500 mt-2">紧急: {repairData.filter(r => r.priority === '紧急').length}</p>
-              </div>
-              <div className="w-12 h-12 bg-red-100 rounded-lg flex items-center justify-center">
-                <span className="text-2xl">🛠️</span>
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-white rounded-xl shadow-sm p-6 border border-slate-200">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-slate-500 mb-1">预警信息</p>
-                <p className="text-3xl font-bold text-yellow-600">{stats.alertCount}</p>
-                <p className="text-xs text-slate-500 mt-2">监测点: {monitoringData.length}</p>
-              </div>
-              <div className="w-12 h-12 bg-yellow-100 rounded-lg flex items-center justify-center">
-                <span className="text-2xl">⚠️</span>
-              </div>
+            <div className="w-14 h-14 bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl flex items-center justify-center shadow-lg">
+              <span className="text-2xl">🔧</span>
             </div>
           </div>
         </div>
 
-        {/* 功能模块 */}
-        <div className="mb-6">
-          <h2 className="text-xl font-bold text-slate-800 mb-4">功能模块</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {menuItems.map((item) => (
-              <Link
-                key={item.key}
-                href={item.link}
-                className="group bg-white rounded-xl shadow-sm p-6 border border-slate-200 hover:shadow-lg hover:border-blue-300 transition-all duration-200"
-              >
-                <div className="flex items-start justify-between mb-4">
-                  <div className="w-14 h-14 bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform">
-                    <span className="text-3xl">{item.icon}</span>
+        <div className="bg-white rounded-xl shadow-sm p-6 border border-slate-200 hover:shadow-md transition-shadow">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm text-slate-500 mb-1">待执行保养</p>
+              <p className="text-3xl font-bold text-orange-600">{stats.maintenancePlan}</p>
+              <p className="text-xs text-slate-500 mt-2">计划总数: {maintenanceData.length}</p>
+            </div>
+            <div className="w-14 h-14 bg-gradient-to-br from-orange-500 to-orange-600 rounded-xl flex items-center justify-center shadow-lg">
+              <span className="text-2xl">🔍</span>
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-white rounded-xl shadow-sm p-6 border border-slate-200 hover:shadow-md transition-shadow">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm text-slate-500 mb-1">待处理维修</p>
+              <p className="text-3xl font-bold text-red-600">{stats.repairOrder}</p>
+              <p className="text-xs text-slate-500 mt-2">紧急: {repairData.filter(r => r.priority === '紧急').length}</p>
+            </div>
+            <div className="w-14 h-14 bg-gradient-to-br from-red-500 to-red-600 rounded-xl flex items-center justify-center shadow-lg">
+              <span className="text-2xl">🛠️</span>
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-white rounded-xl shadow-sm p-6 border border-slate-200 hover:shadow-md transition-shadow">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm text-slate-500 mb-1">预警信息</p>
+              <p className="text-3xl font-bold text-yellow-600">{stats.alertCount}</p>
+              <p className="text-xs text-slate-500 mt-2">监测点: {monitoringData.length}</p>
+            </div>
+            <div className="w-14 h-14 bg-gradient-to-br from-yellow-500 to-yellow-600 rounded-xl flex items-center justify-center shadow-lg">
+              <span className="text-2xl">⚠️</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* 快捷操作 */}
+        <div className="lg:col-span-2">
+          <div className="bg-white rounded-xl shadow-sm p-6 border border-slate-200">
+            <h3 className="text-lg font-bold text-slate-800 mb-4">快捷操作</h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {quickActions.map((action) => (
+                <Link
+                  key={action.title}
+                  href={action.link}
+                  className="flex items-center space-x-4 p-4 rounded-lg border border-slate-200 hover:border-blue-300 hover:shadow-md transition-all group"
+                >
+                  <div className={`w-12 h-12 bg-gradient-to-br ${action.color} rounded-lg flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform`}>
+                    <span className="text-2xl">{action.icon}</span>
                   </div>
-                  <div className="px-3 py-1 bg-slate-100 rounded-full">
-                    <span className="text-sm font-medium text-slate-600">{item.count}</span>
+                  <div>
+                    <p className="text-sm font-medium text-slate-800">{action.title}</p>
+                    <p className="text-xs text-slate-500">{action.desc}</p>
+                  </div>
+                </Link>
+              ))}
+            </div>
+          </div>
+
+          {/* 最近活动 */}
+          <div className="bg-white rounded-xl shadow-sm p-6 border border-slate-200 mt-6">
+            <h3 className="text-lg font-bold text-slate-800 mb-4">最近活动</h3>
+            <div className="space-y-4">
+              {recentActivities.map((activity, index) => (
+                <div key={index} className="flex items-center justify-between p-3 bg-slate-50 rounded-lg">
+                  <div className="flex items-center space-x-3">
+                    <div className="w-2 h-2 rounded-full bg-blue-500"></div>
+                    <div>
+                      <p className="text-sm font-medium text-slate-800">{activity.content}</p>
+                      <p className="text-xs text-slate-500">{activity.time}</p>
+                    </div>
+                  </div>
+                  <span className={`px-2 py-1 text-xs font-medium rounded-full ${
+                    activity.status === '已完成' ? 'bg-green-100 text-green-700' :
+                    activity.status === '预警中' ? 'bg-yellow-100 text-yellow-700' :
+                    activity.status === '维修中' || activity.status === '执行中' ? 'bg-blue-100 text-blue-700' :
+                    'bg-red-100 text-red-700'
+                  }`}>
+                    {activity.status}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {/* 右侧信息栏 */}
+        <div className="space-y-6">
+          {/* 系统状态 */}
+          <div className="bg-white rounded-xl shadow-sm p-6 border border-slate-200">
+            <h3 className="text-lg font-bold text-slate-800 mb-4">系统状态</h3>
+            <div className="space-y-4">
+              <div>
+                <div className="flex justify-between text-sm mb-2">
+                  <span className="text-slate-600">设备运行率</span>
+                  <span className="font-medium text-slate-800">85%</span>
+                </div>
+                <div className="w-full bg-slate-200 rounded-full h-2">
+                  <div className="bg-gradient-to-r from-blue-500 to-blue-600 h-2 rounded-full" style={{ width: '85%' }}></div>
+                </div>
+              </div>
+              <div>
+                <div className="flex justify-between text-sm mb-2">
+                  <span className="text-slate-600">保养完成率</span>
+                  <span className="font-medium text-slate-800">92%</span>
+                </div>
+                <div className="w-full bg-slate-200 rounded-full h-2">
+                  <div className="bg-gradient-to-r from-green-500 to-green-600 h-2 rounded-full" style={{ width: '92%' }}></div>
+                </div>
+              </div>
+              <div>
+                <div className="flex justify-between text-sm mb-2">
+                  <span className="text-slate-600">维修响应率</span>
+                  <span className="font-medium text-slate-800">78%</span>
+                </div>
+                <div className="w-full bg-slate-200 rounded-full h-2">
+                  <div className="bg-gradient-to-r from-orange-500 to-orange-600 h-2 rounded-full" style={{ width: '78%' }}></div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* 备件库存预警 */}
+          <div className="bg-white rounded-xl shadow-sm p-6 border border-slate-200">
+            <h3 className="text-lg font-bold text-slate-800 mb-4">库存预警</h3>
+            <div className="space-y-3">
+              {sparePartsData.filter(s => s.stock < s.safetyStock).slice(0, 4).map((part) => (
+                <div key={part.id} className="flex items-center justify-between p-3 bg-red-50 rounded-lg border border-red-200">
+                  <div>
+                    <p className="text-sm font-medium text-slate-800">{part.name}</p>
+                    <p className="text-xs text-slate-500">{part.model}</p>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-sm font-bold text-red-600">{part.stock}/{part.safetyStock}</p>
+                    <p className="text-xs text-slate-500">库存</p>
                   </div>
                 </div>
-                <h3 className="text-lg font-bold text-slate-800 mb-2">{item.title}</h3>
-                <p className="text-sm text-slate-500">{item.desc}</p>
-              </Link>
-            ))}
+              ))}
+            </div>
           </div>
         </div>
-
-        {/* 快速访问 */}
-        <div className="bg-white rounded-xl shadow-sm p-6 border border-slate-200">
-          <h2 className="text-lg font-bold text-slate-800 mb-4">快速访问</h2>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <Link href="/equipment" className="flex items-center space-x-2 p-3 rounded-lg hover:bg-slate-50 transition-colors">
-              <span className="text-xl">📋</span>
-              <span className="text-sm text-slate-700">设备列表</span>
-            </Link>
-            <Link href="/repair" className="flex items-center space-x-2 p-3 rounded-lg hover:bg-slate-50 transition-colors">
-              <span className="text-xl">🚨</span>
-              <span className="text-sm text-slate-700">报修申请</span>
-            </Link>
-            <Link href="/maintenance" className="flex items-center space-x-2 p-3 rounded-lg hover:bg-slate-50 transition-colors">
-              <span className="text-xl">📅</span>
-              <span className="text-sm text-slate-700">保养计划</span>
-            </Link>
-            <Link href="/monitoring" className="flex items-center space-x-2 p-3 rounded-lg hover:bg-slate-50 transition-colors">
-              <span className="text-xl">📈</span>
-              <span className="text-sm text-slate-700">实时监控</span>
-            </Link>
-          </div>
-        </div>
-      </main>
-
-      {/* 页脚 */}
-      <footer className="mt-12 py-6 border-t border-slate-200 bg-white">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <p className="text-center text-sm text-slate-500">© 2025 EAM系统 - 企业资产管理平台 Demo</p>
-        </div>
-      </footer>
-    </div>
+      </div>
+    </MainLayout>
   );
 }
