@@ -8,13 +8,14 @@
 
 import { useState, useEffect } from 'react'
 import { showSuccess, showError, showWarningMessage } from '@/lib/confirm'
-import { Table, Button, Space, Modal, Form, Input, Select, DatePicker, Drawer, Row, Col, Divider, Popconfirm, Radio, Upload, Descriptions, Tabs } from 'antd'
+import { Table, Button, Space, Modal, Form, Input, Select, DatePicker, Drawer, Row, Col, Divider, Popconfirm, Radio, Upload, Descriptions, Tabs, Tooltip } from 'antd'
 import { PlusOutlined, EditOutlined, DeleteOutlined, EyeOutlined, SendOutlined, FolderOutlined, UploadOutlined, FileTextOutlined } from '@ant-design/icons'
 import { StatusTag } from '@/components/StatusTag'
 import { ApprovalTimeline } from '@/components/ApprovalTimeline'
 import { RejectModal } from '@/components/RejectModal'
 import { CreateEntrustmentButton } from '@/components/CreateEntrustmentButton'
 import { QuotationPDFButton } from '@/components/QuotationPDFButton'
+import { QuotationApprovalRecords } from '@/components/QuotationApprovalRecords'
 import type { ColumnsType } from 'antd/es/table'
 import dayjs from 'dayjs'
 import { useRouter } from 'next/navigation'
@@ -157,8 +158,20 @@ export default function QuotationPage() {
     router.push(`/entrustment/quotation/edit/${record.id}`)
   }
 
-  const handleView = (record: Quotation) => {
-    setCurrentQuotation(record)
+  const handleView = async (record: Quotation) => {
+    // 调用详情API获取完整数据（包含approvalInstance和approvalFlow）
+    try {
+      const res = await fetch(`/api/quotation/${record.id}`)
+      const json = await res.json()
+      if (res.ok && json.success) {
+        setCurrentQuotation(json.data)
+      } else {
+        setCurrentQuotation(record) // 降级方案
+      }
+    } catch (e) {
+      console.error('获取报价详情失败:', e)
+      setCurrentQuotation(record) // 降级方案
+    }
     setViewDrawerOpen(true)
   }
 
@@ -415,11 +428,18 @@ export default function QuotationPage() {
       width: 150,
       render: (s: string, record: any) => (
         <div>
-          <StatusTag type="quotation" status={s} />
+          {/* 如果是pending状态且有currentApproverName，显示"待XXX审批" */}
+          {s.startsWith('pending_') && record.currentApproverName ? (
+            <StatusTag type="quotation" status={s} text={`待${record.currentApproverName}审批`} color="processing" />
+          ) : (
+            <StatusTag type="quotation" status={s} />
+          )}
           {s === 'rejected' && record.lastRejectReason && (
-            <div style={{ fontSize: 11, color: '#f5222d', marginTop: 4, maxWidth: 120 }} className="truncate" title={record.lastRejectReason}>
-              原因: {record.lastRejectReason}
-            </div>
+            <Tooltip title={record.lastRejectReason}>
+              <div style={{ fontSize: 11, color: '#f5222d', marginTop: 4, maxWidth: 120 }} className="truncate">
+                原因: {record.lastRejectReason}
+              </div>
+            </Tooltip>
           )}
         </div>
       ),
@@ -657,64 +677,7 @@ export default function QuotationPage() {
                 label: '审批记录',
                 children: (
                   <div style={{ maxHeight: 'calc(100vh - 200px)', overflowY: 'auto' }}>
-                    {/* 动态从审批实例中读取审批节点 */}
-                    {(() => {
-                      const approvalInstance = (currentQuotation as any).approvalInstance
-                      const approvalFlow = (currentQuotation as any).approvalFlow
-
-                      // 如果没有审批实例，显示提示信息
-                      if (!approvalInstance) {
-                        return <div style={{ textAlign: 'center', padding: '40px 0', color: '#999' }}>暂无审批记录</div>
-                      }
-
-                      // 解析审批流节点
-                      let nodes: Array<{ step: number; name: string; role: string }> = []
-                      try {
-                        if (approvalFlow?.nodes) {
-                          const parsedNodes = JSON.parse(approvalFlow.nodes)
-                          nodes = parsedNodes.map((node: any, index: number) => ({
-                            step: index + 1,
-                            name: node.name || `审批节点${index + 1}`,
-                            role: node.assigneeType === 'user'
-                              ? (node.assigneeNames?.[0] || node.assigneeIds?.[0] || '指定审批人')
-                              : (node.assigneeIds?.[0] || '角色审批'),
-                          }))
-                        }
-                      } catch (e) {
-                        console.error('解析审批节点失败:', e)
-                        nodes = [{ step: 1, name: '审批', role: '审批人' }]
-                      }
-
-                      // 获取当前步骤
-                      const currentStep = approvalInstance.currentStep || 1
-
-                      // 获取状态
-                      const status = approvalInstance.status === 'approved' ? 'approved'
-                        : approvalInstance.status === 'rejected' ? 'rejected'
-                        : 'pending'
-
-                      // 转换审批记录格式
-                      const records = (approvalInstance.records || []).map((record: any) => ({
-                        id: record.id,
-                        step: record.step,
-                        action: record.action as 'approve' | 'reject',
-                        approverId: record.approverId || '',
-                        approverName: record.approverName || '未知',
-                        comment: record.comment,
-                        createdAt: record.createdAt,
-                      }))
-
-                      return (
-                        <ApprovalTimeline
-                          nodes={nodes}
-                          currentStep={currentStep}
-                          status={status}
-                          submitterName={approvalInstance.submitterName || '申请人'}
-                          submittedAt={approvalInstance.submittedAt || currentQuotation.createdAt}
-                          records={records}
-                        />
-                      )
-                    })()}
+                    <QuotationApprovalRecords quotation={currentQuotation} />
                   </div>
                 )
               }

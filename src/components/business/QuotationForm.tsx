@@ -371,6 +371,14 @@ export default function QuotationForm({
                 />
             )}
             <Form form={form} layout="vertical">
+                {/* 🔧 隐藏字段：从咨询单创建时携带咨询单ID和单号 */}
+                <Form.Item name="consultationId" hidden>
+                    <Input />
+                </Form.Item>
+                <Form.Item name="consultationNo" hidden>
+                    <Input />
+                </Form.Item>
+
                 <Row gutter={24}>
                     <Col span={8}>
                         <Form.Item name="clientId" label="客户名称" rules={[{ required: true, message: '请选择客户' }]}>

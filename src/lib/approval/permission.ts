@@ -61,6 +61,7 @@ export function canViewApproval(
   // 管理员可以看到所有审批
   const userRoleCodes = user.roles.map(r => r.role.code)
   if (user.username === 'admin' || userRoleCodes.includes('admin')) {
+    console.log(`[DEBUG] ${user.username} 是管理员，通过权限检查`)
     return true
   }
 
@@ -71,10 +72,13 @@ export function canViewApproval(
   if (instance.status === 'pending' && flowNodes) {
     const currentNode = flowNodes.find(n => n.step === instance.currentStep)
     if (!currentNode) {
+      console.log(`[DEBUG] ${user.username} 找不到当前节点 (step=${instance.currentStep})，拒绝访问`)
       return false
     }
 
-    return hasApprovalPermission(currentNode, user)
+    const hasPermission = hasApprovalPermission(currentNode, user)
+    console.log(`[DEBUG] ${user.username} 检查节点权限: step=${instance.currentStep}, node.type=${currentNode.type}, node.targetId=${currentNode.targetId}, 结果=${hasPermission}`)
+    return hasPermission
   }
 
   // 已完成/已驳回/已撤回的审批，参与过的人可以看到
@@ -94,6 +98,7 @@ export function hasApprovalPermission(node: ApprovalNode, user: User): boolean {
 
   // 管理员豁免
   if (user.username === 'admin' || userRoleCodes.includes('admin')) {
+    console.log(`[DEBUG] ${user.username} 管理员豁免`)
     return true
   }
 
@@ -101,21 +106,29 @@ export function hasApprovalPermission(node: ApprovalNode, user: User): boolean {
   switch (node.type) {
     case 'role':
       // 角色审批：用户必须拥有指定角色
-      return userRoleCodes.includes(node.targetId)
+      const hasRole = userRoleCodes.includes(node.targetId)
+      console.log(`[DEBUG] 角色检查 - 用户角色: [${userRoleCodes.join(', ')}], 需要角色: ${node.targetId}, 结果: ${hasRole}`)
+      return hasRole
 
     case 'user':
       // 指定用户审批：用户必须是指定用户
-      return user.id === node.targetId
+      const isUser = user.id === node.targetId
+      console.log(`[DEBUG] 用户检查 - 用户ID: ${user.id}, 需要ID: ${node.targetId}, 结果: ${isUser}`)
+      return isUser
 
     case 'department':
       // 部门负责人审批：用户必须在指定部门且有管理角色
       if (user.deptId !== node.targetId) {
+        console.log(`[DEBUG] 部门检查 - 用户部门: ${user.deptId}, 需要部门: ${node.targetId}, 不匹配`)
         return false
       }
       const managerRoles = ['admin', 'manager', 'dept_manager', 'sales_manager', 'lab_director']
-      return userRoleCodes.some(code => managerRoles.includes(code))
+      const hasManagerRole = userRoleCodes.some(code => managerRoles.includes(code))
+      console.log(`[DEBUG] 部门管理角色检查 - 用户角色: [${userRoleCodes.join(', ')}], 管理角色: ${hasManagerRole}`)
+      return hasManagerRole
 
     default:
+      console.log(`[DEBUG] 未知节点类型: ${node.type}`)
       return false
   }
 }

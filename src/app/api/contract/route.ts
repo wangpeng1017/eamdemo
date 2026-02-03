@@ -3,6 +3,7 @@ import { NextRequest } from 'next/server'
 import { withAuth, success } from '@/lib/api-handler'
 import { auth } from '@/lib/auth'
 import { getDataFilter } from '@/lib/data-permission'
+import { addCurrentApproverInfo } from '@/lib/approval/utils'
 
 export const GET = withAuth(async (request: NextRequest, user) => {
   const { searchParams } = new URL(request.url)
@@ -52,8 +53,11 @@ export const GET = withAuth(async (request: NextRequest, user) => {
     prisma.contract.count({ where }),
   ])
 
+  // 为每个合同添加当前审批人信息
+  const listWithApprover = await addCurrentApproverInfo(rawList, prisma, 'contract')
+
   // 字段映射:将数据库字段名映射为前端期望的字段名
-  const list = rawList.map((contract: any) => ({
+  const list = listWithApprover.map((contract: any) => ({
     ...contract,
     // 前端期望的字段名
     clientName: contract.partyACompany || contract.client?.name || null,

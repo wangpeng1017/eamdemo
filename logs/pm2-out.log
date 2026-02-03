@@ -61,3 +61,6 @@
 {"message":"   ▲ Next.js 15.1.0\n","timestamp":"2026-02-02 14:27:50 +08:00","type":"out","process_id":0,"app_name":"lims-next"}
 {"message":"   - Local:        http://localhost:3000\n   - Network:      http://0.0.0.0:3000\n\n ✓ Starting...\n","timestamp":"2026-02-02 14:27:50 +08:00","type":"out","process_id":0,"app_name":"lims-next"}
 {"message":" ✓ Ready in 36ms\n","timestamp":"2026-02-02 14:27:51 +08:00","type":"out","process_id":0,"app_name":"lims-next"}
+{"message":"   ▲ Next.js 15.1.0\n","timestamp":"2026-02-03 09:17:26 +08:00","type":"out","process_id":0,"app_name":"lims-next"}
+{"message":"   - Local:        http://localhost:3000\n   - Network:      http://0.0.0.0:3000\n\n ✓ Starting...\n","timestamp":"2026-02-03 09:17:26 +08:00","type":"out","process_id":0,"app_name":"lims-next"}
+{"message":" ✓ Ready in 44ms\n","timestamp":"2026-02-03 09:17:26 +08:00","type":"out","process_id":0,"app_name":"lims-next"}

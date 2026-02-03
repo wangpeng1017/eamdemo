@@ -114,6 +114,11 @@ export function ApprovalTimeline({
             return (
                 <div style={{ marginTop: 8 }}>
                     <Tag color="processing">待审批</Tag>
+                    {node.role && (
+                        <Text type="secondary" style={{ fontSize: 12, marginLeft: 4 }}>
+                            待 {node.role} 审批
+                        </Text>
+                    )}
                 </div>
             )
         }

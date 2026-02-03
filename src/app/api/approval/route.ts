@@ -87,7 +87,17 @@ export const GET = withAuth(async (request: NextRequest, user) => {
     return success([])
   }
 
+  // 🔍 调试日志
+  const userRoleCodes = userWithRoles.roles.map(r => r.role.code)
+  console.log('[DEBUG] 审批权限检查 - 用户:', user.username, '角色:', userRoleCodes)
+  console.log('[DEBUG] 审批权限检查 - 过滤前实例数:', instances.length)
+
   const filteredInstances = await filterViewableApprovals(instances, userWithRoles)
+
+  console.log('[DEBUG] 审批权限检查 - 过滤后实例数:', filteredInstances.length)
+  if (filteredInstances.length < instances.length) {
+    console.log('[DEBUG] 审批权限检查 - 已过滤的实例:', instances.length - filteredInstances.length, '条')
+  }
 
   return success(filteredInstances)
 })

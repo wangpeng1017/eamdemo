@@ -3,6 +3,7 @@ import { NextRequest } from 'next/server'
 import { withAuth, success } from '@/lib/api-handler'
 import { auth } from '@/lib/auth'
 import { getDataFilter } from '@/lib/data-permission'
+import { addCurrentApproverInfo } from '@/lib/approval/utils'
 
 // 获取报价列表
 export const GET = withAuth(async (request: NextRequest, user) => {
@@ -50,9 +51,14 @@ export const GET = withAuth(async (request: NextRequest, user) => {
     prisma.quotation.count({ where }),
   ])
 
-  const formattedList = list.map((item: any) => ({
+  // 为每个报价单添加当前审批人信息
+  const listWithApprover = await addCurrentApproverInfo(list, prisma, 'quotation')
+
+  // 格式化返回数据
+  const formattedList = listWithApprover.map((item: any) => ({
     ...item,
     clientName: item.client?.name || '',
+    consultationNo: item.consultationNo,
     quotationDate: item.createdAt,
     totalAmount: item.subtotal,
     taxRate: 0.06,
@@ -62,6 +68,7 @@ export const GET = withAuth(async (request: NextRequest, user) => {
     finalAmount: item.discountTotal || item.taxTotal || item.subtotal,
     paymentTerms: item.clientRemark,
     clientResponse: item.clientStatus,
+    currentApproverName: item.currentApproverName, // ✅ 当前审批人姓名
   }))
 
   return success({ list: formattedList, total, page, pageSize })

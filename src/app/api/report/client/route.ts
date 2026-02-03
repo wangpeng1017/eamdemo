@@ -6,6 +6,7 @@ import {
   validateRequired,
 } from '@/lib/api-handler'
 import { generateClientReportNo } from '@/lib/generate-no'
+import { addCurrentApproverInfo } from '@/lib/approval/utils'
 
 // 获取客户报告列表
 export const GET = withErrorHandler(async (request: NextRequest) => {
@@ -49,6 +50,9 @@ export const GET = withErrorHandler(async (request: NextRequest) => {
     prisma.clientReport.count({ where }),
   ])
 
+  // 为每个客户报告添加当前审批人信息
+  const listWithApprover = await addCurrentApproverInfo(list, prisma, 'report')
+
   // 统计各状态数量
   const stats = await prisma.clientReport.groupBy({
     by: ['status'],
@@ -56,7 +60,7 @@ export const GET = withErrorHandler(async (request: NextRequest) => {
   })
 
   return success({
-    list,
+    list: listWithApprover,
     total,
     page,
     pageSize,
