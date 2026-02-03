@@ -87,15 +87,7 @@ interface Entrustment {
     follower: string | null
     items?: QuotationItem[]
   }
-  projects: EntrustmentProject[]
-  samples: Sample[]
-  client?: {
-    id?: string
-    name?: string
-    phone?: string
-    contact?: string
-  }
-
+}
 interface Device {
   id: string
   name: string
