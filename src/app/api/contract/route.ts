@@ -113,6 +113,19 @@ export const POST = withAuth(async (request: NextRequest, user) => {
     clientId = quotation?.clientId
   }
 
+  // 查询报价单以继承 clientReportDeadline 和 follower
+  let inheritedDeadline = data.clientReportDeadline ? new Date(data.clientReportDeadline) : null
+  let inheritedFollower = data.follower || null
+  if (data.quotationId && (!inheritedDeadline || !inheritedFollower)) {
+    const quotation = await prisma.quotation.findUnique({
+      where: { id: data.quotationId },
+      select: { clientReportDeadline: true, follower: true, clientEmail: true }
+    })
+    if (!inheritedDeadline && quotation?.clientReportDeadline) inheritedDeadline = quotation.clientReportDeadline
+    if (!inheritedFollower && quotation?.follower) inheritedFollower = quotation.follower
+    data.clientEmail = data.clientEmail || quotation?.clientEmail
+  }
+
   // 构建合同创建数据
   const createData: any = {
     createdBy: user?.id ? { connect: { id: user.id } } : undefined,
@@ -124,10 +137,15 @@ export const POST = withAuth(async (request: NextRequest, user) => {
     partyACompany: data.clientName,
     partyAContact: data.clientContact,
     partyATel: data.clientPhone,
+    partyAEmail: data.clientEmail,
     partyAAddress: data.clientAddress,
     contractAmount: data.amount != null ? Number(data.amount) : null,
     hasAdvancePayment: data.prepaymentAmount != null && data.prepaymentAmount > 0,
     advancePaymentAmount: data.prepaymentAmount != null ? Number(data.prepaymentAmount) : null,
+
+    // 继承字段
+    clientReportDeadline: inheritedDeadline,
+    follower: inheritedFollower,
 
     // 样品信息 (兼容旧字段)
     sampleName: data.sampleName || (data.samples?.[0]?.name),

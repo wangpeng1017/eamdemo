@@ -151,8 +151,30 @@ LIMS（Laboratory Information Management System）是一套面向检测实验室
 #### 2.2.6 报告审批流程
 
 ```
-[草稿] → [待审核] → [已审核] → [已批准] → [已发布]
+[草稿] → [待审核] → [已审核] → [批准] → [已发布]
 ```
+
+### 2.3 数据自动化流转规范 (Data Flow Specification)
+
+为了保证业务连续性并减少重复录入，系统在单据转换（流转）过程中遵循以下数据继承原则：
+
+#### 2.3.1 继承核心字段
+在以下任何流转路径中，系统将自动带入并预填相关字段：
+- **基本信息**: 客户单位、联系人、联系电话、电子邮箱、地址、跟单人。
+- **业务时间**: 客户要求的报告截止日期（clientReportDeadline）。
+- **样品项目**: 样品检测项（SampleTestItem v2数据结构）及检测明细（v1兼容项目）。
+
+#### 2.3.2 详细流转路径逻辑
+
+| 流转路径 | 继承源 | 目标单据 | 继承字段明细 |
+| :--- | :--- | :--- | :--- |
+| **咨询 -> 报价** | 咨询单 (Consultation) | 报价单 (Quotation) | 客户ID、联系人、电话、邮箱、地址、跟单人、报告截止日期、样品检测项 |
+| **报价 -> 合同** | 报价单 (Quotation) | 合同 (Contract) | 客户ID、甲方单位/联系人/电话/邮箱/地址/税号/开户行、跟单人、报告截止日期、项目明细及检测项 |
+| **合同 -> 委托** | 合同 (Contract) | 委托单 (Entrustment) | 客户ID、单位、联系人、电话、邮箱、地址、跟单人、报告截止日期、样品检测项 |
+| **报价 -> 委托** | 报价单 (Quotation) | 委托单 (Entrustment) | 客户ID、单位、联系人、电话、邮箱、地址、跟单人、报告截止日期、样品检测项 |
+
+> [!NOTE]
+> 流转时采取“快照”模式：即在创建新单据时从源单据复制当前值，后续如果修改源单据，不会自动同步到已生成的后续单据，以保持历史记录的独立性。
 
 ---
 ## 三、功能清单
@@ -508,15 +530,15 @@ LIMS（Laboratory Information Management System）是一套面向检测实验室
 | 字段名 | 字段标识 | 类型 | 必填 | 说明 |
 |--------|----------|------|------|------|
 | 单位名称 | name | string | 是 | 公司全称 |
+| 简称 | shortName | string | 否 | 客户简称 |
 | 联系人 | contactPerson | string | 是 | 主要联系人 |
 | 联系电话 | contactPhone | string | 是 | 联系电话 |
+| 邮箱 | email | string | 否 | 电子邮箱 |
 | 地址 | address | string | 否 | 公司地址 |
-| 备注 | remark | string | 否 | 备注信息 |
 | 税号 | taxId | string | 否 | 纳税人识别号 |
-| 开票地址 | invoiceAddress | string | 否 | 发票抬头地址 |
-| 开票电话 | invoicePhone | string | 否 | 发票抬头电话 |
 | 开户行 | bankName | string | 否 | 银行名称 |
 | 银行账号 | bankAccount | string | 否 | 银行账号 |
+| 备注 | remark | string | 否 | 备注信息 |
 | 状态 | status | enum | 是 | draft/pending/approved/rejected |
 | 创建人 | creator | string | 是 | 自动记录 |
 | 创建时间 | createTime | datetime | 是 | 自动记录 |

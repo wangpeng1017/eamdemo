@@ -37,6 +37,8 @@ export default function EditEntrustmentPageClient({ id }: EditPageClientProps) {
             const sampleTestItems = (itemsJson.success && itemsJson.data) ? itemsJson.data.map((item: any) => ({
                 ...item,
                 key: item.id || `temp_${Date.now()}_${Math.random()}`,
+                assessorId: item.assessorId || item.currentAssessorId,
+                assessorName: item.assessorName || item.currentAssessorName,
             })) : []
 
             setInitialValues({
@@ -123,7 +125,6 @@ export default function EditEntrustmentPageClient({ id }: EditPageClientProps) {
                 mode="edit"
                 initialValues={initialValues}
                 onSubmit={handleSubmit}
-                onCancel={handleCancel}
                 loading={loading}
             />
         </div>

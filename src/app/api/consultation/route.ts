@@ -52,11 +52,48 @@ export const GET = withAuth(async (request: NextRequest, user) => {
     prisma.consultation.count({ where }),
   ])
 
-  const parsedList = list.map((item: any) => ({
-    ...item,
-    testItems: item.testItems ? JSON.parse(item.testItems as string) : [],
-    attachments: item.attachments ? JSON.parse(item.attachments as string) : [],
-  }))
+  // 5. 提取所有咨询单ID
+  const consultationIds = list.map((item) => item.id)
+
+  // 6. 批量查询关联的样品检测项 (v2)
+  const sampleTestItems = await prisma.sampleTestItem.findMany({
+    where: {
+      bizType: 'consultation',
+      bizId: { in: consultationIds }
+    },
+    select: {
+      bizId: true,
+      testItemName: true
+    }
+  })
+
+  // 7. 组装数据
+  const parsedList = list.map((item: any) => {
+    // 获取 v1 数据
+    let v1Items: string[] = []
+    if (item.testItems) {
+      try {
+        v1Items = JSON.parse(item.testItems as string)
+      } catch (e) {
+        v1Items = []
+      }
+    }
+
+    // 获取 v2 数据
+    const v2Items = sampleTestItems
+      .filter((s) => s.bizId === item.id)
+      .map((s) => s.testItemName)
+      .filter(Boolean)
+
+    // 合并并去重
+    const mergedItems = Array.from(new Set([...v1Items, ...v2Items]))
+
+    return {
+      ...item,
+      testItems: mergedItems,
+      attachments: item.attachments ? JSON.parse(item.attachments as string) : [],
+    }
+  })
 
   return success({ list: parsedList, total, page, pageSize })
 })

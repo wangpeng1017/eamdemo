@@ -9,13 +9,46 @@ export const GET = withAuth(async (
   context?: { params: Promise<Record<string, string>> }
 ) => {
   const { id } = await context!.params
-  const client = await prisma.client.findUnique({ where: { id } })
+  const client = await prisma.client.findUnique({
+    where: { id },
+    include: {
+      createdBy: {
+        select: { name: true, email: true }
+      }
+    }
+  })
 
   if (!client) {
     notFound('客户不存在')
   }
 
-  return success(client)
+  // 查询审批实例和记录
+  const approvalInstance = await prisma.approvalInstance.findFirst({
+    where: {
+      bizType: 'client',
+      bizId: id,
+    },
+    orderBy: { submittedAt: 'desc' },
+    include: {
+      records: {
+        orderBy: { createdAt: 'asc' },
+      },
+    },
+  })
+
+  // 如果有审批实例，查询审批流配置获取节点信息
+  let approvalFlow = null
+  if (approvalInstance) {
+    approvalFlow = await prisma.approvalFlow.findUnique({
+      where: { code: approvalInstance.flowCode },
+    })
+  }
+
+  return success({
+    ...client,
+    approvalInstance,
+    approvalFlow,
+  })
 })
 
 // 更新客户 - 需要登录
@@ -26,7 +59,44 @@ export const PUT = withAuth(async (
 ) => {
   const { id } = await context!.params
   const data = await request.json()
-  const client = await prisma.client.update({ where: { id }, data })
+
+  // 1. 更新客户信息，并设置状态为 pending
+  const client = await prisma.client.update({
+    where: { id },
+    data: {
+      ...data,
+      status: 'pending', // 触发审批
+      // 避免更新一些不可变字段
+      createdAt: undefined,
+      updatedAt: undefined,
+      createdById: undefined,
+    }
+  })
+
+  // 2. 自动提交审批
+  if (user?.id) {
+    try {
+      const { ApprovalEngine } = await import('@/lib/approval/engine')
+      const engine = new ApprovalEngine()
+
+      // 检查是否已存在 pending 状态的审批实例，如果有则不做处理（避免重复提交）
+      // 或者这里业务逻辑是每次修改都重新提交审批？
+      // 假设每次修改都会触发新的审批请求
+
+      await engine.submit({
+        bizType: 'client',
+        bizId: client.id,
+        flowCode: 'CLIENT_APPROVAL',
+        submitterId: user.id,
+        submitterName: user.name || '提交人',
+      })
+    } catch (error) {
+      console.error('更新客户触发审批失败:', error)
+      // 即使审批提交失败，数据已更新为 pending，用户可以手动提交或联系管理员
+      // 但最好 warn 用户
+    }
+  }
+
   return success(client)
 })
 

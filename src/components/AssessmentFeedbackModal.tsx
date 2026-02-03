@@ -32,7 +32,6 @@ interface AssessmentFeedbackModalProps {
 
 const CONCLUSION_OPTIONS = [
   { value: 'feasible', label: '可行', color: 'success' },
-  { value: 'difficult', label: '有难度', color: 'warning' },
   { value: 'infeasible', label: '不可行', color: 'error' },
 ]
 

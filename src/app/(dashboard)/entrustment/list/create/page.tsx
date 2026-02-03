@@ -22,6 +22,8 @@ function CreateEntrustmentContent() {
         const contactPhone = searchParams.get('contactPhone')
         const clientAddress = searchParams.get('clientAddress')
         const projectsParam = searchParams.get('projects')
+        const quotationId = searchParams.get('quotationId')
+        const quotationNo = searchParams.get('quotationNo')
 
         let projects = [{}]
         if (projectsParam) {
@@ -39,24 +41,19 @@ function CreateEntrustmentContent() {
             }
         }
 
-        if (contractNo || clientName) {
+        if (contractNo || clientName || quotationNo) {
             setInitialValues({
                 entrustmentNo: '自动生成',
                 contractNo,
                 contractId,
+                quotationId,
+                quotationNo,
                 clientName,
                 contactPerson,
-                clientPhone: contactPhone, // Note: form field might be different? EntrustmentForm uses clientName (select) which sets clientId.
-                // But EntrustmentForm uses 'contactPerson'.
-                // Let's check EntrustmentForm again. It uses handleContractChange to set client info.
-                // Here we just set initialValues.
+                clientPhone: contactPhone,
                 clientAddress,
                 isSampleReturn: false,
                 sampleDate: dayjs(),
-                // EntrustmentForm doesn't really use 'projects' field for display, but handleSubmit uses it?
-                // EntrustmentForm handles sampleTestItems.
-                // We can pass projects if needed, but EntrustmentForm might not render them if there is no field.
-                // Current EntrustmentForm implementation relies on SampleTestItemTable.
             })
         } else {
             setInitialValues({
@@ -112,22 +109,19 @@ function CreateEntrustmentContent() {
                 })
             }
 
-            // 3. Copy from Contract if needed
-            if (values.contractId && (!values.sampleTestItems || values.sampleTestItems.length === 0)) {
-                // Only copy if we didn't manually add items? Or always copy?
-                // Original logic: "if (contractId && entrustmentId && !editingId)" - implied always on create.
-                // And original logic had empty sampleTestItems usually.
+            // 3. Copy from Contract or Quotation if needed
+            if ((values.contractId || values.quotationId) && (!values.sampleTestItems || values.sampleTestItems.length === 0)) {
                 await fetch('/api/sample-test-item/copy', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
-                        sourceBizType: 'contract',
-                        sourceBizId: values.contractId,
+                        sourceBizType: values.contractId ? 'contract' : 'quotation',
+                        sourceBizId: values.contractId || values.quotationId,
                         targetBizType: 'entrustment',
                         targetBizId: entrustmentId,
                     })
                 })
-                showSuccess('已从合同复制样品检测项数据')
+                showSuccess(values.contractId ? '已从合同复制样品检测项数据' : '已从报价单复制样品检测项数据')
             }
 
             showSuccess('创建成功')

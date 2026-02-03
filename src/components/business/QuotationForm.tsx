@@ -403,6 +403,11 @@ export default function QuotationForm({
                             <DatePicker style={{ width: '100%' }} />
                         </Form.Item>
                     </Col>
+                    <Col span={8}>
+                        <Form.Item name="follower" label="跟单人" rules={[{ required: true, message: '请选择跟单人' }]}>
+                            <UserSelect placeholder="选择跟单人" />
+                        </Form.Item>
+                    </Col>
                 </Row>
 
                 {/* 样品检测项 (数据源) */}

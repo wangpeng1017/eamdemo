@@ -115,40 +115,27 @@ export default function SampleTestItemTable({
     fetchUsers()
   }, [showAssessment])
 
-  // 从服务器加载数据
-  useEffect(() => {
-    if (bizId) {
-      loadData()
-    }
-  }, [bizId])
 
   // 同步外部 value 变化
   useEffect(() => {
     if (value) {
-      setItems(value)
+      const normalizedItems = value.map(item => {
+        // 兼容 currentAssessorId 和 assessorId
+        const assessorId = item.assessorId || (item as any).currentAssessorId
+        const assessorName = item.assessorName || (item as any).currentAssessorName
+
+        return {
+          ...item,
+          assessorId,
+          assessorName,
+          // 如果已经有评估人，自动设置状态为已分配，确保编辑模式正确显示
+          assigningState: item.assigningState || (assessorId ? 'assigned' : 'none')
+        }
+      })
+      setItems(normalizedItems)
     }
   }, [value])
 
-  const loadData = async () => {
-    if (!bizId) return
-    setLoading(true)
-    try {
-      const res = await fetch(`/api/sample-test-item?bizType=${bizType}&bizId=${bizId}`)
-      const json = await res.json()
-      if (json.success && json.data) {
-        const loadedItems = json.data.map((item: any) => ({
-          ...item,
-          key: item.id || `temp_${Date.now()}_${Math.random()}`,
-        }))
-        setItems(loadedItems)
-        onChange?.(loadedItems)
-      }
-    } catch (error) {
-      // 静默处理加载错误
-      setItems([])
-    }
-    setLoading(false)
-  }
 
   // 添加新行
   const handleAdd = () => {

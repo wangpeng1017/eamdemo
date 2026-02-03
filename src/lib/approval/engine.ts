@@ -299,14 +299,19 @@ export class ApprovalEngine {
    */
   parseNodes(flow: { nodes: string | object }): ApprovalNode[] {
     try {
+      let nodes: any[] = []
       // Handle both string (needs parsing) and already-parsed array
       if (typeof flow.nodes === 'string') {
-        return JSON.parse(flow.nodes)
+        nodes = JSON.parse(flow.nodes)
+      } else if (Array.isArray(flow.nodes)) {
+        nodes = flow.nodes
       }
-      if (Array.isArray(flow.nodes)) {
-        return flow.nodes
-      }
-      return []
+
+      // Normalize nodes: map 'order' to 'step' if 'step' is missing
+      return nodes.map(node => ({
+        ...node,
+        step: node.step || node.order || 0
+      }))
     } catch {
       return []
     }
@@ -360,15 +365,65 @@ export class ApprovalEngine {
         })
         break
       case 'contract':
+        // 同步更新 status 字段
+        if (approvalStatus === 'approved') {
+          updateData.status = 'signed' // 审批通过即视为已签订（或待签章，视业务而定，目前改为已签订）
+        } else if (approvalStatus === 'rejected') {
+          updateData.status = 'draft' // 驳回回退到草稿
+        } else if (approvalStatus === 'cancelled') {
+          updateData.status = 'draft'
+        }
+
         await prisma.contract.update({
           where: { id: bizId },
           data: updateData,
         })
         break
       case 'client':
+        // 同步更新 status 字段
+        if (approvalStatus === 'approved') {
+          updateData.status = 'approved'
+        } else if (approvalStatus === 'rejected') {
+          updateData.status = 'rejected'
+        } else if (approvalStatus === 'pending') {
+          updateData.status = 'pending'
+        } else if (approvalStatus === 'cancelled') {
+          updateData.status = 'draft'
+        }
+
         await prisma.client.update({
           where: { id: bizId },
           data: updateData,
+        })
+        break
+      case 'entrustment':
+        const entrustmentStatus =
+          approvalStatus === 'approved' ? 'accepted' :
+            approvalStatus === 'rejected' ? 'pending' : // 驳回重置为待处理
+              approvalStatus === 'cancelled' ? 'pending' :
+                'pending'
+
+        await prisma.entrustment.update({
+          where: { id: bizId },
+          data: {
+            ...updateData,
+            status: entrustmentStatus
+          },
+        })
+        break
+      case 'consultation':
+        const consultationStatus =
+          approvalStatus === 'approved' ? 'assessment_passed' :
+            approvalStatus === 'rejected' ? 'rejected' :
+              approvalStatus === 'cancelled' ? 'following' :
+                'following'
+
+        await prisma.consultation.update({
+          where: { id: bizId },
+          data: {
+            ...updateData,
+            status: consultationStatus
+          },
         })
         break
       default:

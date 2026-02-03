@@ -44,7 +44,8 @@ export default function EditQuotationPage({ id }: { id: string }) {
                     sampleTestItems = itemJson.data.map((item: any) => ({
                         ...item,
                         key: item.id,
-                        // 字段映射等处理，如果在 Form 里处理了这里可以简化
+                        assessorId: item.assessorId || item.currentAssessorId,
+                        assessorName: item.assessorName || item.currentAssessorName,
                     }))
                 }
             } catch (e) {

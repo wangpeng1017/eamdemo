@@ -36,6 +36,9 @@ function CreateQuotationContent() {
                 const values: any = {
                     clientId: data.clientId || data.client?.id,
                     clientContactPerson: data.clientContactPerson,
+                    clientPhone: data.clientPhone,
+                    clientEmail: data.clientEmail,
+                    clientAddress: data.clientAddress,
                     consultationId: data.id,
                     consultationNo: data.consultationNo,
                     quotationDate: dayjs(),
@@ -44,6 +47,8 @@ function CreateQuotationContent() {
                     discountAmount: 0,
                     // ✅ 自动带入业务咨询的报告时间
                     clientReportDeadline: data.clientReportDeadline ? dayjs(data.clientReportDeadline) : undefined,
+                    // ✅ 自动带入跟单人
+                    follower: data.follower || undefined,
                 }
 
                 // 2. 也是最重要的，样品检测项
@@ -58,7 +63,9 @@ function CreateQuotationContent() {
                             ...item,
                             id: undefined, // 关键：这是新单据的检测项，不能带ID
                             bizType: 'quotation', // 准备变为 quotation 类型
-                            bizId: undefined
+                            bizId: undefined,
+                            assessorId: item.assessorId || item.currentAssessorId,
+                            assessorName: item.assessorName || item.currentAssessorName,
                         }))
 
                         // 自动从样品检测项生成报价明细

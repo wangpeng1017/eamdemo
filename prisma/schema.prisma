@@ -183,6 +183,9 @@ model Consultation {
   clientId           String?
   client             Client?   @relation(fields: [clientId], references: [id])
   clientContactPerson String?  @db.VarChar(50) // 联系人
+  clientPhone        String?  @db.VarChar(50) // 联系电话
+  clientEmail        String?  @db.VarChar(100) // 邮箱
+  clientAddress      String?  @db.VarChar(500) // 地址
   testItems          String?   @db.Text // JSON 数组 检测项目列表
   clientReportDeadline DateTime? // 报告时间（客户要求的报告截止日期）
   budgetRange        String?   @db.VarChar(50) // 预算范围
@@ -310,6 +313,9 @@ model Quotation {
   clientId       String?
   client         Client?  @relation(fields: [clientId], references: [id])
   clientContactPerson String?  @db.VarChar(50) // 联系人
+  clientPhone        String?  @db.VarChar(50) // 联系电话
+  clientEmail        String?  @db.VarChar(100) // 邮箱
+  clientAddress      String?  @db.VarChar(500) // 地址
   serviceCompany String   @default("江苏国轻检测技术有限公司") @db.VarChar(200)
   serviceContact String?  @db.VarChar(50) // 业务员
   serviceTel     String?  @db.VarChar(20)
@@ -373,6 +379,7 @@ model Contract {
   partyATaxId       String? @db.VarChar(50)
   partyABankName    String? @db.VarChar(200)
   partyABankAccount String? @db.VarChar(50)
+  partyAEmail      String? @db.VarChar(100) // 甲方邮箱
 
   // 乙方信息
   partyBCompany String? @default("江苏国轻检测技术有限公司") @db.VarChar(200)
@@ -396,6 +403,7 @@ model Contract {
   sampleModel    String?   @db.VarChar(100)
   sampleMaterial String?   @db.VarChar(100)
   sampleQuantity Int?
+  follower       String?   @db.VarChar(50) // 跟进人
 
   status        String    @default("draft") // draft/signed/executing/completed/terminated
 
@@ -494,6 +502,9 @@ model Entrustment {
   clientId      String?
   client        Client?   @relation(fields: [clientId], references: [id])
   contactPerson String?   @db.VarChar(50)
+  contactPhone  String?   @db.VarChar(50)
+  contactEmail  String?   @db.VarChar(100)
+  clientAddress String?   @db.VarChar(500)
   sampleDate    DateTime? // 送样时间
   clientReportDeadline DateTime? // 客户报告截止日期
   follower      String?   @db.VarChar(50) // 跟进人

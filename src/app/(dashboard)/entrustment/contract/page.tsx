@@ -18,9 +18,11 @@ import { useRouter } from 'next/navigation'
 interface Contract {
   id: string
   contractNo: string
+  contractName: string | null
   quotationId?: string | null
   quotationNo?: string | null
-  clientName: string | null
+  partyACompany: string | null  // 甲方公司名称
+  clientName?: string | null  // 兼容字段，从 client.name 或 partyACompany 获取
   clientContact?: string | null
   clientPhone?: string | null
   clientAddress?: string | null
@@ -42,6 +44,13 @@ interface Contract {
   status: string
   createdAt: string
   items?: ContractItem[]
+  client?: {
+    id: string
+    name: string
+    contact?: string
+    phone?: string
+    address?: string
+  }
 }
 
 interface ContractItem {
@@ -186,7 +195,7 @@ export default function ContractPage() {
     const params = new URLSearchParams({
       contractId: contract.id, // 添加合同ID用于复制样品检测项
       contractNo: contract.contractNo,
-      clientName: contract.clientName || '',
+      clientName: contract.partyACompany || contract.client?.name || contract.clientName || '',
       contactPerson: contract.clientContact || '',
       contactPhone: contract.clientPhone || '',
       clientAddress: contract.clientAddress || '',
@@ -211,7 +220,13 @@ export default function ContractPage() {
         <a style={{ color: '#1890ff' }}>{no}</a>
       ) : '-'
     },
-    { title: '客户名称', dataIndex: 'clientName', width: 150, ellipsis: true },
+    {
+      title: '客户名称',
+      dataIndex: 'partyACompany',
+      width: 150,
+      ellipsis: true,
+      render: (_, record) => record.partyACompany || record.client?.name || record.clientName || '-'
+    },
     {
       title: '合同金额',
       dataIndex: 'amount',
@@ -382,7 +397,9 @@ export default function ContractPage() {
                   <div>
                     <Descriptions column={2} bordered size="small">
                       <Descriptions.Item label="合同编号">{currentContract.contractNo}</Descriptions.Item>
-                      <Descriptions.Item label="客户名称">{currentContract.clientName}</Descriptions.Item>
+                      <Descriptions.Item label="客户名称">
+                        {currentContract.partyACompany || currentContract.client?.name || currentContract.clientName || '-'}
+                      </Descriptions.Item>
                       <Descriptions.Item label="明细项数">共 {currentContract.items?.length || 0} 项</Descriptions.Item>
                       <Descriptions.Item label="合计金额">¥{Number(currentContract.amount || 0).toLocaleString()}</Descriptions.Item>
                       <Descriptions.Item label="联系人">{currentContract.clientContact}</Descriptions.Item>

@@ -2,9 +2,10 @@
 
 import { useState, useEffect } from 'react'
 import { showSuccess, showError, showLoading, showConfirm, showWarning } from '@/lib/confirm'
-import { Table, Button, Space, Tag, Modal, Form, Input, Select, Popconfirm } from 'antd'
+import { Table, Button, Space, Tag, Modal, Form, Input, Select, Popconfirm, Drawer, Descriptions, Tabs, Divider } from 'antd'
 import { PlusOutlined, EditOutlined, DeleteOutlined, ExclamationCircleOutlined, EyeOutlined } from '@ant-design/icons'
 import { ClientApprovalButtons } from '@/components/ClientApprovalButtons'
+import { ApprovalRecords } from '@/components/approval/ApprovalRecords'
 import type { ColumnsType } from 'antd/es/table'
 import dayjs from 'dayjs'
 
@@ -13,13 +14,17 @@ interface Client {
   name: string
   contact: string | null
   phone: string | null
+  email: string | null
   address: string | null
   creditCode: string | null  // 税号
   bankName: string | null    // 开户行
   bankAccount: string | null // 银行账号
   remark: string | null
-  status: string
+  status: 'draft' | 'pending' | 'approved' | 'rejected'
   createdAt: string
+  approvalInstance?: any
+  approvalFlow?: any
+  createdBy?: { name: string, email: string }
 }
 
 interface ClientRelations {
@@ -37,7 +42,9 @@ export default function ClientPage() {
   const [total, setTotal] = useState(0)
   const [page, setPage] = useState(1)
   const [modalOpen, setModalOpen] = useState(false)
+  const [viewDrawerOpen, setViewDrawerOpen] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
+  const [currentClient, setCurrentClient] = useState<Client | null>(null)
   const [form] = Form.useForm()
   const [modal, contextHolder] = Modal.useModal()
 
@@ -200,8 +207,17 @@ export default function ClientPage() {
       ),
     },
     {
-      title: '状态', dataIndex: 'status', width: 80,
-      render: (s: string) => <Tag color={s === 'approved' ? 'success' : 'default'}>{s === 'approved' ? '已批准' : s}</Tag>
+      title: '状态', dataIndex: 'status', width: 100,
+      render: (s: string) => {
+        const statusMap: Record<string, { text: string, color: string }> = {
+          'draft': { text: '草稿', color: 'default' },
+          'pending': { text: '待审批', color: 'processing' },
+          'approved': { text: '已批准', color: 'success' },
+          'rejected': { text: '已驳回', color: 'error' },
+        }
+        const config = statusMap[s] || { text: s, color: 'default' }
+        return <Tag color={config.color}>{config.text}</Tag>
+      }
     },
     {
       title: '创建时间', dataIndex: 'createdAt', width: 160,
@@ -209,6 +225,7 @@ export default function ClientPage() {
     },
     { title: '联系人', dataIndex: 'contact', width: 100 },
     { title: '联系方式', dataIndex: 'phone', width: 130 },
+    { title: '邮箱', dataIndex: 'email', width: 180 },
     {
       title: '操作',
       key: 'action',
@@ -237,12 +254,20 @@ export default function ClientPage() {
     }
   ]
 
-  const handleView = (record: Client) => {
-    setEditingId(record.id)
-    form.setFieldsValue(record)
-    setModalOpen(true)
-    // 设置表单为只读模式
-    form.getFieldsValue()
+  const handleView = async (record: Client) => {
+    try {
+      const res = await fetch(`/api/client/${record.id}`)
+      const json = await res.json()
+      if (res.ok && json.success) {
+        setCurrentClient(json.data)
+      } else {
+        setCurrentClient(record)
+      }
+    } catch (e) {
+      console.error('获取单位详情失败:', e)
+      setCurrentClient(record)
+    }
+    setViewDrawerOpen(true)
   }
 
   return (
@@ -278,6 +303,9 @@ export default function ClientPage() {
             <Form.Item name="phone" label="联系方式">
               <Input placeholder="请输入联系电话" />
             </Form.Item>
+            <Form.Item name="email" label="电子邮箱">
+              <Input placeholder="请输入电子邮箱" />
+            </Form.Item>
           </div>
           <Form.Item name="address" label="地址">
             <Input placeholder="请输入地址" />
@@ -297,6 +325,85 @@ export default function ClientPage() {
           {/* 状态由审批流程自动控制，编辑时不允许手动修改 */}
         </Form>
       </Modal>
+
+      {/* 查看详情抽屉 */}
+      <Drawer
+        title="业务单位详情"
+        placement="right"
+        width={700}
+        open={viewDrawerOpen}
+        onClose={() => setViewDrawerOpen(false)}
+        footer={
+          <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+            <Button onClick={() => setViewDrawerOpen(false)}>关闭</Button>
+          </div>
+        }
+      >
+        {currentClient && (
+          <Tabs
+            defaultActiveKey="1"
+            items={[
+              {
+                key: '1',
+                label: '单位详情',
+                children: (
+                  <div style={{ maxHeight: 'calc(100vh - 200px)', overflowY: 'auto', paddingRight: 8 }}>
+                    <Descriptions column={2} bordered size="small">
+                      <Descriptions.Item label="单位名称" span={2}>{currentClient.name}</Descriptions.Item>
+                      <Descriptions.Item label="联系人">{currentClient.contact || '-'}</Descriptions.Item>
+                      <Descriptions.Item label="联系电话">{currentClient.phone || '-'}</Descriptions.Item>
+                      <Descriptions.Item label="电子邮箱" span={2}>{currentClient.email || '-'}</Descriptions.Item>
+                      <Descriptions.Item label="联系地址" span={2}>{currentClient.address || '-'}</Descriptions.Item>
+                      <Descriptions.Item label="状态">
+                        {(() => {
+                          const statusMap: Record<string, { text: string, color: string }> = {
+                            'draft': { text: '草稿', color: 'default' },
+                            'pending': { text: '待审批', color: 'processing' },
+                            'approved': { text: '已批准', color: 'success' },
+                            'rejected': { text: '已驳回', color: 'error' },
+                          }
+                          const config = statusMap[currentClient.status] || { text: currentClient.status, color: 'default' }
+                          return <Tag color={config.color}>{config.text}</Tag>
+                        })()}
+                      </Descriptions.Item>
+                      <Descriptions.Item label="创建时间">
+                        {dayjs(currentClient.createdAt).format('YYYY-MM-DD HH:mm:ss')}
+                      </Descriptions.Item>
+                    </Descriptions>
+
+                    <Divider orientation="left">开票信息</Divider>
+                    <Descriptions column={1} bordered size="small">
+                      <Descriptions.Item label="纳税人识别号">{currentClient.creditCode || '-'}</Descriptions.Item>
+                      <Descriptions.Item label="开户银行">{currentClient.bankName || '-'}</Descriptions.Item>
+                      <Descriptions.Item label="银行账号">{currentClient.bankAccount || '-'}</Descriptions.Item>
+                    </Descriptions>
+
+                    {currentClient.remark && (
+                      <>
+                        <Divider orientation="left">备注</Divider>
+                        <div style={{ padding: '0 12px', color: '#666' }}>{currentClient.remark}</div>
+                      </>
+                    )}
+                  </div>
+                )
+              },
+              {
+                key: '2',
+                label: '审批记录',
+                children: (
+                  <div style={{ maxHeight: 'calc(100vh - 200px)', overflowY: 'auto' }}>
+                    <ApprovalRecords
+                      approvalInstance={currentClient.approvalInstance}
+                      approvalFlow={currentClient.approvalFlow}
+                      createdAt={currentClient.createdAt}
+                    />
+                  </div>
+                )
+              }
+            ]}
+          />
+        )}
+      </Drawer>
     </div>
   )
 }

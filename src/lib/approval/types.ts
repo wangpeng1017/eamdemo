@@ -10,6 +10,7 @@
  */
 export interface ApprovalNode {
   step: number // 步骤序号
+  order?: number // 步骤序号 (兼容字段)
   name: string // 节点名称
   type: 'role' | 'user' | 'department' // 审批类型
   targetId: string // 审批对象ID(角色编码/用户ID/部门ID)

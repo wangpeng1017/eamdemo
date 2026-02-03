@@ -5,6 +5,7 @@
  * @output: showConfirm/showSuccess/showError/showWarning/showInfo
  */
 
+import React from 'react'
 import { Modal, message } from 'antd'
 import type { ModalProps } from 'antd'
 

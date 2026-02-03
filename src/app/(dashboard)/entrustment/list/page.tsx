@@ -14,6 +14,7 @@ import { StatusTag } from '@/components/StatusTag'
 import type { ColumnsType } from 'antd/es/table'
 import dayjs from 'dayjs'
 import { exportToExcel } from '@/hooks/useExport'
+import { copyToClipboard } from '@/lib/utils/format'
 import { useRouter, useSearchParams } from 'next/navigation'
 
 // 类型定义
@@ -29,6 +30,17 @@ interface EntrustmentProject {
   subcontractor: string | null
   deviceId: string | null
   deadline: string | null
+}
+
+interface Sample {
+  id: string
+  sampleNo: string
+  name: string
+  type: string | null
+  specification: string | null
+  material: string | null
+  quantity: string | null
+  status: string
 }
 
 interface Entrustment {
@@ -49,8 +61,25 @@ interface Entrustment {
   status: string
   createdAt: string
   projects: EntrustmentProject[]
+  samples: Sample[]
   client?: {
+    id?: string
+    name?: string
     phone?: string
+    contact?: string
+  }
+  contract?: {
+    id: string
+    contractNo: string
+    contractName: string | null
+    partyACompany: string | null
+    clientReportDeadline: string | null
+  }
+  quotation?: {
+    id: string
+    quotationNo: string
+    clientReportDeadline: string | null
+    follower: string | null
   }
 }
 
@@ -98,11 +127,20 @@ export default function EntrustmentListPage() {
   const router = useRouter()
   const searchParams = useSearchParams()
 
+  // 引入 useMessage 钩子
+  const [messageApi, contextHolder] = message.useMessage()
+  const [modal, modalContextHolder] = Modal.useModal() // 补充 Modal 的 Hook
+
+  // 本地封装提示函数，确保 Context 正确
+  const showSuccessMsg = (content: string) => messageApi.success(content)
+  const showErrorMsg = (content: string) => messageApi.error(content)
+
   // 基础状态
   const [data, setData] = useState<Entrustment[]>([])
   const [loading, setLoading] = useState(false)
   const [total, setTotal] = useState(0)
   const [page, setPage] = useState(1)
+  const [generatingLink, setGeneratingLink] = useState<string | null>(null)
 
   // 查看抽屉状态
   const [viewDrawerOpen, setViewDrawerOpen] = useState(false)
@@ -125,7 +163,7 @@ export default function EntrustmentListPage() {
   const [suppliers, setSuppliers] = useState<Supplier[]>([])
   const [clients, setClients] = useState<Client[]>([])
   const [contracts, setContracts] = useState<Contract[]>([])
-  const [testTemplates, setTestTemplates] = useState<any[]>([]) // 新增：检测项目列表
+  const [testTemplates, setTestTemplates] = useState<any[]>([])
 
   // 展开行控制
   const [expandedRowKeys, setExpandedRowKeys] = useState<string[]>([])
@@ -153,7 +191,7 @@ export default function EntrustmentListPage() {
       fetch('/api/supplier?pageSize=1000'),
       fetch('/api/client?pageSize=1000'),
       fetch('/api/contract?pageSize=1000'),
-      fetch('/api/test-template?pageSize=1000'), // 新增：加载检测项目
+      fetch('/api/test-template?pageSize=1000'),
     ])
     const [usersJson, devicesJson, suppliersJson, clientsJson, contractsJson, templatesJson] = await Promise.all([
       usersRes.json(),
@@ -164,7 +202,6 @@ export default function EntrustmentListPage() {
       templatesRes.json(),
     ])
 
-    // 修复数据解析路径：json.data.list
     const getUsers = (json: any) => (json.success && json.data?.list) || json.list || []
 
     setUsers(getUsers(usersJson))
@@ -180,13 +217,11 @@ export default function EntrustmentListPage() {
     fetchOptions()
   }, [page])
 
-  // 处理从合同页面传递的参数 - Redirect to create page if params exist
   useEffect(() => {
     const contractNo = searchParams.get('contractNo')
     const clientName = searchParams.get('clientName')
 
     if (contractNo || clientName) {
-      // Redirect to create page with current search params
       const params = new URLSearchParams(searchParams.toString())
       router.replace(`/entrustment/list/create?${params.toString()}`)
     }
@@ -213,17 +248,54 @@ export default function EntrustmentListPage() {
     const res = await fetch(`/api/entrustment/${id}`, { method: 'DELETE' })
     const json = await res.json()
     if (res.ok && json.success) {
-      showSuccess('删除成功')
+      showSuccessMsg('删除成功')
       fetchData()
     } else {
-      showError(json.error?.message || '删除失败')
+      showErrorMsg(json.error?.message || '删除失败')
     }
   }
 
-  const handleGenerateExternalLink = (record: Entrustment) => {
-    const link = `${window.location.origin}/entrustment/external/${record.id}`
-    navigator.clipboard.writeText(link)
-    showSuccess('外部链接已复制到剪贴板')
+
+  const handleGenerateExternalLink = async (record: Entrustment) => {
+    setGeneratingLink(record.id)
+    try {
+      const res = await fetch(`/api/entrustment/${record.id}/external-link`, {
+        method: 'POST',
+      })
+      const json = await res.json()
+      if (res.ok && json.success) {
+        const link = json.data.link
+
+        // 尝试复制，但无论成功与否都弹窗展示，确保用户能看到链接
+        const success = await copyToClipboard(link)
+        if (success) {
+          showSuccessMsg('外部链接已生成并复制到剪贴板')
+        }
+
+        // 使用 Modal 展示链接，解决 HTTP 环境下无法复制的问题，并提供明确反馈
+        modal.success({
+          title: '外部链接生成成功',
+          content: (
+            <div>
+              <p>链接地址：</p>
+              <Input.TextArea value={link} readOnly autoSize={{ minRows: 2, maxRows: 6 }} />
+              <p style={{ marginTop: 8, color: '#999', fontSize: 12 }}>如果未自动复制，请手动复制上方链接。</p>
+            </div>
+          ),
+          okText: '关闭',
+          width: 500,
+          centered: true
+        })
+
+      } else {
+        showErrorMsg(json.error?.message || '生成外部链接失败')
+      }
+    } catch (e) {
+      console.error('生成外部链接异常:', e)
+      showErrorMsg('生成外部链接失败')
+    } finally {
+      setGeneratingLink(null)
+    }
   }
 
   // 打开分配弹窗
@@ -259,7 +331,7 @@ export default function EntrustmentListPage() {
     if (!currentProject) return
     try {
       const values = await assignForm.validateFields()
-      const res = await fetch(`/api/entrustment/${currentProject.entrustmentId}/project/${currentProject.project.id}`, {
+      const res = await fetch(`/api/entrustment/${currentProject.entrustmentId}/projects/${currentProject.project.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -270,7 +342,7 @@ export default function EntrustmentListPage() {
       })
       const json = await res.json()
       if (res.ok && json.success) {
-        showSuccess('任务分配成��')
+        showSuccess('任务分配成功')
         setAssignModalOpen(false)
         fetchData()
       } else {
@@ -286,7 +358,7 @@ export default function EntrustmentListPage() {
     if (!currentProject) return
     try {
       const values = await subcontractForm.validateFields()
-      const res = await fetch(`/api/entrustment/${currentProject.entrustmentId}/project/${currentProject.project.id}`, {
+      const res = await fetch(`/api/entrustment/${currentProject.entrustmentId}/projects/${currentProject.project.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -403,8 +475,36 @@ export default function EntrustmentListPage() {
       width: 150,
       render: (no: string) => <a style={{ color: '#1890ff' }}>{no}</a>
     },
-    { title: '委托单位', dataIndex: 'clientName', width: 150, ellipsis: true },
-    { title: '样品名称', dataIndex: 'sampleName', ellipsis: true },
+    {
+      title: '报价单号',
+      dataIndex: 'quotation',
+      width: 150,
+      render: (quotation: any) => quotation ? (
+        <a
+          style={{ color: '#1890ff', cursor: 'pointer' }}
+          onClick={() => router.push(`/entrustment/quotation?keyword=${encodeURIComponent(quotation.quotationNo)}`)}
+        >
+          {quotation.quotationNo}
+        </a>
+      ) : '-'
+    },
+    {
+      title: '委托单位',
+      dataIndex: 'clientName',
+      width: 150,
+      ellipsis: true,
+      render: (text, record) => record.client?.name || text || '-'
+    },
+    {
+      title: '样品名称',
+      dataIndex: 'samples',
+      width: 120,
+      ellipsis: true,
+      render: (samples: Sample[]) => {
+        if (!samples || samples.length === 0) return '-'
+        return samples.map(s => s.name).join(', ')
+      }
+    },
     {
       title: '创建时间',
       dataIndex: 'createdAt',
@@ -481,11 +581,19 @@ export default function EntrustmentListPage() {
       title: '操作',
       key: 'action',
       fixed: 'right',
+      width: 250,
       render: (_: any, record: Entrustment) => (
         <Space size="small" style={{ whiteSpace: 'nowrap' }}>
           {/* 业务按钮（带文字） */}
           {record.status === 'pending' && (
-            <Button size="small" icon={<ShareAltOutlined />} onClick={() => handleGenerateExternalLink(record)}>生成外部链接</Button>
+            <Button
+              size="small"
+              icon={<ShareAltOutlined />}
+              onClick={() => handleGenerateExternalLink(record)}
+              loading={generatingLink === record.id}
+            >
+              生成外部链接
+            </Button>
           )}
           {/* 通用按钮（仅图标） */}
           <Button size="small" icon={<EyeOutlined />} onClick={() => handleView(record)} />
@@ -500,6 +608,8 @@ export default function EntrustmentListPage() {
 
   return (
     <div>
+      {contextHolder}
+      {modalContextHolder}
       <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <h2 style={{ margin: 0 }}>检测委托单管理</h2>
         <Space style={{ whiteSpace: 'nowrap' }}>
@@ -555,7 +665,9 @@ export default function EntrustmentListPage() {
                     <Descriptions title="委托信息" column={2} bordered size="small">
                       <Descriptions.Item label="委托编号">{currentEntrustment.entrustmentNo}</Descriptions.Item>
                       <Descriptions.Item label="合同编号">{currentEntrustment.contractNo || '-'}</Descriptions.Item>
-                      <Descriptions.Item label="委托单位">{currentEntrustment.clientName || '-'}</Descriptions.Item>
+                      <Descriptions.Item label="委托单位">
+                        {currentEntrustment.client?.name || currentEntrustment.clientName || '-'}
+                      </Descriptions.Item>
                       <Descriptions.Item label="联系人">{currentEntrustment.contactPerson || '-'}</Descriptions.Item>
                       <Descriptions.Item label="联系电话">{currentEntrustment.client?.phone || '-'}</Descriptions.Item>
                       <Descriptions.Item label="跟单人">{currentEntrustment.follower || '-'}</Descriptions.Item>
@@ -570,10 +682,26 @@ export default function EntrustmentListPage() {
                     <Divider />
 
                     <Descriptions title="样品信息" column={2} bordered size="small">
-                      <Descriptions.Item label="样品名称">{currentEntrustment.sampleName || '-'}</Descriptions.Item>
-                      <Descriptions.Item label="样品型号">{currentEntrustment.sampleModel || '-'}</Descriptions.Item>
-                      <Descriptions.Item label="样品材质">{currentEntrustment.sampleMaterial || '-'}</Descriptions.Item>
-                      <Descriptions.Item label="样品数量">{currentEntrustment.sampleQuantity || '-'}</Descriptions.Item>
+                      <Descriptions.Item label="样品名称">
+                        {currentEntrustment.samples && currentEntrustment.samples.length > 0
+                          ? currentEntrustment.samples.map(s => s.name).join(', ')
+                          : currentEntrustment.sampleName || '-'}
+                      </Descriptions.Item>
+                      <Descriptions.Item label="样品型号">
+                        {currentEntrustment.samples && currentEntrustment.samples.length > 0
+                          ? currentEntrustment.samples.map(s => s.specification || '-').join(', ')
+                          : currentEntrustment.sampleModel || '-'}
+                      </Descriptions.Item>
+                      <Descriptions.Item label="样品材质">
+                        {currentEntrustment.samples && currentEntrustment.samples.length > 0
+                          ? currentEntrustment.samples.map(s => s.material || '-').join(', ')
+                          : currentEntrustment.sampleMaterial || '-'}
+                      </Descriptions.Item>
+                      <Descriptions.Item label="样品数量">
+                        {currentEntrustment.samples && currentEntrustment.samples.length > 0
+                          ? currentEntrustment.samples.map(s => s.quantity || '-').join(', ')
+                          : (currentEntrustment.sampleQuantity?.toString() || '-')}
+                      </Descriptions.Item>
                       <Descriptions.Item label="样品退回">
                         {currentEntrustment.isSampleReturn ? '是' : '否'}
                       </Descriptions.Item>

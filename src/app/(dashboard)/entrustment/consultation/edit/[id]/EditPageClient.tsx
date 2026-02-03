@@ -1,14 +1,16 @@
 'use client'
 
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { Button, Spin, Result } from 'antd'
 import { ArrowLeftOutlined } from '@ant-design/icons'
 import ConsultationForm from '@/components/business/ConsultationForm'
 import { showSuccess, showError } from '@/lib/confirm'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, Suspense } from 'react'
 
-export default function EditConsultationPage({ id }: { id: string }) {
+function EditConsultationContent({ id }: { id: string }) {
     const router = useRouter()
+    const searchParams = useSearchParams()
+    const isReassess = searchParams.get('reassess') === '1'
 
     const [loading, setLoading] = useState(false)
     const [fetching, setFetching] = useState(true)
@@ -43,8 +45,8 @@ export default function EditConsultationPage({ id }: { id: string }) {
                     sampleTestItems = itemJson.data.map((item: any) => ({
                         ...item,
                         key: item.id,
-                        assessorId: item.currentAssessorId,
-                        assessorName: item.currentAssessorName,
+                        assessorId: item.assessorId || item.currentAssessorId,
+                        assessorName: item.assessorName || item.currentAssessorName,
                     }))
                 }
             } catch (e) {
@@ -67,22 +69,26 @@ export default function EditConsultationPage({ id }: { id: string }) {
     const handleFinish = async (values: any) => {
         setLoading(true)
         try {
-            const res = await fetch(`/api/consultation/${id}`, {
-                method: 'PUT',
+            const url = isReassess
+                ? `/api/consultation/${id}/reassess`
+                : `/api/consultation/${id}`
+
+            const res = await fetch(url, {
+                method: isReassess ? 'POST' : 'PUT',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(values)
             })
             const json = await res.json()
 
             if (res.ok && json.success) {
-                showSuccess('更新咨询单成功')
+                showSuccess(isReassess ? '发起重新评估成功' : '更新咨询单成功')
                 router.push('/entrustment/consultation')
             } else {
-                showError(json.error?.message || '更新失败')
+                showError(json.error?.message || (isReassess ? '发起重新评估失败' : '更新失败'))
             }
         } catch (error) {
-            console.error('更新咨询单异常', error)
-            showError('更新失败')
+            console.error('操作咨询单异常', error)
+            showError('提交失败')
         } finally {
             setLoading(false)
         }
@@ -111,7 +117,9 @@ export default function EditConsultationPage({ id }: { id: string }) {
                 >
                     返回列表
                 </Button>
-                <span style={{ fontSize: 20, fontWeight: 500, marginLeft: 8 }}>编辑业务咨询</span>
+                <span style={{ fontSize: 20, fontWeight: 500, marginLeft: 8 }}>
+                    {isReassess ? '重新评估业务咨询' : '编辑业务咨询'}
+                </span>
             </div>
 
             <ConsultationForm
@@ -122,5 +130,13 @@ export default function EditConsultationPage({ id }: { id: string }) {
                 bizId={id}
             />
         </div>
+    )
+}
+
+export default function EditConsultationPage({ id }: { id: string }) {
+    return (
+        <Suspense fallback={<div style={{ display: 'flex', justifyContent: 'center', padding: 50 }}><Spin size="large" /></div>}>
+            <EditConsultationContent id={id} />
+        </Suspense>
     )
 }

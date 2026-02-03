@@ -6,14 +6,13 @@
 
 'use client'
 
-import { useState, useEffect } from 'react'
-import { Table, Button, Space, Modal, Form, Input, Select, DatePicker, Drawer, Row, Col, InputNumber, Divider, Tabs, Upload, Image, Tag, Alert } from 'antd'
+import React, { useState, useEffect } from 'react'
+import { Table, Button, Space, Modal, Form, Input, Select, DatePicker, Drawer, Row, Col, InputNumber, Divider, Tabs, Upload, Image, Tag, Alert, Descriptions, Popconfirm } from 'antd'
 import { PlusOutlined, EditOutlined, DeleteOutlined, EyeOutlined, FileTextOutlined, CloseCircleOutlined, TeamOutlined, SyncOutlined, PaperClipOutlined } from '@ant-design/icons'
 import { StatusTag } from '@/components/StatusTag'
 import UserSelect from '@/components/UserSelect'
 import SampleTestItemTable, { SampleTestItemData } from '@/components/SampleTestItemTable'
 // ConsultationAssessmentModal 已废弃 - v2系统中评估人在创建咨询单时通过样品检测项分配
-import ReassessmentModal from '@/components/ReassessmentModal'
 import AssessmentResultTab from '@/components/AssessmentResultTab'
 import type { ColumnsType } from 'antd/es/table'
 import dayjs from 'dayjs'
@@ -98,7 +97,6 @@ export default function ConsultationPage() {
   // const [sampleTestItems, setSampleTestItems] = useState<SampleTestItemData[]>([])
 
   // 评估相关状态
-  const [reassessmentModalOpen, setReassessmentModalOpen] = useState(false)
   const [currentUser, setCurrentUser] = useState<any>(null)
 
   // 附件上传相关 - 移除
@@ -173,41 +171,18 @@ export default function ConsultationPage() {
   }
 
   const handleDelete = async (record: Consultation) => {
-    let title = '确认删除'
-    let content = '确定要删除这条咨询记录吗？'
-    let okType: 'danger' | 'primary' = 'primary'
-
-    if (record.status === 'quoted') {
-      title = '无法删除'
-      content = '该咨询单已生成报价，请先处理相关报价单后再尝试删除，或将状态更改为"已关闭"。'
-      showWarning(title, content)
-      return
-    }
-
-    if (record.status === 'closed') {
-      content = '该咨询单已关闭，确定要彻底删除吗？删除后无法恢复。'
-      okType = 'danger'
-    }
-
-    modal.confirm({
-      title,
-      content,
-      okType,
-      onOk: async () => {
-        try {
-          const res = await fetch(`/api/consultation/${record.id}`, { method: 'DELETE' })
-          const json = await res.json()
-          if (res.ok && json.success) {
-            showSuccess('删除成功')
-            fetchData()
-          } else {
-            showError(json.error?.message || '删除失败')
-          }
-        } catch (error) {
-          showError('删除异常')
-        }
+    try {
+      const res = await fetch(`/api/consultation/${record.id}`, { method: 'DELETE' })
+      const json = await res.json()
+      if (res.ok && json.success) {
+        showSuccess('删除成功')
+        fetchData()
+      } else {
+        showError(json.error?.message || '删除失败')
       }
-    })
+    } catch (error) {
+      showError('删除异常')
+    }
   }
 
 
@@ -247,26 +222,41 @@ export default function ConsultationPage() {
 
   // 针对单条记录生成报价单
   const handleOpenGenerateQuoteForRecord = async (consultation: Consultation) => {
+    console.log('>>> [生成报价单] 开始处理, ID:', consultation.id);
     // ✅ 需求1：评估验证 - 检查所有样品检测项是否已评估通过
     try {
       const res = await fetch(`/api/consultation/${consultation.id}`)
       const result = await res.json()
 
+      console.log('>>> [生成报价单] API 返回结果:', result);
+
       if (!res.ok || !result.success) {
+        console.error('>>> [生成报价单] API 报错:', result);
         showError('获取咨询详情失败：无法加载咨询单信息')
         return
       }
 
       const data = result.data
+      if (!data) {
+        console.error('>>> [生成报价单] 数据 (result.data) 为空');
+        showError('获取咨询详情失败：返回数据为空')
+        return
+      }
+
       const items = data.sampleTestItems || []
+      console.log('>>> [生成报价单] 样品项明细 (sampleTestItems):', items);
 
       // 检查是否有未评估或评估未通过的项
       const unfinishedItems = items.filter(
         (item: any) => item.assessmentStatus !== 'passed'
       )
 
+      console.log('>>> [生成报价单] 过滤出的未完成项:', unfinishedItems);
+
       if (unfinishedItems.length > 0) {
-        // 使用 modal 实例（来自 useModal hook）而非静态 Modal.warning
+        console.log('>>> [生成报价单] 命中拦截，准备弹出原生警告(Hook版)');
+
+        // 使用 Hook 方式调用，确保上下文正确
         modal.warning({
           title: '评估未完成',
           width: 700,
@@ -309,17 +299,18 @@ export default function ConsultationPage() {
               />
             </div>
           ),
-          okText: '我知道了'
-        })
-        return
+          okText: '知道了'
+        });
+        return;
       }
 
       // ✅ 验证通过，跳转到新建报价单页面
+      console.log('>>> [生成报价单] 验证通过，正在跳转...');
       router.push(`/entrustment/quotation/create?consultationId=${consultation.id}`)
 
-    } catch (error) {
-      console.error('❌ [生成报价单] 异常:', error)
-      showError('生成报价单失败，请重试')
+    } catch (error: any) {
+      console.error('❌ [生成报价单] 捕获到异常:', error)
+      showError(`操作失败: ${error.message || '未知错误'}`)
     }
   }
 
@@ -327,8 +318,7 @@ export default function ConsultationPage() {
 
   // 重新评估
   const handleReassessment = (consultation: Consultation) => {
-    setCurrentConsultation(consultation)
-    setReassessmentModalOpen(true)
+    router.push(`/entrustment/consultation/edit/${consultation.id}?reassess=1`)
   }
 
   // 关闭咨询单
@@ -442,7 +432,27 @@ export default function ConsultationPage() {
           </Button>
           <Button size="small" icon={<EyeOutlined />} onClick={() => handleView(record)} />
           <Button size="small" icon={<EditOutlined />} onClick={() => handleEdit(record)} />
-          <Button size="small" danger icon={<DeleteOutlined />} onClick={() => handleDelete(record)} />
+          <Popconfirm
+            title={record.status === 'closed' ? '彻底删除咨询单' : '确认删除咨询单'}
+            description={record.status === 'closed' ? '该咨询单已关闭，确定要彻底删除吗？删除后无法恢复' : '确定要删除这条咨询记录吗？'}
+            onConfirm={() => handleDelete(record)}
+            okText="确定"
+            cancelText="取消"
+            disabled={record.status === 'quoted'}
+            okButtonProps={{ danger: true }}
+          >
+            <Button
+              size="small"
+              danger
+              icon={<DeleteOutlined />}
+              onClick={(e) => {
+                if (record.status === 'quoted') {
+                  e.stopPropagation()
+                  showWarning('无法删除', '该咨询单已生成报价，请先处理相关报价单后再尝试删除，或将状态更改为"已关闭"。')
+                }
+              }}
+            />
+          </Popconfirm>
         </Space>
       )
     }
@@ -456,7 +466,7 @@ export default function ConsultationPage() {
     },
   }
 
-  // 引用 useModal
+  // 引入 useModal 钩子
   const [modal, contextHolder] = Modal.useModal()
 
   return (
@@ -499,8 +509,6 @@ export default function ConsultationPage() {
         pagination={{ current: page, total, pageSize: 10, onChange: setPage, showSizeChanger: false }}
       />
 
-
-
       {/* 查看详情抽屉 */}
       <Drawer
         title="咨询详情"
@@ -517,10 +525,37 @@ export default function ConsultationPage() {
                 key: 'basic',
                 label: '基本信息',
                 children: (
-                  <div>
-                    <Descriptions title="基本信息" data={currentConsultation} />
-                    <Divider />
-                    <Descriptions title="其他信息" data={currentConsultation} />
+                  <div style={{ maxHeight: 'calc(100vh - 200px)', overflowY: 'auto', paddingRight: 8 }}>
+                    <Descriptions title="基本信息" bordered size="small" column={2}>
+                      <Descriptions.Item label="咨询单号">{currentConsultation.consultationNo}</Descriptions.Item>
+                      <Descriptions.Item label="客户名称">{currentConsultation.client?.name || '-'}</Descriptions.Item>
+                      <Descriptions.Item label="联系人">{currentConsultation.clientContactPerson || '-'}</Descriptions.Item>
+                      <Descriptions.Item label="联系电话">{currentConsultation.client?.phone || '-'}</Descriptions.Item>
+                      <Descriptions.Item label="客户邮箱" span={2}>{currentConsultation.client?.email || '-'}</Descriptions.Item>
+                      <Descriptions.Item label="客户地址" span={2}>{currentConsultation.client?.address || '-'}</Descriptions.Item>
+                    </Descriptions>
+
+                    <Divider style={{ margin: '16px 0' }} />
+
+                    <Descriptions title="其他信息" bordered size="small" column={2}>
+                      <Descriptions.Item label="预估数量">{currentConsultation.estimatedQuantity || '-'}</Descriptions.Item>
+                      <Descriptions.Item label="检测项目">{currentConsultation.testItems?.join('、') || '-'}</Descriptions.Item>
+                      <Descriptions.Item label="报告时间">
+                        {currentConsultation.expectedDeadline ? dayjs(currentConsultation.expectedDeadline).format('YYYY-MM-DD HH:mm:ss') : '-'}
+                      </Descriptions.Item>
+                      <Descriptions.Item label="预算范围">{currentConsultation.budgetRange || '-'}</Descriptions.Item>
+                      <Descriptions.Item label="可行性评估">
+                        <StatusTag type="feasibility" status={currentConsultation.feasibility} />
+                      </Descriptions.Item>
+                      <Descriptions.Item label="可行性说明">{currentConsultation.feasibilityNote || '-'}</Descriptions.Item>
+                      <Descriptions.Item label="跟单人">{currentConsultation.follower || '-'}</Descriptions.Item>
+                      <Descriptions.Item label="状态">
+                        <StatusTag type="consultation" status={currentConsultation.status} />
+                      </Descriptions.Item>
+                      <Descriptions.Item label="创建时间" span={2}>
+                        {dayjs(currentConsultation.createdAt).format('YYYY-MM-DD HH:mm:ss')}
+                      </Descriptions.Item>
+                    </Descriptions>
                   </div>
                 )
               },
@@ -540,8 +575,6 @@ export default function ConsultationPage() {
         )}
       </Drawer>
 
-
-
       {/* 关闭咨询弹窗 */}
       <Modal
         title="关闭咨询"
@@ -559,66 +592,7 @@ export default function ConsultationPage() {
           </Form.Item>
         </Form>
       </Modal>
-
-      {/* v2: 发起评估弹窗已废弃，评估人在创建咨询单时通过样品检测项分配 */}
-
-      {/* 重新评估弹窗 */}
-      <ReassessmentModal
-        open={reassessmentModalOpen}
-        consultationId={currentConsultation?.id || null}
-        consultationNo={currentConsultation?.consultationNo}
-        currentRequirement={currentConsultation?.clientRequirement || undefined}
-        onCancel={() => {
-          setReassessmentModalOpen(false)
-          setCurrentConsultation(null)
-        }}
-        onSuccess={() => {
-          setReassessmentModalOpen(false)
-          setCurrentConsultation(null)
-          fetchData()
-        }}
-      />
     </div>
   )
 }
 
-// 详情展示组件
-function Descriptions({ title, data }: { title: string; data: Consultation }) {
-  const items = [
-    { label: '咨询单号', value: data.consultationNo },
-    { label: '客户名称', value: data.client?.name || '-' },
-    { label: '联系人', value: data.clientContactPerson || '-' },
-    { label: '联系电话', value: data.client?.phone || '-' },
-    { label: '客户邮箱', value: data.client?.email || '-' },
-    { label: '客户地址', value: data.client?.address || '-' },
-    { label: '预估数量', value: data.estimatedQuantity },
-    { label: '检测项目', value: data.testItems?.join(', ') },
-    { label: '报告时间', value: data.expectedDeadline ? dayjs(data.expectedDeadline).format('YYYY-MM-DD HH:mm:ss') : '-' },
-    { label: '预算范围', value: data.budgetRange },
-    { label: '可行性评估', value: <StatusTag type="feasibility" status={data.feasibility} /> },
-    { label: '可行性说明', value: data.feasibilityNote },
-    { label: '跟单人', value: data.follower },
-    { label: '状态', value: <StatusTag type="consultation" status={data.status} /> },
-    { label: '创建时间', value: dayjs(data.createdAt).format('YYYY-MM-DD HH:mm:ss') },
-  ]
-
-  const relevantItems = title === '基本信息'
-    ? items.slice(0, 6)
-    : title === '其他信息'
-      ? items.slice(6)
-      : []
-
-  return (
-    <div>
-      <h4 style={{ marginBottom: 16 }}>{title}</h4>
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px 24px' }}>
-        {relevantItems.map((item, index) => (
-          <div key={index}>
-            <span style={{ color: '#666', fontSize: 12 }}>{item.label}：</span>
-            <span style={{ marginLeft: 8 }}>{item.value || '-'}</span>
-          </div>
-        ))}
-      </div>
-    </div>
-  )
-}

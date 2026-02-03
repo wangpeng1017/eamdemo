@@ -78,15 +78,20 @@ export const GET = withAuth(async (request: NextRequest, user) => {
 export const POST = withAuth(async (request: NextRequest, user) => {
   const data = await request.json()
 
-  // 如果从咨询单创建，查询咨询单以继承 clientReportDeadline
+  // 如果从咨询单创建，查询咨询单以继承 clientReportDeadline 和 follower
   let inheritedDeadline = null
+  let inheritedFollower = null
   const consultationNo = data.consultationNo || data.consultationId
-  if (consultationNo && !data.clientReportDeadline) {
+  if (consultationNo && (!data.clientReportDeadline || !data.follower)) {
     const consultation = await prisma.consultation.findUnique({
       where: { consultationNo },
-      select: { clientReportDeadline: true },
+      select: { clientReportDeadline: true, follower: true, clientPhone: true, clientEmail: true, clientAddress: true },
     })
     inheritedDeadline = consultation?.clientReportDeadline
+    inheritedFollower = consultation?.follower
+    data.clientPhone = data.clientPhone || consultation?.clientPhone
+    data.clientEmail = data.clientEmail || consultation?.clientEmail
+    data.clientAddress = data.clientAddress || consultation?.clientAddress
   }
 
   const today = new Date().toISOString().slice(0, 10).replace(/-/g, '')
@@ -105,11 +110,14 @@ export const POST = withAuth(async (request: NextRequest, user) => {
     quotationNo,
     client: data.clientId ? { connect: { id: data.clientId } } : undefined,
     clientContactPerson: data.clientContactPerson,
+    clientPhone: data.clientPhone,
+    clientEmail: data.clientEmail,
+    clientAddress: data.clientAddress,
     consultationNo: data.consultationNo || data.consultationId || undefined,
 
     // 注意：Quotation 模型不再包含 sampleName 等扁平化字段，这些信息在 items 或 samples 中
 
-    follower: data.follower,
+    follower: data.follower || inheritedFollower,
     clientRemark: data.paymentTerms,
     subtotal,
     taxTotal,

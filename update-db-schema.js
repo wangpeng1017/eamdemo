@@ -119,6 +119,75 @@ async function main() {
         }
     }
 
+    try {
+        console.log('Adding follower column to biz_contract...')
+        await prisma.$executeRawUnsafe(`ALTER TABLE biz_contract ADD COLUMN follower VARCHAR(50);`)
+        console.log('✅ follower column added to biz_contract.')
+    } catch (e) {
+        if (e.message.includes('Duplicate column name')) {
+            console.log('ℹ️ follower column already exists in biz_contract.')
+        } else {
+            console.error('❌ Error adding follower column to biz_contract:', e.message)
+        }
+    }
+
+    try {
+        console.log('Adding partyAEmail column to biz_contract...')
+        await prisma.$executeRawUnsafe(`ALTER TABLE biz_contract ADD COLUMN partyAEmail VARCHAR(100);`)
+        console.log('✅ partyAEmail column added to biz_contract.')
+    } catch (e) {
+        if (e.message.includes('Duplicate column name')) {
+            console.log('ℹ️ partyAEmail column already exists in biz_contract.')
+        } else {
+            console.error('❌ Error adding partyAEmail column to biz_contract:', e.message)
+        }
+    }
+
+    // ==================== Quotation 表更新 ====================
+    try {
+        console.log('Adding client info columns to biz_quotation...')
+        await prisma.$executeRawUnsafe(`ALTER TABLE biz_quotation ADD COLUMN clientPhone VARCHAR(50);`)
+        await prisma.$executeRawUnsafe(`ALTER TABLE biz_quotation ADD COLUMN clientEmail VARCHAR(100);`)
+        await prisma.$executeRawUnsafe(`ALTER TABLE biz_quotation ADD COLUMN clientAddress VARCHAR(500);`)
+        console.log('✅ Client info columns added to biz_quotation.')
+    } catch (e) {
+        if (e.message.includes('Duplicate column name')) {
+            console.log('ℹ️ Client info columns already exist in biz_quotation.')
+        } else {
+            console.error('❌ Error adding client info columns to biz_quotation:', e.message)
+        }
+    }
+
+    // ==================== Consultation 表更新 ====================
+    try {
+        console.log('Adding client info columns to biz_consultation...')
+        await prisma.$executeRawUnsafe(`ALTER TABLE biz_consultation ADD COLUMN clientPhone VARCHAR(50);`)
+        await prisma.$executeRawUnsafe(`ALTER TABLE biz_consultation ADD COLUMN clientEmail VARCHAR(100);`)
+        await prisma.$executeRawUnsafe(`ALTER TABLE biz_consultation ADD COLUMN clientAddress VARCHAR(500);`)
+        console.log('✅ Client info columns added to biz_consultation.')
+    } catch (e) {
+        if (e.message.includes('Duplicate column name')) {
+            console.log('ℹ️ Client info columns already exist in biz_consultation.')
+        } else {
+            console.error('❌ Error adding client info columns to biz_consultation:', e.message)
+        }
+    }
+
+    // ==================== Entrustment 表更新 ====================
+    try {
+        console.log('Adding client info columns to biz_entrustment...')
+        await prisma.$executeRawUnsafe(`ALTER TABLE biz_entrustment ADD COLUMN contactPhone VARCHAR(50);`)
+        await prisma.$executeRawUnsafe(`ALTER TABLE biz_entrustment ADD COLUMN contactEmail VARCHAR(100);`)
+        await prisma.$executeRawUnsafe(`ALTER TABLE biz_entrustment ADD COLUMN clientAddress VARCHAR(500);`)
+        console.log('✅ Client info columns added to biz_entrustment.')
+    } catch (e) {
+        if (e.message.includes('Duplicate column name')) {
+            console.log('ℹ️ Client info columns already exist in biz_entrustment.')
+        } else {
+            console.error('❌ Error adding client info columns to biz_entrustment:', e.message)
+        }
+    }
+
     // ==================== ContractItem 表创建 ====================
     try {
         console.log('Creating biz_contract_item table...')

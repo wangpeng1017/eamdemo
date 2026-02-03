@@ -253,13 +253,11 @@ export const TEST_PURPOSE_OPTIONS = [
 // ==================== 可行性评估 ====================
 export const FEASIBILITY_OPTIONS = [
   { value: 'feasible', label: '可行' },
-  { value: 'difficult', label: '困难' },
   { value: 'infeasible', label: '不可行' },
 ]
 
 export const FEASIBILITY_COLOR: Record<string, string> = {
   feasible: 'success',
-  difficult: 'warning',
   infeasible: 'error',
 }
 

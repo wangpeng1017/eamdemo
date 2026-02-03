@@ -63,6 +63,9 @@ export default function EntrustmentForm({ initialValues, mode, onSubmit, loading
                 clientName: contract.partyACompany || client?.name,
                 clientId: contract.clientId || client?.id,
                 contactPerson: contract.clientContact || client?.contact,
+                contactPhone: contract.partyATel || client?.phone,
+                contactEmail: contract.partyAEmail || client?.email,
+                clientAddress: contract.partyAAddress || client?.address,
                 follower: contract.salesPerson || undefined,
                 sampleDate: dayjs(),
             })
@@ -122,12 +125,29 @@ export default function EntrustmentForm({ initialValues, mode, onSubmit, loading
                             />
                         </Form.Item>
                     </Col>
-                    <Col span={12}>
+                </Row>
+
+                <Row gutter={16}>
+                    <Col span={8}>
                         <Form.Item name="contactPerson" label="联系人">
                             <Input placeholder="请输入联系人" />
                         </Form.Item>
                     </Col>
+                    <Col span={8}>
+                        <Form.Item name="contactPhone" label="联系电话">
+                            <Input placeholder="请输入电话" />
+                        </Form.Item>
+                    </Col>
+                    <Col span={8}>
+                        <Form.Item name="contactEmail" label="电子邮箱">
+                            <Input placeholder="请输入邮箱" />
+                        </Form.Item>
+                    </Col>
                 </Row>
+
+                <Form.Item name="clientAddress" label="地址">
+                    <Input placeholder="请输入地址" />
+                </Form.Item>
 
                 <Row gutter={16}>
                     <Col span={12}>

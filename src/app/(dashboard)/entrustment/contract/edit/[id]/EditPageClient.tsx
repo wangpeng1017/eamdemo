@@ -30,7 +30,12 @@ export default function EditContractPageClient({ id }: EditContractPageClientPro
                         const itemsRes = await fetch(`/api/sample-test-item?bizType=contract&bizId=${id}`)
                         const itemsJson = await itemsRes.json()
                         if (itemsJson.success && itemsJson.data) {
-                            sampleTestItems = itemsJson.data
+                            sampleTestItems = itemsJson.data.map((item: any) => ({
+                                ...item,
+                                key: item.id,
+                                assessorId: item.assessorId || item.currentAssessorId,
+                                assessorName: item.assessorName || item.currentAssessorName,
+                            }))
                         }
                     } catch (e) {
                         console.error('Failed to load items', e)

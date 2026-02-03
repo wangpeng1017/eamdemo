@@ -75,6 +75,15 @@ export const GET = withErrorHandler(async (request: NextRequest) => {
             contractNo: true,
             contractName: true,
             status: true,
+            clientReportDeadline: true, // Included
+          },
+        },
+        quotation: {
+          select: {
+            id: true,
+            quotationNo: true,
+            clientReportDeadline: true, // Included
+            follower: true, // Included
           },
         },
         projects: {
@@ -117,8 +126,32 @@ export const GET = withErrorHandler(async (request: NextRequest) => {
     _count: true,
   })
 
+  // 处理列表数据，确保报告时间和跟单人显示
+  const processedList = list.map((item: any) => {
+    // 1. 如果委托单本身没有报告时间，尝试从报价单或合同获取
+    if (!item.clientReportDeadline) {
+      if (item.quotation?.clientReportDeadline) {
+        item.clientReportDeadline = item.quotation.clientReportDeadline
+      } else if (item.contract?.clientReportDeadline) {
+        item.clientReportDeadline = item.contract.clientReportDeadline
+      }
+    }
+
+    // 2. 如果委托单本身没有跟单人，尝试从报价单获取 (合同暂无跟单人字段，或者需要确认) - Quotation has follower
+    if (!item.follower) {
+      if (item.quotation?.follower) {
+        item.follower = item.quotation.follower
+      }
+      // Contract model might not have follower directly exposed or named differently, checking schema...
+      // Schema check: Quotation has `follower`. Contract does NOT have `follower` based on previous schema view (lines 359-438).
+      // So only fallback to Quotation for follower.
+    }
+
+    return item
+  })
+
   return success({
-    list,
+    list: processedList,
     total,
     page,
     pageSize,
@@ -147,14 +180,52 @@ export const POST = withErrorHandler(async (request: NextRequest) => {
   const entrustmentNo = await generateNo(NumberPrefixes.ENTRUSTMENT, 4)
   console.log('[Entrustment Create] Generated entrustmentNo:', entrustmentNo)
 
+  // 继承字段：报告截止日期和跟单人
+  let inheritedDeadline = data.clientReportDeadline ? new Date(data.clientReportDeadline) : null
+  let inheritedFollower = data.follower || null
+
+  // 如果从报价单生成
+  if (data.quotationId && (!inheritedDeadline || !inheritedFollower)) {
+    const quotation = await prisma.quotation.findUnique({
+      where: { id: data.quotationId },
+      select: { clientReportDeadline: true, follower: true, clientContactPerson: true, clientPhone: true, clientEmail: true, clientAddress: true }
+    })
+    if (!inheritedDeadline && quotation?.clientReportDeadline) inheritedDeadline = quotation.clientReportDeadline
+    if (!inheritedFollower && quotation?.follower) inheritedFollower = quotation.follower
+    data.contactPerson = data.contactPerson || quotation?.clientContactPerson
+    data.contactPhone = data.contactPhone || quotation?.clientPhone
+    data.contactEmail = data.contactEmail || quotation?.clientEmail
+    data.clientAddress = data.clientAddress || quotation?.clientAddress
+  }
+
+  // 如果从合同生成
+  if (data.contractNo && (!inheritedDeadline || !inheritedFollower)) {
+    const contract = await prisma.contract.findUnique({
+      where: { contractNo: data.contractNo },
+      select: { clientReportDeadline: true, follower: true, partyAContact: true, partyATel: true, partyAEmail: true, partyAAddress: true }
+    })
+    if (!inheritedDeadline && contract?.clientReportDeadline) inheritedDeadline = contract.clientReportDeadline
+    if (!inheritedFollower && contract?.follower) inheritedFollower = contract.follower
+    data.contactPerson = data.contactPerson || contract?.partyAContact
+    data.contactPhone = data.contactPhone || contract?.partyATel
+    data.contactEmail = data.contactEmail || contract?.partyAEmail
+    data.clientAddress = data.clientAddress || contract?.partyAAddress
+  }
+
   // 只提取 schema 中存在的字段（移除sampleName等不存在的字段）
   const createData: any = {
     entrustmentNo,
     contractNo: data.contractNo || null,
+    quotation: data.quotationId ? { connect: { id: data.quotationId } } : undefined,
     client: data.clientId ? { connect: { id: data.clientId } } : undefined,
     contactPerson: data.contactPerson || null,
+    contactPhone: data.contactPhone || null,
+    contactEmail: data.contactEmail || null,
+    clientAddress: data.clientAddress || null,
     sampleDate: data.sampleDate ? new Date(data.sampleDate) : new Date(),
-    follower: data.follower || null,
+    // 优先使用手动提供的值，否则继承
+    clientReportDeadline: inheritedDeadline,
+    follower: inheritedFollower,
     isSampleReturn: data.isSampleReturn || false,
     sourceType: data.sourceType || null,
     status: data.status || 'pending',

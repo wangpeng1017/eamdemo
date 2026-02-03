@@ -154,12 +154,7 @@ export default function DashboardPage() {
   }
 
   const getStepText = (step: number) => {
-    const stepMap: Record<number, string> = {
-      1: '销售审批',
-      2: '财务审批',
-      3: '实验室审批',
-    }
-    return stepMap[step] || `第${step}级`
+    return `第${step}级`
   }
 
   const getTaskStatusColor = (status: string) => {

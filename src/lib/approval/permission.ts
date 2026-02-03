@@ -11,6 +11,7 @@ import { prisma } from '@/lib/prisma'
  */
 interface ApprovalNode {
   step: number
+  order?: number
   name: string
   type: 'role' | 'user' | 'department'
   targetId: string
@@ -160,23 +161,38 @@ export async function filterViewableApprovals(
 
     console.log(`[DEBUG] 查询到 ${flows.length} 个审批流程`)
 
-    flowNodesMap = {}
+    const map: Record<string, ApprovalNode[]> = {}
     flows.forEach(flow => {
       try {
         const nodes = JSON.parse(flow.nodes)
-        flowNodesMap[flow.code] = nodes
+        map[flow.code] = nodes.map((n: any) => ({
+          ...n,
+          step: n.step || n.order || 0
+        }))
         console.log(`[DEBUG] 流程 ${flow.code} 有 ${nodes.length} 个节点`)
       } catch (e) {
         console.error(`解析审批流节点失败: ${flow.code}`, e)
-        flowNodesMap[flow.code] = []
+        map[flow.code] = []
       }
     })
+    flowNodesMap = map
   }
 
   // 过滤用户可以查看的审批
-  return instances.filter(instance =>
-    canViewApproval(instance, user, flowNodesMap[instance.flowCode])
-  )
+  return instances.filter(instance => {
+    // Try to find flow nodes using exact match, or case-insensitive match
+    let nodes = flowNodesMap![instance.flowCode];
+    if (!nodes) {
+      // Try finding by uppercase (common convention in DB)
+      nodes = flowNodesMap![instance.flowCode.toUpperCase()];
+    }
+    if (!nodes) {
+      // Try finding by lowercase
+      nodes = flowNodesMap![instance.flowCode.toLowerCase()];
+    }
+
+    return canViewApproval(instance, user, nodes);
+  })
 }
 
 /**

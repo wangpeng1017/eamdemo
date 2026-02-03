@@ -118,12 +118,6 @@ export default function SampleItemAssessmentModal({
                       <span>可行</span>
                     </Space>
                   </Radio>
-                  <Radio value="difficult">
-                    <Space>
-                      <ClockCircleOutlined style={{ color: '#faad14' }} />
-                      <span>有难度</span>
-                    </Space>
-                  </Radio>
                   <Radio value="infeasible">
                     <Space>
                       <CloseCircleOutlined style={{ color: '#ff4d4f' }} />

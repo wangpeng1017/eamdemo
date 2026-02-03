@@ -140,7 +140,11 @@ export async function createEntrustmentFromQuotation(
       contractNo: quotation.contractNo || undefined,  // 如果有关联合同则记录
       clientId: quotation.clientId,
       contactPerson: params.contactPerson || quotation.clientContactPerson,
+      contactPhone: quotation.clientPhone,
+      contactEmail: quotation.clientEmail,
+      clientAddress: quotation.clientAddress,
       sampleDate: params.sampleDate ? new Date(params.sampleDate) : undefined,
+      clientReportDeadline: quotation.clientReportDeadline, // 自动带入报告时间
       follower: params.follower || quotation.follower,
       sourceType: 'quotation',
       status: 'pending',
@@ -149,19 +153,47 @@ export async function createEntrustmentFromQuotation(
     }
   })
 
-  // 5. 复制检测项目到委托单
+  // 5. 复制检测项目到委托单 (v1 兼容字段)
   const projects = await Promise.all(
     quotation.items.map(item =>
       prisma.entrustmentProject.create({
         data: {
-          entrustmentId: entrustment.id,  // 使用 id 而不是 entrustmentNo
-          name: item.serviceItem,          // serviceName -> name
-          testItems: '[]',                 // 检测参数列表（空数组）
-          method: item.methodStandard      // testStandard -> method
+          entrustmentId: entrustment.id,
+          name: item.sampleName || item.serviceItem,
+          testItems: '[]',
+          method: item.methodStandard
         }
       })
     )
   )
+
+  // 6. 复制样品检测项 (v2 样品表)
+  const sampleTestItems = await prisma.sampleTestItem.findMany({
+    where: { bizType: 'quotation', bizId: quotation.id },
+    orderBy: { sortOrder: 'asc' }
+  })
+
+  if (sampleTestItems.length > 0) {
+    await prisma.sampleTestItem.createMany({
+      data: sampleTestItems.map((item, index) => ({
+        bizType: 'entrustment',
+        bizId: entrustment.id,
+        sampleName: item.sampleName,
+        batchNo: item.batchNo,
+        material: item.material,
+        appearance: item.appearance,
+        quantity: item.quantity,
+        testTemplateId: item.testTemplateId,
+        testItemName: item.testItemName,
+        testStandard: item.testStandard,
+        judgmentStandard: item.judgmentStandard,
+        sortOrder: index,
+      }))
+    })
+  } else if (quotation.items.length > 0 && sampleTestItems.length === 0) {
+    // 如果没有 v2 数据但有 v1 items，尝试初始化 v2 数据（可选，视业务需求而定）
+    // 目前保持逻辑一致，主要复制已有 v2 数据
+  }
 
   return {
     success: true,
