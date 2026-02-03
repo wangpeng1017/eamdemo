@@ -66,11 +66,11 @@ export default function MaintenanceTaskDetailPage() {
           <h2 style={{ fontSize: 24, fontWeight: 600, color: '#00405C', margin: 0 }}>
             {task.taskNo}
           </h2>
-          <Tag color={maintenanceStatusMap[task.status].color}>
-            {maintenanceStatusMap[task.status].label}
+          <Tag color={maintenanceStatusMap[task.status as keyof typeof maintenanceStatusMap]?.color}>
+            {maintenanceStatusMap[task.status as keyof typeof maintenanceStatusMap]?.label}
           </Tag>
-          <Tag color={maintenancePriorityMap[task.priority].color}>
-            {maintenancePriorityMap[task.priority].label}
+          <Tag color={maintenancePriorityMap[task.priority as keyof typeof maintenancePriorityMap]?.color}>
+            {maintenancePriorityMap[task.priority as keyof typeof maintenancePriorityMap]?.label}
           </Tag>
         </div>
         <Space>
@@ -98,18 +98,18 @@ export default function MaintenanceTaskDetailPage() {
             <Descriptions column={2} bordered>
               <Descriptions.Item label="任务编号">{task.taskNo}</Descriptions.Item>
               <Descriptions.Item label="状态">
-                <Tag color={maintenanceStatusMap[task.status].color}>
-                  {maintenanceStatusMap[task.status].label}
+                <Tag color={maintenanceStatusMap[task.status as keyof typeof maintenanceStatusMap]?.color}>
+                  {maintenanceStatusMap[task.status as keyof typeof maintenanceStatusMap]?.label}
                 </Tag>
               </Descriptions.Item>
               <Descriptions.Item label="设备编码">{task.equipmentCode}</Descriptions.Item>
               <Descriptions.Item label="设备名称">{task.equipmentName}</Descriptions.Item>
               <Descriptions.Item label="保养类型">
-                {maintenanceTypeMap[task.type]}
+                {maintenanceTypeMap[task.type as keyof typeof maintenanceTypeMap]}
               </Descriptions.Item>
               <Descriptions.Item label="优先级">
-                <Tag color={maintenancePriorityMap[task.priority].color}>
-                  {maintenancePriorityMap[task.priority].label}
+                <Tag color={maintenancePriorityMap[task.priority as keyof typeof maintenancePriorityMap]?.color}>
+                  {maintenancePriorityMap[task.priority as keyof typeof maintenancePriorityMap]?.label}
                 </Tag>
               </Descriptions.Item>
               <Descriptions.Item label="保养内容" span={2}>

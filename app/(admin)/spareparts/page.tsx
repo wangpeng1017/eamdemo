@@ -112,7 +112,7 @@ export default function SparePartsListPage() {
         return (
           <div>
             <div style={{ fontWeight: 600, color }}>
-              {stock} {sparePartUnitMap[record.unit]}
+              {stock} {sparePartUnitMap[record.unit as keyof typeof sparePartUnitMap]}
             </div>
             <Progress
               percent={percent}
@@ -130,14 +130,14 @@ export default function SparePartsListPage() {
       dataIndex: 'safetyStock',
       key: 'safetyStock',
       width: 80,
-      render: (stock: number, record: SparePart) => `${stock} ${sparePartUnitMap[record.unit]}`,
+      render: (stock: number, record: SparePart) => `${stock} ${sparePartUnitMap[record.unit as keyof typeof sparePartUnitMap]}`,
     },
     {
       title: '已预留',
       dataIndex: 'reservedStock',
       key: 'reservedStock',
       width: 80,
-      render: (stock: number, record: SparePart) => `${stock} ${sparePartUnitMap[record.unit]}`,
+      render: (stock: number, record: SparePart) => `${stock} ${sparePartUnitMap[record.unit as keyof typeof sparePartUnitMap]}`,
     },
     {
       title: '单价',

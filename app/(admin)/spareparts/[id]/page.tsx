@@ -120,15 +120,15 @@ export default function SparePartDetailPage() {
                   <Descriptions.Item label="备件编码">{sparePart.code}</Descriptions.Item>
                   <Descriptions.Item label="备件名称">{sparePart.name}</Descriptions.Item>
                   <Descriptions.Item label="型号规格">{sparePart.model}</Descriptions.Item>
-                  <Descriptions.Item label="分类">{sparePartCategoryMap[sparePart.category]}</Descriptions.Item>
-                  <Descriptions.Item label="单位">{sparePartUnitMap[sparePart.unit]}</Descriptions.Item>
+                  <Descriptions.Item label="分类">{sparePartCategoryMap[sparePart.category as keyof typeof sparePartCategoryMap]}</Descriptions.Item>
+                  <Descriptions.Item label="单位">{sparePartUnitMap[sparePart.unit as keyof typeof sparePartUnitMap]}</Descriptions.Item>
                   <Descriptions.Item label="制造商">{sparePart.manufacturer}</Descriptions.Item>
                   <Descriptions.Item label="供应商">{sparePart.supplier}</Descriptions.Item>
                   <Descriptions.Item label="单价">¥{sparePart.unitPrice.toLocaleString()}</Descriptions.Item>
                   <Descriptions.Item label="当前库存">
                     <Space direction="vertical" style={{ width: '100%' }}>
                       <span style={{ fontSize: 18, fontWeight: 600, color: stockStatus.color }}>
-                        {sparePart.currentStock} {sparePartUnitMap[sparePart.unit]}
+                        {sparePart.currentStock} {sparePartUnitMap[sparePart.unit as keyof typeof sparePartUnitMap]}
                       </span>
                       <Progress
                         percent={stockPercent}
@@ -137,9 +137,9 @@ export default function SparePartDetailPage() {
                       />
                     </Space>
                   </Descriptions.Item>
-                  <Descriptions.Item label="安全库存">{sparePart.safetyStock} {sparePartUnitMap[sparePart.unit]}</Descriptions.Item>
-                  <Descriptions.Item label="重订货点">{sparePart.reorderPoint} {sparePartUnitMap[sparePart.unit]}</Descriptions.Item>
-                  <Descriptions.Item label="已预留库存">{sparePart.reservedStock} {sparePartUnitMap[sparePart.unit]}</Descriptions.Item>
+                  <Descriptions.Item label="安全库存">{sparePart.safetyStock} {sparePartUnitMap[sparePart.unit as keyof typeof sparePartUnitMap]}</Descriptions.Item>
+                  <Descriptions.Item label="重订货点">{sparePart.reorderPoint} {sparePartUnitMap[sparePart.unit as keyof typeof sparePartUnitMap]}</Descriptions.Item>
+                  <Descriptions.Item label="已预留库存">{sparePart.reservedStock} {sparePartUnitMap[sparePart.unit as keyof typeof sparePartUnitMap]}</Descriptions.Item>
                   <Descriptions.Item label="仓库">{sparePart.warehouse}</Descriptions.Item>
                   <Descriptions.Item label="存放位置">{sparePart.location}</Descriptions.Item>
                   <Descriptions.Item label="库存总值" span={2}>

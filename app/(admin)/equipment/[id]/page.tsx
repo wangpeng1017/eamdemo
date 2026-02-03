@@ -60,11 +60,11 @@ export default function EquipmentDetailPage() {
           <h2 style={{ fontSize: 24, fontWeight: 600, color: '#00405C', margin: 0 }}>
             {equipment.name}
           </h2>
-          <Tag color={equipmentStatusMap[equipment.status].color}>
-            {equipmentStatusMap[equipment.status].label}
+          <Tag color={equipmentStatusMap[equipment.status as keyof typeof equipmentStatusMap]?.color}>
+            {equipmentStatusMap[equipment.status as keyof typeof equipmentStatusMap]?.label}
           </Tag>
-          <Tag color={criticalityMap[equipment.criticality].color}>
-            {criticalityMap[equipment.criticality].label}
+          <Tag color={criticalityMap[equipment.criticality as keyof typeof criticalityMap]?.color}>
+            {criticalityMap[equipment.criticality as keyof typeof criticalityMap]?.label}
           </Tag>
         </div>
         <Space>
