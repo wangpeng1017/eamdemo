@@ -90,10 +90,11 @@ interface Entrustment {
   projects: EntrustmentProject[]
   samples: Sample[]
   client?: {
-  id: string
-  name: string
-  username: string
-}
+    id?: string
+    name?: string
+    phone?: string
+    contact?: string
+  }
 
 interface Device {
   id: string
