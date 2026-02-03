@@ -1,7 +1,7 @@
 
 # 慧新 EAM 系统产品需求文档 (PRD)
 
-> 最后更新: 2026-02-03 | 版本: 1.1
+> 最后更新: 2026-02-03 | 版本: 1.2
 
 ---
 
@@ -46,6 +46,8 @@
 | F010 | 备品备件 | 备件库存查询 | 🟢 | P0 | app/(admin)/spareparts/page.tsx |
 | F011 | 备品备件 | 备件详情查看 | 🟢 | P0 | app/(admin)/spareparts/[id]/page.tsx |
 | F012 | 备品备件 | 入库/出库记录 | 🟢 | P0 | app/(admin)/spareparts/[id]/page.tsx |
+| F013 | 维护保养 | 保养计划列表 | 🟢 | P0 | app/(admin)/maintenance/page.tsx |
+| F014 | 维护保养 | 保养任务详情 | 🟢 | P0 | app/(admin)/maintenance/[id]/page.tsx |
 
 ---
 
@@ -157,6 +159,25 @@
   - [x] 表格展示出库记录（单号、类型、数量、关联单据、领用人等）
 - **关联页面**: /admin/spareparts/[id]
 
+### F013: 保养计划列表
+- **用户故事**: 作为设备管理员，我希望查看所有保养计划和任务
+- **验收标准**:
+  - [x] Tab 切换查看保养计划和保养任务
+  - [x] 表格展示任务信息（编号、设备、类型、内容、计划日期、负责人、状态等）
+  - [x] 支持按编号/设备/内容搜索
+  - [x] 支持按状态筛选
+  - [x] 显示统计卡片（计划数、执行中、已完成等）
+- **关联页面**: /admin/maintenance
+
+### F014: 保养任务详情
+- **用户故事**: 作为保养人员，我希望查看保养任务的详细信息
+- **验收标准**:
+  - [x] 展示任务完整信息（任务编号、设备、保养内容、标准、时间等）
+  - [x] 显示保养结果（发现问题、使用备件等）
+  - [x] 显示处理时间轴
+  - [x] 显示关联计划信息
+- **关联页面**: /admin/maintenance/[id]
+
 ---
 
 ## 四、数据模型概览
@@ -168,6 +189,9 @@
 | SparePart | 备品备件表 | id, code, name, model, category, unit, manufacturer, supplier, unitPrice, safetyStock, reorderPoint, currentStock, reservedStock, location, warehouse |
 | StockInRecord | 入库记录表 | id, orderNo, sparePartId, type, quantity, unitPrice, totalPrice, supplier, warehouse, location, operator, createdAt |
 | StockOutRecord | 出库记录表 | id, orderNo, sparePartId, type, quantity, requestId, requestNo, department, operator, receiver, createdAt |
+| MaintenancePlan | 保养计划表 | id, planNo, name, equipmentId, type, period, content, standard, estimatedHours, responsiblePerson, priority, nextDate, lastDate, active |
+| MaintenanceTask | 保养任务表 | id, taskNo, planId, equipmentId, type, content, standard, scheduledDate, responsiblePerson, priority, status, startTime, endTime, actualHours, result, findings, spareParts |
+| InspectionRecord | 点检记录表 | id, recordNo, equipmentId, inspectionDate, inspector, items, summary, status |
 
 ### 设备状态枚举
 - `running`: 运行中
@@ -232,3 +256,4 @@
 |------|------|----------|--------|
 | 2026-02-03 | 1.0 | 初始版本，完成设备台账和维修管理基础功能 | AI |
 | 2026-02-03 | 1.1 | 新增备品备件管理模块：库存查询、详情查看、出入库记录 | AI |
+| 2026-02-03 | 1.2 | 新增维护保养管理模块：保养计划、保养任务、点检记录 | AI |
