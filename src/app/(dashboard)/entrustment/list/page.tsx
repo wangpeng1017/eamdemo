@@ -335,7 +335,7 @@ export default function EntrustmentListPage() {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          action: 'assign',
+          status: 'assigned',
           ...values,
           deadline: values.deadline ? values.deadline.format('YYYY-MM-DD') : null
         })
@@ -362,7 +362,7 @@ export default function EntrustmentListPage() {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          action: 'subcontract',
+          status: 'subcontracted',
           ...values,
           deadline: values.deadline ? values.deadline.format('YYYY-MM-DD') : null
         })
