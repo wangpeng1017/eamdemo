@@ -95,7 +95,7 @@ export default function DashboardPage() {
               prefix={<CheckCircleOutlined />}
               valueStyle={{ color: '#2BA471' }}
             />
-            <Progress percent={completeRate.toFixed(1)} showInfo={false} strokeColor="#2BA471" />
+            <Progress percent={parseFloat(completeRate.toFixed(1))} showInfo={false} strokeColor="#2BA471" />
           </Card>
         </Col>
       </Row>
