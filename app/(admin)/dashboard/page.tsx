@@ -72,7 +72,7 @@ export default function DashboardPage() {
               suffix="台"
               valueStyle={{ color: '#2BA471' }}
             />
-            <Progress percent={runningRate.toFixed(1)} showInfo={false} strokeColor="#2BA471" />
+            <Progress percent={parseFloat(runningRate.toFixed(1))} showInfo={false} strokeColor="#2BA471" />
           </Card>
         </Col>
         <Col span={6}>
