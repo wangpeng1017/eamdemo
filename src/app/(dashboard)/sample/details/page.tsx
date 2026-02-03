@@ -137,6 +137,19 @@ export default function SampleDetailsPage() {
 
   const handleInternalSubmit = async () => {
     const values = await internalForm.validateFields()
+
+    if (!selectedSample) return
+
+    // 前端库存校验
+    const availStr = getAvailableQty(selectedSample)
+    const available = parseFloat(availStr)
+    const requestQty = parseFloat(values.quantity)
+
+    if (requestQty > available) {
+      showError(`库存不足，当前可用: ${available}`)
+      return
+    }
+
     try {
       const res = await fetch('/api/sample/requisition', {
         method: 'POST',
@@ -243,8 +256,7 @@ export default function SampleDetailsPage() {
     },
     { title: "收样人", dataIndex: "receiptPerson", width: 80 },
     {
-      title: '操作', fixed: 'right',
-      
+      title: '操作',
       fixed: "right" as const,
       render: (_, record) => (
         <Space size="small" style={{ whiteSpace: 'nowrap' }}>
@@ -289,7 +301,52 @@ export default function SampleDetailsPage() {
       width: 80,
       render: (s) => <Tag color={requisitionStatusMap[s]?.color}>{requisitionStatusMap[s]?.text || s}</Tag>
     },
+    {
+      title: "操作",
+      width: 80,
+      render: (_, record) => (
+        record.status !== 'returned' && (
+          <Button
+            type="link"
+            size="small"
+            onClick={() => handleReturn(record)}
+          >
+            归还
+          </Button>
+        )
+      )
+    }
   ]
+
+  const handleReturn = async (record: Requisition) => {
+    Modal.confirm({
+      title: '确认归还',
+      content: '确认归还该样品吗？',
+      onOk: async () => {
+        try {
+          const res = await fetch('/api/sample/requisition', {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ id: record.id }),
+          })
+          if (res.ok) {
+            showSuccess('归还成功')
+            // Refresh records
+            const recordsRes = await fetch(`/api/sample/requisition?sampleId=${selectedSample?.id}&pageSize=100`)
+            const json = await recordsRes.json()
+            setRequisitionRecords(json.list || [])
+            // Refresh main list to update available quantity
+            fetchData()
+          } else {
+            const err = await res.json()
+            showError(err.error || '归还失败')
+          }
+        } catch (e) {
+          showError('归还失败')
+        }
+      }
+    })
+  }
 
   return (
     <div className="p-4">

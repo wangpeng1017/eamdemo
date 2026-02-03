@@ -150,37 +150,19 @@ export default function SampleReceiptPage() {
       ...values,
       entrustmentId: selectedEntrustment?.id || null,
       receiptDate: values.receiptDate?.toISOString(),
+      testItems: sampleTestItems,
     }
     const res = await fetcher("/api/sample", {
       method: "POST",
       body: JSON.stringify(data)
     })
     const json = await res.json()
-    const sampleId = json.id
 
-    // 保存样品检测项数据
-    if (sampleId) {
-      try {
-        const res = await fetcher('/api/sample-test-item', {
-          method: 'POST',
-          body: JSON.stringify({
-            bizType: 'sample_receipt',
-            bizId: sampleId,
-            items: sampleTestItems,
-          })
-        })
-        if (!res.ok) {
-          const json = await res.json()
-          showError(`保存样品检测项失败: ${json.error?.message || '未知错误'}`)
-          return // 不关闭弹窗
-        }
-      } catch (error) {
-        showError('保存样品检测项失败，请重试')
-        return // 不关闭弹窗
-      }
-    }
+    // 后端现在返回创建的样品数组
+    const createdSamples = Array.isArray(json) ? json : [json]
+    const count = createdSamples.length
 
-    showSuccess("收样登记成功")
+    showSuccess(`成功登记 ${count} 个样品`)
     setModalOpen(false)
     fetchData()
   }
@@ -245,7 +227,7 @@ export default function SampleReceiptPage() {
     },
     {
       title: '操作', fixed: 'right',
-      
+
       render: (_, record) => (
         <Button
           type="link"
@@ -315,35 +297,21 @@ export default function SampleReceiptPage() {
                 <Descriptions.Item label="委托单号">{selectedEntrustment.entrustmentNo}</Descriptions.Item>
                 <Descriptions.Item label="客户名称">{selectedEntrustment.client?.name || '-'}</Descriptions.Item>
                 <Descriptions.Item label="检测项">
-                  {sampleTestItems.length > 0 ? (
+                  {loadingTestItems ? (
+                    <Tag color="processing">加载中...</Tag>
+                  ) : sampleTestItems.length > 0 ? (
                     <Tag color="blue">{sampleTestItems.length} 个检测项已自动加载</Tag>
                   ) : (
-                    <Tag color="default">加载中...</Tag>
+                    <Tag color="default">暂无检测项</Tag>
                   )}
                 </Descriptions.Item>
               </Descriptions>
             </Card>
           )}
 
-          <Row gutter={16}>
-            <Col span={12}>
-              <Form.Item label="单位" name="unit">
-                <Select allowClear>
-                  <Select.Option value="个">个</Select.Option>
-                  <Select.Option value="件">件</Select.Option>
-                  <Select.Option value="片">片</Select.Option>
-                  <Select.Option value="根">根</Select.Option>
-                  <Select.Option value="组">组</Select.Option>
-                  <Select.Option value="批">批</Select.Option>
-                </Select>
-              </Form.Item>
-            </Col>
-            <Col span={12}>
-              <Form.Item label="收样日期" name="receiptDate" rules={[{ required: true }]}>
-                <DatePicker style={{ width: "100%" }} />
-              </Form.Item>
-            </Col>
-          </Row>
+          <Form.Item label="收样日期" name="receiptDate" rules={[{ required: true }]}>
+            <DatePicker style={{ width: "100%" }} />
+          </Form.Item>
           <Form.Item label="存放位置" name="storageLocation">
             <Input placeholder="如：A区-1-02" />
           </Form.Item>
@@ -386,13 +354,10 @@ export default function SampleReceiptPage() {
             displayValue={true}
             fontSize={14}
           />
-          <div style={{ marginTop: 12, fontSize: 12 }}>
-            <div><strong>样品编号:</strong> {labelSample?.sampleNo}</div>
-            <div><strong>样品名称:</strong> {labelSample?.name}</div>
-
+          <div style={{ marginTop: 12, fontSize: 12, textAlign: 'left', width: '100%', paddingLeft: 10, paddingRight: 10 }}>
             {/* 检测项目多行显示 */}
             {labelTestItems.length > 0 && (
-              <div style={{ marginTop: 8, textAlign: 'left' }}>
+              <div style={{ marginBottom: 8 }}>
                 <div style={{ fontWeight: 'bold', marginBottom: 4, fontSize: 12 }}>
                   检测项目:
                 </div>
@@ -407,6 +372,8 @@ export default function SampleReceiptPage() {
                 ))}
               </div>
             )}
+
+            <div><strong>样品名称:</strong> {labelSample?.name}</div>
           </div>
         </div>
       </Modal>

@@ -16,6 +16,13 @@ export const GET = withErrorHandler(async (
 ) => {
   const { id } = await context!.params
 
+  if (!id || id === 'undefined' || id === 'null') {
+    return badRequest('无效的任务ID')
+  }
+
+  // DEBUG LOG
+  console.log(`[GET /api/task/${id}] Parsing task details...`)
+
   const task = await prisma.testTask.findUnique({
     where: { id },
     include: {
@@ -59,7 +66,6 @@ export const GET = withErrorHandler(async (
             select: {
               id: true,
               entrustmentNo: true,
-              sampleName: true,
               samples: {
                 select: {
                   id: true,

@@ -132,10 +132,21 @@ export const PUT = withErrorHandler(async (request: NextRequest, context?: { par
       // 生成初始 sheetData（如果关联了模版）
       const sheetData = await generateSheetDataFromTemplate(data.testTemplateId || updatedProject.testTemplateId)
 
+      // 查找对应名称的样品，建立关联
+      const matchedSample = await prisma.sample.findFirst({
+        where: {
+          entrustmentId: entrustmentId,
+          name: project.name
+        }
+      })
+
+      console.log(`[Project Assign] Linking task to sample: project="${project.name}" -> sampleId=${matchedSample?.id || 'null'}`)
+
       const taskData = {
         taskNo,
         entrustmentId: entrustmentId,
         projectId: projectId,
+        sampleId: matchedSample?.id || null, // 明确关联样品ID
         sampleName: project.name, // 项目名称
         parameters: project.testItems, // 检测参数
         testMethod: project.method, // 检测方法
@@ -187,10 +198,21 @@ export const PUT = withErrorHandler(async (request: NextRequest, context?: { par
       // 生成初始 sheetData（如果关联了模版）
       const sheetData = await generateSheetDataFromTemplate(data.testTemplateId || updatedProject.testTemplateId)
 
+      // 查找对应名称的样品，建立关联
+      const matchedSample = await prisma.sample.findFirst({
+        where: {
+          entrustmentId: entrustmentId,
+          name: project.name
+        }
+      })
+
+      console.log(`[Project Outsource] Linking task to sample: project="${project.name}" -> sampleId=${matchedSample?.id || 'null'}`)
+
       const taskData = {
         taskNo,
         entrustmentId: entrustmentId,
         projectId: projectId,
+        sampleId: matchedSample?.id || null, // 明确关联样品ID
         sampleName: project.name,
         parameters: project.testItems,
         testMethod: project.method,

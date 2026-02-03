@@ -161,8 +161,55 @@ export const GET = withErrorHandler(async (request: NextRequest) => {
       // So only fallback to Quotation for follower.
     }
 
+
     return item
   })
+
+  // 3. 补充查询 SampleTestItem 数据并合并到 projects
+  const entrustmentIds = processedList.map((e: any) => e.id)
+  const sampleTestItems = await prisma.sampleTestItem.findMany({
+    where: {
+      bizType: 'entrustment',
+      bizId: { in: entrustmentIds }
+    }
+  })
+
+  // 将 sampleTestItems 按照 entrustmentId -> sampleName 分组
+  const testItemsMap: Record<string, Record<string, string[]>> = {}
+  for (const item of sampleTestItems) {
+    if (!testItemsMap[item.bizId]) {
+      testItemsMap[item.bizId] = {}
+    }
+    if (!testItemsMap[item.bizId][item.sampleName]) {
+      testItemsMap[item.bizId][item.sampleName] = []
+    }
+    testItemsMap[item.bizId][item.sampleName].push(item.testItemName)
+  }
+
+  // 遍历 processedList，如果 project 的 testItems 为空，则尝试从 map 中填充
+  for (const entrustment of processedList) {
+    if (entrustment.projects && Array.isArray(entrustment.projects)) {
+      for (const project of entrustment.projects) {
+        // 检查 testItems 是否看起来为空 (null, "", "[]")
+        const isTestItemsEmpty = !project.testItems || project.testItems === '[]' || project.testItems === ''
+
+        if (isTestItemsEmpty) {
+          const items = testItemsMap[entrustment.id]?.[project.name]
+          if (items && items.length > 0) {
+            // 填充回去，保持 string[] 格式或者 JSON string 格式，虽然前端代码里 projectColumns render 做了兼容，
+            // 但为了保险，我们可以直接给 string[]，因为前端 render: (items: string | string[] | null) 支持数组
+            // project.testItems 是 string 类型 (数据库字段 db.Text)，所以这里 update 需要注意类型
+            // 但这里我们是在修改返回给前端的 JSON 对象，不是数据库对象，所以可以直接赋值数组
+            // 注意：TypeScript 可能会为了类型安全报错，但在 JS 运行时 JSON 序列化没事。
+            // 我们的 processedList 是 `any` 类型 (line 144)，所以可以直接赋值。
+            project.testItems = items
+          }
+        }
+      }
+    }
+  }
+
+
 
   return success({
     list: processedList,

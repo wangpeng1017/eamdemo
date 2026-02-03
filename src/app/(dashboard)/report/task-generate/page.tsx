@@ -124,7 +124,17 @@ export default function TestReportPage() {
     { title: '样品名称', dataIndex: 'sampleName', width: 150 },
     { title: '样品编号', dataIndex: 'sampleNo', width: 120 },
     { title: '客户名称', dataIndex: 'clientName', width: 150 },
-    { title: '检测结论', dataIndex: 'overallConclusion', ellipsis: true },
+    {
+      title: '检测结论',
+      dataIndex: 'overallConclusion',
+      render: (val: string) => {
+        const map: Record<string, string> = {
+          qualified: '合格',
+          unqualified: '不合格'
+        }
+        return map[val] || val
+      }
+    },
     {
       title: '状态',
       dataIndex: 'status',
@@ -140,7 +150,7 @@ export default function TestReportPage() {
     },
     {
       title: '操作', fixed: 'right',
-      
+
       render: (_, record) => (
         <Space style={{ whiteSpace: 'nowrap' }}>
           <Button

@@ -23,7 +23,37 @@ export const GET = withAuth(async (
   const params = await context?.params
   const id = params?.id
 
-  // 1. 查询委托单及其项目
+  // 1. 优先尝试从 SampleTestItem 表查询 (新系统)
+  // 检查是否有 bizType='entrustment' 且 bizId=id 的记录
+  const sampleTestItems = await prisma.sampleTestItem.findMany({
+    where: {
+      bizType: 'entrustment',
+      bizId: id,
+    },
+    orderBy: {
+      sortOrder: 'asc',
+    },
+  })
+
+  // 如果找到了新系统的检测项数据，直接返回
+  if (sampleTestItems.length > 0) {
+    const formattedItems = sampleTestItems.map(item => ({
+      key: item.id,
+      id: item.id,
+      sampleName: item.sampleName,
+      batchNo: item.batchNo,
+      material: item.material,
+      appearance: item.appearance,
+      quantity: item.quantity,
+      testTemplateId: item.testTemplateId,
+      testItemName: item.testItemName,
+      testStandard: item.testStandard,
+      judgmentStandard: item.judgmentStandard,
+    }))
+    return success(formattedItems)
+  }
+
+  // 2. 如果没有找到，查询委托单及其项目 (旧系统兼容)
   const entrustment = await prisma.entrustment.findUnique({
     where: { id },
     include: {
@@ -31,7 +61,7 @@ export const GET = withAuth(async (
     },
   })
 
-  // 2. 验证委托单是否存在
+  // 验证委托单是否存在
   if (!entrustment) {
     return error('NOT_FOUND', '委托单不存在', 404)
   }
