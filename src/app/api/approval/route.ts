@@ -8,6 +8,9 @@ import { NextRequest } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { approvalEngine } from '@/lib/approval/engine'
 import { withErrorHandler, success, validateRequired } from '@/lib/api-handler'
+import { withAuth } from '@/lib/api-handler'
+import { auth } from '@/lib/auth'
+import { filterViewableApprovals } from '@/lib/approval/permission'
 
 /**
  * 查询审批实例列表
@@ -16,8 +19,10 @@ import { withErrorHandler, success, validateRequired } from '@/lib/api-handler'
  * @query status - 审批状态 (pending/approved/rejected/cancelled)
  * @query submitterId - 提交人ID
  * @query bizType - 业务类型 (quotation/contract/client)
+ *
+ * @security 权限过滤：只返回用户有权限查看的审批实例
  */
-export const GET = withErrorHandler(async (request: NextRequest) => {
+export const GET = withAuth(async (request: NextRequest, user) => {
   const { searchParams } = new URL(request.url)
   const status = searchParams.get('status')
   const submitterId = searchParams.get('submitterId')
@@ -66,7 +71,25 @@ export const GET = withErrorHandler(async (request: NextRequest) => {
     },
   })
 
-  return success(instances)
+  // 🔒 关键安全修复：过滤用户有权限查看的审批实例
+  const userWithRoles = await prisma.user.findUnique({
+    where: { id: user.id },
+    include: {
+      roles: {
+        include: {
+          role: true
+        }
+      }
+    }
+  })
+
+  if (!userWithRoles) {
+    return success([])
+  }
+
+  const filteredInstances = await filterViewableApprovals(instances, userWithRoles)
+
+  return success(filteredInstances)
 })
 
 /**

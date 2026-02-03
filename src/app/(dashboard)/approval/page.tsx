@@ -69,30 +69,7 @@ export default function ApprovalPage() {
       const pendingRes = await fetch('/api/approval?status=pending')
       if (pendingRes.ok) {
         const json = await pendingRes.json()
-        const allPending = json.data || []
-        const userRoles = session?.user?.roles || []
-
-        const myPending = allPending.filter((item: ApprovalInstance) => {
-          if (userRoles.includes('admin')) return true
-          // 步骤1：业务经理审批（兼容新旧角色）
-          if (item.currentStep === 1 && (
-            userRoles.includes('sales_manager') ||
-            userRoles.includes('BUSINESS_MANAGER') ||
-            userRoles.includes('TEST_DIRECTOR')
-          )) return true
-          // 步骤2：财务审批
-          if (item.currentStep === 2 && userRoles.includes('finance')) return true
-          // 步骤3：实验室负责人审批（兼容新旧角色）
-          if (item.currentStep === 3 && (
-            userRoles.includes('lab_director') ||
-            userRoles.includes('TEST_DIRECTOR') ||
-            userRoles.includes('MATERIAL_TEST_MANAGER') ||
-            userRoles.includes('PRODUCT_TEST_MANAGER')
-          )) return true
-          return false
-        })
-
-        setPendingApprovals(myPending)
+        setPendingApprovals(json.data || [])
       }
 
       // 获取我提交的审批
@@ -134,8 +111,6 @@ export default function ApprovalPage() {
         body: JSON.stringify({
           action,
           comment,
-          approverId: session?.user?.id,
-          approverName: session?.user?.name || '审批人'
         }),
       })
       if (response.ok) {
