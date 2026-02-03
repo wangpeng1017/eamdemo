@@ -385,7 +385,7 @@ export default function EntrustmentListPage() {
   const projectColumns: ColumnsType<EntrustmentProject> = [
     { title: '项目名称', dataIndex: 'name', width: 150 },
     {
-      title: '检测参数',
+      title: '检测项目',
       dataIndex: 'testItems',
       width: 200,
       render: (items: string | string[] | null) => {
