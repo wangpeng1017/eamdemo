@@ -12,6 +12,7 @@ import {
   FundOutlined,
   ToolOutlined,
   InboxOutlined,
+  SettingOutlined,
   UserOutlined,
   LogoutOutlined,
   MenuFoldOutlined,
@@ -36,6 +37,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     { key: '/admin/equipment', icon: <FundOutlined />, label: <Link href="/admin/equipment">设备台账</Link> },
     { key: '/admin/repair', icon: <ToolOutlined />, label: <Link href="/admin/repair">维修管理</Link> },
     { key: '/admin/spareparts', icon: <InboxOutlined />, label: <Link href="/admin/spareparts">备品备件</Link> },
+    { key: '/admin/maintenance', icon: <SettingOutlined />, label: <Link href="/admin/maintenance">维护保养</Link> },
   ]
 
   // 用户下拉菜单
