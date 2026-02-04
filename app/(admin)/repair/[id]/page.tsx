@@ -88,11 +88,11 @@ export default function RepairDetailPage() {
           <h2 style={{ fontSize: 24, fontWeight: 600, color: '#00405C', margin: 0 }}>
             {order.orderNo}
           </h2>
-          <Tag color={repairStatusMap[order.status].color}>
-            {repairStatusMap[order.status].label}
+          <Tag color={repairStatusMap[order.status as keyof typeof repairStatusMap]?.color}>
+            {repairStatusMap[order.status as keyof typeof repairStatusMap]?.label}
           </Tag>
-          <Tag color={repairPriorityMap[order.priority].color}>
-            {repairPriorityMap[order.priority].label}
+          <Tag color={repairPriorityMap[order.priority as keyof typeof repairPriorityMap]?.color}>
+            {repairPriorityMap[order.priority as keyof typeof repairPriorityMap]?.label}
           </Tag>
         </div>
         <Space>
@@ -127,18 +127,18 @@ export default function RepairDetailPage() {
                 <Descriptions column={2} bordered>
                   <Descriptions.Item label="工单编号">{order.orderNo}</Descriptions.Item>
                   <Descriptions.Item label="状态">
-                    <Tag color={repairStatusMap[order.status].color}>
-                      {repairStatusMap[order.status].label}
+                    <Tag color={repairStatusMap[order.status as keyof typeof repairStatusMap]?.color}>
+                      {repairStatusMap[order.status as keyof typeof repairStatusMap]?.label}
                     </Tag>
                   </Descriptions.Item>
                   <Descriptions.Item label="设备编码">{order.equipmentCode}</Descriptions.Item>
                   <Descriptions.Item label="设备名称">{order.equipmentName}</Descriptions.Item>
                   <Descriptions.Item label="故障类型">
-                    {faultTypeMap[order.faultType]}
+                    {faultTypeMap[order.faultType as keyof typeof faultTypeMap]}
                   </Descriptions.Item>
                   <Descriptions.Item label="优先级">
-                    <Tag color={repairPriorityMap[order.priority].color}>
-                      {repairPriorityMap[order.priority].label}
+                    <Tag color={repairPriorityMap[order.priority as keyof typeof repairPriorityMap]?.color}>
+                      {repairPriorityMap[order.priority as keyof typeof repairPriorityMap]?.label}
                     </Tag>
                   </Descriptions.Item>
                   <Descriptions.Item label="故障描述" span={2}>
