@@ -20,6 +20,9 @@ import {
   Modal,
   Form,
   message,
+  Radio,
+  DatePicker,
+  Upload,
 } from 'antd'
 import {
   PlusOutlined,
@@ -27,6 +30,8 @@ import {
   EditOutlined,
   EyeOutlined,
   CheckCircleOutlined,
+  UserOutlined,
+  ClockCircleOutlined,
 } from '@ant-design/icons'
 import Link from 'next/link'
 import { mockRepairOrders } from '@/data/mock-data'
@@ -37,11 +42,25 @@ const { Search } = Input
 const { Option } = Select
 const { TextArea } = Input
 
+// Demo维修人员数据
+const REPAIR_PERSONNEL = [
+  { id: 'RP001', name: '维修工-张', phone: '13800138001', speciality: '电气', status: 'available', currentTasks: 0 },
+  { id: 'RP002', name: '维修工-李', phone: '13800138002', speciality: '机械', status: 'available', currentTasks: 1 },
+  { id: 'RP003', name: '维修工-王', phone: '13800138003', speciality: '液压', status: 'busy', currentTasks: 3 },
+  { id: 'RP004', name: '维修工-刘', phone: '13800138004', speciality: '气动', status: 'available', currentTasks: 0 },
+  { id: 'RP005', name: '维修工-陈', phone: '13800138005', speciality: '控制', status: 'available', currentTasks: 2 },
+]
+
 export default function RepairListPage() {
   const [searchText, setSearchText] = useState('')
   const [statusFilter, setStatusFilter] = useState<string | undefined>()
   const [dataSource, setDataSource] = useState<RepairOrder[]>(mockRepairOrders)
   const [reportModalOpen, setReportModalOpen] = useState(false)
+  const [dispatchModalOpen, setDispatchModalOpen] = useState(false)
+  const [verifyModalOpen, setVerifyModalOpen] = useState(false)
+  const [selectedRecord, setSelectedRecord] = useState<RepairOrder | null>(null)
+  const [dispatchForm] = Form.useForm()
+  const [verifyForm] = Form.useForm()
   const [form] = Form.useForm()
 
   // 筛选数据
@@ -68,6 +87,63 @@ export default function RepairListPage() {
       message.success('报修申请已提交，等待派工')
       setReportModalOpen(false)
       form.resetFields()
+    })
+  }
+
+  // 打开派工弹框
+  const openDispatchModal = (record: RepairOrder) => {
+    setSelectedRecord(record)
+    dispatchForm.setFieldsValue({
+      priority: record.priority,
+      deadline: dayjs().add(24, 'hour'),
+    })
+    setDispatchModalOpen(true)
+  }
+
+  // 提交派工
+  const handleDispatchSubmit = () => {
+    dispatchForm.validateFields().then((values) => {
+      const personnel = REPAIR_PERSONNEL.find(p => p.id === values.assignee)
+      message.success(`派工成功！已分配给 ${personnel?.name}，联系电话：${personnel?.phone}`)
+
+      // 更新数据状态
+      setDataSource(prev => prev.map(item =>
+        item.id === selectedRecord?.id
+          ? { ...item, status: 'assigned', assignee: personnel?.name, assignTime: new Date().toISOString() }
+          : item
+      ))
+
+      setDispatchModalOpen(false)
+      dispatchForm.resetFields()
+      setSelectedRecord(null)
+    })
+  }
+
+  // 打开验收弹框
+  const openVerifyModal = (record: RepairOrder) => {
+    setSelectedRecord(record)
+    verifyForm.setFieldsValue({
+      verifyResult: 'pass',
+      verifyTime: dayjs(),
+    })
+    setVerifyModalOpen(true)
+  }
+
+  // 提交验收
+  const handleVerifySubmit = () => {
+    verifyForm.validateFields().then((values) => {
+      message.success('验收完成！工单已关闭')
+
+      // 更新数据状态
+      setDataSource(prev => prev.map(item =>
+        item.id === selectedRecord?.id
+          ? { ...item, status: 'closed', verifyResult: values.verifyResult, verifyTime: new Date().toISOString() }
+          : item
+      ))
+
+      setVerifyModalOpen(false)
+      verifyForm.resetFields()
+      setSelectedRecord(null)
     })
   }
 
@@ -149,12 +225,22 @@ export default function RepairListPage() {
             </Button>
           </Link>
           {record.status === 'pending' && (
-            <Button type="link" size="small" icon={<EditOutlined />}>
+            <Button
+              type="link"
+              size="small"
+              icon={<EditOutlined />}
+              onClick={() => openDispatchModal(record)}
+            >
               派工
             </Button>
           )}
           {record.status === 'completed' && (
-            <Button type="link" size="small" icon={<CheckCircleOutlined />}>
+            <Button
+              type="link"
+              size="small"
+              icon={<CheckCircleOutlined />}
+              onClick={() => openVerifyModal(record)}
+            >
               验收
             </Button>
           )}
@@ -306,6 +392,231 @@ export default function RepairListPage() {
             <TextArea rows={4} placeholder="请详细描述故障现象、发生时间等信息" />
           </Form.Item>
         </Form>
+      </Modal>
+
+      {/* 派工弹窗 */}
+      <Modal
+        title={
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <UserOutlined />
+            <span>维修派工</span>
+          </div>
+        }
+        open={dispatchModalOpen}
+        onOk={handleDispatchSubmit}
+        onCancel={() => {
+          setDispatchModalOpen(false)
+          dispatchForm.resetFields()
+          setSelectedRecord(null)
+        }}
+        width={700}
+        okText="确认派工"
+        cancelText="取消"
+      >
+        {selectedRecord && (
+          <div>
+            {/* 工单信息 */}
+            <Card size="small" style={{ marginBottom: 16, backgroundColor: '#f5f5f5' }}>
+              <p><strong>工单编号：</strong>{selectedRecord.orderNo}</p>
+              <p><strong>设备名称：</strong>{selectedRecord.equipmentName}</p>
+              <p><strong>故障描述：</strong>{selectedRecord.faultDescription}</p>
+              <p><strong>报修时间：</strong>{dayjs(selectedRecord.reportTime).format('YYYY-MM-DD HH:mm')}</p>
+            </Card>
+
+            <Form form={dispatchForm} layout="vertical">
+              <Form.Item
+                name="assignee"
+                label="选择维修人员"
+                rules={[{ required: true, message: '请选择维修人员' }]}
+              >
+                <Radio.Group style={{ width: '100%' }}>
+                  <Space direction="vertical" style={{ width: '100%' }}>
+                    {REPAIR_PERSONNEL.map(person => (
+                      <Radio
+                        key={person.id}
+                        value={person.id}
+                        disabled={person.status === 'busy'}
+                        style={{ width: '100%' }}
+                      >
+                        <Card
+                          size="small"
+                          style={{
+                            width: '100%',
+                            marginLeft: 24,
+                            marginTop: 8,
+                            border: person.status === 'busy' ? '1px dashed #d9d9d9' : undefined,
+                          }}
+                        >
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <div>
+                              <div style={{ fontWeight: 600, marginBottom: 4 }}>
+                                {person.name}
+                                <Tag
+                                  color={person.status === 'available' ? 'green' : 'orange'}
+                                  style={{ marginLeft: 8 }}
+                                >
+                                  {person.status === 'available' ? '空闲' : '忙碌'}
+                                </Tag>
+                              </div>
+                              <div style={{ color: '#666', fontSize: 12 }}>
+                                专长：{person.speciality} | 电话：{person.phone}
+                              </div>
+                            </div>
+                            <div style={{ textAlign: 'right' }}>
+                              <div style={{ fontSize: 12, color: '#666' }}>
+                                当前任务数
+                              </div>
+                              <div style={{ fontSize: 20, fontWeight: 600, color: '#0097BA' }}>
+                                {person.currentTasks}
+                              </div>
+                            </div>
+                          </div>
+                        </Card>
+                      </Radio>
+                    ))}
+                  </Space>
+                </Radio.Group>
+              </Form.Item>
+
+              <Form.Item
+                name="priority"
+                label="优先级"
+                rules={[{ required: true, message: '请选择优先级' }]}
+              >
+                <Select>
+                  <Option value="urgent">紧急 - 立即处理</Option>
+                  <Option value="high">高 - 4小时内处理</Option>
+                  <Option value="normal">普通 - 24小时内处理</Option>
+                  <Option value="low">低 - 3天内处理</Option>
+                </Select>
+              </Form.Item>
+
+              <Form.Item
+                name="deadline"
+                label="要求完成时间"
+                rules={[{ required: true, message: '请选择要求完成时间' }]}
+              >
+                <DatePicker showTime style={{ width: '100%' }} />
+              </Form.Item>
+
+              <Form.Item
+                name="instructions"
+                label="派工说明"
+              >
+                <TextArea rows={3} placeholder="填写维修注意事项、特殊要求等" />
+              </Form.Item>
+            </Form>
+          </div>
+        )}
+      </Modal>
+
+      {/* 验收弹窗 */}
+      <Modal
+        title={
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <CheckCircleOutlined />
+            <span>维修验收</span>
+          </div>
+        }
+        open={verifyModalOpen}
+        onOk={handleVerifySubmit}
+        onCancel={() => {
+          setVerifyModalOpen(false)
+          verifyForm.resetFields()
+          setSelectedRecord(null)
+        }}
+        width={700}
+        okText="确认验收"
+        cancelText="取消"
+      >
+        {selectedRecord && (
+          <div>
+            {/* 工单信息 */}
+            <Card size="small" style={{ marginBottom: 16, backgroundColor: '#f5f5f5' }}>
+              <p><strong>工单编号：</strong>{selectedRecord.orderNo}</p>
+              <p><strong>设备名称：</strong>{selectedRecord.equipmentName}</p>
+              <p><strong>维修人员：</strong>{selectedRecord.assignee || '-'}</p>
+              <p><strong>开始维修：</strong>{selectedRecord.startTime ? dayjs(selectedRecord.startTime).format('YYYY-MM-DD HH:mm') : '-'}</p>
+              <p><strong>完成维修：</strong>{selectedRecord.endTime ? dayjs(selectedRecord.endTime).format('YYYY-MM-DD HH:mm') : '-'}</p>
+            </Card>
+
+            <Form form={verifyForm} layout="vertical">
+              <Form.Item
+                name="verifyResult"
+                label="验收结果"
+                rules={[{ required: true, message: '请选择验收结果' }]}
+              >
+                <Radio.Group style={{ width: '100%' }}>
+                  <Space direction="vertical" style={{ width: '100%' }}>
+                    <Radio value="pass" style={{ display: 'flex', alignItems: 'flex-start' }}>
+                      <Card size="small" style={{ marginLeft: 24, marginTop: 8 }}>
+                        <div style={{ fontWeight: 600, color: '#2BA471', marginBottom: 4 }}>
+                          ✓ 通过
+                        </div>
+                        <div style={{ color: '#666', fontSize: 12 }}>
+                          设备故障已排除，运行正常，符合验收标准
+                        </div>
+                      </Card>
+                    </Radio>
+                    <Radio value="fail" style={{ display: 'flex', alignItems: 'flex-start' }}>
+                      <Card size="small" style={{ marginLeft: 24, marginTop: 8 }}>
+                        <div style={{ fontWeight: 600, color: '#E37318', marginBottom: 4 }}>
+                          ✗ 不通过
+                        </div>
+                        <div style={{ color: '#666', fontSize: 12 }}>
+                          设备仍存在问题，需要返工维修
+                        </div>
+                      </Card>
+                    </Radio>
+                    <Radio value="conditional" style={{ display: 'flex', alignItems: 'flex-start' }}>
+                      <Card size="small" style={{ marginLeft: 24, marginTop: 8 }}>
+                        <div style={{ fontWeight: 600, color: '#0097BA', marginBottom: 4 }}>
+                          ! 有条件通过
+                        </div>
+                        <div style={{ color: '#666', fontSize: 12 }}>
+                          基本功能恢复，但需要后续跟踪观察
+                        </div>
+                      </Card>
+                    </Radio>
+                  </Space>
+                </Radio.Group>
+              </Form.Item>
+
+              <Form.Item
+                name="verifyTime"
+                label="验收时间"
+                rules={[{ required: true, message: '请选择验收时间' }]}
+              >
+                <DatePicker showTime style={{ width: '100%' }} />
+              </Form.Item>
+
+              <Form.Item
+                name="verifyComment"
+                label="验收意见"
+                rules={[{ required: true, message: '请填写验收意见' }]}
+              >
+                <TextArea rows={4} placeholder="请详细说明验收情况、设备运行状态等" />
+              </Form.Item>
+
+              <Form.Item
+                name="attachments"
+                label="验收附件"
+              >
+                <Upload.Dragger
+                  listType="picture"
+                  multiple
+                  style={{ marginBottom: 16 }}
+                >
+                  <p className="ant-upload-drag-icon">
+                    <Upload />
+                  </p>
+                  <p className="ant-upload-text">点击或拖拽文件到此区域上传</p>
+                  <p className="ant-upload-hint">支持设备运行照片、测试数据等</p>
+                </Upload.Dragger>
+              </Form.Item>
+            </Form>
+          </div>
+        )}
       </Modal>
     </div>
   )

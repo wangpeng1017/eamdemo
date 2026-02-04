@@ -17,6 +17,8 @@ import {
   LogoutOutlined,
   MenuFoldOutlined,
   MenuUnfoldOutlined,
+  DollarOutlined,
+  LineChartOutlined,
 } from '@ant-design/icons'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
@@ -38,6 +40,8 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     { key: '/admin/repair', icon: <ToolOutlined />, label: <Link href="/admin/repair">维修管理</Link> },
     { key: '/admin/spareparts', icon: <InboxOutlined />, label: <Link href="/admin/spareparts">备品备件</Link> },
     { key: '/admin/maintenance', icon: <SettingOutlined />, label: <Link href="/admin/maintenance">维护保养</Link> },
+    { key: '/admin/assets', icon: <DollarOutlined />, label: <Link href="/admin/assets">资产管理</Link> },
+    { key: '/admin/monitoring', icon: <LineChartOutlined />, label: <Link href="/admin/monitoring">状态监测</Link> },
   ]
 
   // 用户下拉菜单
