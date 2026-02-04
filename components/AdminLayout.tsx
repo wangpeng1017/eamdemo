@@ -19,6 +19,10 @@ import {
   MenuUnfoldOutlined,
   DollarOutlined,
   LineChartOutlined,
+  DatabaseOutlined,
+  FolderOutlined,
+  BookOutlined,
+  ControlOutlined,
 } from '@ant-design/icons'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
@@ -42,6 +46,16 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     { key: '/admin/maintenance', icon: <SettingOutlined />, label: <Link href="/admin/maintenance">维护保养</Link> },
     { key: '/admin/assets', icon: <DollarOutlined />, label: <Link href="/admin/assets">资产管理</Link> },
     { key: '/admin/monitoring', icon: <LineChartOutlined />, label: <Link href="/admin/monitoring">状态监测</Link> },
+    {
+      key: '/admin/basic-data',
+      icon: <DatabaseOutlined />,
+      label: '基础数据',
+      children: [
+        { key: '/admin/basic-data/equipment-classification', icon: <FolderOutlined />, label: <Link href="/admin/basic-data/equipment-classification">设备分类</Link> },
+        { key: '/admin/basic-data/master-data', icon: <ControlOutlined />, label: <Link href="/admin/basic-data/master-data">主数据管理</Link> },
+        { key: '/admin/basic-data/data-standards', icon: <BookOutlined />, label: <Link href="/admin/basic-data/data-standards">数据标准</Link> },
+      ],
+    },
   ]
 
   // 用户下拉菜单
