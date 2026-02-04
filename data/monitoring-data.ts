@@ -1,6 +1,7 @@
+
 /**
  * @file monitoring-data.ts
- * @desc 状态监测与故障诊断模拟数据 - 20个监测点、50条监测数据、30条报警记录、10条诊断记录
+ * @desc 状态监测与故障诊断模拟数据 - 食用油加工设备监测
  */
 import { MonitorPoint, MonitorData, AlarmRecord, DiagnosisRecord, TrendAnalysis, MonitorPointType, MonitorStatus, AlarmLevel, monitorPointTypeMap } from '@/lib/monitoring-types'
 import { mockEquipments } from './mock-data'
@@ -20,7 +21,7 @@ function addHours(date: Date, hours: number): Date {
 
 const pointTypes: MonitorPointType[] = ['temperature', 'vibration', 'pressure', 'current', 'voltage', 'flow', 'speed']
 const statuses: MonitorStatus[] = ['normal', 'normal', 'normal', 'warning', 'alarm', 'offline']
-const locations = ['主轴', '电机', '液压系统', '冷却系统', '控制柜', '传动系统', '轴承座', '泵体']
+const locations = ['榨油机主轴', '真空泵', '脱臭塔', '导热油炉', '精炼罐', '离心机', '换热器', '过滤机']
 const sensorModels = ['S-T100', 'S-V200', 'S-P300', 'S-C400', 'S-FC500', 'S-F600', 'S-S700']
 const manufacturers = ['传感器A厂', '传感器B厂', '传感器C厂', '传感器D厂']
 
@@ -40,11 +41,11 @@ export const mockMonitorPoints: MonitorPoint[] = Array.from({ length: 20 }, (_, 
 
   if (pointType === 'temperature') {
     lowerLimit = 0
-    upperLimit = 100
-    warningLower = 70
-    warningUpper = 85
-    alarmLower = 60
-    alarmUpper = 90
+    upperLimit = 120
+    warningLower = 75
+    warningUpper = 95
+    alarmLower = 65
+    alarmUpper = 100
   } else if (pointType === 'vibration') {
     lowerLimit = 0
     upperLimit = 10
@@ -54,32 +55,32 @@ export const mockMonitorPoints: MonitorPoint[] = Array.from({ length: 20 }, (_, 
     alarmUpper = 8
   } else if (pointType === 'pressure') {
     lowerLimit = 0
-    upperLimit = 10
-    warningLower = 2
-    warningUpper = 8
-    alarmLower = 1
-    alarmUpper = 9
+    upperLimit = 30
+    warningLower = 5
+    warningUpper = 25
+    alarmLower = 3
+    alarmUpper = 27
   } else if (pointType === 'current') {
     lowerLimit = 0
-    upperLimit = 50
-    warningLower = 5
-    warningUpper = 45
-    alarmLower = 3
-    alarmUpper = 48
+    upperLimit = 100
+    warningLower = 10
+    warningUpper = 90
+    alarmLower = 5
+    alarmUpper = 95
   } else if (pointType === 'voltage') {
-    lowerLimit = 200
-    upperLimit = 250
-    warningLower = 210
-    warningUpper = 240
-    alarmLower = 205
-    alarmUpper = 245
+    lowerLimit = 350
+    upperLimit = 410
+    warningLower = 360
+    warningUpper = 400
+    alarmLower = 355
+    alarmUpper = 405
   } else if (pointType === 'flow') {
     lowerLimit = 0
-    upperLimit = 100
-    warningLower = 20
-    warningUpper = 80
-    alarmLower = 10
-    alarmUpper = 90
+    upperLimit = 200
+    warningLower = 40
+    warningUpper = 160
+    alarmLower = 20
+    alarmUpper = 180
   } else if (pointType === 'speed') {
     lowerLimit = 0
     upperLimit = 3000
@@ -123,7 +124,7 @@ export const mockMonitorPoints: MonitorPoint[] = Array.from({ length: 20 }, (_, 
     installDate,
     calibrationDate,
     nextCalibrationDate: addHours(new Date(calibrationDate), 8760).toISOString(), // 1年后
-    description: `监测点描述-${i + 1}`,
+    description: `食用油加工设备监测点-${i + 1}`,
     remark: i % 5 === 0 ? '需要定期校准' : '',
     active: true,
     createdAt: installDate,
@@ -207,9 +208,9 @@ export const mockDiagnosisRecords: DiagnosisRecord[] = Array.from({ length: 10 }
   const result = results[i % results.length]
   const method = methods[i % methods.length]
 
-  const faultLocations = ['主轴轴承', '电机绕组', '液压泵', '控制系统', '传动链条', '冷却系统', '传感器', '执行机构']
-  const faultTypes = ['磨损', '过热', '堵塞', '短路', '老化', '失衡', '松动', '断裂']
-  const faultCauses = ['长期使用磨损', '润滑不足', '负载过大', '电压波动', '环境温度高', '维护不当', '质量问题']
+  const faultLocations = ['榨油机主轴轴承', '真空泵泵体', '脱臭塔密封系统', '导热油炉燃烧器', '精炼罐搅拌器', '离心机转鼓', '过滤机滤布', '液压系统泵']
+  const faultTypes = ['磨损', '过热', '堵塞', '泄漏', '老化', '失衡', '松动', '断裂']
+  const faultCauses = ['长期使用磨损', '润滑不足', '负载过大', '温度过高', '维护不当', '物料堵塞']
 
   return {
     id: `DG${String(i + 1).padStart(4, '0')}`,
@@ -224,7 +225,7 @@ export const mockDiagnosisRecords: DiagnosisRecord[] = Array.from({ length: 10 }
     faultLocation: result !== 'normal' ? faultLocations[i % faultLocations.length] : undefined,
     faultType: result !== 'normal' ? faultTypes[i % faultTypes.length] : undefined,
     faultCause: result !== 'normal' ? faultCauses[i % faultCauses.length] : undefined,
-    faultDescription: result === 'normal' ? '设备运行状态良好，未发现异常' :
+    faultDescription: result === 'normal' ? '食用油加工设备运行状态良好，未发现异常' :
                        result === 'degraded' ? '设备性能有所下降，建议关注' :
                        result === 'fault' ? '检测到故障隐患，建议尽快检修' : '设备存在严重故障，必须立即停机检修',
     recommendation: result === 'normal' ? '继续正常运行，按计划进行日常维护' :
@@ -235,7 +236,7 @@ export const mockDiagnosisRecords: DiagnosisRecord[] = Array.from({ length: 10 }
       '监测数据显示异常趋势',
       '振动值超出正常范围',
       '温度持续升高',
-      '噪声明显增加',
+      '真空度下降明显',
     ].slice(0, Math.floor(Math.random() * 3) + 1),
     handled: i % 3 === 0,
     handleResult: i % 3 === 0 ? '已更换相关部件，设备恢复正常' : undefined,
