@@ -3,7 +3,7 @@
  * @file mock-data.ts
  * @desc 模拟数据 - 20条设备记录、20条维修工单
  */
-import { Equipment, RepairOrder, EquipmentStatus, RepairStatus } from './types'
+import { Equipment, RepairOrder, EquipmentStatus, RepairStatus } from '@/lib/types'
 
 // 当前日期
 const now = new Date()
@@ -87,21 +87,21 @@ export const mockRepairOrders: RepairOrder[] = Array.from({ length: 20 }, (_, i)
     reporter: reporters[i % reporters.length],
     reportTime,
     createdAt: reportTime,
-    updatedAt: randomDate(reportTime, now),
+    updatedAt: randomDate(new Date(reportTime), now),
   }
 
   // 根据状态设置其他字段
   if (status !== 'pending') {
     order.assignee = repairPeople[i % repairPeople.length]
-    order.assignTime = randomDate(reportTime, now)
+    order.assignTime = randomDate(new Date(reportTime), now)
   }
 
   if (status === 'processing' || status === 'completed' || status === 'closed') {
-    order.startTime = randomDate(order.assignTime!, now)
+    order.startTime = randomDate(new Date(order.assignTime!), now)
   }
 
   if (status === 'completed' || status === 'closed') {
-    order.endTime = randomDate(order.startTime!, now)
+    order.endTime = randomDate(new Date(order.startTime!), now)
     order.repairDescription = '维修已完成，更换相关部件，设备恢复正常运行'
     order.spareParts = '备件-A x2, 备件-B x1'
     order.laborHours = Math.floor(2 + Math.random() * 6)
@@ -110,7 +110,7 @@ export const mockRepairOrders: RepairOrder[] = Array.from({ length: 20 }, (_, i)
 
   if (status === 'closed') {
     order.verifier = '设备管理员'
-    order.verifyTime = randomDate(order.endTime!, now)
+    order.verifyTime = randomDate(new Date(order.endTime!), now)
     order.verifyResult = 'pass'
   }
 

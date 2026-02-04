@@ -2,7 +2,7 @@
  * @file maintenance-data.ts
  * @desc 维护保养模拟数据 - 15条保养计划、20条保养任务、10条点检记录
  */
-import { MaintenancePlan, MaintenanceTask, InspectionRecord, MaintenanceType, MaintenanceStatus, MaintenancePeriod, MaintenancePriority } from '../lib/maintenance-types'
+import { MaintenancePlan, MaintenanceTask, InspectionRecord, InspectionItem, MaintenanceType, MaintenanceStatus, MaintenancePeriod, MaintenancePriority } from '@/lib/maintenance-types'
 import { mockEquipments } from './mock-data'
 
 const now = new Date()
@@ -108,7 +108,7 @@ export const mockInspectionRecords: InspectionRecord[] = Array.from({ length: 10
   const equipment = mockEquipments[i % mockEquipments.length]
   const inspectionDate = addDays(now, -Math.floor(Math.random() * 30))
 
-  const items = [
+  const items: InspectionItem[] = [
     { item: '设备外观', standard: '无损坏、无变形', method: '目视检查', result: Math.random() > 0.2 ? 'normal' : 'abnormal', value: undefined, remark: '' },
     { item: '运行声音', standard: '无异响', method: '听觉检查', result: Math.random() > 0.2 ? 'normal' : 'abnormal', value: undefined, remark: '' },
     { item: '设备温度', standard: '≤60℃', method: '温度计测量', result: 'normal', value: `${Math.floor(40 + Math.random() * 15)}℃`, remark: '' },
