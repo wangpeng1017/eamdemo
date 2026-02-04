@@ -20,6 +20,9 @@ import {
   Progress,
   Badge,
   Alert,
+  Modal,
+  Descriptions,
+  message,
 } from 'antd'
 import {
   SearchOutlined,
@@ -56,6 +59,9 @@ export default function MonitoringListPage() {
   const [typeFilter, setTypeFilter] = useState<string | undefined>()
   const [statusFilter, setStatusFilter] = useState<string | undefined>()
   const [activeTab, setActiveTab] = useState('points')
+  const [alarmRecords, setAlarmRecords] = useState<AlarmRecord[]>(mockAlarmRecords)
+  const [alarmDetailModalOpen, setAlarmDetailModalOpen] = useState(false)
+  const [selectedAlarm, setSelectedAlarm] = useState<AlarmRecord | null>(null)
 
   // 筛选监测点数据
   const filteredPoints = mockMonitorPoints.filter((item) => {
@@ -74,10 +80,31 @@ export default function MonitoringListPage() {
     normalPoints: mockMonitorPoints.filter(p => p.status === 'normal').length,
     warningPoints: mockMonitorPoints.filter(p => p.status === 'warning').length,
     alarmPoints: mockMonitorPoints.filter(p => p.status === 'alarm').length,
-    activeAlarms: mockAlarmRecords.filter(a => a.status === 'active').length,
+    activeAlarms: alarmRecords.filter(a => a.status === 'active').length,
     todayDiagnosis: mockDiagnosisRecords.filter(d =>
       dayjs(d.diagnosisTime).format('YYYY-MM-DD') === dayjs().format('YYYY-MM-DD')
     ).length,
+  }
+
+  // 确认报警
+  const handleAcknowledgeAlarm = (record: AlarmRecord) => {
+    setAlarmRecords(prev => prev.map(item =>
+      item.id === record.id
+        ? {
+            ...item,
+            status: 'acknowledged',
+            acknowledgedBy: '管理员',
+            acknowledgeTime: new Date().toISOString(),
+          }
+        : item
+    ))
+    message.success(`报警 ${record.alarmNo} 已确认`)
+  }
+
+  // 查看报警详情
+  const handleViewAlarm = (record: AlarmRecord) => {
+    setSelectedAlarm(record)
+    setAlarmDetailModalOpen(true)
   }
 
   // 监测点列
@@ -267,11 +294,19 @@ export default function MonitoringListPage() {
       render: (_: any, record: AlarmRecord) => (
         <Space size="small">
           {record.status === 'active' && (
-            <Button type="link" size="small">
+            <Button
+              type="link"
+              size="small"
+              onClick={() => handleAcknowledgeAlarm(record)}
+            >
               确认
             </Button>
           )}
-          <Button type="link" size="small">
+          <Button
+            type="link"
+            size="small"
+            onClick={() => handleViewAlarm(record)}
+          >
             查看
           </Button>
         </Space>
@@ -552,7 +587,7 @@ export default function MonitoringListPage() {
               children: (
                 <Table
                   rowKey="id"
-                  dataSource={mockAlarmRecords}
+                  dataSource={alarmRecords}
                   columns={alarmColumns}
                   scroll={{ x: 1400 }}
                   pagination={{
@@ -583,6 +618,76 @@ export default function MonitoringListPage() {
           ]}
         />
       </Card>
+
+      {/* 报警详情弹框 */}
+      <Modal
+        title={
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <BellOutlined />
+            <span>报警详情</span>
+          </div>
+        }
+        open={alarmDetailModalOpen}
+        onCancel={() => {
+          setAlarmDetailModalOpen(false)
+          setSelectedAlarm(null)
+        }}
+        footer={[
+          <Button key="close" onClick={() => setAlarmDetailModalOpen(false)}>
+            关闭
+          </Button>,
+        ]}
+        width={700}
+      >
+        {selectedAlarm && (
+          <div>
+            <Card size="small" style={{ marginBottom: 16 }}>
+              <Descriptions column={2} size="small">
+                <Descriptions.Item label="报警编号">{selectedAlarm.alarmNo}</Descriptions.Item>
+                <Descriptions.Item label="监测点">{selectedAlarm.pointName}</Descriptions.Item>
+                <Descriptions.Item label="关联设备">{selectedAlarm.equipmentName}</Descriptions.Item>
+                <Descriptions.Item label="报警级别">
+                  <Tag color={alarmLevelMap[selectedAlarm.level].color}>
+                    {alarmLevelMap[selectedAlarm.level].label}
+                  </Tag>
+                </Descriptions.Item>
+                <Descriptions.Item label="报警值">
+                  <span style={{ color: '#E37318', fontWeight: 600 }}>
+                    {selectedAlarm.alarmValue.toFixed(2)}
+                  </span>
+                </Descriptions.Item>
+                <Descriptions.Item label="阈值">
+                  {selectedAlarm.thresholdValue}
+                </Descriptions.Item>
+                <Descriptions.Item label="报警时间">
+                  {dayjs(selectedAlarm.alarmTime).format('YYYY-MM-DD HH:mm:ss')}
+                </Descriptions.Item>
+                <Descriptions.Item label="当前状态">
+                  <Tag color={selectedAlarm.status === 'active' ? 'red' : selectedAlarm.status === 'acknowledged' ? 'orange' : 'green'}>
+                    {selectedAlarm.status === 'active' ? '活动' : selectedAlarm.status === 'acknowledged' ? '已确认' : '已恢复'}
+                  </Tag>
+                </Descriptions.Item>
+                {selectedAlarm.acknowledgedBy && (
+                  <>
+                    <Descriptions.Item label="确认人">{selectedAlarm.acknowledgedBy}</Descriptions.Item>
+                    <Descriptions.Item label="确认时间">
+                      {selectedAlarm.acknowledgeTime ? dayjs(selectedAlarm.acknowledgeTime).format('YYYY-MM-DD HH:mm:ss') : '-'}
+                    </Descriptions.Item>
+                  </>
+                )}
+                <Descriptions.Item label="报警描述" span={2}>
+                  {selectedAlarm.description}
+                </Descriptions.Item>
+                {selectedAlarm.remark && (
+                  <Descriptions.Item label="备注" span={2}>
+                    {selectedAlarm.remark}
+                  </Descriptions.Item>
+                )}
+              </Descriptions>
+            </Card>
+          </div>
+        )}
+      </Modal>
     </div>
   )
 }
