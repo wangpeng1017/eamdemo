@@ -45,7 +45,7 @@ export default function Home() {
               type="primary"
               size="large"
               icon={<FundOutlined />}
-              style={{ height: 48, fontSize: 16, paddingHorizontal: 32 }}
+              style={{ height: 48, fontSize: 16, padding: '0 32px' }}
             >
               设备台账
             </Button>
@@ -54,7 +54,7 @@ export default function Home() {
             <Button
               size="large"
               icon={<ToolOutlined />}
-              style={{ height: 48, fontSize: 16, paddingHorizontal: 32 }}
+              style={{ height: 48, fontSize: 16, padding: '0 32px' }}
             >
               维修管理
             </Button>
