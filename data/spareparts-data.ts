@@ -41,7 +41,6 @@ export const mockSpareParts: SparePart[] = Array.from({ length: 20 }, (_, i) => 
   // 根据库存判断状态
   let status: SparePartStatus = 'in_stock'
   if (currentStock === 0) status = 'out_of_stock'
-  else if (currentStock <= reorderPoint) status = 'low_stock'
   else if (reservedStock > 0) status = 'reserved'
 
   return {
