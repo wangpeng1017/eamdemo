@@ -17,6 +17,7 @@ import {
   Modal,
   Form,
   Input,
+  Select,
   message,
 } from 'antd'
 import {
@@ -227,8 +228,8 @@ export default function RepairDetailPage() {
         <Form form={form} layout="vertical" style={{ marginTop: 24 }}>
           <Form.Item name="result" label="验收结果" rules={[{ required: true }]}>
             <Select placeholder="请选择验收结果">
-              <Option value="pass">验收通过</Option>
-              <Option value="fail">验收不通过</Option>
+              <Select.Option value="pass">验收通过</Select.Option>
+              <Select.Option value="fail">验收不通过</Select.Option>
             </Select>
           </Form.Item>
           <Form.Item name="comment" label="验收意见" rules={[{ required: true }]}>
