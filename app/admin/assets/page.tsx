@@ -21,6 +21,7 @@ import {
   message,
   DatePicker,
   InputNumber,
+  Popconfirm,
 } from 'antd'
 import {
   PlusOutlined,
@@ -34,7 +35,7 @@ import {
 } from '@ant-design/icons'
 import Link from 'next/link'
 import { mockAssets } from '@/data/asset-data'
-import { Asset, assetStatusMap, assetCategoryMap, depreciationMethodMap } from '@/lib/asset-types'
+import { Asset, assetStatusMap, assetCategoryMap, depreciationMethodMap, AssetCategory, AssetSource, DepreciationMethod } from '@/lib/asset-types'
 import dayjs from 'dayjs'
 
 const { Search } = Input
@@ -47,6 +48,7 @@ export default function AssetListPage() {
   const [statusFilter, setStatusFilter] = useState<string | undefined>()
   const [dataSource, setDataSource] = useState<Asset[]>(mockAssets)
   const [modalOpen, setModalOpen] = useState(false)
+  const [editingRecord, setEditingRecord] = useState<Asset | null>(null)
   const [form] = Form.useForm()
 
   // 筛选数据
@@ -69,18 +71,88 @@ export default function AssetListPage() {
   }
 
   // 打开新增弹框
-  const openModal = () => {
+  const openAddModal = () => {
+    setEditingRecord(null)
     form.resetFields()
+    form.setFieldsValue({
+      usefulLife: 120, // 默认10年
+      depreciationMethod: 'straight_line',
+      purchaseDate: dayjs(),
+    })
+    setModalOpen(true)
+  }
+
+  // 打开编辑弹框
+  const openEditModal = (record: Asset) => {
+    setEditingRecord(record)
+    form.setFieldsValue({
+      name: record.name,
+      category: record.category,
+      source: record.source,
+      originalValue: record.originalValue,
+      purchaseDate: dayjs(record.purchaseDate),
+      usefulLife: record.usefulLife,
+      depreciationMethod: record.depreciationMethod,
+      location: record.location,
+      department: record.department,
+      responsiblePerson: record.responsiblePerson,
+      custodian: record.custodian,
+      manufacturer: record.manufacturer,
+      model: record.model,
+      serialNumber: record.serialNumber,
+      description: record.description,
+    })
     setModalOpen(true)
   }
 
   // 提交表单
   const handleSubmit = () => {
     form.validateFields().then((values) => {
-      message.success('资产添加成功')
+      if (editingRecord) {
+        // 编辑模式
+        message.success(`资产 "${values.name}" 更新成功`)
+        setDataSource(prev => prev.map(item =>
+          item.id === editingRecord.id
+            ? {
+                ...item,
+                ...values,
+                purchaseDate: values.purchaseDate.toISOString(),
+              }
+            : item
+        ))
+      } else {
+        // 新增模式
+        const newAsset: Asset = {
+          id: `AS${String(dataSource.length + 1).padStart(4, '0')}`,
+          assetNo: `AS-${dayjs().year()}-${String(dataSource.length + 1).padStart(4, '0')}`,
+          ...values,
+          purchaseDate: values.purchaseDate.toISOString(),
+          startDepreciationDate: values.purchaseDate.toISOString(),
+          lastDepreciationDate: dayjs().toISOString(),
+          currentValue: values.originalValue,
+          netResidualValue: Math.floor(values.originalValue * 0.05),
+          accumulatedDepreciation: 0,
+          depreciationRate: 0.0083,
+          usedMonths: 0,
+          status: 'normal',
+          supplier: '供应商A',
+          createdAt: dayjs().toISOString(),
+          updatedAt: dayjs().toISOString(),
+        }
+        message.success(`资产 "${values.name}" 添加成功`)
+        setDataSource(prev => [...prev, newAsset])
+      }
+
       setModalOpen(false)
       form.resetFields()
+      setEditingRecord(null)
     })
+  }
+
+  // 删除资产
+  const handleDelete = (record: Asset) => {
+    setDataSource(prev => prev.filter(item => item.id !== record.id))
+    message.success(`资产 "${record.name}" 已删除`)
   }
 
   const columns = [
@@ -197,12 +269,25 @@ export default function AssetListPage() {
               详情
             </Button>
           </Link>
-          <Button type="link" size="small" icon={<EditOutlined />}>
+          <Button
+            type="link"
+            size="small"
+            icon={<EditOutlined />}
+            onClick={() => openEditModal(record)}
+          >
             编辑
           </Button>
-          <Button type="link" size="small" danger icon={<DeleteOutlined />}>
-            删除
-          </Button>
+          <Popconfirm
+            title="确认删除"
+            description="确定要删除这个资产吗？删除后无法恢复。"
+            onConfirm={() => handleDelete(record)}
+            okText="确认"
+            cancelText="取消"
+          >
+            <Button type="link" size="small" danger icon={<DeleteOutlined />}>
+              删除
+            </Button>
+          </Popconfirm>
         </Space>
       ),
     },
@@ -293,7 +378,7 @@ export default function AssetListPage() {
             <Option value="scrapped">报废</Option>
           </Select>
           <div style={{ flex: 1 }} />
-          <Button type="primary" icon={<PlusOutlined />} onClick={openModal}>
+          <Button type="primary" icon={<PlusOutlined />} onClick={openAddModal}>
             新增资产
           </Button>
         </div>
@@ -310,14 +395,15 @@ export default function AssetListPage() {
         />
       </Card>
 
-      {/* 新增资产弹窗 */}
+      {/* 新增/编辑资产弹窗 */}
       <Modal
-        title="新增资产"
+        title={editingRecord ? '编辑资产' : '新增资产'}
         open={modalOpen}
         onOk={handleSubmit}
         onCancel={() => {
           setModalOpen(false)
           form.resetFields()
+          setEditingRecord(null)
         }}
         width={800}
         okText="提交"
@@ -355,6 +441,21 @@ export default function AssetListPage() {
           <Row gutter={16}>
             <Col span={12}>
               <Form.Item
+                name="source"
+                label="资产来源"
+                rules={[{ required: true, message: '请选择资产来源' }]}
+              >
+                <Select placeholder="请选择资产来源">
+                  <Option value="purchase">购入</Option>
+                  <Option value="self_built">自建</Option>
+                  <Option value="donation">捐赠</Option>
+                  <Option value="transfer">调入</Option>
+                  <Option value="lease">租赁</Option>
+                </Select>
+              </Form.Item>
+            </Col>
+            <Col span={12}>
+              <Form.Item
                 name="originalValue"
                 label="资产原值"
                 rules={[{ required: true, message: '请输入资产原值' }]}
@@ -368,6 +469,9 @@ export default function AssetListPage() {
                 />
               </Form.Item>
             </Col>
+          </Row>
+
+          <Row gutter={16}>
             <Col span={12}>
               <Form.Item
                 name="purchaseDate"
@@ -377,9 +481,6 @@ export default function AssetListPage() {
                 <DatePicker style={{ width: '100%' }} />
               </Form.Item>
             </Col>
-          </Row>
-
-          <Row gutter={16}>
             <Col span={12}>
               <Form.Item
                 name="usefulLife"
@@ -394,6 +495,9 @@ export default function AssetListPage() {
                 />
               </Form.Item>
             </Col>
+          </Row>
+
+          <Row gutter={16}>
             <Col span={12}>
               <Form.Item
                 name="depreciationMethod"
@@ -408,6 +512,22 @@ export default function AssetListPage() {
                 </Select>
               </Form.Item>
             </Col>
+            <Col span={12}>
+              <Form.Item
+                name="department"
+                label="使用部门"
+                rules={[{ required: true, message: '请输入使用部门' }]}
+              >
+                <Select placeholder="请选择使用部门">
+                  <Option value="生产部">生产部</Option>
+                  <Option value="设备部">设备部</Option>
+                  <Option value="质量部">质量部</Option>
+                  <Option value="研发部">研发部</Option>
+                  <Option value="行政部">行政部</Option>
+                  <Option value="信息部">信息部</Option>
+                </Select>
+              </Form.Item>
+            </Col>
           </Row>
 
           <Row gutter={16}>
@@ -417,7 +537,14 @@ export default function AssetListPage() {
                 label="存放位置"
                 rules={[{ required: true, message: '请输入存放位置' }]}
               >
-                <Input placeholder="请输入存放位置" />
+                <Select placeholder="请选择存放位置">
+                  <Option value="一车间">一车间</Option>
+                  <Option value="二车间">二车间</Option>
+                  <Option value="办公楼">办公楼</Option>
+                  <Option value="实验室">实验室</Option>
+                  <Option value="仓库">仓库</Option>
+                  <Option value="停车场">停车场</Option>
+                </Select>
               </Form.Item>
             </Col>
             <Col span={12}>
@@ -440,6 +567,19 @@ export default function AssetListPage() {
             <Col span={12}>
               <Form.Item name="model" label="型号规格">
                 <Input placeholder="请输入型号规格" />
+              </Form.Item>
+            </Col>
+          </Row>
+
+          <Row gutter={16}>
+            <Col span={12}>
+              <Form.Item name="serialNumber" label="序列号">
+                <Input placeholder="请输入序列号" />
+              </Form.Item>
+            </Col>
+            <Col span={12}>
+              <Form.Item name="custodian" label="保管人">
+                <Input placeholder="请输入保管人" />
               </Form.Item>
             </Col>
           </Row>
