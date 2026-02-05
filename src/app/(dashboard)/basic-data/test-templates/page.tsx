@@ -2,6 +2,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
 import { showSuccess, showError } from '@/lib/confirm'
 import { Table, Button, Space, Modal, Select, Tag, message, Popconfirm } from 'antd'
 import { PlusOutlined, EditOutlined, DeleteOutlined, EyeOutlined } from '@ant-design/icons'
@@ -46,6 +47,7 @@ export default function TestTemplatesPage() {
   const [editingId, setEditingId] = useState<string | null>(null)
   const [editingRecord, setEditingRecord] = useState<TestTemplate | null>(null)
   const [selectedCategory, setSelectedCategory] = useState<string>()
+  const router = useRouter()
 
   const fetchData = async (p = page) => {
     setLoading(true)
@@ -180,7 +182,20 @@ export default function TestTemplatesPage() {
       title: '操作', fixed: 'right',
       render: (_, record) => (
         <Space size="small" style={{ whiteSpace: 'nowrap' }}>
-          <Button size="small" icon={<EditOutlined />} onClick={() => handleEdit(record)}/>
+          <Button
+            size="small"
+            title="编辑基础信息"
+            icon={<EditOutlined />}
+            onClick={() => handleEdit(record)}
+          />
+          <Button
+            size="small"
+            type="primary"
+            icon={<EyeOutlined />}
+            onClick={() => router.push(`/basic-data/test-templates/editor/${record.id}`)}
+          >
+            编辑内容
+          </Button>
           <Button
             size="small"
             onClick={() => handleToggleStatus(record.id, record.status)}

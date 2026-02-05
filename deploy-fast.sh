@@ -45,12 +45,14 @@ if command -v rsync &> /dev/null; then
     rsync -avz --progress -e "sshpass -p '$SERVER_PASS' ssh -o StrictHostKeyChecking=no" .next/standalone.tar.gz "$SERVER:$REMOTE_DIR/"
     rsync -avz --progress -e "sshpass -p '$SERVER_PASS' ssh -o StrictHostKeyChecking=no" public.tar.gz "$SERVER:$REMOTE_DIR/"
     rsync -avz --progress -e "sshpass -p '$SERVER_PASS' ssh -o StrictHostKeyChecking=no" update-db-schema.js "$SERVER:$REMOTE_DIR/"
+    rsync -avz --progress -e "sshpass -p '$SERVER_PASS' ssh -o StrictHostKeyChecking=no" prisma/schema.prisma "$SERVER:$REMOTE_DIR/prisma/"
 else
     # 回退到 scp
     echo "警告: 未找到 rsync，回退到 scp..."
     sshpass -p "$SERVER_PASS" scp -o StrictHostKeyChecking=no -o ServerAliveInterval=60 .next/standalone.tar.gz "$SERVER:$REMOTE_DIR/"
     sshpass -p "$SERVER_PASS" scp -o StrictHostKeyChecking=no -o ServerAliveInterval=60 public.tar.gz "$SERVER:$REMOTE_DIR/"
     sshpass -p "$SERVER_PASS" scp -o StrictHostKeyChecking=no -o ServerAliveInterval=60 update-db-schema.js "$SERVER:$REMOTE_DIR/"
+    sshpass -p "$SERVER_PASS" scp -o StrictHostKeyChecking=no -o ServerAliveInterval=60 prisma/schema.prisma "$SERVER:$REMOTE_DIR/prisma/"
 fi
 
 # 4. 服务器解压并配置
@@ -67,6 +69,7 @@ sshpass -p "$SERVER_PASS" ssh -o StrictHostKeyChecking=no -o ServerAliveInterval
   cp standalone/package.json . 2>/dev/null || true && \
   cp .env standalone/ 2>/dev/null || true && \
   rm -rf standalone standalone.tar.gz public.tar.gz && \
+  npx prisma generate && \
   node update-db-schema.js"
 
 # 5. 重启服务（使用 PORT 环境变量）

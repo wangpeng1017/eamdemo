@@ -27,7 +27,6 @@ interface InspectionStandard {
 
 export default function TemplateEditor({ initialValue, onSave, onCancel }: TemplateEditorProps) {
   const [form] = Form.useForm()
-  const [sheetData, setSheetData] = useState<any[]>([])
   const [schema, setSchema] = useState<TemplateSchema>(initialValue || getDefaultSchema())
   const [selectedColumn, setSelectedColumn] = useState<number | null>(null)
   const [showColumnModal, setShowColumnModal] = useState(false)
@@ -75,18 +74,7 @@ export default function TemplateEditor({ initialValue, onSave, onCancel }: Templ
     return () => clearTimeout(timer);
   }, [localSampleType])
 
-  // 初始化表格数据
-  useEffect(() => {
-    console.log("[TemplateEditor] schema changed, converting to sheetData. title:", schema.title);
-    try {
-      const data = convertSchemaToPreviewData(schema)
-      console.log("[TemplateEditor] convertSchemaToPreviewData result celldata length:", data?.[0]?.celldata?.length);
-      setSheetData(data)
-    } catch (err) {
-      console.error("[TemplateEditor] CRASH in convertSchemaToPreviewData:", err);
-      showError('表格预览转换失败: ' + (err as Error).message);
-    }
-  }, [schema])
+  // 移除实时预览 DataSheet 的转换逻辑
 
   // 初始化表单
   useEffect(() => {
@@ -290,23 +278,25 @@ export default function TemplateEditor({ initialValue, onSave, onCancel }: Templ
     <div className="flex flex-col h-[700px] gap-4">
       {/* 左右分栏布局 */}
       <div className="flex flex-1 gap-4 overflow-hidden">
-        {/* 左侧：表格编辑区 */}
+        {/* 左侧：示意图区域（原表格预览） */}
         <div className="flex-1 flex flex-col overflow-hidden">
-          <Card title="表格预览" className="flex-1 overflow-hidden">
-            <div className="h-full overflow-auto">
-              <DataSheet
-                data={sheetData}
-                onChange={(newData) => {
-                  // 如果顶层正在由于 schema 变化而重绘，忽略表格上报的变动
-                  // 这能从根本上杜绝“撕裂状态”下非法数据引发的崩溃
-                  if (isUpdatingSchemaRef.current) {
-                    console.log("[TemplateEditor] Skipping DataSheet onChange - system is updating schema");
-                    return;
-                  }
-                  setSheetData(newData);
-                }}
-                height={500}
-              />
+          <Card title="表格模式示意" className="flex-1 overflow-hidden">
+            <div className="h-full flex flex-col items-center justify-center bg-gray-50 border-2 border-dashed border-gray-200 rounded-lg p-8 text-center">
+              <div className="text-4xl mb-4 text-blue-500">📊</div>
+              <h3 className="text-lg font-medium text-gray-700 mb-2">已开启“稳定编辑模式”</h3>
+              <p className="text-gray-400 max-w-sm mb-6">
+                为了确保表格编辑的绝对稳定，我们已将基础配置（左侧）与内容编辑物理隔离。
+              </p>
+              <div className="bg-white p-4 rounded border text-left w-full max-w-md">
+                <div className="text-xs uppercase text-gray-400 font-bold mb-2">当前结构预览:</div>
+                <div className="mb-1 text-sm">✅ 标题行: {localTitle}</div>
+                <div className="mb-1 text-sm">✅ 检测列数: {schema.columns.length} 列</div>
+                <div className="mb-1 text-sm">✅ 包含环境: {schema.environment ? '是' : '否'}</div>
+                <div className="mb-1 text-sm">✅ 包含设备: {schema.equipment ? '是' : '否'}</div>
+              </div>
+              <div className="mt-8 text-blue-400 text-sm">
+                提示：保存基础设置后，在列表页点击“编辑内容”进入全屏编辑器。
+              </div>
             </div>
           </Card>
         </div>
