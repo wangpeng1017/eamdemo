@@ -57,6 +57,11 @@ export interface SheetData {
  * 将 TemplateSchema 转换为 Fortune-sheet 预览数据
  */
 export function convertSchemaToPreviewData(schema: TemplateSchema): SheetData[] {
+  console.log("[convertSchemaToPreviewData] processing schema:", {
+    title: schema?.title,
+    titleType: typeof schema?.title,
+    columnsCount: schema?.columns?.length
+  });
   const columns = schema.columns || []
   const defaultRows = schema.defaultRows || 5
 

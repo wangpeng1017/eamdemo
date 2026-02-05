@@ -47,8 +47,15 @@ export default function TemplateEditor({ initialValue, onSave, onCancel }: Templ
 
   // 初始化表格数据
   useEffect(() => {
-    const data = convertSchemaToPreviewData(schema)
-    setSheetData(data)
+    console.log("[TemplateEditor] schema changed, converting to sheetData. title:", schema.title);
+    try {
+      const data = convertSchemaToPreviewData(schema)
+      console.log("[TemplateEditor] convertSchemaToPreviewData result celldata length:", data?.[0]?.celldata?.length);
+      setSheetData(data)
+    } catch (err) {
+      console.error("[TemplateEditor] CRASH in convertSchemaToPreviewData:", err);
+      showError('表格预览转换失败: ' + (err as Error).message);
+    }
   }, [schema])
 
   // 初始化表单
@@ -101,7 +108,13 @@ export default function TemplateEditor({ initialValue, onSave, onCancel }: Templ
 
   // 更新 Schema
   const updateSchema = (updates: Partial<TemplateSchema>) => {
-    setSchema(prev => ({ ...prev, ...updates }))
+    console.log("[TemplateEditor] updateSchema called with:", updates);
+    setSchema(prev => {
+      const next = { ...prev, ...updates };
+      // 深度防御：确保关键字段类型正确
+      if (typeof next.title !== 'string') next.title = String(next.title || '');
+      return next;
+    });
   }
 
   // 更新列
