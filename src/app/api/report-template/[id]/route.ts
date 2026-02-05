@@ -35,7 +35,7 @@ export async function PUT(
 
     const { id } = await params
     const body = await request.json()
-    const { name, category, fileUrl, status, remark } = body
+    const { name, category, fileUrl, status, remark, coverConfig, backCoverConfig } = body
 
     const template = await prisma.reportTemplate.update({
         where: { id },
@@ -44,7 +44,9 @@ export async function PUT(
             ...(category && { category }),
             ...(fileUrl && { fileUrl }),
             ...(status && { status }),
-            ...(remark !== undefined && { remark })
+            ...(remark !== undefined && { remark }),
+            ...(coverConfig !== undefined && { coverConfig }),
+            ...(backCoverConfig !== undefined && { backCoverConfig })
         }
     })
 

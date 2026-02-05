@@ -31,7 +31,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json()
-    const { name, code, category, fileUrl, remark } = body
+    const { name, code, category, fileUrl, remark, coverConfig, backCoverConfig } = body
 
     if (!name || !code || !category) {
         return NextResponse.json({ error: '缺少必填字段' }, { status: 400 })
@@ -52,7 +52,9 @@ export async function POST(request: NextRequest) {
             category,
             fileUrl: fileUrl || '',
             uploader: session.user.name || session.user.id || '系统',
-            remark
+            remark,
+            coverConfig,
+            backCoverConfig
         }
     })
 
