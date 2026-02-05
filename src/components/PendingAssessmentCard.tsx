@@ -91,8 +91,8 @@ export default function PendingAssessmentCard({ onViewAll }: PendingAssessmentCa
           </Space>
         }
         extra={
-          assessmentGroups.length > 0 && onViewAll && (
-            <Button type="link" onClick={onViewAll} icon={<RightOutlined />}>
+          onViewAll && (
+            <Button type="link" onClick={onViewAll}>
               查看全部
             </Button>
           )
