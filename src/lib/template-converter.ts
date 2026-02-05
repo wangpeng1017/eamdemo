@@ -228,37 +228,38 @@ export function convertSheetDataToSchema(sheetData: SheetData[]): TemplateSchema
 
   // 解析标题行
   const titleCell = celldata.find(c => c.r === 0 && c.c === 0)
-  if (titleCell?.v?.v && !titleCell.v.v.includes('：')) {
-    schema.title = titleCell.v.v
+  const titleVal = String(titleCell?.v?.v || '')
+  if (titleVal && !titleVal.includes('：')) {
+    schema.title = titleVal
   }
 
   // 解析检测依据行
-  const methodCell = celldata.find(c => c.v?.v?.includes?.('检测依据：'))
+  const methodCell = celldata.find(c => String(c.v?.v || '').includes('检测依据：'))
   if (methodCell) {
-    schema.header.methodBasis = methodCell.v.v.replace('检测依据：', '')
+    schema.header.methodBasis = String(methodCell.v.v).replace('检测依据：', '')
   }
 
   // 解析样品类型行
-  const sampleTypeCell = celldata.find(c => c.v?.v?.includes?.('样品类型：'))
+  const sampleTypeCell = celldata.find(c => String(c.v?.v || '').includes('样品类型：'))
   if (sampleTypeCell) {
-    schema.header.sampleType = sampleTypeCell.v.v.replace('样品类型：', '')
+    schema.header.sampleType = String(sampleTypeCell.v.v).replace('样品类型：', '')
   }
 
   // 查找列标题行
   let headerRowIndex = 1
-  const envCell = celldata.find(c => c.v?.v?.includes?.('环境条件'))
+  const envCell = celldata.find(c => String(c.v?.v || '').includes('环境条件'))
   if (envCell) {
     schema.environment = true
     headerRowIndex = Math.max(headerRowIndex, envCell.r + 1)
   }
 
-  const equipCell = celldata.find(c => c.v?.v?.includes?.('检测设备'))
+  const equipCell = celldata.find(c => String(c.v?.v || '').includes('检测设备'))
   if (equipCell) {
     schema.equipment = true
     headerRowIndex = Math.max(headerRowIndex, equipCell.r + 1)
   }
 
-  const personCell = celldata.find(c => c.v?.v?.includes?.('检测人员'))
+  const personCell = celldata.find(c => String(c.v?.v || '').includes('检测人员'))
   if (personCell) {
     schema.personnel = true
     headerRowIndex = Math.max(headerRowIndex, personCell.r + 1)
