@@ -52,20 +52,23 @@ const statusMap: Record<string, { text: string; color: string }> = {
     issued: { text: '已发布', color: 'cyan' },
 }
 
-const reviewTypeMap: Record<string, string> = {
+const actionTextMap: Record<string, string> = {
     submit: '提交审核',
     review: '审核',
-    issue: '发布'
+    approve: '批准',
+    issue: '发布',
+    reject: '驳回'
 }
+
 
 export default function ReportDetailPage() {
     const params = useParams()
     const router = useRouter()
     const reportId = params.id as string
 
-    const [report, setReport] = useState<Report | null>(null)
+    const [report, setReport] = useState<any>(null)
     const [testData, setTestData] = useState<TestData[]>([])
-    const [approvals, setApprovals] = useState<Approval[]>([])
+
     const [loading, setLoading] = useState(false)
     const [approvalModalOpen, setApprovalModalOpen] = useState(false)
     const [approvalAction, setApprovalAction] = useState<string>('')
@@ -73,8 +76,8 @@ export default function ReportDetailPage() {
 
     useEffect(() => {
         fetchReport()
-        fetchApprovals()
     }, [reportId])
+
 
     const fetchReport = async () => {
         setLoading(true)
@@ -104,17 +107,7 @@ export default function ReportDetailPage() {
         }
     }
 
-    const fetchApprovals = async () => {
-        try {
-            const res = await fetch(`/api/report/${reportId}/approval`)
-            const json = await res.json()
-            if (json.success) {
-                setApprovals(json.data || [])
-            }
-        } catch (error) {
-            console.error('获取审批历史失败', error)
-        }
-    }
+
 
     const handlePrint = () => {
         window.print()
@@ -139,10 +132,10 @@ export default function ReportDetailPage() {
             window.URL.revokeObjectURL(url)
             document.body.removeChild(a)
 
-            showSuccess({ content: '导出成功', key: 'export' })
         } catch (error) {
-            showError({ content: '导出失败', key: 'export' })
+            showError('导出失败')
         }
+
     }
 
     const handleApprovalAction = (action: string) => {
@@ -155,8 +148,8 @@ export default function ReportDetailPage() {
             const values = await form.validateFields()
             setLoading(true)
 
-            const res = await fetch(`/api/report/${reportId}/approval`, {
-                method: 'POST',
+            const res = await fetch(`/api/test-report/${reportId}`, {
+                method: 'PATCH',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     action: approvalAction,
@@ -164,13 +157,14 @@ export default function ReportDetailPage() {
                 })
             })
 
+
             const json = await res.json()
             if (res.ok && json.success) {
                 showSuccess(json.message)
                 setApprovalModalOpen(false)
                 form.resetFields()
                 fetchReport()
-                fetchApprovals()
+
             } else {
                 showError(json.error || '操作失败')
             }
@@ -303,24 +297,24 @@ export default function ReportDetailPage() {
             </Card>
 
             {/* 审批历史 */}
-            {approvals.length > 0 && (
+            {report.approvalFlow && report.approvalFlow.length > 0 && (
                 <Card title="审批历史" className="no-print">
                     <Timeline
-                        items={approvals.map(item => ({
-                            color: item.result === 'pass' ? 'green' : 'red',
+                        items={report.approvalFlow.map((item: any) => ({
+                            color: item.action === 'reject' ? 'red' : 'green',
                             children: (
                                 <div>
                                     <div className="font-medium">
-                                        {reviewTypeMap[item.reviewType] || item.reviewType}
-                                        <Tag color={item.result === 'pass' ? 'success' : 'error'} className="ml-2">
-                                            {item.result === 'pass' ? '通过' : '驳回'}
+                                        {actionTextMap[item.action] || item.action}
+                                        <Tag color={item.action === 'reject' ? 'error' : 'success'} className="ml-2">
+                                            {item.action === 'reject' ? '驳回' : '通过'}
                                         </Tag>
                                     </div>
                                     <div className="text-gray-500 text-sm">
-                                        {item.reviewer} · {dayjs(item.reviewDate).format('YYYY-MM-DD HH:mm')}
+                                        {item.operator} · {dayjs(item.timestamp).format('YYYY-MM-DD HH:mm')}
                                     </div>
-                                    {item.comments && (
-                                        <div className="text-gray-600 mt-1">{item.comments}</div>
+                                    {item.comment && (
+                                        <div className="text-gray-600 mt-1">{item.comment}</div>
                                     )}
                                 </div>
                             )
@@ -328,6 +322,7 @@ export default function ReportDetailPage() {
                     />
                 </Card>
             )}
+
 
             {/* 审批确认弹窗 */}
             <Modal

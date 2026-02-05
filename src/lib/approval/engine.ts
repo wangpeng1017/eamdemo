@@ -426,8 +426,25 @@ export class ApprovalEngine {
           },
         })
         break
+      case 'test_report':
+        // 同步更新 status 字段
+        const testReportStatus =
+          approvalStatus === 'approved' ? 'approved' :
+            approvalStatus === 'rejected' ? 'draft' :
+              approvalStatus === 'cancelled' ? 'draft' :
+                'reviewing'
+
+        await prisma.testReport.update({
+          where: { id: bizId },
+          data: {
+            ...updateData,
+            status: testReportStatus
+          },
+        })
+        break
       default:
         throw new Error(`不支持的业务类型: ${bizType}`)
+
     }
   }
 

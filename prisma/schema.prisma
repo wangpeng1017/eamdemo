@@ -629,8 +629,10 @@ model TestTask {
 
   testData TestData[]
   reports  TestReport[]
+  outsourceOrders OutsourceOrder[]
 
   @@index([sampleId])
+
   @@index([assignedToId])
   @@index([status])
   @@index([createdAt])
@@ -672,6 +674,13 @@ model TestReport {
   reportNo String    @unique @db.VarChar(50) // RPT-YYYYMMDD-XXX
   taskId   String?
   task     TestTask? @relation(fields: [taskId], references: [id])
+
+  // 统一审批字段
+  approvalStatus   String?   @default("pending") // pending/approved/rejected/cancelled
+  approvalStep     Int?      @default(0)
+  approvalInstanceId String?  @unique
+  approvalInstance ApprovalInstance? @relation(fields: [approvalInstanceId], references: [id])
+
 
   // 基本信息
   entrustmentId String? @db.VarChar(50)
@@ -847,6 +856,7 @@ model OutsourceOrder {
   supplier      Supplier? @relation(fields: [supplierId], references: [id])
   supplierName  String?   @db.VarChar(200)
   taskId        String?   @db.VarChar(50) // 关联任务
+  task          TestTask? @relation(fields: [taskId], references: [id])
   items         String?   @db.Text // JSON 外包项目
   amount        Decimal?  @db.Decimal(12, 2)
   expectedDate  DateTime?
@@ -997,6 +1007,8 @@ model ApprovalInstance {
   quotation     Quotation?
   contract      Contract?
   client        Client?
+  testReport    TestReport?
+
 
   @@unique([bizType, bizId])
   @@index([bizType, bizId, status])

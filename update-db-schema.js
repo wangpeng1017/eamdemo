@@ -393,8 +393,26 @@ async function main() {
             console.error('❌ Error adding rejection fields to biz_client:', e.message)
         }
     }
-}
 
+    // ==================== TestReport 表更新 ====================
+    try {
+        console.log('Adding approval fields to biz_test_report...')
+        await prisma.$executeRawUnsafe(`ALTER TABLE biz_test_report ADD COLUMN approvalStatus VARCHAR(50) DEFAULT 'pending';`)
+    } catch (e) { console.log('approvalStatus column check...'); }
+    try {
+        await prisma.$executeRawUnsafe(`ALTER TABLE biz_test_report ADD COLUMN approvalStep INT DEFAULT 0;`)
+    } catch (e) { console.log('approvalStep column check...'); }
+    try {
+        await prisma.$executeRawUnsafe(`ALTER TABLE biz_test_report ADD COLUMN approvalInstanceId VARCHAR(191);`)
+        console.log('✅ Approval fields added to biz_test_report.')
+    } catch (e) {
+        if (e.message.includes('Duplicate column name')) {
+            console.log('ℹ️ Approval fields already exist in biz_test_report.')
+        } else {
+            console.error('❌ Error adding approval fields to biz_test_report:', e.message)
+        }
+    }
+}
 
 main()
     .catch((e) => {

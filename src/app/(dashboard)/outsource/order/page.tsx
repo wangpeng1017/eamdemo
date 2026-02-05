@@ -38,6 +38,7 @@ export default function OutsourceOrderPage() {
   const [page, setPage] = useState(1)
   const [modalOpen, setModalOpen] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
+  const [suppliers, setSuppliers] = useState<any[]>([])
   const [form] = Form.useForm()
 
   const fetchData = async (p = page) => {
@@ -48,18 +49,26 @@ export default function OutsourceOrderPage() {
       setData(json.data.list || [])
       setTotal(json.data.total || 0)
     } else {
-      if (json.success && json.data) {
-      setData(json.data.list || [])
-      setTotal(json.data.total || 0)
-    } else {
       setData(json.list || [])
       setTotal(json.total || 0)
-    }
     }
     setLoading(false)
   }
 
-  useEffect(() => { fetchData() }, [page])
+  const fetchSuppliers = async () => {
+    try {
+      const res = await fetch('/api/supplier?pageSize=100')
+      const json = await res.json()
+      setSuppliers(json.list || [])
+    } catch (e) {
+      console.error(e)
+    }
+  }
+
+  useEffect(() => {
+    fetchData()
+    fetchSuppliers()
+  }, [page])
 
   const handleAdd = () => {
     setEditingId(null)
@@ -90,21 +99,29 @@ export default function OutsourceOrderPage() {
 
   const handleSubmit = async () => {
     const values = await form.validateFields()
+    const selectedSupplier = suppliers.find(s => s.id === values.supplierId)
     const data = {
       ...values,
+      supplierName: selectedSupplier?.name,
       expectedDate: values.expectedDate?.toISOString(),
       completedDate: values.completedDate?.toISOString(),
     }
     const url = editingId ? `/api/outsource-order/${editingId}` : '/api/outsource-order'
     const method = editingId ? 'PUT' : 'POST'
-    await fetch(url, {
+    const res = await fetch(url, {
       method,
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(data)
     })
-    showSuccess(editingId ? '更新成功' : '创建成功')
-    setModalOpen(false)
-    fetchData()
+
+    if (res.ok) {
+      showSuccess(editingId ? '更新成功' : '创建成功')
+      setModalOpen(false)
+      fetchData()
+    } else {
+      const err = await res.json()
+      showError(err.error || '操作失败')
+    }
   }
 
   const columns: ColumnsType<OutsourceOrder> = [
@@ -124,7 +141,7 @@ export default function OutsourceOrderPage() {
       render: (s: string) => <Tag color={statusMap[s]?.color}>{statusMap[s]?.text}</Tag>
     },
     {
-      title: '操作', fixed: 'right', 
+      title: '操作', fixed: 'right',
       render: (_, record) => (
         <Space style={{ whiteSpace: 'nowrap' }}>
           <Button size="small" icon={<EditOutlined />} onClick={() => handleEdit(record)} />
@@ -155,8 +172,13 @@ export default function OutsourceOrderPage() {
         width={600}
       >
         <Form form={form} layout="vertical">
-          <Form.Item name="supplierName" label="供应商名称" rules={[{ required: true }]}>
-            <Input />
+          <Form.Item name="supplierId" label="供应商名称" rules={[{ required: true }]}>
+            <Select
+              placeholder="请选择供应商"
+              showSearch
+              optionFilterProp="label"
+              options={suppliers.map(s => ({ value: s.id, label: s.name }))}
+            />
           </Form.Item>
           <Form.Item name="amount" label="金额">
             <InputNumber style={{ width: '100%' }} prefix="¥" />

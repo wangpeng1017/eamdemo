@@ -16,6 +16,7 @@ import dayjs from 'dayjs'
 import { exportToExcel } from '@/hooks/useExport'
 import { copyToClipboard } from '@/lib/utils/format'
 import { useRouter, useSearchParams } from 'next/navigation'
+import type { User, Device, Supplier, Client, Contract } from '@prisma/client'
 
 // 类型定义
 interface EntrustmentProject {
@@ -88,24 +89,25 @@ interface Entrustment {
     items?: QuotationItem[]
   }
 }
-interface Device {
-  id: string
-  name: string
-  deviceNo: string
-}
+// The original Device, Supplier, Client, Contract interfaces are now replaced by Prisma types.
+// interface Device {
+//   id: string
+//   name: string
+//   deviceNo: string
+// }
 
-interface Supplier {
-  id: string
-  name: string
-  code: string
-}
+// interface Supplier {
+//   id: string
+//   name: string
+//   code: string
+// }
 
-interface Client {
-  id: string
-  name: string
-  shortName: string | null
-  contact: string | null
-}
+// interface Client {
+//   id: string
+//   name: string
+//   shortName: string | null
+//   contact: string | null
+// }
 
 interface Quotation {
   id: string
@@ -120,20 +122,21 @@ interface QuotationItem {
   serviceItem: string
 }
 
-interface Contract {
-  id: string
-  contractNo: string
-  contractName: string | null
-  partyACompany: string | null
-  clientId?: string
-  clientContact?: string
-  salesPerson?: string
-  sampleName?: string
-  sampleModel?: string
-  sampleMaterial?: string
-  sampleQuantity?: number
-  contractSamples?: { name: string; model?: string; material?: string; quantity: number; remark?: string }[]
-}
+// The original Contract interface is now replaced by Prisma type.
+// interface Contract {
+//   id: string
+//   contractNo: string
+//   contractName: string | null
+//   partyACompany: string | null
+//   clientId?: string
+//   clientContact?: string
+//   salesPerson?: string
+//   sampleName?: string
+//   sampleModel?: string
+//   sampleMaterial?: string
+//   sampleQuantity?: number
+//   contractSamples?: { name: string; model?: string; material?: string; quantity: number; remark?: string }[]
+// }
 
 export default function EntrustmentListPage() {
   const router = useRouter()
@@ -183,6 +186,7 @@ export default function EntrustmentListPage() {
   // 获取委托单列表
   // 获取样品名称：优先从 Sample 表，否则从 Contract/Quotation
   const getSampleName = () => {
+    if (!currentEntrustment) return '-'
     if (currentEntrustment.samples && currentEntrustment.samples.length > 0) {
       return currentEntrustment.samples.map(s => s.name).join(', ')
     }
@@ -196,7 +200,9 @@ export default function EntrustmentListPage() {
     return '-'
   }
 
+
   const getSampleModel = () => {
+    if (!currentEntrustment) return '-'
     if (currentEntrustment.samples && currentEntrustment.samples.length > 0) {
       return currentEntrustment.samples.map(s => s.specification || '-').join(', ')
     }
@@ -206,7 +212,9 @@ export default function EntrustmentListPage() {
     return '-'
   }
 
+
   const getSampleMaterial = () => {
+    if (!currentEntrustment) return '-'
     if (currentEntrustment.samples && currentEntrustment.samples.length > 0) {
       return currentEntrustment.samples.map(s => s.material || '-').join(', ')
     }
@@ -216,7 +224,9 @@ export default function EntrustmentListPage() {
     return '-'
   }
 
+
   const getSampleQuantity = () => {
+    if (!currentEntrustment) return '-'
     if (currentEntrustment.samples && currentEntrustment.samples.length > 0) {
       return currentEntrustment.samples.map(s => s.quantity || '-').join(', ')
     }
@@ -225,6 +235,7 @@ export default function EntrustmentListPage() {
     }
     return '-'
   }
+
 
   const fetchData = async (p = page) => {
     setLoading(true)
@@ -795,7 +806,8 @@ export default function EntrustmentListPage() {
               showSearch
               placeholder="选择检测人员"
               optionFilterProp="label"
-              options={users.map(u => ({ value: u.name, label: u.name }))}
+              options={users.map(u => ({ value: u.phone, label: `${u.name} (${u.phone})` }))}
+
             />
           </Form.Item>
           <Form.Item name="deviceId" label="检测设备">
@@ -835,7 +847,8 @@ export default function EntrustmentListPage() {
               showSearch
               placeholder="选择检测人员"
               optionFilterProp="label"
-              options={users.map(u => ({ value: u.name, label: u.name }))}
+              options={users.map(u => ({ value: u.phone, label: `${u.name} (${u.phone})` }))}
+
             />
           </Form.Item>
           <Form.Item name="deadline" label="截止日期">

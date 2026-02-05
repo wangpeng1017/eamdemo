@@ -65,6 +65,14 @@ export const GET = withAuth(async (request: NextRequest, user) => {
           shortName: true,
         },
       },
+      testReport: {
+        select: {
+          reportNo: true,
+          projectName: true,
+          clientName: true,
+        }
+      }
+
     },
     orderBy: {
       createdAt: 'desc',
@@ -89,10 +97,12 @@ export const GET = withAuth(async (request: NextRequest, user) => {
 
   // 🔍 调试日志
   const userRoleCodes = userWithRoles.roles.map(r => r.role.code)
-  console.log('[DEBUG] 审批权限检查 - 用户:', user.username, '角色:', userRoleCodes)
+  console.log('[DEBUG] 审批权限检查 - 用户:', (user as any).username, '角色:', userRoleCodes)
   console.log('[DEBUG] 审批权限检查 - 过滤前实例数:', instances.length)
 
-  const filteredInstances = await filterViewableApprovals(instances, userWithRoles)
+
+  const filteredInstances = await filterViewableApprovals(instances as any, userWithRoles)
+
 
   console.log('[DEBUG] 审批权限检查 - 过滤后实例数:', filteredInstances.length)
   if (filteredInstances.length < instances.length) {

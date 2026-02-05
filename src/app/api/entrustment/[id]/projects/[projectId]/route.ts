@@ -108,7 +108,7 @@ export const PUT = withErrorHandler(async (request: NextRequest, context?: { par
 
   // 如果指定了内部检测人员，自动创建/更新检测任务
   if (data.assignTo && data.status === 'assigned') {
-    // 优先使用 assignToId，如果没有则按名称查找（兼容旧逻辑）
+    // 优先使用 assignToId，如果没有则按手机号查找（优化：手机号比姓名更唯一）
     let user = null
     if (data.assignToId) {
       user = await prisma.user.findUnique({
@@ -116,9 +116,16 @@ export const PUT = withErrorHandler(async (request: NextRequest, context?: { par
       })
     } else {
       user = await prisma.user.findFirst({
-        where: { name: data.assignTo }
+        where: {
+          OR: [
+            { phone: data.assignTo },
+            { username: data.assignTo },
+            { name: data.assignTo } // 保留姓名作为最后的兜底
+          ]
+        }
       })
     }
+
 
     if (user) {
       // 检查任务是否存在
@@ -174,7 +181,7 @@ export const PUT = withErrorHandler(async (request: NextRequest, context?: { par
 
   // 如果指定了外包检测人员，自动创建/更新检测任务
   if (data.subcontractAssignee && data.status === 'subcontracted') {
-    // 优先使用 subcontractAssigneeId，如果没有则按名称查找（兼容旧逻辑）
+    // 优先使用 subcontractAssigneeId，如果没有则按手机号查找（优化：手机号比姓名更唯一）
     let user = null
     if (data.subcontractAssigneeId) {
       user = await prisma.user.findUnique({
@@ -182,9 +189,16 @@ export const PUT = withErrorHandler(async (request: NextRequest, context?: { par
       })
     } else {
       user = await prisma.user.findFirst({
-        where: { name: data.subcontractAssignee }
+        where: {
+          OR: [
+            { phone: data.subcontractAssignee },
+            { username: data.subcontractAssignee },
+            { name: data.subcontractAssignee } // 保留姓名作为最后的兜底
+          ]
+        }
       })
     }
+
 
     if (user) {
       // 检查任务是否存在
