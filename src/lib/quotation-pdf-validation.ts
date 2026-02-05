@@ -32,8 +32,8 @@ export const QUOTATION_STATUS_CONFIG: Record<QuotationStatus, {
   draft: {
     text: '草稿',
     color: 'default',
-    canGeneratePDF: false,
-    message: '报价单尚未提交审批，请先提交审批后再生成PDF'
+    canGeneratePDF: true,
+    message: ''
   },
   pending: {
     text: '审批中',

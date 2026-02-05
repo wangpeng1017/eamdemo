@@ -90,7 +90,7 @@ export default function QuotationForm({
             form.setFieldsValue({
                 quotationDate: dayjs(),
                 validDays: 30,
-                taxRate: 0.06,
+                taxRate: 0,
                 discountAmount: 0,
             })
             setItems([{ sampleName: '', serviceItem: '', methodStandard: '', quantity: 1, unitPrice: 0, totalPrice: 0 }])
@@ -175,11 +175,9 @@ export default function QuotationForm({
 
     // 计算汇总数据
     const totalAmount = items.reduce((sum, item) => sum + (item.totalPrice || 0), 0)
-    const taxRate = Form.useWatch('taxRate', form) || 0
     const discountAmount = Form.useWatch('discountAmount', form) || 0
-
-    const taxAmount = totalAmount * taxRate // 税额 (如果单价是不含税) - 这里假设单价是不含税
-    const totalWithTax = totalAmount + taxAmount // 价税合计
+    const taxAmount = 0 // 移除税额计算，视为已含税
+    const totalWithTax = totalAmount // 价税合计即为小计合计
     const finalAmount = totalWithTax - discountAmount // 最终金额
 
     // 监听样品检测项变化，自动同步到报价明细
@@ -453,23 +451,8 @@ export default function QuotationForm({
 
                 <div style={{ marginTop: 16, display: 'flex', justifyContent: 'flex-end' }}>
                     <div style={{ width: 300 }}>
-                        <Form.Item label="金额合计">
+                        <Form.Item label="报价合计(含税)" style={{ fontWeight: 'bold' }}>
                             <Input value={`¥${totalAmount.toFixed(2)}`} disabled />
-                        </Form.Item>
-                        <Row gutter={8}>
-                            <Col span={12}>
-                                <Form.Item name="taxRate" label="税率">
-                                    <InputNumber min={0} max={1} step={0.01} style={{ width: '100%' }} />
-                                </Form.Item>
-                            </Col>
-                            <Col span={12}>
-                                <Form.Item label="税额">
-                                    <Input value={`¥${taxAmount.toFixed(2)}`} disabled />
-                                </Form.Item>
-                            </Col>
-                        </Row>
-                        <Form.Item label="价税合计">
-                            <Input value={`¥${totalWithTax.toFixed(2)}`} disabled />
                         </Form.Item>
                         <Form.Item name="discountAmount" label="折扣金额">
                             <InputNumber style={{ width: '100%' }} prefix="¥" />

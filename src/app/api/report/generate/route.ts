@@ -32,7 +32,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: '未登录' }, { status: 401 })
   }
 
-  const { taskId } = await request.json()
+  const { taskId, templateId, precautions, conclusion, testData } = await request.json()
 
   if (!taskId) {
     return NextResponse.json({ error: '缺少任务ID' }, { status: 400 })
@@ -43,11 +43,12 @@ export async function POST(request: NextRequest) {
     where: { id: taskId },
     include: {
       sample: true,
-      testData: true,  // 🔥 关键：获取结构化数据
+      testData: true,
       assignedTo: { select: { name: true } },
     },
-    // 注意：include 和 select 不能同时使用，所以我们用 include 获取关联，字段会自动包含
   })
+
+  // ... (validation checks remain same) ...
 
   if (!task) {
     return NextResponse.json({ error: '任务不存在' }, { status: 404 })
@@ -69,6 +70,10 @@ export async function POST(request: NextRequest) {
   // 生成报告编号
   const reportNo = await generateReportNo()
 
+  // 确定最终数据 (优先使用前端提交的编辑数据，否则使用任务原始数据)
+  const finalConclusion = conclusion !== undefined ? conclusion : ((task as any).conclusion || null)
+  const finalTestData = testData !== undefined ? JSON.stringify(testData) : JSON.stringify(task.testData)
+
   // 创建报告记录
   const report = await prisma.testReport.create({
     data: {
@@ -81,11 +86,25 @@ export async function POST(request: NextRequest) {
       specification: task.sample?.specification,
       sampleQuantity: task.sample?.quantity,
       receivedDate: task.sample?.receiptDate,
-      testParameters: task.parameters,  // JSON 字符串
-      testResults: JSON.stringify(task.testData),  // 🔥 使用 TestData
-      overallConclusion: (task as any).conclusion || null,  // 使用类型断言
+      testParameters: task.parameters,
+      testResults: finalTestData,
+      overallConclusion: finalConclusion,
+      precautions: precautions || null, // 需求7：写入注意事项
       tester: task.assignedTo?.name,
       status: 'draft',
+      // (Optionally link templateId if TestReport model has it, but schema update added templateId to ClientReport. 
+      // TestReport doesn't seem to have templateId in my update? 
+      // Wait, user usually selects template for generation. 
+      // If TestReport needs to know which template to use for "Printing", we might need to store it or pass it during print.
+      // Usually TestReport is just data. The "Client Report" has a template. 
+      // Individual Task Report printing might use a default template or selected one.
+      // Current `exportReportPDF` likely uses a default layout.
+      // If we want to persist the choice, we need a field.
+      // Check TestReport schema again? I didn't add templateId to TestReport.
+      // But page.tsx passes `templateId`. 
+      // I should likely store it if I want to use it later, OR just ignore it if current PDF logic doesn't use DB stored template.)
+      // For now, I'll ignore templateId storage unless I add the field. 
+      // The requirement focuses on "Client Report" template.
     }
   })
 

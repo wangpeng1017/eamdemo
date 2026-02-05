@@ -124,6 +124,10 @@ export const PUT = withErrorHandler(async (
   if (data.testMethod !== undefined) updateData.testMethod = data.testMethod
   if (data.deviceId !== undefined) updateData.deviceId = data.deviceId
   if (data.plannedDate !== undefined) updateData.plannedDate = new Date(data.plannedDate)
+  // 需求6补全：支持预计开始和结束时间
+  if (data.plannedStartDate !== undefined) updateData.plannedStartDate = data.plannedStartDate ? new Date(data.plannedStartDate) : null
+  if (data.plannedEndDate !== undefined) updateData.plannedEndDate = data.plannedEndDate ? new Date(data.plannedEndDate) : null
+
   if (data.dueDate !== undefined) updateData.dueDate = new Date(data.dueDate)
   if (data.progress !== undefined) updateData.progress = data.progress
   if (data.remark !== undefined) updateData.remark = data.remark
@@ -272,6 +276,9 @@ export const PATCH = withErrorHandler(async (
       updateData = {
         status: 'in_progress',
         progress: 10,
+        // 需求6：开始任务时记录时间
+        plannedStartDate: data.plannedStartDate ? new Date(data.plannedStartDate) : undefined,
+        plannedEndDate: data.plannedEndDate ? new Date(data.plannedEndDate) : undefined,
       }
       break
 

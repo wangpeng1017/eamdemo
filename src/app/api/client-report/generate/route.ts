@@ -20,13 +20,24 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json()
-    const { entrustmentId, taskIds, clientName, projectName, sampleName, overallConclusion } = body
+    const {
+        entrustmentId,
+        taskIds,
+        templateId, // 需求2：模板ID
+        coverData,  // 需求2：封面数据
+        backCoverData, // 需求2：封底数据
+        clientName,
+        projectName,
+        sampleName,
+        overallConclusion
+    } = body
 
     if (!entrustmentId || !taskIds || taskIds.length === 0 || !clientName || !sampleName) {
         return NextResponse.json({ error: '缺少必填字段' }, { status: 400 })
     }
 
     // 获取相关任务和任务报告
+    // 需求2：需要建立 ClientReport -> TestReport 的关联
     const tasks = await prisma.testTask.findMany({
         where: {
             id: { in: taskIds },
@@ -41,12 +52,13 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ error: '未找到已完成的任务' }, { status: 400 })
     }
 
-    // 获取任务报告编号
-    const taskReportNos = await prisma.testReport.findMany({
+    // 获取任务报告 (用于关联和 JSON 存储兼容)
+    const taskReports = await prisma.testReport.findMany({
         where: {
             taskId: { in: taskIds }
         },
         select: {
+            id: true, // 获取 ID 用于 connect
             reportNo: true,
             taskId: true
         }
@@ -75,12 +87,22 @@ export async function POST(request: NextRequest) {
             projectName,
             clientName,
             sampleName,
-            taskReportNos: JSON.stringify(taskReportNos.map(r => r.reportNo)),
+            taskReportNos: JSON.stringify(taskReports.map(r => r.reportNo)),
             testItems: JSON.stringify(testItems),
             testStandards: JSON.stringify(testStandards),
             overallConclusion,
             preparer: session.user.name || session.user.id || '系统',
-            status: 'draft'
+            status: 'draft',
+
+            // 新增字段
+            templateId: templateId || null,
+            coverData: coverData ? JSON.stringify(coverData) : null,
+            backCoverData: backCoverData ? JSON.stringify(backCoverData) : null, // 存储封底内容作为 JSON 字符串 { content: "..." }
+
+            // 建立关联
+            tasks: {
+                connect: taskReports.map(r => ({ id: r.id }))
+            }
         }
     })
 

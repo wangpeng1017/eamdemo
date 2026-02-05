@@ -38,13 +38,13 @@ export function QuotationPDFButton({
   showLabel = true,
   icon = <PrinterOutlined />
 }: QuotationPDFButtonProps) {
-  // 检查是否可以打印PDF
-  const canPrint = quotationStatus === 'approved'
+  // 检查是否可以打印PDF (需求5：新增支持草稿状态打印)
+  const canPrint = quotationStatus === 'approved' || quotationStatus === 'draft'
 
   // 获取状态提示信息
   const getStatusMessage = (): string => {
     const messages: Record<QuotationStatus, string> = {
-      draft: '报价单为草稿状态，尚未提交审批',
+      draft: '点击打印草稿PDF',
       pending_sales: '报价单正在销售审批中，请耐心等待',
       pending_finance: '报价单正在财务审批中，请耐心等待',
       pending_lab: '报价单正在实验室审批中，请耐心等待',

@@ -529,6 +529,7 @@ model Entrustment {
   projects    EntrustmentProject[]
   samples     Sample[]
   receivables FinanceReceivable[]
+  invoices    FinanceInvoice[] // 关联发票 (需求1)
 
   @@index([clientId])
   @@index([quotationId])
@@ -610,7 +611,12 @@ model TestTask {
   device        Device?   @relation(fields: [deviceId], references: [id])
   assignedToId  String?
   assignedTo    User?     @relation("AssignedTo", fields: [assignedToId], references: [id])
-  plannedDate   DateTime? // 计划日期
+  plannedDate   DateTime? // 计划完成日期
+  
+  // 预计开始与结束时间 (需求6)
+  plannedStartDate DateTime?
+  plannedEndDate   DateTime?
+
   dueDate       DateTime? // 完成截止日期
   clientReportDeadline DateTime? // 客户报告截止日期
   actualDate    DateTime? // 实际完成日期
@@ -709,6 +715,9 @@ model TestReport {
   // 客户报告关联
   isClientReport Boolean @default(false)
   clientReportId String? @db.VarChar(50)
+  clientReport   ClientReport? @relation(fields: [clientReportId], references: [id]) // 建立关联
+
+  precautions    String? @db.Text // 需求7：检测注意事项(自定义编辑)
 
   status       String    @default("draft") // draft/reviewing/approved/issued
   approvalFlow String?   @db.Text // JSON 审批流程
@@ -919,6 +928,10 @@ model FinanceInvoice {
   receivable   FinanceReceivable? @relation(fields: [receivableId], references: [id])
   clientId     String?
   client       Client?            @relation(fields: [clientId], references: [id])
+  
+  // 关联委托单 (需求1)
+  entrustmentId String?           @db.VarChar(50)
+  entrustment   Entrustment?       @relation(fields: [entrustmentId], references: [id])
 
   // 购买方信息
   clientName        String  @db.VarChar(200)
@@ -1112,6 +1125,12 @@ model ReportTemplate {
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
 
+  // 需求7：自定义封面封底配置
+  coverConfig     String? @db.Text // JSON 封面配置
+  backCoverConfig String? @db.Text // JSON 封底配置
+
+  clientReports   ClientReport[]
+
   @@map("biz_report_template")
 }
 
@@ -1142,6 +1161,17 @@ model ClientReport {
   attachmentUrl     String?   @db.VarChar(500)
   createdAt         DateTime  @default(now())
   updatedAt         DateTime  @updatedAt
+
+  // 关联模板
+  templateId        String?
+  template          ReportTemplate? @relation(fields: [templateId], references: [id])
+  
+  // 实例数据
+  coverData         String?   @db.Text // JSON 封面填充数据
+  backCoverData     String?   @db.Text // JSON 封底填充数据
+
+  // 关联任务报告 (1:N)
+  tasks             TestReport[]
 
   @@map("biz_client_report")
 }
@@ -1278,6 +1308,10 @@ model InspectionStandard {
   name       String   @db.VarChar(500)         // 标准名称
   description String?  @db.Text                 // 描述/备注
   validity   String   @default("valid")        // valid/invalid
+  
+  // 分类 (需求2)，如：企业标准、奇瑞、比亚迪
+  category   String?  @db.VarChar(100)
+
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
 

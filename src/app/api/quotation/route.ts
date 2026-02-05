@@ -61,8 +61,8 @@ export const GET = withAuth(async (request: NextRequest, user) => {
     consultationNo: item.consultationNo,
     quotationDate: item.createdAt,
     totalAmount: item.subtotal,
-    taxRate: 0.06,
-    taxAmount: item.taxTotal ? (Number(item.taxTotal) - Number(item.subtotal)) : 0,
+    taxRate: 0,
+    taxAmount: 0,
     totalWithTax: item.taxTotal || item.subtotal,
     discountAmount: item.discountTotal ? (Number(item.taxTotal || item.subtotal) - Number(item.discountTotal)) : 0,
     finalAmount: item.discountTotal || item.taxTotal || item.subtotal,
@@ -102,7 +102,7 @@ export const POST = withAuth(async (request: NextRequest, user) => {
 
   const items = data.items || []
   const subtotal = items.reduce((sum: number, item: any) => sum + (item.quantity || 1) * (item.unitPrice || 0), 0)
-  const taxTotal = subtotal * 1.06
+  const taxTotal = subtotal // 需求4：报价默认为含税，taxTotal 等于 subtotal
   const discountTotal = data.finalAmount || taxTotal
 
   // 构造创建数据

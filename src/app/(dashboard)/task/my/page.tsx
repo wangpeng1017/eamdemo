@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react"
 import { showSuccess, showError } from '@/lib/confirm'
-import { Table, Button, Space, Tag, Modal, Form, Select, message, Card, Statistic } from "antd"
+import { Table, Button, Space, Tag, Modal, Form, Select, message, Card, Statistic, DatePicker } from "antd"
 import { PlayCircleOutlined, CheckCircleOutlined, ClockCircleOutlined, SwapOutlined, EditOutlined } from "@ant-design/icons"
 import type { ColumnsType } from "antd/es/table"
 import dayjs from "dayjs"
@@ -42,9 +42,14 @@ export default function MyTasksPage() {
   const [statusFilter, setStatusFilter] = useState<string | undefined>()
   const [stats, setStats] = useState<Record<string, number>>({})
   const [users, setUsers] = useState<User[]>([])
+
+  // 模态框状态
   const [transferModalOpen, setTransferModalOpen] = useState(false)
+  const [startModalOpen, setStartModalOpen] = useState(false) // 新增：开始任务模态框
+
   const [currentTask, setCurrentTask] = useState<Task | null>(null)
   const [transferForm] = Form.useForm()
+  const [startForm] = Form.useForm() // 新增：开始任务表单
 
   const fetchData = async (p = page) => {
     setLoading(true)
@@ -53,17 +58,22 @@ export default function MyTasksPage() {
       pageSize: "10",
       ...(statusFilter && { status: statusFilter }),
     })
-    const res = await fetch(`/api/task/my?${params}`)
-    const json = await res.json()
-    if (json.success && json.data) {
-      setData(json.data.list || [])
-      setTotal(json.data.total || 0)
-    } else {
-      setData(json.list || [])
-      setTotal(json.total || 0)
+    try {
+      const res = await fetch(`/api/task/my?${params}`)
+      const json = await res.json()
+      if (json.success && json.data) {
+        setData(json.data.list || [])
+        setTotal(json.data.total || 0)
+      } else {
+        setData(json.list || [])
+        setTotal(json.total || 0)
+      }
+      setStats(json.stats || {})
+    } catch (e) {
+      showError('获取任务列表失败')
+    } finally {
+      setLoading(false)
     }
-    setStats(json.stats || {})
-    setLoading(false)
   }
 
   const fetchUsers = async () => {
@@ -81,18 +91,46 @@ export default function MyTasksPage() {
     fetchUsers()
   }, [page, statusFilter])
 
-  const handleStart = async (id: string) => {
-    const res = await fetch(`/api/task/${id}`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action: 'start' })
-    })
-    if (res.ok) {
-      showSuccess("任务已开始")
-      fetchData()
-    } else {
-      const data = await res.json()
-      showError(data.error || "操作失败")
+  // 打开转交模态框
+  const openTransferModal = (task: Task) => {
+    setCurrentTask(task)
+    transferForm.resetFields()
+    setTransferModalOpen(true)
+  }
+
+  // 打开开始任务模态框
+  const openStartModal = (task: Task) => {
+    setCurrentTask(task)
+    startForm.resetFields()
+    setStartModalOpen(true)
+  }
+
+  // 提交开始任务
+  const handleStartSubmit = async () => {
+    if (!currentTask) return
+    try {
+      const values = await startForm.validateFields()
+
+      const res = await fetch(`/api/task/${currentTask.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'start',
+          plannedStartDate: values.plannedStartDate, // 提交时间字段
+          plannedEndDate: values.plannedEndDate,
+        })
+      })
+
+      if (res.ok) {
+        showSuccess("任务已开始")
+        setStartModalOpen(false)
+        fetchData()
+      } else {
+        const data = await res.json()
+        showError(data.error || "操作失败")
+      }
+    } catch (e) {
+      // validation failed
     }
   }
 
@@ -109,12 +147,6 @@ export default function MyTasksPage() {
       const data = await res.json()
       showError(data.error || "操作失败")
     }
-  }
-
-  const openTransferModal = (task: Task) => {
-    setCurrentTask(task)
-    transferForm.resetFields()
-    setTransferModalOpen(true)
   }
 
   const handleTransfer = async () => {
@@ -169,12 +201,11 @@ export default function MyTasksPage() {
     },
     {
       title: '操作', fixed: 'right',
-      
       render: (_, record) => (
         <Space size="small" style={{ whiteSpace: 'nowrap' }}>
           {/* 待开始状态：显示"开始"按钮 */}
           {record.status === "pending" && (
-            <Button type="primary" size="small" icon={<PlayCircleOutlined />} onClick={() => handleStart(record.id)}>
+            <Button type="primary" size="small" icon={<PlayCircleOutlined />} onClick={() => openStartModal(record)}>
               开始
             </Button>
           )}
@@ -279,7 +310,25 @@ export default function MyTasksPage() {
           </Form.Item>
         </Form>
       </Modal>
+
+      {/* 需求6：开始任务弹窗 */}
+      <Modal
+        title="开始检测任务"
+        open={startModalOpen}
+        onOk={handleStartSubmit}
+        onCancel={() => setStartModalOpen(false)}
+        width={400}
+      >
+        <Form form={startForm} layout="vertical">
+          <p className="mb-4 text-gray-500">确认开始任务并记录预计时间：</p>
+          <Form.Item name="plannedStartDate" label="预计开始时间" rules={[{ required: true, message: '请选择开始时间' }]}>
+            <DatePicker showTime style={{ width: '100%' }} />
+          </Form.Item>
+          <Form.Item name="plannedEndDate" label="预计完成时间" rules={[{ required: true, message: '请选择完成时间' }]}>
+            <DatePicker showTime style={{ width: '100%' }} />
+          </Form.Item>
+        </Form>
+      </Modal>
     </div>
   )
 }
-

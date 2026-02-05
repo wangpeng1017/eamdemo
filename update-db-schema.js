@@ -472,6 +472,97 @@ async function main() {
     } catch (e) {
         console.log('ℹ️ Contract fields update check (ignoring duplicate column errors).')
     }
+
+    // ==================== 2026-02-05 报告增强与任务时间补全 ====================
+
+    // 1. TestTask 时间字段
+    try {
+        console.log('Adding plannedStartDate/End to biz_test_task...')
+        await prisma.$executeRawUnsafe(`ALTER TABLE biz_test_task ADD COLUMN plannedStartDate DATETIME(3);`)
+        await prisma.$executeRawUnsafe(`ALTER TABLE biz_test_task ADD COLUMN plannedEndDate DATETIME(3);`)
+        console.log('✅ Task time fields added.')
+    } catch (e) { console.log('ℹ️ Task time fields check.'); }
+
+    // 2. TestReport 增强字段
+    try {
+        console.log('Updating biz_test_report for custom content...')
+        await prisma.$executeRawUnsafe(`ALTER TABLE biz_test_report ADD COLUMN precautions TEXT;`)
+        await prisma.$executeRawUnsafe(`ALTER TABLE biz_test_report ADD COLUMN isClientReport BOOLEAN DEFAULT FALSE;`)
+        await prisma.$executeRawUnsafe(`ALTER TABLE biz_test_report ADD COLUMN clientReportId VARCHAR(191);`)
+        console.log('✅ TestReport custom fields added.')
+    } catch (e) { console.log('ℹ️ TestReport custom fields check.'); }
+
+    // 3. ReportTemplate 配置字段
+    try {
+        console.log('Updating biz_report_template for configs...')
+        await prisma.$executeRawUnsafe(`ALTER TABLE biz_report_template ADD COLUMN coverConfig TEXT;`)
+        await prisma.$executeRawUnsafe(`ALTER TABLE biz_report_template ADD COLUMN backCoverConfig TEXT;`)
+        console.log('✅ ReportTemplate config fields added.')
+    } catch (e) { console.log('ℹ️ ReportTemplate config fields check.'); }
+
+    // 4. 创建 ClientReport 表
+    try {
+        console.log('Creating biz_client_report table...')
+        await prisma.$executeRawUnsafe(`
+            CREATE TABLE IF NOT EXISTS biz_client_report (
+                id VARCHAR(191) NOT NULL,
+                reportNo VARCHAR(50) NOT NULL UNIQUE,
+                entrustmentId VARCHAR(50),
+                projectName VARCHAR(200),
+                clientName VARCHAR(200) NOT NULL,
+                clientAddress VARCHAR(500),
+                sampleName VARCHAR(200) NOT NULL,
+                sampleNo VARCHAR(50),
+                specification VARCHAR(200),
+                sampleQuantity VARCHAR(50),
+                receivedDate DATETIME(3),
+                taskReportNos TEXT,
+                testItems TEXT,
+                testStandards TEXT,
+                overallConclusion TEXT,
+                preparer VARCHAR(50),
+                reviewer VARCHAR(50),
+                approver VARCHAR(50),
+                status VARCHAR(50) NOT NULL DEFAULT 'draft',
+                approvalFlow TEXT,
+                issuedDate DATETIME(3),
+                attachmentUrl VARCHAR(500),
+                templateId VARCHAR(191),
+                coverData TEXT,
+                backCoverData TEXT,
+                createdAt DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+                updatedAt DATETIME(3) NOT NULL,
+                
+                PRIMARY KEY (id)
+            ) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+        `)
+        console.log('✅ biz_client_report table checked/created.')
+    } catch (e) {
+        console.error('❌ Error creating biz_client_report table:', e.message)
+    }
+
+    // 4.1 显式检查并添加 biz_client_report 字段 (针对已存在的表)
+    const clientReportColumns = [
+        ['templateId', 'VARCHAR(191)'],
+        ['coverData', 'TEXT'],
+        ['backCoverData', 'TEXT'],
+        ['clientAddress', 'VARCHAR(500)'],
+        ['memo', 'TEXT']
+    ]
+
+    for (const [col, type] of clientReportColumns) {
+        try {
+            await prisma.$executeRawUnsafe(`ALTER TABLE biz_client_report ADD COLUMN ${col} ${type};`)
+            console.log(`✅ Column ${col} added to biz_client_report.`)
+        } catch (e) {
+            // 忽略重复列错误
+        }
+    }
+
+    // 5. 建立 ClientReport 外键关联 (可选，防止失败)
+    try {
+        await prisma.$executeRawUnsafe(`ALTER TABLE biz_test_report ADD CONSTRAINT biz_test_report_clientReportId_fkey FOREIGN KEY (clientReportId) REFERENCES biz_client_report(id) ON DELETE SET NULL ON UPDATE CASCADE;`)
+    } catch (e) { console.log('ℹ️ FK relation check.'); }
 }
 
 main()

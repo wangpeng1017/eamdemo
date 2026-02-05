@@ -124,7 +124,7 @@ export const PUT = withAuth(async (
     const subtotal = data.items.reduce((sum: number, item: { quantity?: number; unitPrice?: number }) => {
       return sum + (item.quantity || 1) * (item.unitPrice || 0)
     }, 0)
-    const taxTotal = subtotal * 1.06
+    const taxTotal = subtotal // 需求4：报价默认为含税
     const discountTotal = data.finalAmount || taxTotal
 
     data.subtotal = subtotal

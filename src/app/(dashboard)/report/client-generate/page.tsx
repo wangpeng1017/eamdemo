@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { showSuccess, showError } from '@/lib/confirm'
-import { Table, Button, Space, Tag, Modal, Select, message, Card, Statistic, Row, Col, Form, Input, Descriptions } from 'antd'
+import { Table, Button, Space, Tag, Modal, Select, message, Card, Statistic, Row, Col, Form, Input, Divider } from 'antd'
 import { PlusOutlined, EyeOutlined, FileTextOutlined } from '@ant-design/icons'
 import type { ColumnsType } from 'antd/es/table'
 import dayjs from 'dayjs'
@@ -35,6 +35,12 @@ interface Entrustment {
     }[]
 }
 
+interface ReportTemplate {
+    id: string
+    name: string
+    code: string
+}
+
 const statusMap: Record<string, { text: string; color: string }> = {
     draft: { text: '草稿', color: 'default' },
     pending_review: { text: '待审核', color: 'processing' },
@@ -53,6 +59,7 @@ export default function ClientReportGeneratePage() {
     // 生成报告弹窗
     const [generateModalOpen, setGenerateModalOpen] = useState(false)
     const [entrustments, setEntrustments] = useState<Entrustment[]>([])
+    const [templates, setTemplates] = useState<ReportTemplate[]>([])
     const [selectedEntrustment, setSelectedEntrustment] = useState<Entrustment | null>(null)
     const [selectedTaskIds, setSelectedTaskIds] = useState<string[]>([])
     const [generating, setGenerating] = useState(false)
@@ -92,8 +99,21 @@ export default function ClientReportGeneratePage() {
         }
     }
 
+    const fetchTemplates = async () => {
+        try {
+            const res = await fetch('/api/report-template?category=client_report&status=active')
+            const json = await res.json()
+            if (json.success && json.data) {
+                setTemplates(json.data.list || [])
+            }
+        } catch (error) {
+            console.error('获取模板失败')
+        }
+    }
+
     useEffect(() => {
         fetchData()
+        fetchTemplates()
     }, [page])
 
     const handleGenerate = () => {
@@ -101,6 +121,10 @@ export default function ClientReportGeneratePage() {
         setSelectedEntrustment(null)
         setSelectedTaskIds([])
         form.resetFields()
+        // 默认选中第一个模板
+        if (templates.length > 0) {
+            form.setFieldValue('templateId', templates[0].id)
+        }
         setGenerateModalOpen(true)
     }
 
@@ -132,10 +156,13 @@ export default function ClientReportGeneratePage() {
                 body: JSON.stringify({
                     entrustmentId: selectedEntrustment.id,
                     taskIds: selectedTaskIds,
+                    templateId: values.templateId,
                     clientName: values.clientName,
                     projectName: values.projectName,
                     sampleName: values.sampleName,
                     overallConclusion: values.overallConclusion,
+                    // 构造封底数据
+                    backCoverData: values.backCoverContent ? { content: values.backCoverContent } : null
                 })
             })
 
@@ -193,14 +220,15 @@ export default function ClientReportGeneratePage() {
         },
         {
             title: '操作', fixed: 'right',
-            
             render: (_, record) => (
                 <Button
                     size="small"
                     type="link"
                     icon={<EyeOutlined />}
                     onClick={() => handleView(record.id)}
-                />
+                >
+                    查看详情
+                </Button>
             )
         }
     ]
@@ -212,7 +240,6 @@ export default function ClientReportGeneratePage() {
         <div className="p-6">
             <div className="mb-4">
                 <h1 className="text-2xl font-bold mb-4">客户报告生成</h1>
-
                 <Row gutter={16} className="mb-4">
                     <Col span={6}>
                         <Card>
@@ -224,11 +251,7 @@ export default function ClientReportGeneratePage() {
 
             <div className="mb-4 flex justify-between">
                 <div></div>
-                <Button
-                    type="primary"
-                    icon={<PlusOutlined />}
-                    onClick={handleGenerate}
-                >
+                <Button type="primary" icon={<PlusOutlined />} onClick={handleGenerate}>
                     生成客户报告
                 </Button>
             </div>
@@ -261,6 +284,12 @@ export default function ClientReportGeneratePage() {
             >
                 <div className="py-4">
                     <Form form={form} layout="vertical">
+                        <Form.Item label="选择报告模板" name="templateId" rules={[{ required: true, message: '请选择模板' }]}>
+                            <Select placeholder="选择客户报告模板" options={templates.map(t => ({ label: t.name, value: t.id }))} />
+                        </Form.Item>
+
+                        <Divider />
+
                         <Form.Item label="选择委托单" required>
                             <Select
                                 style={{ width: '100%' }}
@@ -296,20 +325,25 @@ export default function ClientReportGeneratePage() {
                                     )}
                                 </Form.Item>
 
-                                <Form.Item name="clientName" label="客户名称" rules={[{ required: true }]}>
-                                    <Input />
-                                </Form.Item>
-
-                                <Form.Item name="projectName" label="项目名称">
-                                    <Input />
-                                </Form.Item>
+                                <div className="grid grid-cols-2 gap-4">
+                                    <Form.Item name="clientName" label="客户名称" rules={[{ required: true }]}>
+                                        <Input />
+                                    </Form.Item>
+                                    <Form.Item name="projectName" label="项目名称">
+                                        <Input />
+                                    </Form.Item>
+                                </div>
 
                                 <Form.Item name="sampleName" label="样品名称" rules={[{ required: true }]}>
                                     <Input />
                                 </Form.Item>
 
                                 <Form.Item name="overallConclusion" label="总体结论">
-                                    <Input.TextArea rows={3} placeholder="请填写客户报告的总体结论" />
+                                    <Input.TextArea rows={2} placeholder="总结论" />
+                                </Form.Item>
+
+                                <Form.Item name="backCoverContent" label="封底自定义内容">
+                                    <Input.TextArea rows={3} placeholder="如有特殊声明或备注，请在此填写（将显示在报告封底）" />
                                 </Form.Item>
                             </>
                         )}

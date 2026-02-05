@@ -9,7 +9,10 @@ export async function GET(
     const { id } = await params
 
     const report = await prisma.clientReport.findUnique({
-        where: { id }
+        where: { id },
+        include: {
+            template: true // 获取模板详情
+        }
     })
 
     if (!report) {
