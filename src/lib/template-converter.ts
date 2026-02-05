@@ -239,15 +239,21 @@ export function convertSheetDataToSchema(sheetData: SheetData[]): TemplateSchema
   }
 
   // 解析检测依据行
-  const methodCell = celldata.find(c => String(c.v?.v || '').includes('检测依据：'))
+  const methodCell = celldata.find(c => {
+    const val = String(c.v?.v || '');
+    return val.includes('检测依据：');
+  })
   if (methodCell) {
-    schema.header.methodBasis = String(methodCell.v.v).replace('检测依据：', '')
+    schema.header.methodBasis = String(methodCell.v.v || '').replace('检测依据：', '')
   }
 
   // 解析样品类型行
-  const sampleTypeCell = celldata.find(c => String(c.v?.v || '').includes('样品类型：'))
+  const sampleTypeCell = celldata.find(c => {
+    const val = String(c.v?.v || '');
+    return val.includes('样品类型：');
+  })
   if (sampleTypeCell) {
-    schema.header.sampleType = String(sampleTypeCell.v.v).replace('样品类型：', '')
+    schema.header.sampleType = String(sampleTypeCell.v.v || '').replace('样品类型：', '')
   }
 
   // 查找列标题行
@@ -255,34 +261,34 @@ export function convertSheetDataToSchema(sheetData: SheetData[]): TemplateSchema
   const envCell = celldata.find(c => String(c.v?.v || '').includes('环境条件'))
   if (envCell) {
     schema.environment = true
-    headerRowIndex = Math.max(headerRowIndex, envCell.r + 1)
+    headerRowIndex = Math.max(headerRowIndex, (envCell.r || 0) + 1)
   }
 
   const equipCell = celldata.find(c => String(c.v?.v || '').includes('检测设备'))
   if (equipCell) {
     schema.equipment = true
-    headerRowIndex = Math.max(headerRowIndex, equipCell.r + 1)
+    headerRowIndex = Math.max(headerRowIndex, (equipCell.r || 0) + 1)
   }
 
   const personCell = celldata.find(c => String(c.v?.v || '').includes('检测人员'))
   if (personCell) {
     schema.personnel = true
-    headerRowIndex = Math.max(headerRowIndex, personCell.r + 1)
+    headerRowIndex = Math.max(headerRowIndex, (personCell.r || 0) + 1)
   }
 
   // 解析列定义
   const headerCells = celldata.filter(c => c.r === headerRowIndex && c.v?.bg?.rgb === "E7E6E6")
   schema.columns = headerCells.map((cell, idx) => ({
-    title: cell.v.v,
-    dataIndex: cell.v.meta?.columnIndex || `column${idx}`,
-    width: sheet.config.columnlen?.[idx] || 120,
+    title: String(cell.v?.v || '新列'),
+    dataIndex: String(cell.v?.meta?.columnIndex || `column${idx}`),
+    width: Number(sheet.config?.columnlen?.[idx] || 120),
     dataType: 'string' as const
   }))
 
   // 统计数据行数
-  const dataCells = celldata.filter(c => c.r > headerRowIndex && !c.v?.bl)
+  const dataCells = celldata.filter(c => (c.r || 0) > headerRowIndex && !c.v?.bl)
   const rowIndices = new Set(dataCells.map(c => c.r))
-  schema.defaultRows = rowIndices.size
+  schema.defaultRows = rowIndices.size || 5
 
   return schema
 }

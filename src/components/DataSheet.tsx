@@ -58,12 +58,20 @@ export default function DataSheet({ data, onChange, readonly = false, height = 5
   }, [data])
 
   const handleChange = useCallback((changedData: any) => {
-    // 强制防御：检查 changedData 和 celldata
-    const celldata = changedData?.[0]?.celldata;
+    // 强制防御：进入时立即检查基本结构
+    if (!changedData || !Array.isArray(changedData) || changedData.length === 0) {
+      console.warn("[DataSheet onChange] Ignored empty or invalid changedData");
+      return;
+    }
+
+    const firstSheet = changedData[0];
+    const celldata = firstSheet?.celldata;
+
     console.log("[DataSheet onChange] Called, celldata length:", celldata?.length);
 
-    if (!changedData || !Array.isArray(changedData) || changedData.length === 0 || !celldata) {
-      console.warn("[DataSheet onChange] Ignored invalid data change (missing celldata)");
+    // 关键拦截：如果 celldata 缺失或不是数组，阻断后续流程，防止下游 convertSheetDataToSchema 报错
+    if (!celldata || !Array.isArray(celldata)) {
+      console.warn("[DataSheet onChange] Ignored invalid data change (missing/invalid celldata)");
       return;
     }
 

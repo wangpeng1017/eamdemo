@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useMemo, useRef } from 'react'
 import { showSuccess, showError, showWarningMessage } from '@/lib/confirm'
 import { Button, Card, Form, Input, Switch, InputNumber, Space, message, Modal, Dropdown, Menu, Select } from 'antd'
 import { PlusOutlined, DeleteOutlined, SettingOutlined } from '@ant-design/icons'
@@ -136,15 +136,24 @@ export default function TemplateEditor({ initialValue, onSave, onCancel }: Templ
     })
   }
 
+  // 用于标记是否正在由于外部 schema 变化而触发的预览更新
+  // 防止 onChange 捕获到正在销毁中的旧 sheetData
+  const isUpdatingSchemaRef = useRef(false);
+
   // 更新 Schema
   const updateSchema = (updates: Partial<TemplateSchema>) => {
     console.log("[TemplateEditor] updateSchema called with:", updates);
+    isUpdatingSchemaRef.current = true;
     setSchema(prev => {
       const next = { ...prev, ...updates };
       // 深度防御：确保关键字段类型正确
       if (typeof next.title !== 'string') next.title = String(next.title || '');
       return next;
     });
+    // 异步重置标记位
+    setTimeout(() => {
+      isUpdatingSchemaRef.current = false;
+    }, 100);
   }
 
   // 更新列
@@ -285,7 +294,15 @@ export default function TemplateEditor({ initialValue, onSave, onCancel }: Templ
             <div className="h-full overflow-auto">
               <DataSheet
                 data={sheetData}
-                onChange={setSheetData}
+                onChange={(newData) => {
+                  // 如果顶层正在由于 schema 变化而重绘，忽略表格上报的变动
+                  // 这能从根本上杜绝“撕裂状态”下非法数据引发的崩溃
+                  if (isUpdatingSchemaRef.current) {
+                    console.log("[TemplateEditor] Skipping DataSheet onChange - system is updating schema");
+                    return;
+                  }
+                  setSheetData(newData);
+                }}
                 height={500}
               />
             </div>
