@@ -36,8 +36,8 @@ export default function InspectionStandardsPage() {
     try {
       const res = await fetch(`/api/inspection-standard?page=${p}&pageSize=10`)
       const json = await res.json()
-      setData(json.list || [])
-      setTotal(json.total || 0)
+      setData(json.data?.list || [])
+      setTotal(json.data?.total || 0)
     } catch {
       showError('加载数据失败')
     }
@@ -73,14 +73,19 @@ export default function InspectionStandardsPage() {
     const values = await form.validateFields()
     const url = editingId ? `/api/inspection-standard/${editingId}` : '/api/inspection-standard'
     const method = editingId ? 'PUT' : 'POST'
-    await fetch(url, {
+    const res = await fetch(url, {
       method,
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(values)
     })
-    showSuccess(editingId ? '更新成功' : '创建成功')
-    setModalOpen(false)
-    fetchData()
+    const json = await res.json()
+    if (res.ok && json.success) {
+      showSuccess(editingId ? '更新成功' : '创建成功')
+      setModalOpen(false)
+      fetchData()
+    } else {
+      showError(json.error?.message || '操作失败')
+    }
   }
 
   const columns: ColumnsType<InspectionStandard> = [
@@ -100,7 +105,7 @@ export default function InspectionStandardsPage() {
       title: '操作', fixed: 'right',
       render: (_, record) => (
         <Space size="small" style={{ whiteSpace: 'nowrap' }}>
-          <Button size="small" icon={<EditOutlined />} onClick={() => handleEdit(record)}/>
+          <Button size="small" icon={<EditOutlined />} onClick={() => handleEdit(record)} />
           <Button size="small" danger icon={<DeleteOutlined />} onClick={() => handleDelete(record.id)} />
         </Space>
       )

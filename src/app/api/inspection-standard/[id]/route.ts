@@ -1,27 +1,30 @@
 import { prisma } from '@/lib/prisma'
-import { NextRequest, NextResponse } from 'next/server'
+import { NextRequest } from 'next/server'
+import { withAuth, success, notFound } from '@/lib/api-handler'
 
-export async function GET(
+export const GET = withAuth(async (
   request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
-  const { id } = await params
+  user,
+  context?: { params: Promise<Record<string, string>> }
+) => {
+  const { id } = await context!.params
   const standard = await prisma.inspectionStandard.findUnique({
     where: { id }
   })
 
   if (!standard) {
-    return NextResponse.json({ error: '记录不存在' }, { status: 404 })
+    notFound('记录不存在')
   }
 
-  return NextResponse.json(standard)
-}
+  return success(standard)
+})
 
-export async function PUT(
+export const PUT = withAuth(async (
   request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
-  const { id } = await params
+  user,
+  context?: { params: Promise<Record<string, string>> }
+) => {
+  const { id } = await context!.params
   const data = await request.json()
 
   const standard = await prisma.inspectionStandard.update({
@@ -29,17 +32,18 @@ export async function PUT(
     data,
   })
 
-  return NextResponse.json(standard)
-}
+  return success(standard)
+})
 
-export async function DELETE(
+export const DELETE = withAuth(async (
   request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
-  const { id } = await params
+  user,
+  context?: { params: Promise<Record<string, string>> }
+) => {
+  const { id } = await context!.params
   await prisma.inspectionStandard.delete({
     where: { id }
   })
 
-  return NextResponse.json({ success: true })
-}
+  return success({ success: true })
+})
