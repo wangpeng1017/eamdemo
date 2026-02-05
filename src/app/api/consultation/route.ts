@@ -47,6 +47,7 @@ export const GET = withAuth(async (request: NextRequest, user) => {
       include: {
         followUps: { orderBy: { date: 'desc' }, take: 1 },
         client: true,
+        createdBy: { select: { name: true } },
       },
     }),
     prisma.consultation.count({ where }),
@@ -141,7 +142,10 @@ export const POST = withAuth(async (request: NextRequest, user) => {
       assessmentPendingCount: assessorCount,
       assessmentPassedCount: 0,
       assessmentFailedCount: 0,
-    } : {}),
+      createdById: user.id,
+    } : {
+      createdById: user.id,
+    }),
   }
 
   // 明确指定允许的字段
@@ -161,6 +165,7 @@ export const POST = withAuth(async (request: NextRequest, user) => {
     'assessmentPassedCount',
     'assessmentFailedCount',
     'assessmentPendingCount',
+    'createdById',
     'estimatedQuantity',
   ]
 

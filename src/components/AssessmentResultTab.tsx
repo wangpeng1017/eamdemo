@@ -35,7 +35,6 @@ interface AssessmentResultTabProps {
 
 const CONCLUSION_MAP: Record<string, { text: string; color: string }> = {
   feasible: { text: '可行', color: 'success' },
-  difficult: { text: '有难度', color: 'warning' },
   infeasible: { text: '不可行', color: 'error' },
 }
 

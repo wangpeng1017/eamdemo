@@ -21,8 +21,8 @@ export const POST = withAuth(async (
   if (!data.feedback) {
     badRequest('请输入评估意见')
   }
-  if (!['feasible', 'difficult', 'infeasible'].includes(data.conclusion)) {
-    badRequest('可行性结论必须是 feasible、difficult 或 infeasible')
+  if (!['feasible', 'infeasible'].includes(data.conclusion)) {
+    badRequest('可行性结论必须是 feasible 或 infeasible')
   }
 
   // 查询评估记录
@@ -64,14 +64,14 @@ export const POST = withAuth(async (
     })
 
     // 检查是否所有人都已反馈
-    const allCompleted = allAssessments.every(a => 
+    const allCompleted = allAssessments.every(a =>
       a.id === id ? true : a.status === 'completed'
     )
 
     if (allCompleted) {
       // 检查是否有人给出"不可行"结论
-      const hasInfeasible = allAssessments.some(a => 
-        a.id === id 
+      const hasInfeasible = allAssessments.some(a =>
+        a.id === id
           ? data.conclusion === 'infeasible'
           : a.conclusion === 'infeasible'
       )

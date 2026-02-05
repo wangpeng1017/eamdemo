@@ -103,7 +103,6 @@ export default function SampleItemAssessmentDetailsTab({
   const getFeasibilityTag = (feasibility: string) => {
     const tagMap: Record<string, { color: string; text: string; icon: React.ReactNode }> = {
       feasible: { color: 'success', text: '可行', icon: <CheckCircleOutlined /> },
-      difficult: { color: 'warning', text: '有难度', icon: <ClockCircleOutlined /> },
       infeasible: { color: 'error', text: '不可行', icon: <CloseCircleOutlined /> },
     }
 

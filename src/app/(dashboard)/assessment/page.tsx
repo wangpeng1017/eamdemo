@@ -106,7 +106,6 @@ export default function AssessmentCenterPage() {
     const getFeasibilityTag = (feasibility: string | null) => {
         const map: Record<string, { color: string; text: string }> = {
             feasible: { color: 'success', text: '可行' },
-            difficult: { color: 'warning', text: '有难度' },
             infeasible: { color: 'error', text: '不可行' },
         }
         if (!feasibility) return '-'

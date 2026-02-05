@@ -11,8 +11,8 @@ import { z } from 'zod'
 
 // 请求体验证 schema
 const SubmitAssessmentSchema = z.object({
-  feasibility: z.enum(['feasible', 'difficult', 'infeasible'], {
-    errorMap: () => ({ message: '可行性必须是: feasible, difficult, 或 infeasible' }),
+  feasibility: z.enum(['feasible', 'infeasible'], {
+    errorMap: () => ({ message: '可行性必须是: feasible 或 infeasible' }),
   }),
   feasibilityNote: z.string().optional(),
 })

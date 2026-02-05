@@ -4,8 +4,9 @@ import { useState, useEffect } from 'react'
 import { showSuccess, showError, showLoading, showConfirm, showWarning } from '@/lib/confirm'
 import { Table, Button, Space, Tag, Modal, Form, Input, Select, Popconfirm, Drawer, Descriptions, Tabs, Divider } from 'antd'
 import { PlusOutlined, EditOutlined, DeleteOutlined, ExclamationCircleOutlined, EyeOutlined } from '@ant-design/icons'
-import { ClientApprovalButtons } from '@/components/ClientApprovalButtons'
+import { StatusTag } from '@/components/StatusTag'
 import { ApprovalRecords } from '@/components/approval/ApprovalRecords'
+import { ClientApprovalButtons } from '@/components/ClientApprovalButtons'
 import type { ColumnsType } from 'antd/es/table'
 import dayjs from 'dayjs'
 
@@ -208,16 +209,7 @@ export default function ClientPage() {
     },
     {
       title: '状态', dataIndex: 'status', width: 100,
-      render: (s: string) => {
-        const statusMap: Record<string, { text: string, color: string }> = {
-          'draft': { text: '草稿', color: 'default' },
-          'pending': { text: '待审批', color: 'processing' },
-          'approved': { text: '已批准', color: 'success' },
-          'rejected': { text: '已驳回', color: 'error' },
-        }
-        const config = statusMap[s] || { text: s, color: 'default' }
-        return <Tag color={config.color}>{config.text}</Tag>
-      }
+      render: (s: string) => <StatusTag type="client" status={s} />
     },
     {
       title: '创建时间', dataIndex: 'createdAt', width: 160,
@@ -355,16 +347,7 @@ export default function ClientPage() {
                       <Descriptions.Item label="电子邮箱" span={2}>{currentClient.email || '-'}</Descriptions.Item>
                       <Descriptions.Item label="联系地址" span={2}>{currentClient.address || '-'}</Descriptions.Item>
                       <Descriptions.Item label="状态">
-                        {(() => {
-                          const statusMap: Record<string, { text: string, color: string }> = {
-                            'draft': { text: '草稿', color: 'default' },
-                            'pending': { text: '待审批', color: 'processing' },
-                            'approved': { text: '已批准', color: 'success' },
-                            'rejected': { text: '已驳回', color: 'error' },
-                          }
-                          const config = statusMap[currentClient.status] || { text: currentClient.status, color: 'default' }
-                          return <Tag color={config.color}>{config.text}</Tag>
-                        })()}
+                        <StatusTag type="client" status={currentClient.status} />
                       </Descriptions.Item>
                       <Descriptions.Item label="创建时间">
                         {dayjs(currentClient.createdAt).format('YYYY-MM-DD HH:mm:ss')}

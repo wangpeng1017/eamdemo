@@ -191,7 +191,7 @@ model Consultation {
   budgetRange        String?   @db.VarChar(50) // 预算范围
   status             String    @default("following") // following/assessing/assessment_passed/assessment_failed/quoted/rejected/closed
   follower           String?   @db.VarChar(50) // 跟进人
-  feasibility        String?   @db.VarChar(20) // feasible/difficult/infeasible
+  feasibility        String?  @db.VarChar(20) // feasible/infeasible
   feasibilityNote    String?   @db.Text // 可行性说明
   quotationId        String?
   quotationNo        String?   @db.VarChar(50)
@@ -207,6 +207,8 @@ model Consultation {
 
   createdAt          DateTime  @default(now())
   updatedAt          DateTime  @updatedAt
+  createdById        String?
+  createdBy          User?     @relation("ConsultationCreatedBy", fields: [createdById], references: [id])
 
   followUps              ConsultationFollowUp[]
   assessments            ConsultationAssessment[]
@@ -226,7 +228,7 @@ model ConsultationAssessment {
   assessorName   String       @db.VarChar(50) // 评估人姓名
 
   // 评估内容
-  conclusion     String?      @db.VarChar(20) // feasible/difficult/infeasible
+  conclusion     String?      @db.VarChar(20) // feasible/infeasible
   feedback       String?      @db.Text // 评估意见（文字反馈）
 
   // 评估轮次（支持多轮评估）
@@ -254,9 +256,10 @@ model ConsultationSampleAssessment {
   sampleTestItemId      String
   assessorId            String   // 评估人用户ID
   assessorName          String?  @db.VarChar(50) // 评估人姓名
-  feasibility           String   @db.VarChar(20) // feasible/difficult/infeasible
+  feasibility           String   @db.VarChar(20) // feasible/infeasible
   feasibilityNote       String?  @db.Text // 可行性说明
   assessedAt            DateTime @default(now()) // 评估时间
+  requestedBy           String?  @db.VarChar(50) // 发起人
   round                 Int      @default(1)      // 第几轮评估
   isLatest              Boolean  @default(true)   // 是否是最新记录
 

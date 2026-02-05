@@ -10,7 +10,7 @@ interface StatusTagProps {
   status?: string | null
   text?: string
   color?: string
-  type?: 'consultation' | 'quotation' | 'quotation_client' | 'contract' | 'entrustment' | 'sample' | 'task' | 'report' | 'device' | 'feasibility' | 'project' | 'receivable' | 'invoice' | 'boolean' | 'calibration_plan'
+  type?: 'consultation' | 'quotation' | 'quotation_client' | 'contract' | 'entrustment' | 'sample' | 'task' | 'report' | 'device' | 'feasibility' | 'project' | 'receivable' | 'invoice' | 'boolean' | 'calibration_plan' | 'client'
   className?: string
 }
 
@@ -94,8 +94,13 @@ const STATUS_TEXT_MAP: Record<string, Record<string, string>> = {
   },
   feasibility: {
     feasible: '可行',
-    difficult: '困难',
     infeasible: '不可行',
+  },
+  client: {
+    draft: '草稿',
+    pending: '待审批',
+    approved: '已批准',
+    rejected: '已驳回',
   },
   receivable: {
     pending: '未收款',
@@ -198,8 +203,13 @@ const STATUS_COLOR_MAP: Record<string, Record<string, string>> = {
   },
   feasibility: {
     feasible: 'success',
-    difficult: 'warning',
     infeasible: 'error',
+  },
+  client: {
+    draft: 'default',
+    pending: 'processing',
+    approved: 'success',
+    rejected: 'error',
   },
   receivable: {
     pending: 'warning',

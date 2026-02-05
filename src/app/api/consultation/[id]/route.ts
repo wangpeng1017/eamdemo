@@ -16,6 +16,7 @@ export const GET = withErrorHandler(async (
     include: {
       followUps: { orderBy: { date: 'desc' } },
       client: true,
+      createdBy: { select: { name: true } },
     },
   })
 

@@ -12,7 +12,6 @@ import { PlusOutlined, EditOutlined, DeleteOutlined, EyeOutlined, FileTextOutlin
 import { StatusTag } from '@/components/StatusTag'
 import UserSelect from '@/components/UserSelect'
 import SampleTestItemTable, { SampleTestItemData } from '@/components/SampleTestItemTable'
-// ConsultationAssessmentModal 已废弃 - v2系统中评估人在创建咨询单时通过样品检测项分配
 import AssessmentResultTab from '@/components/AssessmentResultTab'
 import type { ColumnsType } from 'antd/es/table'
 import dayjs from 'dayjs'
@@ -68,7 +67,6 @@ interface Consultation {
 
 const FEASIBILITY_OPTIONS = [
   { value: 'feasible', label: '可行' },
-  { value: 'difficult', label: '困难' },
   { value: 'infeasible', label: '不可行' },
 ]
 
@@ -166,7 +164,18 @@ export default function ConsultationPage() {
   }
 
   const handleView = async (record: Consultation) => {
-    setCurrentConsultation(record)
+    try {
+      const res = await fetch(`/api/consultation/${record.id}`)
+      const json = await res.json()
+      if (json.success && json.data) {
+        setCurrentConsultation(json.data)
+      } else {
+        setCurrentConsultation(record)
+      }
+    } catch (error) {
+      console.error('获取咨询详情失败:', error)
+      setCurrentConsultation(record)
+    }
     setViewDrawerOpen(true)
   }
 
@@ -386,6 +395,12 @@ export default function ConsultationPage() {
       render: (t: string) => dayjs(t).format('YYYY-MM-DD HH:mm:ss')
     },
     {
+      title: '提交人',
+      dataIndex: ['createdBy', 'name'],
+      width: 100,
+      render: (v: string) => v || '-'
+    },
+    {
       title: '联系人/电话',
       width: 130,
       render: (_, record) => (
@@ -549,6 +564,7 @@ export default function ConsultationPage() {
                       </Descriptions.Item>
                       <Descriptions.Item label="可行性说明">{currentConsultation.feasibilityNote || '-'}</Descriptions.Item>
                       <Descriptions.Item label="跟单人">{currentConsultation.follower || '-'}</Descriptions.Item>
+                      <Descriptions.Item label="提交人">{(currentConsultation as any).createdBy?.name || '-'}</Descriptions.Item>
                       <Descriptions.Item label="状态">
                         <StatusTag type="consultation" status={currentConsultation.status} />
                       </Descriptions.Item>
@@ -556,6 +572,14 @@ export default function ConsultationPage() {
                         {dayjs(currentConsultation.createdAt).format('YYYY-MM-DD HH:mm:ss')}
                       </Descriptions.Item>
                     </Descriptions>
+
+                    <Divider style={{ margin: '16px 0' }} orientation="left">样品检测项</Divider>
+                    <SampleTestItemTable
+                      bizType="consultation"
+                      bizId={currentConsultation.id}
+                      value={(currentConsultation as any).sampleTestItems}
+                      readonly={true}
+                    />
                   </div>
                 )
               },
