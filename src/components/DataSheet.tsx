@@ -33,34 +33,44 @@ export default function DataSheet({ data, onChange, readonly = false, height = 5
 
   // 当外部 data 变化时更新
   useEffect(() => {
-    console.log("[DataSheet useEffect] data prop changed, isInternalEdit:", isInternalEditRef.current)
-    console.log("[DataSheet useEffect] data:", data?.length, "items")
-    if (data && data[0]) {
-      console.log("[DataSheet useEffect] data[0].celldata length:", data[0].celldata?.length)
-    }
+    const incomingCelldataLength = data?.[0]?.celldata?.length;
+    console.log("[DataSheet useEffect] data prop changed. isInternalEdit:", isInternalEditRef.current, "new celldata length:", incomingCelldataLength);
 
     // 如果是内部编辑导致的变化，跳过
     if (isInternalEditRef.current) {
-      console.log("[DataSheet useEffect] Skipping - internal edit")
-      isInternalEditRef.current = false
-      return
+      console.log("[DataSheet useEffect] Skipping - internal edit");
+      isInternalEditRef.current = false;
+      return;
     }
 
     // 只有当有新的有效数据时才更新
-    if (data && data.length > 0) {
-      console.log("[DataSheet useEffect] Updating sheetData and key")
-      setSheetData(data)
-      // 更新 key 强制重新渲染 Workbook
-      setSheetKey(Date.now())
+    if (data && data.length > 0 && incomingCelldataLength !== undefined) {
+      // 深度比较：如果 celldata 长度和内容核心没变（比如只是 title 变了），尽量不重置 Key
+      // 这里简单通过长度判断，作为第一道防线
+      console.log("[DataSheet useEffect] Updating sheetData");
+      setSheetData(data);
+
+      // 强制更新 key 会导致 Fortune-sheet 彻底重新挂载（DOM 销毁）
+      // 如果不是因为数据结构变化（由外部同步进来），尽量减少此操作
+      // 目前逻辑保留，但在 TemplateEditor 中将通过防抖减少触发频率
+      setSheetKey(prev => prev + 1);
     }
   }, [data])
 
   const handleChange = useCallback((changedData: any) => {
-    console.log("[DataSheet onChange] Called, celldata length:", changedData?.[0]?.celldata?.length)
+    // 强制防御：检查 changedData 和 celldata
+    const celldata = changedData?.[0]?.celldata;
+    console.log("[DataSheet onChange] Called, celldata length:", celldata?.length);
+
+    if (!changedData || !Array.isArray(changedData) || changedData.length === 0 || !celldata) {
+      console.warn("[DataSheet onChange] Ignored invalid data change (missing celldata)");
+      return;
+    }
+
     // 标记为内部编辑
-    isInternalEditRef.current = true
-    setSheetData(changedData)
-    onChange?.(changedData)
+    isInternalEditRef.current = true;
+    setSheetData(changedData);
+    onChange?.(changedData);
   }, [onChange])
 
   console.log("[DataSheet Render] sheetKey:", sheetKey, "sheetData length:", sheetData?.length, "celldata:", sheetData?.[0]?.celldata?.length)

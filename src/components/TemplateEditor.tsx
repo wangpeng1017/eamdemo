@@ -45,6 +45,36 @@ export default function TemplateEditor({ initialValue, onSave, onCancel }: Templ
       })
   }, [])
 
+  // 用于输入框的组件级防抖
+  const [localTitle, setLocalTitle] = useState(schema.title);
+  const [localSampleType, setLocalSampleType] = useState(schema.header.sampleType || '');
+
+  // 当外部 schema 变化时同步本地状态（仅当非活跃输入时）
+  useEffect(() => {
+    setLocalTitle(schema.title);
+    setLocalSampleType(schema.header.sampleType || '');
+  }, [schema.title, schema.header.sampleType])
+
+  // 防抖更新 schema.title
+  useEffect(() => {
+    if (localTitle === schema.title) return;
+    const timer = setTimeout(() => {
+      updateSchema({ title: localTitle });
+    }, 500);
+    return () => clearTimeout(timer);
+  }, [localTitle])
+
+  // 防抖更新 schema.header.sampleType
+  useEffect(() => {
+    if (localSampleType === (schema.header.sampleType || '')) return;
+    const timer = setTimeout(() => {
+      updateSchema({
+        header: { ...schema.header, sampleType: localSampleType }
+      });
+    }, 500);
+    return () => clearTimeout(timer);
+  }, [localSampleType])
+
   // 初始化表格数据
   useEffect(() => {
     console.log("[TemplateEditor] schema changed, converting to sheetData. title:", schema.title);
@@ -270,7 +300,8 @@ export default function TemplateEditor({ initialValue, onSave, onCancel }: Templ
               <Form.Item label="模版名称" name="name" rules={[{ required: true }]}>
                 <Input
                   placeholder="如: 拉伸性能测试"
-                  onChange={(e) => updateSchema({ title: e.target.value })}
+                  value={localTitle}
+                  onChange={(e) => setLocalTitle(e.target.value)}
                 />
               </Form.Item>
 
@@ -296,9 +327,8 @@ export default function TemplateEditor({ initialValue, onSave, onCancel }: Templ
               <Form.Item label="样品类型" name="sampleType">
                 <Input
                   placeholder="如: 定向纤维增强聚合物基复合材料"
-                  onChange={(e) => updateSchema({
-                    header: { ...schema.header, sampleType: e.target.value }
-                  })}
+                  value={localSampleType}
+                  onChange={(e) => setLocalSampleType(e.target.value)}
                 />
               </Form.Item>
 
