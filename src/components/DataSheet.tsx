@@ -30,6 +30,8 @@ export default function DataSheet({ data, onChange, readonly = false, height = 5
 
   // 标记是否是内部编辑导致的变化
   const isInternalEditRef = useRef(false)
+  // 物理卸载锁：防止组件卸载瞬间异步抛出的数据导致崩溃
+  const isUnmountingRef = useRef(false)
 
   // 当外部 data 变化时更新
   useEffect(() => {
@@ -55,6 +57,11 @@ export default function DataSheet({ data, onChange, readonly = false, height = 5
       // 目前逻辑保留，但在 TemplateEditor 中将通过防抖减少触发频率
       setSheetKey(prev => prev + 1);
     }
+
+    return () => {
+      // 捕获即将到来的卸载动作（由于 Key 变化引发的销毁）
+      isUnmountingRef.current = true;
+    };
   }, [data])
 
   const handleChange = useCallback((changedData: any) => {

@@ -88,7 +88,10 @@ export function convertSchemaToPreviewData(schema: TemplateSchema): SheetData[] 
     celldata.push({
       r: currentRow,
       c: 0,
-      v: { v: `检测依据：${schema.header.methodBasis}` }
+      v: {
+        v: `检测依据：${schema.header.methodBasis}`,
+        ct: { fa: "General", t: "g" }
+      }
     })
     currentRow++
   }
@@ -98,7 +101,10 @@ export function convertSchemaToPreviewData(schema: TemplateSchema): SheetData[] 
     celldata.push({
       r: currentRow,
       c: 0,
-      v: { v: `样品类型：${schema.header.sampleType}` }
+      v: {
+        v: `样品类型：${schema.header.sampleType}`,
+        ct: { fa: "General", t: "g" }
+      }
     })
     currentRow++
   }
@@ -109,7 +115,10 @@ export function convertSchemaToPreviewData(schema: TemplateSchema): SheetData[] 
     celldata.push({
       r: currentRow,
       c: 0,
-      v: { v: "环境条件：温度      ℃    湿度      %RH" }
+      v: {
+        v: "环境条件：温度      ℃    湿度      %RH",
+        ct: { fa: "General", t: "g" }
+      }
     })
     currentRow++
     headerRow = currentRow
@@ -120,7 +129,10 @@ export function convertSchemaToPreviewData(schema: TemplateSchema): SheetData[] 
     celldata.push({
       r: currentRow,
       c: 0,
-      v: { v: "检测设备：" }
+      v: {
+        v: "检测设备：",
+        ct: { fa: "General", t: "g" }
+      }
     })
     currentRow++
     headerRow = currentRow
@@ -131,7 +143,10 @@ export function convertSchemaToPreviewData(schema: TemplateSchema): SheetData[] 
     celldata.push({
       r: currentRow,
       c: 0,
-      v: { v: "检测人员：" }
+      v: {
+        v: "检测人员：",
+        ct: { fa: "General", t: "g" }
+      }
     })
     currentRow++
     headerRow = currentRow
@@ -173,7 +188,11 @@ export function convertSchemaToPreviewData(schema: TemplateSchema): SheetData[] 
     celldata.push({
       r: currentRow,
       c: 0,
-      v: { v: "统计", bl: 1 }
+      v: {
+        v: "统计",
+        bl: 1,
+        ct: { fa: "General", t: "g" }
+      }
     })
 
     schema.statistics.forEach((stat) => {
@@ -181,7 +200,10 @@ export function convertSchemaToPreviewData(schema: TemplateSchema): SheetData[] 
       celldata.push({
         r: currentRow + 1,
         c: 0,
-        v: { v: stat.label }
+        v: {
+          v: stat.label,
+          ct: { fa: "General", t: "g" }
+        }
       })
       if (colIndex >= 0) {
         celldata.push({

@@ -113,7 +113,8 @@ export default function TemplateEditor({ initialValue, onSave, onCancel }: Templ
 
       await onSave(schema)
     } catch (e) {
-      showError('保存失败')
+      console.error("[TemplateEditor] Save Error:", e);
+      showError('保存失败: ' + (e as Error).message);
     }
   }
 
@@ -150,10 +151,11 @@ export default function TemplateEditor({ initialValue, onSave, onCancel }: Templ
       if (typeof next.title !== 'string') next.title = String(next.title || '');
       return next;
     });
-    // 异步重置标记位
+    // 增加锁定延时：300ms 以覆盖 Fortune-sheet 彻底销毁与重绘的异步周期
     setTimeout(() => {
+      console.log("[TemplateEditor] Resetting isUpdatingSchemaRef");
       isUpdatingSchemaRef.current = false;
-    }, 100);
+    }, 300);
   }
 
   // 更新列
