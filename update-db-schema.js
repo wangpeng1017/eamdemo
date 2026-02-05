@@ -412,6 +412,66 @@ async function main() {
             console.error('❌ Error adding approval fields to biz_test_report:', e.message)
         }
     }
+
+    // ==================== Consultation - CreatedById ====================
+    try {
+        console.log('Adding createdById to biz_consultation...')
+        await prisma.$executeRawUnsafe(`ALTER TABLE biz_consultation ADD COLUMN createdById VARCHAR(191);`)
+        console.log('✅ createdById added to biz_consultation.')
+    } catch (e) {
+        if (e.message.includes('Duplicate column name')) {
+            console.log('ℹ️ createdById already exists in biz_consultation.')
+        } else {
+            console.error('❌ Error adding createdById to biz_consultation:', e.message)
+        }
+    }
+
+    // ==================== ConsultationSampleAssessment - round, isLatest ====================
+    try {
+        console.log('Adding round and isLatest to consultation_sample_assessment...')
+        await prisma.$executeRawUnsafe(`ALTER TABLE consultation_sample_assessment ADD COLUMN round INT DEFAULT 1;`)
+        await prisma.$executeRawUnsafe(`ALTER TABLE consultation_sample_assessment ADD COLUMN isLatest BOOLEAN DEFAULT TRUE;`)
+        console.log('✅ round and isLatest added.')
+    } catch (e) {
+        if (e.message.includes('Duplicate column name')) {
+            console.log('ℹ️ round or isLatest already exists.')
+        } else {
+            console.error('❌ Error adding round/isLatest:', e.message)
+        }
+    }
+
+    try {
+        console.log('Adding indexes to consultation_sample_assessment...')
+        await prisma.$executeRawUnsafe(`CREATE INDEX consultation_sample_assessment_consultationId_isLatest_idx ON consultation_sample_assessment (consultationId, isLatest);`)
+        await prisma.$executeRawUnsafe(`CREATE INDEX consultation_sample_assessment_sampleTestItemId_isLatest_idx ON consultation_sample_assessment (sampleTestItemId, isLatest);`)
+        console.log('✅ Indexes added.')
+    } catch (e) {
+        console.log('ℹ️ Indexes check (might already exist or implicit).')
+    }
+
+    // ==================== Quotation - Approval & CreatedBy ====================
+    try {
+        console.log('Updating biz_quotation schema...')
+        await prisma.$executeRawUnsafe(`ALTER TABLE biz_quotation ADD COLUMN approvalStatus VARCHAR(50) DEFAULT 'pending';`)
+        await prisma.$executeRawUnsafe(`ALTER TABLE biz_quotation ADD COLUMN approvalStep INT DEFAULT 0;`)
+        await prisma.$executeRawUnsafe(`ALTER TABLE biz_quotation ADD COLUMN approvalInstanceId VARCHAR(191);`)
+        await prisma.$executeRawUnsafe(`ALTER TABLE biz_quotation ADD COLUMN createdById VARCHAR(191);`)
+        console.log('✅ Quotation fields updated.')
+    } catch (e) {
+        console.log('ℹ️ Quotation fields update check (ignoring duplicate column errors).')
+    }
+
+    // ==================== Contract - Approval & CreatedBy ====================
+    try {
+        console.log('Updating biz_contract schema...')
+        await prisma.$executeRawUnsafe(`ALTER TABLE biz_contract ADD COLUMN approvalStatus VARCHAR(50) DEFAULT 'pending';`)
+        await prisma.$executeRawUnsafe(`ALTER TABLE biz_contract ADD COLUMN approvalStep INT DEFAULT 0;`)
+        await prisma.$executeRawUnsafe(`ALTER TABLE biz_contract ADD COLUMN approvalInstanceId VARCHAR(191);`)
+        await prisma.$executeRawUnsafe(`ALTER TABLE biz_contract ADD COLUMN createdById VARCHAR(191);`)
+        console.log('✅ Contract fields updated.')
+    } catch (e) {
+        console.log('ℹ️ Contract fields update check (ignoring duplicate column errors).')
+    }
 }
 
 main()
