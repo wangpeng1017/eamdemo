@@ -22,7 +22,14 @@ if (fs.existsSync(envPath)) {
  }
  }
  });
- console.log('✅ .env 文件已加载');
+ console.log('✅ .env 已加载');
+ console.log('🔍 AUTH_SECRET:', process.env.AUTH_SECRET ? process.env.AUTH_SECRET.substring(0, 10) + '...' : '未设置');
+}
+
+// 验证必需的环境变量
+if (!process.env.AUTH_SECRET) {
+ console.error('❌ 错误: AUTH_SECRET 未设置');
+ process.exit(1);
 }
 
 // 启动 Next.js 服务器

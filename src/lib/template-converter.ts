@@ -62,19 +62,27 @@ export function convertSchemaToPreviewData(schema: TemplateSchema): SheetData[] 
     titleType: typeof schema?.title,
     columnsCount: schema?.columns?.length
   });
+
+  // 深度防御：确保 schema 存在且有效
+  if (!schema) {
+    console.warn("[convertSchemaToPreviewData] Invalid schema:", schema)
+    return convertSchemaToPreviewData(getDefaultSchema())
+  }
+
   const columns = schema.columns || []
   const defaultRows = schema.defaultRows || 5
 
   const celldata: any[] = []
   let currentRow = 0
 
-  // 标题行
+  // 标题行 - 确保值是字符串
   if (schema.title) {
+    const titleValue = String(schema.title || '')
     celldata.push({
       r: currentRow,
       c: 0,
       v: {
-        v: schema.title,
+        v: titleValue,
         ct: { fa: "General", t: "g" },
         bl: 1,
         fs: 14
@@ -83,40 +91,42 @@ export function convertSchemaToPreviewData(schema: TemplateSchema): SheetData[] 
     currentRow++
   }
 
-  // 检测依据行
+  // 检测依据行 - 确保值是字符串
   if (schema.header?.methodBasis) {
+    const methodValue = String(schema.header.methodBasis || '')
     celldata.push({
       r: currentRow,
       c: 0,
       v: {
-        v: `检测依据：${schema.header.methodBasis}`,
+        v: `检测依据：${methodValue}`,
         ct: { fa: "General", t: "g" }
       }
     })
     currentRow++
   }
 
-  // 样品类型行（如果有）
+  // 样品类型行（如果有）- 确保值是字符串
   if (schema.header?.sampleType) {
+    const sampleValue = String(schema.header.sampleType || '')
     celldata.push({
       r: currentRow,
       c: 0,
       v: {
-        v: `样品类型：${schema.header.sampleType}`,
+        v: `样品类型：${sampleValue}`,
         ct: { fa: "General", t: "g" }
       }
     })
     currentRow++
   }
 
-  // 环境条件行
+  // 环境条件行 - 确保值是字符串
   let headerRow = currentRow
   if (schema.environment) {
     celldata.push({
       r: currentRow,
       c: 0,
       v: {
-        v: "环境条件：温度      ℃    湿度      %RH",
+        v: String("环境条件：温度      ℃    湿度      %RH"),
         ct: { fa: "General", t: "g" }
       }
     })
@@ -124,13 +134,13 @@ export function convertSchemaToPreviewData(schema: TemplateSchema): SheetData[] 
     headerRow = currentRow
   }
 
-  // 设备信息行
+  // 设备信息行 - 确保值是字符串
   if (schema.equipment) {
     celldata.push({
       r: currentRow,
       c: 0,
       v: {
-        v: "检测设备：",
+        v: String("检测设备："),
         ct: { fa: "General", t: "g" }
       }
     })
@@ -138,13 +148,13 @@ export function convertSchemaToPreviewData(schema: TemplateSchema): SheetData[] 
     headerRow = currentRow
   }
 
-  // 人员信息行
+  // 人员信息行 - 确保值是字符串
   if (schema.personnel) {
     celldata.push({
       r: currentRow,
       c: 0,
       v: {
-        v: "检测人员：",
+        v: String("检测人员："),
         ct: { fa: "General", t: "g" }
       }
     })
@@ -152,13 +162,14 @@ export function convertSchemaToPreviewData(schema: TemplateSchema): SheetData[] 
     headerRow = currentRow
   }
 
-  // 列标题行
+  // 列标题行 - 确保列标题是字符串
   columns.forEach((col, idx) => {
+    const titleValue = String(col.title || '新列')
     celldata.push({
       r: headerRow,
       c: idx,
       v: {
-        v: col.title,
+        v: titleValue,
         ct: { fa: "General", t: "g" },
         bl: 1,
         bg: { rgb: "E7E6E6" }
@@ -170,19 +181,19 @@ export function convertSchemaToPreviewData(schema: TemplateSchema): SheetData[] 
   })
   currentRow++
 
-  // 数据行
+  // 数据行 - 确保空值也是字符串
   for (let r = 0; r < defaultRows; r++) {
     columns.forEach((_col, c) => {
       celldata.push({
         r: currentRow + r,
         c: c,
-        v: { v: "", ct: { fa: "General", t: "g" } }
+        v: { v: String(""), ct: { fa: "General", t: "g" } }
       })
     })
   }
   currentRow += defaultRows
 
-  // 统计行
+  // 统计行 - 确保标签是字符串
   if (schema.statistics && schema.statistics.length > 0) {
     currentRow++ // 空行
     celldata.push({
@@ -197,22 +208,25 @@ export function convertSchemaToPreviewData(schema: TemplateSchema): SheetData[] 
 
     schema.statistics.forEach((stat) => {
       const colIndex = columns.findIndex(c => c.dataIndex === stat.column)
+      const labelValue = String(stat.label || '')
       celldata.push({
         r: currentRow + 1,
         c: 0,
         v: {
-          v: stat.label,
+          v: labelValue,
           ct: { fa: "General", t: "g" }
         }
       })
       if (colIndex >= 0) {
+        const formulaDisplay = getFormulaDisplay(stat.type, colIndex, headerRow + 2, headerRow + 1 + defaultRows)
+        const formula = getFormula(stat.type, colIndex, headerRow + 2, headerRow + 1 + defaultRows)
         celldata.push({
           r: currentRow + 1,
           c: colIndex,
           v: {
-            v: getFormulaDisplay(stat.type, colIndex, headerRow + 2, headerRow + 1 + defaultRows),
+            v: formulaDisplay,
             ct: { fa: "General", t: "f" },
-            f: getFormula(stat.type, colIndex, headerRow + 2, headerRow + 1 + defaultRows)
+            f: formula
           }
         })
       }

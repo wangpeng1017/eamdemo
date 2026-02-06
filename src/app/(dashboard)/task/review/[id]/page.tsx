@@ -3,9 +3,19 @@
 import { useState, useEffect } from 'react'
 import { showSuccess, showError } from '@/lib/confirm'
 import { useParams, useRouter } from 'next/navigation'
-import { Card, Descriptions, Button, Modal, Form, Input, message, Tag, Space } from 'antd'
+import { Card, Descriptions, Button, Modal, Form, Input, message, Tag, Space, Spin } from 'antd'
 import { CheckCircleOutlined, CloseCircleOutlined, ArrowLeftOutlined } from '@ant-design/icons'
-import DataSheet from '@/components/DataSheet'
+import dynamic from 'next/dynamic'
+
+// ⚠️ 关键修复：禁用 SSR，避免 Fortune-sheet 在服务端执行 DOM 操作
+const DataSheet = dynamic(() => import('@/components/DataSheet'), {
+    ssr: false,
+    loading: () => (
+        <div className="flex h-96 items-center justify-center">
+            <Spin size="large" tip="正在加载表格编辑器..." />
+        </div>
+    )
+})
 
 interface Task {
     id: string

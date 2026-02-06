@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo, useRef } from 'react'
 import { showSuccess, showError, showWarningMessage } from '@/lib/confirm'
 import { Button, Card, Form, Input, Switch, InputNumber, Space, message, Modal, Dropdown, Menu, Select } from 'antd'
 import { PlusOutlined, DeleteOutlined, SettingOutlined } from '@ant-design/icons'
-import DataSheet from './DataSheet'
+// import DataSheet from './DataSheet' // 已移除：未使用，避免 SSR 问题
 import ColumnPropertyForm from './ColumnPropertyForm'
 import {
   TemplateSchema,

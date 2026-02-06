@@ -4,7 +4,18 @@ import { useState, useEffect, use } from 'react'
 import { useRouter } from 'next/navigation'
 import { Button, Card, Space, message, Spin, Result } from 'antd'
 import { SaveOutlined, ArrowLeftOutlined } from '@ant-design/icons'
-import DataSheet from '@/components/DataSheet'
+import dynamic from 'next/dynamic'
+
+// ⚠️ 关键修复：禁用 SSR，避免 Fortune-sheet 在服务端执行 DOM 操作
+const DataSheet = dynamic(() => import('@/components/DataSheet'), {
+    ssr: false,
+    loading: () => (
+        <div className="flex h-full items-center justify-center">
+            <Spin size="large" tip="正在加载表格编辑器..." />
+        </div>
+    )
+})
+
 import {
     TemplateSchema,
     convertSheetDataToSchema,

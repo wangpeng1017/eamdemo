@@ -28,20 +28,21 @@ module.exports = {
   NODE_ENV: 'production',
  PORT: 3001,
   DATABASE_URL: 'mysql://root:lims_mysql_2024@127.0.0.1:3308/lims',
-  NEXTAUTH_SECRET: 'lims-secret-key-2024',
+  AUTH_SECRET: '+U4LE/4e2weswNKvwluQPTLEsDG5sbslDLfNXGqTvoY=',
+  NEXTAUTH_SECRET: '+U4LE/4e2weswNKvwluQPTLEsDG5sbslDLfNXGqTvoY=',
  NEXTAUTH_URL: 'http://8.130.182.148:3001'
-  },
+ },
 
  // 日志配置
  error_file: './logs/pm2-error.log',
   out_file: './logs/pm2-out.log',
  log_date_format: 'YYYY-MM-DD HH:mm:ss Z',
-  merge_logs: true,
+ merge_logs: true,
  log_type: 'json',
 
   // 进程行为
  kill_timeout: 5000,  // 强制杀死前等待 5 秒
  listen_timeout: 10000,   // 等待应用监听端口的超时时间
-  shutdown_with_message: true,  // 允许优雅关闭
+ shutdown_with_message: true,  // 允许优雅关闭
  }]
 }
