@@ -59,7 +59,7 @@ export default function LoginPage() {
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'center',
-      background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)'
+     background: '#ffffff'
     }}>
       <Card style={{ width: 420, boxShadow: '0 4px 12px rgba(0,0,0,0.15)' }}>
         <div style={{ textAlign: 'center', marginBottom: 32 }}>
