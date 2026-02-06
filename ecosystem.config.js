@@ -8,7 +8,7 @@ module.exports = {
  apps: [{
  // 应用基本信息
  name: 'lims-next',
- script: 'server.js',
+ script: 'start.js',
  cwd: '/root/lims-next',
 
  // 实例配置
