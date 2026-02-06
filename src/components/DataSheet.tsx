@@ -12,13 +12,16 @@ interface DataSheetProps {
 }
 
 /**
- * 数据规范化工具：确保始终使用 celldata 格式
+ * 数据规范化工具：处理 Fortune-sheet 的多种数据格式
  *
- * Fortune-sheet 有两种数据格式：
- * - celldata: 稀疏数组格式 [{r, c, v}, ...]，用于初始化
- * - data: 2D 数组格式，用于运行时（会导致崩溃）
+ * Fortune-sheet 数据格式说明：
+ * - celldata: 稀疏数组格式 [{r, c, v}, ...]，适合初始化
+ * - data: 2D 数组格式，运行时使用（onChange 返回此格式）
  *
- * 本函数确保所有数据都是 celldata 格式
+ * 关键修复：
+ * 1. onChange 返回的数据包含完整的内部状态（包括 inlineStr 等）
+ * 2. 强制转换会丢失这些内部状态，导致渲染错误
+ * 3. 因此：初始化时转换为 celldata，但 onChange 直接使用原始数据
  */
 function ensureCelldataFormat(data: any[]): any[] {
   if (!data || data.length === 0) {
@@ -30,12 +33,12 @@ function ensureCelldataFormat(data: any[]): any[] {
     return []
   }
 
-  // 已经是 celldata 格式
+  // 已经是 celldata 格式（初始化场景）
   if (firstSheet.celldata && Array.isArray(firstSheet.celldata)) {
     return data
   }
 
-  // 需要从 data 格式转换为 celldata
+  // 从 data 格式转换为 celldata（仅用于初始化）
   if (firstSheet.data && Array.isArray(firstSheet.data)) {
     const celldata: any[] = []
 
@@ -47,36 +50,60 @@ function ensureCelldataFormat(data: any[]): any[] {
         const cell = row[c]
         if (cell === null || cell === undefined) continue
 
-        if (typeof cell === 'object') {
+        // 保留完整的单元格对象结构（包括 ct.s 等内部格式）
+        if (typeof cell === 'object' && cell !== null) {
           celldata.push({ r, c, v: cell })
         } else {
-          celldata.push({ r, c, v: { v: cell, ct: { fa: "General", t: "g" } } })
+          // 基本值创建最小结构
+          celldata.push({
+            r, c,
+            v: { v: cell, ct: { fa: "General", t: "g" } }
+          })
         }
       }
     }
 
-    return [{ ...firstSheet, celldata, data: undefined }]
+    return [{
+      ...firstSheet,
+      celldata,
+      // 保留原始 data 引用，避免丢失信息
+      data: firstSheet.data
+    }]
   }
 
   return data
 }
 
 /**
- * DataSheet - 完全受控组件
+ * DataSheet - 完全受控组件（修复 indexOf 错误版本）
  *
  * 设计原则：
  * 1. 组件本身无状态（no useState）
  * 2. 所有数据来自 props
- * 3. onChange 只通知父组件，不更新内部状态
- * 4. 数据转换由父组件负责
+ * 3. onChange 直接传递 Fortune-sheet 返回的原始数据
+ * 4. 只在初始化时进行格式转换，编辑循环中保持原始格式
+ *
+ * 关键修复：
+ * - Fortune-sheet 的 onChange 返回包含完整内部状态的数据
+ * - 强制转换为 celldata 会丢失 inlineStr 等格式，导致渲染错误
+ * - 解决方案：初始化用 celldata，编辑后直接使用 onChange 返回的 data 格式
  */
 export default function DataSheet({ data, onChange, readonly = false, height = 500 }: DataSheetProps) {
-  // 🔑 关键：使用 useMemo 确保数据格式正确，但不创建状态
-  const normalizedData = useMemo(() => ensureCelldataFormat(data), [data])
+  // 🔑 关键：只在初始化或数据格式变化时转换
+  // 编辑循环中 onChange 返回的数据已经是正确格式，无需转换
+  const normalizedData = useMemo(() => {
+    // 如果数据已有 data 属性（2D 数组），说明是 onChange 返回的，直接使用
+    if (data && data.length > 0 && data[0]?.data && Array.isArray(data[0].data)) {
+      return data
+    }
+    // 否则是初始化数据，转换为 celldata 格式
+    return ensureCelldataFormat(data)
+  }, [data])
 
-  // 🔑 关键：handleChange 只通知父组件，不做任何转换
+  // 🔑 关键：handleChange 直接传递原始数据，不做任何转换
   const handleChange = (changedData: any) => {
-    // 直接传递原始数据，让父组件决定如何处理
+    // Fortune-sheet onChange 返回的数据已经是可用格式
+    // 父组件直接保存，下次渲染时会被上面的 useMemo 识别为 "已有 data 属性" 而直接使用
     onChange?.(changedData)
   }
 
