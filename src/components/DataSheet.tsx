@@ -1,7 +1,6 @@
-
 'use client'
 
-import { useState, useRef, useEffect, useCallback } from "react"
+import { useMemo } from "react"
 import { Workbook, WorkbookInstance } from "@fortune-sheet/react"
 import "@fortune-sheet/react/dist/index.css"
 
@@ -13,36 +12,31 @@ interface DataSheetProps {
 }
 
 /**
- * 规范化数据：确保 celldata 字段总是存在且有效
+ * 数据规范化工具：确保始终使用 celldata 格式
  *
- * 支持3种输入格式：
- * 1. celldata 格式（初始化格式）- 直接返回
- * 2. data 格式（Fortune-sheet onChange 返回格式）- 转换为 celldata
- * 3. 无效数据 - 返回默认数据
+ * Fortune-sheet 有两种数据格式：
+ * - celldata: 稀疏数组格式 [{r, c, v}, ...]，用于初始化
+ * - data: 2D 数组格式，用于运行时（会导致崩溃）
+ *
+ * 本函数确保所有数据都是 celldata 格式
  */
-function normalizeSheetData(data: any[]): any[] {
-  console.log("[normalizeSheetData] Called")
-
+function ensureCelldataFormat(data: any[]): any[] {
   if (!data || data.length === 0) {
-    console.warn("[normalizeSheetData] Empty data, returning default")
-    return getDefaultData()
+    return []
   }
 
   const firstSheet = data[0]
   if (!firstSheet) {
-    console.warn("[normalizeSheetData] No first sheet, returning default")
-    return getDefaultData()
+    return []
   }
 
-  // 情况1：已经有 celldata - 直接返回
-  if (firstSheet.celldata && Array.isArray(firstSheet.celldata) && firstSheet.celldata.length > 0) {
-    console.log("[normalizeSheetData] Already has celldata, returning as-is")
+  // 已经是 celldata 格式
+  if (firstSheet.celldata && Array.isArray(firstSheet.celldata)) {
     return data
   }
 
-  // 情况2：有 data 字段 - 转换为 celldata
+  // 需要从 data 格式转换为 celldata
   if (firstSheet.data && Array.isArray(firstSheet.data)) {
-    console.log("[normalizeSheetData] Converting data -> celldata")
     const celldata: any[] = []
 
     for (let r = 0; r < firstSheet.data.length; r++) {
@@ -53,7 +47,6 @@ function normalizeSheetData(data: any[]): any[] {
         const cell = row[c]
         if (cell === null || cell === undefined) continue
 
-        // data 格式中的 cell 可能是对象或简单值
         if (typeof cell === 'object') {
           celldata.push({ r, c, v: cell })
         } else {
@@ -62,81 +55,35 @@ function normalizeSheetData(data: any[]): any[] {
       }
     }
 
-    console.log("[normalizeSheetData] Converted", celldata.length, "cells")
     return [{ ...firstSheet, celldata, data: undefined }]
   }
 
-  console.warn("[normalizeSheetData] No valid data, returning default")
-  return getDefaultData()
+  return data
 }
 
+/**
+ * DataSheet - 完全受控组件
+ *
+ * 设计原则：
+ * 1. 组件本身无状态（no useState）
+ * 2. 所有数据来自 props
+ * 3. onChange 只通知父组件，不更新内部状态
+ * 4. 数据转换由父组件负责
+ */
 export default function DataSheet({ data, onChange, readonly = false, height = 500 }: DataSheetProps) {
-  const workbookRef = useRef<WorkbookInstance>(null)
+  // 🔑 关键：使用 useMemo 确保数据格式正确，但不创建状态
+  const normalizedData = useMemo(() => ensureCelldataFormat(data), [data])
 
-  // ⚠️⚠️⚠️ 核心变化：使用内部 state 而不是直接使用 props
-  const [internalSheetData, setInternalSheetData] = useState<any[]>(() => {
-    console.log("[DataSheet Init] Initializing with data prop")
-    return normalizeSheetData(data)
-  })
-
-  // 编辑锁：标记用户正在编辑
-  const isEditingRef = useRef(false)
-  // 卸载锁
-  const isUnmountingRef = useRef(false)
-
-  // ⚠️⚠️⚠️ 关键逻辑：外部 data 变化时，只在非编辑状态下同步
-  useEffect(() => {
-    // 如果正在编辑，忽略外部变化（避免崩溃）
-    if (isEditingRef.current) {
-      console.log("[DataSheet] External data changed, but SKIPPING because user is editing")
-      return
-    }
-
-    console.log("[DataSheet] External data changed, synchronizing internal state")
-    const normalized = normalizeSheetData(data)
-    setInternalSheetData(normalized)
-  }, [data])
-
-  // ⚠️⚠️⚠️ 关键逻辑：onChange 时立即转换为 celldata 格式，避免 Fortune-sheet 崩溃
-  const handleChange = useCallback((changedData: any) => {
-    if (!changedData || !Array.isArray(changedData) || changedData.length === 0) {
-      console.warn("[DataSheet onChange] Invalid data, ignoring")
-      return
-    }
-
-    const firstSheet = changedData[0]
-    if (!firstSheet) return
-
-    console.log("[DataSheet onChange] Called")
-    console.log("[DataSheet onChange] Data format:", firstSheet.data ? 'data (2D array)' : 'celldata')
-
-    // ⚠️⚠️⚠️ 关键修复：立即转换为 celldata 格式
-    // Fortune-sheet 内部代码期望 celldata 格式，data 格式会导致 indexOf 错误
-    const normalized = normalizeSheetData(changedData)
-
-    // 1. 标记正在编辑
-    isEditingRef.current = true
-
-    // 2. 更新内部状态（使用 celldata 格式）
-    setInternalSheetData(normalized)
-
-    // 3. 向上通知（也使用 celldata 格式，保持一致性）
-    onChange?.(normalized)
-
-    // 4. 100ms 后释放编辑锁
-    setTimeout(() => {
-      isEditingRef.current = false
-      console.log("[DataSheet onChange] Edit lock released")
-    }, 100)
-  }, [onChange])
-
-  console.log("[DataSheet Render] internal state:", internalSheetData[0]?.celldata?.length || internalSheetData[0]?.data?.length, "cells")
+  // 🔑 关键：handleChange 只通知父组件，不做任何转换
+  const handleChange = (changedData: any) => {
+    // 直接传递原始数据，让父组件决定如何处理
+    onChange?.(changedData)
+  }
 
   return (
     <div className="border border-gray-200 rounded" style={{ height: typeof height === 'number' ? `${height}px` : height }}>
       <Workbook
-        ref={workbookRef}
-        data={internalSheetData}  // ← 使用内部 state
+        data={normalizedData}
         onChange={handleChange}
         allowEdit={!readonly}
         showToolbar={true}
@@ -172,7 +119,7 @@ export function getDefaultData() {
   }]
 }
 
-// 工具函数保持不变
+// 工具函数：生成表格数据
 export function generateSheetData(headers: string[], rows: any[][]) {
   const celldata: any[] = []
   headers.forEach((header, col) => {
@@ -186,6 +133,7 @@ export function generateSheetData(headers: string[], rows: any[][]) {
   return [{ name: "Sheet1", celldata }]
 }
 
+// 工具函数：提取表格数据为二维数组
 export function extractSheetData(sheetData: any) {
   if (!sheetData || sheetData.length === 0) return []
   const sheet = sheetData[0]
@@ -207,6 +155,7 @@ export function extractSheetData(sheetData: any) {
   return rows
 }
 
+// 工具函数：转换 data 格式为 celldata
 export function convertDataToCelldata(sheetData: any[]): any[] {
-  return normalizeSheetData(sheetData)
+  return ensureCelldataFormat(sheetData)
 }

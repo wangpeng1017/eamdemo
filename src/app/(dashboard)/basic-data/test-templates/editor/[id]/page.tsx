@@ -22,6 +22,7 @@ import {
     convertSchemaToPreviewData
 } from '@/lib/template-converter'
 import { showSuccess, showError } from '@/lib/confirm'
+import { convertDataToCelldata } from '@/components/DataSheet'
 
 export default function TemplateEditorPage({ params }: { params: Promise<{ id: string }> }) {
     const { id } = use(params)
@@ -148,10 +149,14 @@ export default function TemplateEditorPage({ params }: { params: Promise<{ id: s
 
             <Card className="flex-1 overflow-hidden" bodyStyle={{ height: '100%', padding: 0 }}>
                 <div className="h-full">
-                    {/* 这里是物理隔离的核心：DataSheet 在这个页面只加载一次，不受外部输入干扰 */}
+                    {/* 完全受控模式：父组件管理状态和数据转换 */}
                     <DataSheet
                         data={sheetData}
-                        onChange={setSheetData}
+                        onChange={(changedData) => {
+                            // 🔑 关键：立即将 data 格式转换为 celldata 格式
+                            const celldata = convertDataToCelldata(changedData)
+                            setSheetData(celldata)
+                        }}
                         height="100%"
                     />
                 </div>
