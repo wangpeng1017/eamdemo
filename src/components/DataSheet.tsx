@@ -97,7 +97,7 @@ export default function DataSheet({ data, onChange, readonly = false, height = 5
     setInternalSheetData(normalized)
   }, [data])
 
-  // ⚠️⚠️⚠️ 关键逻辑：onChange 时只更新内部状态，不触发外部更新
+  // ⚠️⚠️⚠️ 关键逻辑：onChange 时立即转换为 celldata 格式，避免 Fortune-sheet 崩溃
   const handleChange = useCallback((changedData: any) => {
     if (!changedData || !Array.isArray(changedData) || changedData.length === 0) {
       console.warn("[DataSheet onChange] Invalid data, ignoring")
@@ -110,14 +110,18 @@ export default function DataSheet({ data, onChange, readonly = false, height = 5
     console.log("[DataSheet onChange] Called")
     console.log("[DataSheet onChange] Data format:", firstSheet.data ? 'data (2D array)' : 'celldata')
 
+    // ⚠️⚠️⚠️ 关键修复：立即转换为 celldata 格式
+    // Fortune-sheet 内部代码期望 celldata 格式，data 格式会导致 indexOf 错误
+    const normalized = normalizeSheetData(changedData)
+
     // 1. 标记正在编辑
     isEditingRef.current = true
 
-    // 2. 更新内部状态（触发重新渲染）
-    setInternalSheetData(changedData)
+    // 2. 更新内部状态（使用 celldata 格式）
+    setInternalSheetData(normalized)
 
-    // 3. 向上通知（但父组件不应该更新 data prop）
-    onChange?.(changedData)
+    // 3. 向上通知（也使用 celldata 格式，保持一致性）
+    onChange?.(normalized)
 
     // 4. 100ms 后释放编辑锁
     setTimeout(() => {
