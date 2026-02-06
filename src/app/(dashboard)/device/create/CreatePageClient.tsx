@@ -76,7 +76,7 @@ export default function CreateDevicePageClient() {
                         <DatePicker style={{ width: '100%' }} />
                     </Form.Item>
                     <Form.Item name="remark" label="备注">
-                        Input.TextArea rows={2} placeholder="请输入备注" />
+                        <Input.TextArea rows={2} placeholder="请输入备注" />
                     </Form.Item>
                     <Form.Item>
                         <Button type="primary" htmlType="submit" loading={loading} style={{ marginRight: 8 }}>

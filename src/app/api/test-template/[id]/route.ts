@@ -12,7 +12,7 @@ export async function GET(
   })
 
   if (!template) {
-    return NextResponse.json({ error: '记录不存在' }, { status: 404 })
+    return NextResponse.json({ success: false, error: { message: '记录不存在' } }, { status: 404 })
   }
 
   // 解析 JSON schema
@@ -21,7 +21,7 @@ export async function GET(
     schema: JSON.parse(template.schema || '{}')
   }
 
-  return NextResponse.json(parsed)
+  return NextResponse.json({ success: true, data: parsed })
 }
 
 export const PUT = withAuth(async (

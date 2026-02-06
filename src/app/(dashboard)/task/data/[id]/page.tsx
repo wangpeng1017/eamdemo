@@ -4,7 +4,7 @@ import { useState, useEffect } from "react"
 import { showSuccess, showError } from '@/lib/confirm'
 import { useParams, useRouter } from "next/navigation"
 import { Card, Button, Form, Select, Input, message, Space, Modal, Descriptions, Tag } from "antd"
-import { SaveOutlined, CheckOutlined, ArrowLeftOutlined } from "@ant-design/icons"
+import { SaveOutlined, CheckOutlined, ArrowLeftOutlined, FileTextOutlined } from "@ant-design/icons"
 import DataSheet, { generateSheetData, extractSheetData, getDefaultData, convertDataToCelldata } from "@/components/DataSheet"
 
 interface Task {
@@ -47,6 +47,7 @@ export default function DataEntryPage() {
   const [task, setTask] = useState<Task | null>(null)
   const [loading, setLoading] = useState(false)
   const [saving, setSaving] = useState(false)
+  const [generating, setGenerating] = useState(false)
   const [sheetData, setSheetData] = useState<any>(null)
   const [submitModalOpen, setSubmitModalOpen] = useState(false)
   const [form] = Form.useForm()
@@ -57,19 +58,14 @@ export default function DataEntryPage() {
   // 获取任务详情
   const fetchTask = async () => {
     setLoading(true)
-    console.log("[DataEntry Fetch] Starting fetch for taskId:", taskId)
     try {
       const res = await fetch(`/api/task/${taskId}`)
-      console.log("[DataEntry Fetch] Response status:", res.status)
       if (!res.ok) throw new Error("获取任务失败")
       const json = await res.json()
 
       // 处理 API 返回的数据结构：{success: true, data: {...}} 或直接返回数据
       const taskData = json.data || json
       setTask(taskData)
-
-      console.log("[DataEntry Fetch] taskData.sheetData raw type:", typeof taskData.sheetData)
-      console.log("[DataEntry Fetch] taskData.sheetData raw length:", taskData.sheetData?.length)
 
       // 优先从 sheetData 加载数据（Fortune-sheet 格式）
       if (taskData.sheetData) {
@@ -78,47 +74,36 @@ export default function DataEntryPage() {
             ? JSON.parse(taskData.sheetData)
             : taskData.sheetData
 
-          console.log("[DataEntry Fetch] parsed sheetData isArray:", Array.isArray(parsed))
-          console.log("[DataEntry Fetch] parsed sheetData length:", parsed?.length)
-
           if (Array.isArray(parsed) && parsed.length > 0) {
             // 检查数据格式：Fortune-sheet 可能使用 celldata 或 data 格式
             const sheet = parsed[0]
-            console.log("[DataEntry Fetch] sheet.celldata:", sheet.celldata?.length)
-            console.log("[DataEntry Fetch] sheet.data:", sheet.data?.length)
 
             // 如果有 data 但没有 celldata，说明是编辑后保存的格式，需要转换
             // Fortune-sheet 初始化时需要 celldata 格式才能正确渲染
             if (sheet.data && sheet.data.length > 0) {
-              console.log("[DataEntry Fetch] Using data format (edited format), converting to celldata")
               const converted = convertDataToCelldata(parsed)
               setSheetData(converted)
             } else if (sheet.celldata && sheet.celldata.length > 0) {
-              console.log("[DataEntry Fetch] Using celldata format (initial format)")
               setSheetData(parsed)
             } else {
-              console.log("[DataEntry Fetch] No valid data in sheet, using default")
               setSheetData(getDefaultData())
             }
           } else {
-            console.log("[DataEntry Fetch] parsed sheetData is empty or not array, init default")
             setSheetData(getDefaultData())
           }
         } catch (e) {
-          console.error("[DataEntry Fetch] 解析 sheetData 失败", e)
+          console.error("解析 sheetData 失败", e)
           setSheetData(getDefaultData())
         }
       }
       // 兼容旧逻辑：如果 testData 是数组且非空
       else if (taskData.testData && Array.isArray(taskData.testData) && taskData.testData.length > 0) {
-        console.log("[DataEntry Fetch] Using legacy testData")
         setSheetData(taskData.testData)
       } else {
-        console.log("[DataEntry Fetch] No valid sheetData or testData found, initializing default")
         setSheetData(getDefaultData())
       }
     } catch (error) {
-      console.error("[DataEntry Fetch] Error:", error)
+      console.error("获取任务失败", error)
       showError("获取任务失败")
     } finally {
       setLoading(false)
@@ -133,18 +118,8 @@ export default function DataEntryPage() {
   const handleSave = async () => {
     setSaving(true)
     try {
-      // 详细日志
-      console.log("[DataEntry Save] Current sheetData state:", sheetData)
-      console.log("[DataEntry Save] sheetData type:", typeof sheetData)
-      console.log("[DataEntry Save] sheetData length:", sheetData?.length)
-      if (sheetData && sheetData[0]) {
-        console.log("[DataEntry Save] sheetData[0].celldata:", sheetData[0].celldata)
-        console.log("[DataEntry Save] sheetData[0].celldata length:", sheetData[0].celldata?.length)
-      }
-
       // 确保不保存空数据，如果为空则保存默认结构
       const dataToSave = sheetData && sheetData.length > 0 ? sheetData : getDefaultData()
-      console.log("[DataEntry Save] dataToSave:", JSON.stringify(dataToSave).substring(0, 500))
 
       const res = await fetch(`/api/task/${taskId}/data`, {
         method: 'POST',
@@ -156,7 +131,6 @@ export default function DataEntryPage() {
       })
 
       const responseJson = await res.json()
-      console.log("[DataEntry Save] Response:", responseJson)
 
       if (res.ok) {
         showSuccess({
@@ -165,11 +139,11 @@ export default function DataEntryPage() {
           key: 'save-draft'
         })
       } else {
-        console.error("[DataEntry Save] Save failed:", responseJson)
+        console.error("保存失败:", responseJson)
         showError({ content: '保存失败', key: 'save-draft' })
       }
     } catch (error) {
-      console.error("[DataEntry Save] Error:", error)
+      console.error("保存失败", error)
       showError({ content: '保存失败', key: 'save-draft' })
     } finally {
       setSaving(false)
@@ -179,9 +153,6 @@ export default function DataEntryPage() {
   // 提交完成
   const handleSubmit = async () => {
     try {
-      await form.validateFields()
-      const values = form.getFieldsValue()
-
       // 确保不提交空数据
       const startData = sheetData && sheetData.length > 0 ? sheetData : getDefaultData()
 
@@ -191,20 +162,49 @@ export default function DataEntryPage() {
         body: JSON.stringify({
           sheetData: startData,
           action: 'submit',
-          summary: values.summary,
-          conclusion: values.conclusion,
         }),
       })
 
       if (res.ok) {
-        showSuccess("提交成功，任务已完成")
+        showSuccess("✅ 提交成功！任务已完成")
         setSubmitModalOpen(false)
         router.push("/task/my")
       } else {
         showError("提交失败")
       }
     } catch (error) {
-      showError("请填写完整信息")
+      showError("提交失败")
+    }
+  }
+
+  // 生成报告
+  const handleGenerateReport = async () => {
+    setGenerating(true)
+    try {
+      const res = await fetch('/api/report/generate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          taskId,
+        }),
+      })
+
+      const json = await res.json()
+
+      if (res.ok && json.success) {
+        showSuccess('报告生成成功')
+        // 跳转到报告查看页面
+        setTimeout(() => {
+          window.open(`/test/report/${json.data.id}`, '_blank')
+        }, 500)
+      } else {
+        showError(json.error || '报告生成失败')
+      }
+    } catch (error) {
+      console.error('生成报告失败:', error)
+      showError('报告生成失败')
+    } finally {
+      setGenerating(false)
     }
   }
 
@@ -228,6 +228,14 @@ export default function DataEntryPage() {
         </div>
         {/* 顶部操作按钮 */}
         <Space>
+          <Button
+            icon={<FileTextOutlined />}
+            loading={generating}
+            onClick={handleGenerateReport}
+            type="default"
+          >
+            生成报告
+          </Button>
           {!isReadOnly && (
             <>
               <Button
@@ -306,30 +314,11 @@ export default function DataEntryPage() {
         open={submitModalOpen}
         onCancel={() => setSubmitModalOpen(false)}
         onOk={handleSubmit}
-        width={600}
+        width={500}
       >
-        <Form form={form} layout="vertical">
-          <Form.Item
-            label="检测摘要"
-            name="summary"
-            rules={[{ required: true, message: "请输入检测摘要" }]}
-          >
-            <Input.TextArea rows={3} placeholder="请简要描述本次检测情况" />
-          </Form.Item>
-          <Form.Item
-            label="检测结论"
-            name="conclusion"
-            rules={[{ required: true, message: "请输入检测结论" }]}
-          >
-            <Select placeholder="请选择检测结论">
-              <Select.Option value="qualified">合格</Select.Option>
-              <Select.Option value="unqualified">不合格</Select.Option>
-              <Select.Option value="conditional">条件合格</Select.Option>
-            </Select>
-          </Form.Item>
-        </Form>
-        <div className="text-gray-500 text-sm">
-          提交后任务将标记为已完成。
+        <div className="text-gray-700 mb-4">
+          <p>确认要提交任务数据吗？</p>
+          <p className="text-sm text-gray-500 mt-2">提交后任务将标记为已完成，数据将不可再修改。</p>
         </div>
       </Modal>
     </div>

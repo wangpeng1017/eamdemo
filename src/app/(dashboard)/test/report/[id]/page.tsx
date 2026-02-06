@@ -1,12 +1,14 @@
+
 'use client'
 
 import { useState, useEffect } from 'react'
 import { showSuccess, showError } from '@/lib/confirm'
 import { useParams, useRouter } from 'next/navigation'
 import { Card, Descriptions, Button, Table, message, Tag, Space, Modal, Form, Input, Timeline } from 'antd'
-import { ArrowLeftOutlined, PrinterOutlined, DownloadOutlined, CheckCircleOutlined, CloseCircleOutlined, SendOutlined, FileTextOutlined } from '@ant-design/icons'
+import { ArrowLeftOutlined, PrinterOutlined, DownloadOutlined, CheckCircleOutlined, CloseCircleOutlined, SendOutlined, FileTextOutlined, EditOutlined } from '@ant-design/icons'
 import type { ColumnsType } from 'antd/es/table'
 import dayjs from 'dayjs'
+import RichTextEditor from '@/components/editor/RichTextEditor'
 
 interface TestData {
     id: string
@@ -29,11 +31,14 @@ interface Report {
     testParameters: string | null
     testResults: string | null
     overallConclusion: string | null
+    richContent?: string | null
     tester: string | null
     reviewer: string | null
     status: string
     createdAt: string
     issuedDate: string | null
+    lastEditedAt?: string | null
+    lastEditedBy?: string | null
 }
 
 interface Approval {
@@ -69,6 +74,9 @@ export default function ReportDetailPage() {
     const [loading, setLoading] = useState(false)
     const [approvalModalOpen, setApprovalModalOpen] = useState(false)
     const [approvalAction, setApprovalAction] = useState<string>('')
+    const [richContentModalOpen, setRichContentModalOpen] = useState(false)
+    const [richContent, setRichContent] = useState('')
+    const [submitting, setSubmitting] = useState(false)
     const [form] = Form.useForm()
 
     useEffect(() => {
@@ -85,6 +93,11 @@ export default function ReportDetailPage() {
             const json = await res.json()
             const reportData = json.data || json
             setReport(reportData)
+
+            // 设置富文本内容
+            if (reportData.richContent) {
+                setRichContent(reportData.richContent)
+            }
 
             // 解析 testResults
             if (reportData.testResults) {
@@ -144,6 +157,43 @@ export default function ReportDetailPage() {
             showSuccess({ content: '导出成功', key: 'export' })
         } catch (error) {
             showError({ content: '导出失败', key: 'export' })
+        }
+    }
+
+    // 打开富文本编辑Modal
+    const handleEditRichContent = () => {
+        if (report?.richContent) {
+            setRichContent(report.richContent)
+        }
+        setRichContentModalOpen(true)
+    }
+
+    // 保存富文本内容
+    const handleSaveRichContent = async () => {
+        try {
+            setSubmitting(true)
+
+            const res = await fetch(`/api/test-report/${reportId}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    richContent: richContent
+                })
+            })
+
+            const json = await res.json()
+            if (res.ok && json.success) {
+                showSuccess('保存成功')
+                setRichContentModalOpen(false)
+                fetchReport() // 刷新报告数据
+            } else {
+                showError(json.error || '保存失败')
+            }
+        } catch (error) {
+            console.error('保存富文本失败:', error)
+            showError('保存失败')
+        } finally {
+            setSubmitting(false)
         }
     }
 
@@ -207,13 +257,21 @@ export default function ReportDetailPage() {
         switch (report.status) {
             case 'draft':
                 return (
-                    <Button type="primary" icon={<SendOutlined />} onClick={() => handleApprovalAction('submit')}>
-                        提交审核
-                    </Button>
+                    <>
+                        <Button icon={<EditOutlined />} onClick={handleEditRichContent} className="mr-2">
+                            编辑富文本
+                        </Button>
+                        <Button type="primary" icon={<SendOutlined />} onClick={() => handleApprovalAction('submit')}>
+                            提交审核
+                        </Button>
+                    </>
                 )
             case 'reviewing':
                 return (
                     <>
+                        <Button icon={<EditOutlined />} onClick={handleEditRichContent} className="mr-2">
+                            编辑富文本
+                        </Button>
                         <Button danger icon={<CloseCircleOutlined />} onClick={() => handleApprovalAction('reject')}>
                             驳回
                         </Button>
@@ -224,12 +282,21 @@ export default function ReportDetailPage() {
                 )
             case 'approved':
                 return (
-                    <Button type="primary" icon={<FileTextOutlined />} onClick={() => handleApprovalAction('issue')}>
-                        发布报告
-                    </Button>
+                    <>
+                        <Button icon={<EditOutlined />} onClick={handleEditRichContent} className="mr-2">
+                            编辑富文本
+                        </Button>
+                        <Button type="primary" icon={<FileTextOutlined />} onClick={() => handleApprovalAction('issue')}>
+                            发布报告
+                        </Button>
+                    </>
                 )
             default:
-                return null
+                return (
+                    <Button icon={<EditOutlined />} onClick={handleEditRichContent}>
+                        查看富文本
+                    </Button>
+                )
         }
     }
 
@@ -280,6 +347,11 @@ export default function ReportDetailPage() {
                     <Descriptions.Item label="发布日期">
                         {report.issuedDate ? dayjs(report.issuedDate).format('YYYY-MM-DD') : '-'}
                     </Descriptions.Item>
+                    {report.lastEditedAt && (
+                        <Descriptions.Item label="最后编辑" span={2}>
+                            {report.lastEditedBy} · {dayjs(report.lastEditedAt).format('YYYY-MM-DD HH:mm')}
+                        </Descriptions.Item>
+                    )}
                 </Descriptions>
             </Card>
 
@@ -295,13 +367,33 @@ export default function ReportDetailPage() {
                 />
             </Card>
 
-            {/* 检测结论 */}
-            <Card title="检测结论" className="mb-4">
-                <div className="p-4 bg-gray-50 rounded">
-                    <p className="text-base whitespace-pre-wrap">
-                        {report.overallConclusion || '暂无结论'}
-                    </p>
-                </div>
+            {/* 检测结论 - 支持富文本 */}
+            <Card
+                title="检测结论"
+                className="mb-4"
+                extra={
+                    <Button
+                        size="small"
+                        icon={<EditOutlined />}
+                        onClick={handleEditRichContent}
+                        className="no-print"
+                    >
+                        编辑
+                    </Button>
+                }
+            >
+                {report.richContent ? (
+                    <div
+                        className="p-4 bg-gray-50 rounded"
+                        dangerouslySetInnerHTML={{ __html: report.richContent }}
+                    />
+                ) : (
+                    <div className="p-4 bg-gray-50 rounded">
+                        <p className="text-base whitespace-pre-wrap">
+                            {report.overallConclusion || '暂无结论'}
+                        </p>
+                    </div>
+                )}
             </Card>
 
             {/* 审批历史 */}
@@ -356,6 +448,26 @@ export default function ReportDetailPage() {
                         />
                     </Form.Item>
                 </Form>
+            </Modal>
+
+            {/* 富文本编辑弹窗 */}
+            <Modal
+                title="编辑检测结论（富文本）"
+                open={richContentModalOpen}
+                onOk={handleSaveRichContent}
+                onCancel={() => setRichContentModalOpen(false)}
+                confirmLoading={submitting}
+                width={1000}
+                okText="保存"
+                cancelText="取消"
+                style={{ top: 20 }}
+            >
+                <RichTextEditor
+                    value={richContent}
+                    onChange={setRichContent}
+                    placeholder="请输入检测结论..."
+                    height="600px"
+                />
             </Modal>
 
             <style jsx global>{`

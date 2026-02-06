@@ -11,21 +11,54 @@ interface DataSheetProps {
   height?: number | string
 }
 
+// 规范化数据：确保 celldata 字段总是存在且有效
+function normalizeSheetData(data: any[]): any[] {
+  if (!data || data.length === 0) {
+    return getDefaultData()
+  }
+
+  const firstSheet = data[0]
+  if (!firstSheet) {
+    return getDefaultData()
+  }
+
+  // 确保 celldata 存在且是数组
+  if (!firstSheet.celldata || !Array.isArray(firstSheet.celldata)) {
+    console.warn("[DataSheet] Normalizing data with missing/invalid celldata")
+    // 尝试从 data 字段转换
+    if (firstSheet.data && Array.isArray(firstSheet.data)) {
+      const celldata = []
+      for (let r = 0; r < firstSheet.data.length; r++) {
+        const row = firstSheet.data[r]
+        if (!row) continue
+        for (let c = 0; c < row.length; c++) {
+          const cell = row[c]
+          if (cell !== null && cell !== undefined) {
+            celldata.push({ r, c, v: cell })
+          }
+        }
+      }
+      return [{ ...firstSheet, celldata }]
+    }
+    // 如果无法转换，返回默认数据
+    return getDefaultData()
+  }
+
+  return data
+}
+
 export default function DataSheet({ data, onChange, readonly = false, height = 500 }: DataSheetProps) {
   const workbookRef = useRef<WorkbookInstance>(null)
 
   // 用于强制重新渲染的 key
   const [sheetKey, setSheetKey] = useState(() => Date.now())
 
-  // 内部数据状态
+  // 内部数据状态 - 规范化后的数据
   const [sheetData, setSheetData] = useState<any[]>(() => {
     console.log("[DataSheet Init] data prop:", data?.length, "items")
-    if (data && data.length > 0) {
-      console.log("[DataSheet Init] Using provided data, celldata length:", data[0]?.celldata?.length)
-      return data
-    }
-    console.log("[DataSheet Init] Using default data")
-    return getDefaultData()
+    const normalized = normalizeSheetData(data)
+    console.log("[DataSheet Init] Normalized celldata length:", normalized[0]?.celldata?.length)
+    return normalized
   })
 
   // 标记是否是内部编辑导致的变化
@@ -45,12 +78,13 @@ export default function DataSheet({ data, onChange, readonly = false, height = 5
       return;
     }
 
+    // 规范化数据
+    const normalized = normalizeSheetData(data)
+
     // 只有当有新的有效数据时才更新
-    if (data && data.length > 0 && incomingCelldataLength !== undefined) {
-      // 深度比较：如果 celldata 长度和内容核心没变（比如只是 title 变了），尽量不重置 Key
-      // 这里简单通过长度判断，作为第一道防线
-      console.log("[DataSheet useEffect] Updating sheetData");
-      setSheetData(data);
+    if (data && data.length > 0) {
+      console.log("[DataSheet useEffect] Updating sheetData with normalized data");
+      setSheetData(normalized);
 
       // 强制更新 key 会导致 Fortune-sheet 彻底重新挂载（DOM 销毁）
       // 如果不是因为数据结构变化（由外部同步进来），尽量减少此操作
@@ -64,28 +98,39 @@ export default function DataSheet({ data, onChange, readonly = false, height = 5
     };
   }, [data])
 
+  // 包装 handleChange：添加双重防护
   const handleChange = useCallback((changedData: any) => {
-    // 强制防御：进入时立即检查基本结构
+    console.log("[DataSheet onChange Wrapper] Received data:", changedData)
+
+    // 第一层防护：检查基本结构
     if (!changedData || !Array.isArray(changedData) || changedData.length === 0) {
-      console.warn("[DataSheet onChange] Ignored empty or invalid changedData");
-      return;
+      console.warn("[DataSheet onChange Wrapper] Blocked: empty or invalid structure")
+      return
     }
 
-    const firstSheet = changedData[0];
-    const celldata = firstSheet?.celldata;
+    // 第二层防护：检查 celldata
+    const firstSheet = changedData[0]
+    if (!firstSheet || !firstSheet.celldata || !Array.isArray(firstSheet.celldata)) {
+      console.warn("[DataSheet onChange Wrapper] Blocked: missing/invalid celldata")
+      return
+    }
+
+    // 规范化数据以确保 celldata 存在
+    const normalized = normalizeSheetData(changedData)
+    const celldata = normalized[0]?.celldata
 
     console.log("[DataSheet onChange] Called, celldata length:", celldata?.length);
 
-    // 关键拦截：如果 celldata 缺失或不是数组，阻断后续流程，防止下游 convertSheetDataToSchema 报错
-    if (!celldata || !Array.isArray(celldata)) {
-      console.warn("[DataSheet onChange] Ignored invalid data change (missing/invalid celldata)");
-      return;
+    // 第三层防护：再次检查规范化后的数据
+    if (!celldata || !Array.isArray(celldata) || celldata.length === 0) {
+      console.warn("[DataSheet onChange] Blocked: normalization failed")
+      return
     }
 
     // 标记为内部编辑
-    isInternalEditRef.current = true;
-    setSheetData(changedData);
-    onChange?.(changedData);
+    isInternalEditRef.current = true
+    setSheetData(normalized)
+    onChange?.(normalized)
   }, [onChange])
 
   console.log("[DataSheet Render] sheetKey:", sheetKey, "sheetData length:", sheetData?.length, "celldata:", sheetData?.[0]?.celldata?.length)

@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react'
 import { showError } from '@/lib/confirm'
 import { Card, Descriptions, Table, Tag, Button, Space, message, Divider, Image } from 'antd'
-import { ArrowLeftOutlined, PrinterOutlined, DownloadOutlined } from '@ant-design/icons'
+import { ArrowLeftOutlined, PrinterOutlined, DownloadOutlined, FilePdfOutlined, FileWordOutlined } from '@ant-design/icons'
 import { useParams, useRouter } from 'next/navigation'
 import dayjs from 'dayjs'
 
@@ -60,6 +60,7 @@ export default function ClientReportDetailPage() {
 
     const [report, setReport] = useState<ClientReport | null>(null)
     const [loading, setLoading] = useState(true)
+    const [exporting, setExporting] = useState(false)
 
     useEffect(() => {
         fetchReport()
@@ -84,6 +85,66 @@ export default function ClientReportDetailPage() {
 
     const handlePrint = () => {
         window.print()
+    }
+
+    const handleExportPDF = async () => {
+        try {
+            setExporting(true)
+            message.loading({ content: '正在生成 PDF...', key: 'export' })
+
+            const response = await fetch(`/api/report/client/${reportId}/export/pdf`)
+
+            if (!response.ok) {
+                throw new Error('导出失败')
+            }
+
+            const blob = await response.blob()
+            const url = window.URL.createObjectURL(blob)
+            const a = document.createElement('a')
+            a.href = url
+            a.download = `${report?.reportNo || 'report'}.pdf`
+            document.body.appendChild(a)
+            a.click()
+            window.URL.revokeObjectURL(url)
+            document.body.removeChild(a)
+
+            message.success({ content: 'PDF 导出成功', key: 'export' })
+        } catch (error) {
+            console.error('PDF 导出失败:', error)
+            message.error({ content: 'PDF 导出失败', key: 'export' })
+        } finally {
+            setExporting(false)
+        }
+    }
+
+    const handleExportWord = async () => {
+        try {
+            setExporting(true)
+            message.loading({ content: '正在生成 Word...', key: 'export' })
+
+            const response = await fetch(`/api/report/client/${reportId}/export/docx`)
+
+            if (!response.ok) {
+                throw new Error('导出失败')
+            }
+
+            const blob = await response.blob()
+            const url = window.URL.createObjectURL(blob)
+            const a = document.createElement('a')
+            a.href = url
+            a.download = `${report?.reportNo || 'report'}.docx`
+            document.body.appendChild(a)
+            a.click()
+            window.URL.revokeObjectURL(url)
+            document.body.removeChild(a)
+
+            message.success({ content: 'Word 导出成功', key: 'export' })
+        } catch (error) {
+            console.error('Word 导出失败:', error)
+            message.error({ content: 'Word 导出失败', key: 'export' })
+        } finally {
+            setExporting(false)
+        }
     }
 
     if (loading) {
@@ -131,6 +192,20 @@ export default function ClientReportDetailPage() {
                 <Space>
                     <Button type="primary" icon={<PrinterOutlined />} onClick={handlePrint}>
                         打印报告
+                    </Button>
+                    <Button
+                        icon={<FilePdfOutlined />}
+                        onClick={handleExportPDF}
+                        loading={exporting}
+                    >
+                        导出 PDF
+                    </Button>
+                    <Button
+                        icon={<FileWordOutlined />}
+                        onClick={handleExportWord}
+                        loading={exporting}
+                    >
+                        导出 Word
                     </Button>
                 </Space>
             </div>

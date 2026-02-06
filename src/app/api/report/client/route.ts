@@ -83,13 +83,29 @@ export const POST = withErrorHandler(async (request: NextRequest) => {
 
   // 处理关联的任务报告
   let taskReportNos: string[] = []
-  if (data.taskReportIds && Array.isArray(data.taskReportIds)) {
+
+  // 支持两种方式：
+  // 1. taskReportIds - 前端发送报告 ID 数组（旧方式，向后兼容）
+  // 2. taskReportNos - 前端直接发送报告编号数组（新方式，已排序）
+  if (data.taskReportNos && typeof data.taskReportNos === 'string') {
+    // 新方式：前端已排序的报告编号
+    try {
+      taskReportNos = JSON.parse(data.taskReportNos)
+    } catch (e) {
+      console.error('解析 taskReportNos 失败:', e)
+    }
+  } else if (data.taskReportIds && Array.isArray(data.taskReportIds)) {
+    // 旧方式：根据 ID 查询报告编号
     const taskReports = await prisma.testReport.findMany({
       where: { id: { in: data.taskReportIds } },
       select: { reportNo: true },
     })
     taskReportNos = taskReports.map((r: any) => r.reportNo)
   }
+
+  // 处理封面和封底数据（已由前端序列化为 JSON 字符串）
+  const coverData = data.coverData || null
+  const backCoverData = data.backCoverData || null
 
   const report = await prisma.clientReport.create({
     data: {
@@ -108,6 +124,8 @@ export const POST = withErrorHandler(async (request: NextRequest) => {
       testStandards: data.testStandards ? JSON.stringify(data.testStandards) : null,
       overallConclusion: data.overallConclusion,
       preparer: data.preparer,
+      coverData,
+      backCoverData,
       status: 'draft',
     },
   })

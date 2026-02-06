@@ -12,15 +12,38 @@ export async function GET(
   return NextResponse.json(report)
 }
 
-export async function PUT(
+export const PUT = withAuth(async (
   request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
-  const { id } = await params
+  user
+) => {
+  // 从URL中获取id
+  const url = new URL(request.url)
+  const pathParts = url.pathname.split('/')
+  const id = pathParts[pathParts.length - 1]
+
   const data = await request.json()
-  const report = await prisma.testReport.update({ where: { id }, data })
-  return NextResponse.json(report)
-}
+
+  // 准备更新数据
+  const updateData: any = {
+    ...data,
+    // 记录最后编辑信息
+    lastEditedAt: new Date(),
+    lastEditedBy: user.name || '未知用户',
+  }
+
+  // 如果传入了richContent，更新富文本内容字段
+  if ('richContent' in data) {
+    updateData.richContent = data.richContent
+  }
+
+  const report = await prisma.testReport.update({
+    where: { id },
+    data: updateData,
+    include: { task: true }
+  })
+
+  return NextResponse.json({ success: true, data: report })
+})
 
 export async function DELETE(
   request: NextRequest,

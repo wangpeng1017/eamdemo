@@ -1,3 +1,4 @@
+
 'use client'
 
 import { useState, useEffect } from 'react'
@@ -7,14 +8,45 @@ import { PlusOutlined, EditOutlined, DeleteOutlined } from '@ant-design/icons'
 import type { ColumnsType } from 'antd/es/table'
 import dayjs from 'dayjs'
 
+interface Client {
+  name: string
+  contact: string | null
+}
+
+interface Entrustment {
+  entrustmentNo: string
+  clientId: string | null
+  contactPerson: string | null
+}
+
 interface Invoice {
   id: string
   invoiceNo: string
   amount: number
+  invoiceType?: string | null
   type: string | null
   status: string
   issuedDate: string | null
+  paymentDate?: string | null
   createdAt: string
+  entrustmentId?: string | null
+  entrustment?: Entrustment | null
+  client?: Client | null
+  clientName: string
+  clientTaxNo?: string | null
+  invoiceAmount?: number
+  taxRate?: number
+  taxAmount?: number
+  totalAmount?: number
+}
+
+interface AvailableEntrustment {
+  id: string
+  entrustmentNo: string
+  client?: {
+    name: string
+    contact: string | null
+  }
 }
 
 const statusMap: Record<string, { text: string; color: string }> = {
@@ -29,25 +61,45 @@ export default function InvoicePage() {
   const [page, setPage] = useState(1)
   const [modalOpen, setModalOpen] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
+  const [submitting, setSubmitting] = useState(false)
+  const [availableEntrustments, setAvailableEntrustments] = useState<AvailableEntrustment[]>([])
+  const [loadingEntrustments, setLoadingEntrustments] = useState(false)
   const [form] = Form.useForm()
 
   const fetchData = async (p = page) => {
     setLoading(true)
-    const res = await fetch(`/api/finance/invoice?page=${p}&pageSize=10`)
-    const json = await res.json()
-    if (json.success && json.data) {
-      setData(json.data.list || [])
-      setTotal(json.data.total || 0)
-    } else {
+    try {
+      const res = await fetch(`/api/finance/invoice?page=${p}&pageSize=10`)
+      const json = await res.json()
       if (json.success && json.data) {
-      setData(json.data.list || [])
-      setTotal(json.data.total || 0)
-    } else {
-      setData(json.list || [])
-      setTotal(json.total || 0)
-    }
+        setData(json.data.list || [])
+        setTotal(json.data.total || 0)
+      } else {
+        setData([])
+        setTotal(0)
+      }
+    } catch (err) {
+      console.error('获取发票列表失败:', err)
+      showError('获取发票列表失败')
+      setData([])
+      setTotal(0)
     }
     setLoading(false)
+  }
+
+  // 获取可关联的委托单列表
+  const fetchAvailableEntrustments = async (keyword = '') => {
+    setLoadingEntrustments(true)
+    try {
+      const res = await fetch(`/api/finance/invoice/available-entrustments?keyword=${encodeURIComponent(keyword)}&page=1&pageSize=50`)
+      const json = await res.json()
+      if (json.success && json.data) {
+        setAvailableEntrustments(json.data.list || [])
+      }
+    } catch (err) {
+      console.error('获取委托单列表失败:', err)
+    }
+    setLoadingEntrustments(false)
   }
 
   useEffect(() => { fetchData() }, [page])
@@ -55,6 +107,7 @@ export default function InvoicePage() {
   const handleAdd = () => {
     setEditingId(null)
     form.resetFields()
+    fetchAvailableEntrustments()
     setModalOpen(true)
   }
 
@@ -62,8 +115,11 @@ export default function InvoicePage() {
     setEditingId(record.id)
     form.setFieldsValue({
       ...record,
+      entrustmentId: record.entrustment?.entrustmentNo || record.entrustmentId || null,
       issuedDate: record.issuedDate ? dayjs(record.issuedDate) : null,
+      paymentDate: record.paymentDate ? dayjs(record.paymentDate) : null,
     })
+    fetchAvailableEntrustments()
     setModalOpen(true)
   }
 
@@ -74,33 +130,70 @@ export default function InvoicePage() {
       showSuccess('删除成功')
       fetchData()
     } else {
-      showError(json.error?.message || '删除失败')
+      showError(json.error || '删除失败')
     }
   }
 
   const handleSubmit = async () => {
-    const values = await form.validateFields()
-    const data = {
-      ...values,
-      issuedDate: values.issuedDate?.toISOString(),
+    try {
+      const values = await form.validateFields()
+      setSubmitting(true)
+
+      // 如果选择了委托单，查找实际的委托单ID
+      let entrustmentId = values.entrustmentId
+      if (values.entrustmentId && typeof values.entrustmentId === 'string') {
+        const selected = availableEntrustments.find(e => e.entrustmentNo === values.entrustmentId)
+        if (selected) {
+          entrustmentId = selected.id
+        }
+      }
+
+      const data = {
+        ...values,
+        entrustmentId,
+        issuedDate: values.issuedDate?.toISOString ? values.issuedDate.toISOString() : values.issuedDate,
+        paymentDate: values.paymentDate?.toISOString ? values.paymentDate.toISOString() : values.paymentDate,
+      }
+
+      const url = editingId ? `/api/finance/invoice/${editingId}` : '/api/finance/invoice'
+      const method = editingId ? 'PUT' : 'POST'
+
+      const res = await fetch(url, {
+        method,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data)
+      })
+
+      const json = await res.json()
+
+      if (res.ok && json.success) {
+        showSuccess(editingId ? '更新成功' : '创建成功')
+        setModalOpen(false)
+        fetchData()
+      } else {
+        showError(json.error || '操作失败')
+      }
+    } catch (err: any) {
+      console.error('提交失败:', err)
+      showError(err.message || '提交失败')
+    } finally {
+      setSubmitting(false)
     }
-    const url = editingId ? `/api/finance/invoice/${editingId}` : '/api/finance/invoice'
-    const method = editingId ? 'PUT' : 'POST'
-    await fetch(url, {
-      method,
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(data)
-    })
-    showSuccess(editingId ? '更新成功' : '创建成功')
-    setModalOpen(false)
-    fetchData()
   }
 
   const columns: ColumnsType<Invoice> = [
     { title: '发票号', dataIndex: 'invoiceNo', width: 150 },
-    { title: '金额', dataIndex: 'amount', width: 120, render: (v) => `¥${v}` },
-    { title: '发票类型', dataIndex: 'type', width: 120 },
-    { title: '开票日期', dataIndex: 'issuedDate', width: 120, render: (t: string) => t ? dayjs(t).format('YYYY-MM-DD HH:mm:ss') : '-' },
+    { title: '客户名称', dataIndex: 'clientName', width: 150 },
+    {
+      title: '关联委托单',
+      dataIndex: 'entrustment',
+      width: 150,
+      render: (e: Entrustment | null) => e?.entrustmentNo || '-'
+    },
+    { title: '开票金额', dataIndex: 'totalAmount', width: 120, render: (v) => v ? `¥${v}` : '-' },
+    { title: '发票类型', dataIndex: 'invoiceType', width: 120 },
+    { title: '回款日期', dataIndex: 'paymentDate', width: 120, render: (t: string) => t ? dayjs(t).format('YYYY-MM-DD') : '-' },
+    { title: '开票日期', dataIndex: 'issuedDate', width: 120, render: (t: string) => t ? dayjs(t).format('YYYY-MM-DD') : '-' },
     {
       title: '状态', dataIndex: 'status', width: 100,
       render: (s: string) => <Tag color={statusMap[s]?.color}>{statusMap[s]?.text}</Tag>
@@ -110,10 +203,10 @@ export default function InvoicePage() {
       render: (t: string) => dayjs(t).format('YYYY-MM-DD HH:mm')
     },
     {
-      title: '操作', fixed: 'right', 
+      title: '操作', fixed: 'right', width: 150,
       render: (_, record) => (
         <Space style={{ whiteSpace: 'nowrap' }}>
-          <Button size="small" icon={<EditOutlined />} onClick={() => handleEdit(record)} />
+          <Button size="small" icon={<EditOutlined />} onClick={() => handleEdit(record)}>编辑</Button>
           <Button size="small" danger icon={<DeleteOutlined />} onClick={() => handleDelete(record.id)} />
         </Space>
       )
@@ -131,6 +224,7 @@ export default function InvoicePage() {
         columns={columns}
         dataSource={data}
         loading={loading}
+        scroll={{ x: 1400 }}
         pagination={{ current: page, total, onChange: setPage }}
       />
       <Modal
@@ -138,26 +232,71 @@ export default function InvoicePage() {
         open={modalOpen}
         onOk={handleSubmit}
         onCancel={() => setModalOpen(false)}
-        width={500}
+        width={600}
+        confirmLoading={submitting}
       >
         <Form form={form} layout="vertical">
-          <Form.Item name="amount" label="金额" rules={[{ required: true }]}>
-            <InputNumber style={{ width: '100%' }} prefix="¥" min={0} />
+          <Form.Item
+            name="entrustmentId"
+            label="关联委托单"
+            tooltip="可选择关联一个委托单"
+          >
+            <Select
+              placeholder="请选择委托单"
+              showSearch
+              loading={loadingEntrustments}
+              onSearch={(value) => fetchAvailableEntrustments(value)}
+              filterOption={false}
+              options={availableEntrustments.map(e => ({
+                value: e.entrustmentNo,
+                label: `${e.entrustmentNo} - ${e.client?.name || '未知客户'}`
+              }))}
+            />
           </Form.Item>
-          <Form.Item name="type" label="发票类型">
-            <Select options={[
-              { value: '增值税普通发票', label: '增值税普通发票' },
-              { value: '增值税专用发票', label: '增值税专用发票' },
-            ]} />
+          <Form.Item
+            name="paymentDate"
+            label="回款日期"
+            rules={[{ required: true, message: '请选择回款日期' }]}
+            tooltip="必填项，记录实际回款日期"
+          >
+            <DatePicker style={{ width: '100%' }} placeholder="请选择回款日期" />
+          </Form.Item>
+          <Form.Item name="clientName" label="客户名称" rules={[{ required: true, message: '请输入客户名称' }]}>
+            <Input placeholder="请输入客户名称" />
+          </Form.Item>
+          <Form.Item name="clientTaxNo" label="客户税号">
+            <Input placeholder="请输入客户税号" />
+          </Form.Item>
+          <Form.Item name="invoiceAmount" label="不含税金额" rules={[{ required: true, message: '请输入金额' }]}>
+            <InputNumber style={{ width: '100%' }} prefix="¥" min={0} precision={2} placeholder="请输入金额" />
+          </Form.Item>
+          <Form.Item
+            name="taxRate"
+            label="税率"
+            rules={[{ required: true, message: '请选择税率' }]}
+            initialValue={0.06}
+          >
+            <Select>
+              <Select.Option value={0.06}>6%</Select.Option>
+              <Select.Option value={0.09}>9%</Select.Option>
+              <Select.Option value={0.13}>13%</Select.Option>
+              <Select.Option value={0}>免税</Select.Option>
+            </Select>
+          </Form.Item>
+          <Form.Item name="invoiceType" label="发票类型" initialValue="增值税普通发票">
+            <Select>
+              <Select.Option value="增值税普通发票">增值税普通发票</Select.Option>
+              <Select.Option value="增值税专用发票">增值税专用发票</Select.Option>
+            </Select>
           </Form.Item>
           <Form.Item name="issuedDate" label="开票日期">
-            <DatePicker style={{ width: '100%' }} />
+            <DatePicker style={{ width: '100%' }} placeholder="请选择开票日期" />
           </Form.Item>
           <Form.Item name="status" label="状态" initialValue="pending">
-            <Select options={[
-              { value: 'pending', label: '待开票' },
-              { value: 'issued', label: '已开票' },
-            ]} />
+            <Select>
+              <Select.Option value="pending">待开票</Select.Option>
+              <Select.Option value="issued">已开票</Select.Option>
+            </Select>
           </Form.Item>
         </Form>
       </Modal>

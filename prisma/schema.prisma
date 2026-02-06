@@ -717,7 +717,12 @@ model TestReport {
   clientReportId String? @db.VarChar(50)
   clientReport   ClientReport? @relation(fields: [clientReportId], references: [id]) // 建立关联
 
-  precautions    String? @db.Text // 需求7：检测注意事项(自定义编辑)
+  precautions    String?   @db.Text // 需求7：检测注意事项(自定义编辑)
+
+  // 富文本编辑相关 (需求9)
+  richContent    String?   @db.Text      // 富文本内容
+  lastEditedAt   DateTime?                // 最后编辑时间
+  lastEditedBy   String?   @db.VarChar(50) // 最后编辑人
 
   status       String    @default("draft") // draft/reviewing/approved/issued
   approvalFlow String?   @db.Text // JSON 审批流程
@@ -947,7 +952,8 @@ model FinanceInvoice {
   taxAmount     Decimal   @db.Decimal(12, 2) // 税额
   totalAmount   Decimal   @db.Decimal(12, 2) // 价税合计
   status        String    @default("pending") // pending/issued
-  issuedDate    DateTime?
+  issuedDate    DateTime? // 开票日期
+  paymentDate   DateTime? // 回款日期
   remark        String?   @db.Text
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
@@ -1173,6 +1179,9 @@ model ClientReport {
   // 关联任务报告 (1:N)
   tasks             TestReport[]
 
+  // 生成历史
+  histories         ClientReportHistory[]
+
   @@map("biz_client_report")
 }
 
@@ -1301,6 +1310,24 @@ model TestTemplate {
   @@index([method])
 }
 
+
+// 检测标准分类（一级分类 - 需求2）
+model InspectionStandardCategory {
+ id  String @id @default(cuid())
+ name String @db.VarChar(100) // 分类名称：企业标准、奇瑞汽车标准等
+ code  String? @unique @db.VarChar(50) // 分类编码
+  description String? @db.Text
+ sort Int  @default(0)
+ status  Int  @default(1)
+ createdAt DateTime @default(now())
+ updatedAt DateTime @updatedAt
+
+ // 关联标准项
+ standards InspectionStandard[]
+
+ @@map("biz_inspection_standard_category")
+}
+
 // 检查标准/依据
 model InspectionStandard {
   id         String   @id @default(cuid())
@@ -1309,15 +1336,37 @@ model InspectionStandard {
   description String?  @db.Text                 // 描述/备注
   validity   String   @default("valid")        // valid/invalid
   
-  // 分类 (需求2)，如：企业标准、奇瑞、比亚迪
-  category   String?  @db.VarChar(100)
+  // 分类外键（需求2）
+  categoryId String?
+  category   InspectionStandardCategory? @relation(fields: [categoryId], references: [id])
 
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
 
   capabilities PersonnelCapability[]
+  items        InspectionItem[]
 
   @@map("biz_inspection_standard")
+}
+
+// 检测项目表（关联到具体标准 - 需求2）
+model InspectionItem {
+ id  String    @id @default(cuid())
+ standardId String
+ standard InspectionStandard @relation(fields: [standardId], references: [id], onDelete: Cascade)
+
+ name  String @db.VarChar(200) // 检测项目名称
+ method  String? @db.VarChar(200) // 检测方法
+ unit  String? @db.VarChar(50) // 单位
+  requirement String? @db.Text  // 技术要求
+ remark String? @db.Text
+  sort  Int  @default(0)
+ status  Int  @default(1)
+ createdAt  DateTime @default(now())
+ updatedAt DateTime @updatedAt
+
+ @@index([standardId])
+ @@map("biz_inspection_item")
 }
 
 // 样品报告分类
@@ -1429,4 +1478,29 @@ model SampleTestItem {
   @@index([testTemplateId])
   @@index([assessmentStatus])
   @@map("biz_sample_test_item")
+}
+
+
+// ==================== 客户报告生成历史 ====================
+
+// 客户报告生成记录（需求9）
+model ClientReportHistory {
+ id   String @id @default(cuid())
+ clientReportId String
+ clientReport ClientReport @relation(fields: [clientReportId], references: [id], onDelete: Cascade)
+
+ version  Int  @default(1) // 版本号
+ generatedAt DateTime  @default(now())  // 生成时间
+ generatedBy String  @db.VarChar(50) // 生成人
+
+ // 快照数据
+ snapshotData String  @db.LongText // JSON: 生成时的完整数据快照
+ exportFormat String?  @db.VarChar(20) // pdf/word/both
+ fileUrl  String?  @db.VarChar(500) // 导出文件URL
+
+ remark   String?  @db.Text
+  createdAt  DateTime  @default(now())
+
+ @@index([clientReportId])
+  @@map("biz_client_report_history")
 }

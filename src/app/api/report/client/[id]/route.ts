@@ -42,6 +42,8 @@ export const GET = withErrorHandler(async (
     testItems: report.testItems ? JSON.parse(report.testItems) : [],
     testStandards: report.testStandards ? JSON.parse(report.testStandards) : [],
     approvalFlow: report.approvalFlow ? JSON.parse(report.approvalFlow) : [],
+    coverData: report.coverData ? JSON.parse(report.coverData) : null,
+    backCoverData: report.backCoverData ? JSON.parse(report.backCoverData) : null,
   }
 
   return success(formatted)
@@ -77,10 +79,13 @@ export const PUT = withErrorHandler(async (
   if (data.specification !== undefined) updateData.specification = data.specification
   if (data.sampleQuantity !== undefined) updateData.sampleQuantity = data.sampleQuantity
   if (data.receivedDate !== undefined) updateData.receivedDate = data.receivedDate ? new Date(data.receivedDate) : null
-  if (data.testItems !== undefined) updateData.testItems = JSON.stringify(data.testItems)
-  if (data.testStandards !== undefined) updateData.testStandards = JSON.stringify(data.testStandards)
+  if (data.testItems !== undefined) updateData.testItems = typeof data.testItems === 'string' ? data.testItems : JSON.stringify(data.testItems)
+  if (data.testStandards !== undefined) updateData.testStandards = typeof data.testStandards === 'string' ? data.testStandards : JSON.stringify(data.testStandards)
   if (data.overallConclusion !== undefined) updateData.overallConclusion = data.overallConclusion
   if (data.preparer !== undefined) updateData.preparer = data.preparer
+  if (data.coverData !== undefined) updateData.coverData = data.coverData
+  if (data.backCoverData !== undefined) updateData.backCoverData = data.backCoverData
+  if (data.taskReportNos !== undefined) updateData.taskReportNos = typeof data.taskReportNos === 'string' ? data.taskReportNos : JSON.stringify(data.taskReportNos)
 
   const report = await prisma.clientReport.update({
     where: { id },

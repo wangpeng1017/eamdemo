@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react'
 import { showSuccess, showError } from '@/lib/confirm'
 import { Table, Button, Space, Tag, Modal, Select, message, Card, Statistic, Row, Col } from 'antd'
-import { PlusOutlined, EyeOutlined, FileTextOutlined } from '@ant-design/icons'
+import { PlusOutlined, EyeOutlined, EditOutlined, FileTextOutlined } from '@ant-design/icons'
 import type { ColumnsType } from 'antd/es/table'
 import dayjs from 'dayjs'
 import { useRouter } from 'next/navigation'
@@ -119,6 +119,10 @@ export default function TestReportPage() {
     router.push(`/report/task/${id}`)
   }
 
+  const handleEdit = (id: string) => {
+    router.push(`/report/task/${id}`)
+  }
+
   const columns: ColumnsType<TestReport> = [
     { title: '报告编号', dataIndex: 'reportNo', width: 150 },
     { title: '样品名称', dataIndex: 'sampleName', width: 150 },
@@ -150,7 +154,6 @@ export default function TestReportPage() {
     },
     {
       title: '操作', fixed: 'right',
-
       render: (_, record) => (
         <Space style={{ whiteSpace: 'nowrap' }}>
           <Button
@@ -158,6 +161,14 @@ export default function TestReportPage() {
             type="link"
             icon={<EyeOutlined />}
             onClick={() => handleView(record.id)}
+            title="查看"
+          />
+          <Button
+            size="small"
+            type="link"
+            icon={<EditOutlined />}
+            onClick={() => handleEdit(record.id)}
+            title="编辑"
           />
         </Space>
       )

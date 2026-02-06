@@ -8,13 +8,24 @@ export const GET = withAuth(async (request: NextRequest, user) => {
   const page = parseInt(searchParams.get('page') || '1')
   const pageSize = parseInt(searchParams.get('pageSize') || '10')
   const validity = searchParams.get('validity')
+  const categoryId = searchParams.get('categoryId')
 
   const where: Record<string, unknown> = {}
   if (validity) where.validity = validity
+  if (categoryId) where.categoryId = categoryId
 
   const [list, total] = await Promise.all([
     prisma.inspectionStandard.findMany({
       where,
+      include: {
+        category: {
+          select: {
+            id: true,
+            name: true,
+            code: true,
+          },
+        },
+      },
       orderBy: { createdAt: 'desc' },
       skip: (page - 1) * pageSize,
       take: pageSize,
@@ -31,6 +42,15 @@ export const POST = withAuth(async (request: NextRequest, user) => {
 
   const standard = await prisma.inspectionStandard.create({
     data,
+    include: {
+      category: {
+        select: {
+          id: true,
+          name: true,
+          code: true,
+        },
+      },
+    },
   })
 
   return success(standard)
