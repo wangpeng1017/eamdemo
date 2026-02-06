@@ -2,7 +2,7 @@
 
 import { useState, useCallback } from 'react'
 import { Table, Form, Input, Button, Space } from 'antd'
-import { PlusOutlined, MinusCircleOutlined } from '@ant-design/icons'
+import { PlusOutlined } from '@ant-design/icons'
 
 interface EditableTableProps {
   dataSource?: any[][]
@@ -24,7 +24,6 @@ export default function EditableTable({
   onChange,
   readonly = false
 }: EditableTableProps) {
-  const [form] = Form.useForm()
   const [data, setData] = useState<any[][]>(
     dataSource.length > 0 ? dataSource : Array(rowCount).fill([]).map(() => Array(columnsCount).fill(''))
   )
@@ -52,7 +51,6 @@ export default function EditableTable({
       </Form.Item>
     )
   }))
-))
 
   // 处理单元格变化
   const handleCellChange = useCallback((rowIndex: number, colIndex: number, value: string) => {
@@ -72,16 +70,9 @@ export default function EditableTable({
     onChange?.(newData)
   }
 
-  // 删除行
-  const handleDeleteRow = (rowIndex: number) => {
-    const newData = data.filter((_, index) => index !== rowIndex)
-    setData(newData)
-    onChange?.(newData)
-  }
-
   return (
     <div className="border border-gray-200 rounded">
-      <Form form={form} component={false}>
+      <Form component={false}>
         <Table
           columns={columns}
           dataSource={data.map((row, index) => ({ ...row, key: index }))}
