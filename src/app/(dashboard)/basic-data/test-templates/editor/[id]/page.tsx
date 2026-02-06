@@ -1,28 +1,17 @@
 'use client'
 
-import { useState, useEffect, use } from 'react'
+import { useState, useEffect, use, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import { Button, Card, Space, message, Spin, Result } from 'antd'
 import { SaveOutlined, ArrowLeftOutlined } from '@ant-design/icons'
-import dynamic from 'next/dynamic'
-
-// ⚠️ 关键修复：禁用 SSR，避免 Fortune-sheet 在服务端执行 DOM 操作
-const DataSheet = dynamic(() => import('@/components/DataSheet'), {
-    ssr: false,
-    loading: () => (
-        <div className="flex h-full items-center justify-center">
-            <Spin size="large" tip="正在加载表格编辑器..." />
-        </div>
-    )
-})
-
+import EditableTable, { convertFromSchema, convertToSchema } from '@/components/EditableTable'
 import {
     TemplateSchema,
     convertSheetDataToSchema,
     convertSchemaToPreviewData
 } from '@/lib/template-converter'
 import { showSuccess, showError } from '@/lib/confirm'
-import { convertDataToCelldata } from '@/components/DataSheet'
+import { extractSheetData } from '@/components/DataSheet'
 
 export default function TemplateEditorPage({ params }: { params: Promise<{ id: string }> }) {
     const { id } = use(params)
@@ -30,7 +19,7 @@ export default function TemplateEditorPage({ params }: { params: Promise<{ id: s
     const [loading, setLoading] = useState(true)
     const [saving, setSaving] = useState(false)
     const [template, setTemplate] = useState<any>(null)
-    const [sheetData, setSheetData] = useState<any[]>([])
+    const [tableData, setTableData] = useState<any[][]>([])
     const [error, setError] = useState<string | null>(null)
 
     // 加载数据
@@ -48,7 +37,7 @@ export default function TemplateEditorPage({ params }: { params: Promise<{ id: s
                 const record = json.data
                 setTemplate(record)
 
-                // 解析 Schema 并转换为表格数据
+                // 解析 Schema
                 let schema: TemplateSchema
                 if (typeof record.schema === 'string') {
                     schema = JSON.parse(record.schema)
@@ -56,8 +45,10 @@ export default function TemplateEditorPage({ params }: { params: Promise<{ id: s
                     schema = record.schema
                 }
 
-                const initialSheetData = convertSchemaToPreviewData(schema)
-                setSheetData(initialSheetData)
+                // 转换为二维数组
+                const sheetData = convertSchemaToPreviewData(schema)
+                const twoDData = extractSheetData(sheetData)
+                setTableData(twoDData.length > 0 ? twoDData : [['检测项目', '检测方法', '技术要求', '实测值', '单项判定', '备注']])
                 setError(null)
             } catch (err: any) {
                 console.error("[TemplateEditorPage] Fetch Error:", err)
@@ -75,8 +66,8 @@ export default function TemplateEditorPage({ params }: { params: Promise<{ id: s
         try {
             setSaving(true)
 
-            // 1. 将表格数据转换回 Schema
-            const currentSchema = convertSheetDataToSchema(sheetData)
+            // 1. 将二维数组转换为 Schema
+            const currentSchema = convertToSchema(tableData)
 
             // 2. 保持原有基础信息，仅更新 schema
             const updateData = {
@@ -149,15 +140,11 @@ export default function TemplateEditorPage({ params }: { params: Promise<{ id: s
 
             <Card className="flex-1 overflow-hidden" bodyStyle={{ height: '100%', padding: 0 }}>
                 <div className="h-full">
-                    {/* 完全受控模式：父组件管理状态和数据转换 */}
-                    <DataSheet
-                        data={sheetData}
-                        onChange={(changedData) => {
-                            // 🔑 关键：立即将 data 格式转换为 celldata 格式
-                            const celldata = convertDataToCelldata(changedData)
-                            setSheetData(celldata)
-                        }}
-                        height="100%"
+                    <EditableTable
+                        dataSource={tableData}
+                        columnsCount={6}
+                        rowCount={30}
+                        onChange={setTableData}
                     />
                 </div>
             </Card>
