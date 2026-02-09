@@ -205,7 +205,6 @@ export default function PermissionPage() {
 
   const roleColumns: ColumnsType<Role> = [
     { title: '角色名称', dataIndex: 'name' },
-    { title: '角色编码', dataIndex: 'code' },
     {
       title: '操作', fixed: 'right',
 
