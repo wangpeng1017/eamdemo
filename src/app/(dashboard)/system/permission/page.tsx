@@ -190,7 +190,10 @@ export default function PermissionPage() {
       })
       const data = await res.json()
       if (data.success !== false) {
-        showSuccess('权限保存成功')
+        Modal.success({
+          title: '保存成功',
+          content: `${selectedRole.name} 的权限配置已保存`,
+        })
         loadRoles()
       } else {
         showError(data.message || '保存失败')
@@ -205,7 +208,7 @@ export default function PermissionPage() {
     { title: '角色编码', dataIndex: 'code' },
     {
       title: '操作', fixed: 'right',
-      
+
       render: (_, record) => (
         <Button
           type={selectedRole?.id === record.id ? 'primary' : 'default'}
@@ -259,7 +262,7 @@ export default function PermissionPage() {
     },
     {
       title: '操作', fixed: 'right',
-      
+
       render: (_, record) => (
         <Space style={{ whiteSpace: 'nowrap' }}>
           <Button size="small" icon={<EditOutlined />} onClick={() => handleEdit(record)} />
