@@ -94,75 +94,83 @@ export const PATCH = withAuth(async (
 
   const { approvalEngine } = await import('@/lib/approval/engine')
 
-  if (action === 'submit') {
-    if (report.status !== 'draft') {
-      return NextResponse.json({ success: false, error: { message: '只有草稿状态的报告可以提交审批' } }, { status: 400 })
-    }
+  try {
+    if (action === 'submit') {
+      if (report.status !== 'draft') {
+        return NextResponse.json({ success: false, error: { message: '只有草稿状态的报告可以提交审批' } }, { status: 400 })
+      }
 
-    await approvalEngine.submit({
-      bizType: 'test_report',
-      bizId: id,
-      flowCode: 'TEST_REPORT_APPROVAL',
-      submitterId: user.id,
-      submitterName: user.name || '未知用户',
-    })
-  }
-  else if (action === 'approve' || action === 'reject') {
-    const instance = await prisma.approvalInstance.findFirst({
-      where: {
+      await approvalEngine.submit({
         bizType: 'test_report',
         bizId: id,
-        status: 'pending'
-      },
-      orderBy: { submittedAt: 'desc' }
-    })
-
-    if (!instance) {
-      return NextResponse.json({ success: false, error: { message: '未找到进行中的审批实例' } }, { status: 400 })
+        flowCode: 'TEST_REPORT_APPROVAL',
+        submitterId: user.id,
+        submitterName: user.name || '未知用户',
+      })
     }
+    else if (action === 'approve' || action === 'reject') {
+      const instance = await prisma.approvalInstance.findFirst({
+        where: {
+          bizType: 'test_report',
+          bizId: id,
+          status: 'pending'
+        },
+        orderBy: { submittedAt: 'desc' }
+      })
 
-    await approvalEngine.approve({
-      instanceId: instance.id,
-      action: action,
-      approverId: user.id,
-      approverName: user.name || '未知用户',
-      comment,
-    })
-  } else if (action === 'review') {
-    const instance = await prisma.approvalInstance.findFirst({
-      where: {
-        bizType: 'test_report',
-        bizId: id,
-        status: 'pending'
-      },
-      orderBy: { submittedAt: 'desc' }
-    })
+      if (!instance) {
+        return NextResponse.json({ success: false, error: { message: '未找到进行中的审批实例' } }, { status: 400 })
+      }
 
-    if (instance) {
       await approvalEngine.approve({
         instanceId: instance.id,
-        action: 'approve',
+        action: action,
         approverId: user.id,
         approverName: user.name || '未知用户',
         comment,
       })
-    } else {
+    } else if (action === 'review') {
+      const instance = await prisma.approvalInstance.findFirst({
+        where: {
+          bizType: 'test_report',
+          bizId: id,
+          status: 'pending'
+        },
+        orderBy: { submittedAt: 'desc' }
+      })
+
+      if (instance) {
+        await approvalEngine.approve({
+          instanceId: instance.id,
+          action: 'approve',
+          approverId: user.id,
+          approverName: user.name || '未知用户',
+          comment,
+        })
+      } else {
+        await prisma.testReport.update({
+          where: { id },
+          data: { status: 'approved' }
+        })
+      }
+    } else if (action === 'issue') {
+      if (report.status !== 'approved') {
+        return NextResponse.json({ success: false, error: { message: '只有已批准状态可以发布' } }, { status: 400 })
+      }
       await prisma.testReport.update({
         where: { id },
-        data: { status: 'approved' }
+        data: {
+          status: 'issued',
+          issuedDate: new Date()
+        }
       })
     }
-  } else if (action === 'issue') {
-    if (report.status !== 'approved') {
-      return NextResponse.json({ success: false, error: { message: '只有已批准状态可以发布' } }, { status: 400 })
-    }
-    await prisma.testReport.update({
-      where: { id },
-      data: {
-        status: 'issued',
-        issuedDate: new Date()
-      }
-    })
+  } catch (err: any) {
+    console.error('[test-report PATCH] 审批操作失败:', err)
+    return NextResponse.json({
+      success: false,
+      error: { message: err.message || '审批操作失败' }
+    }, { status: 400 })
   }
 
   const updated = await prisma.testReport.findUnique({
