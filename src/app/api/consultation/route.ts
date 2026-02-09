@@ -153,6 +153,9 @@ export const POST = withAuth(async (request: NextRequest, user) => {
   const allowedFields = [
     'clientId',
     'clientContactPerson',
+    'clientPhone',
+    'clientEmail',
+    'clientAddress',
     'clientReportDeadline',
     'budgetRange',
     'followerId',

@@ -596,7 +596,7 @@ export default function ConsultationPage() {
                 label: '基本信息',
                 children: (
                   <div style={{ maxHeight: 'calc(100vh - 200px)', overflowY: 'auto', paddingRight: 8 }}>
-                    <Descriptions title="基本信息" bordered size="small" column={2}>
+                    <Descriptions title="委托方信息" bordered size="small" column={2}>
                       <Descriptions.Item label="咨询单号">{currentConsultation.consultationNo}</Descriptions.Item>
                       <Descriptions.Item label="客户名称">{currentConsultation.client?.name || '-'}</Descriptions.Item>
                       <Descriptions.Item label="联系人">{currentConsultation.clientContactPerson || '-'}</Descriptions.Item>

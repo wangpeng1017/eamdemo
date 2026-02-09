@@ -13,6 +13,8 @@ interface Client {
     name: string
     contact?: string
     phone?: string
+    email?: string
+    address?: string
 }
 
 interface TestTemplate {
@@ -109,8 +111,12 @@ export default function ConsultationForm({
     const handleClientChange = (clientId: string) => {
         const client = clients.find(c => c.id === clientId)
         if (client) {
+            // 选择客户后自动填充委托方全部信息
             form.setFieldsValue({
                 clientContactPerson: client.contact || '',
+                clientPhone: client.phone || '',
+                clientEmail: client.email || '',
+                clientAddress: client.address || '',
             })
         }
     }
@@ -201,11 +207,11 @@ export default function ConsultationForm({
         <Card bordered={false}>
             <Form form={form} layout="vertical">
 
-                {/* ========== ① 基本信息 ========== */}
-                <Divider orientation="left" orientationMargin="0">① 基本信息</Divider>
+                {/* ========== ① 委托方信息 ========== */}
+                <Divider orientation="left" orientationMargin="0">① 委托方信息 Company</Divider>
                 <Row gutter={16}>
                     <Col span={12}>
-                        <Form.Item name="clientId" label="客户" rules={[{ required: true, message: '请选择客户' }]}>
+                        <Form.Item name="clientId" label="委托方 Company" rules={[{ required: true, message: '请选择委托方' }]}>
                             <Select
                                 showSearch
                                 allowClear
@@ -218,11 +224,31 @@ export default function ConsultationForm({
                         </Form.Item>
                     </Col>
                     <Col span={12}>
-                        <Form.Item name="clientContactPerson" label="联系人" rules={[{ required: true, message: '请输入联系人' }]}>
-                            <Input placeholder="请输入联系人姓名" />
+                        <Form.Item name="clientContactPerson" label="委托人 From" rules={[{ required: true, message: '请输入联系人' }]}>
+                            <Input placeholder="联系人姓名" />
                         </Form.Item>
                     </Col>
                 </Row>
+                <Row gutter={16}>
+                    <Col span={8}>
+                        <Form.Item name="clientPhone" label="电话 Tel">
+                            <Input placeholder="联系电话" />
+                        </Form.Item>
+                    </Col>
+                    <Col span={8}>
+                        <Form.Item name="clientEmail" label="邮箱 Email">
+                            <Input placeholder="邮箱" />
+                        </Form.Item>
+                    </Col>
+                    <Col span={8}>
+                        <Form.Item name="clientAddress" label="地址 Address">
+                            <Input placeholder="地址" />
+                        </Form.Item>
+                    </Col>
+                </Row>
+
+                {/* ========== ② 业务信息 ========== */}
+                <Divider orientation="left" orientationMargin="0">② 业务信息</Divider>
                 <Row gutter={16}>
                     <Col span={8}>
                         <Form.Item name="clientReportDeadline" label="报告时间" rules={[{ required: true, message: '请选择报告时间' }]}>
@@ -244,8 +270,8 @@ export default function ConsultationForm({
                     />
                 </Form.Item>
 
-                {/* ========== ② 检测样品 ========== */}
-                <Divider orientation="left" orientationMargin="0">② 检测样品</Divider>
+                {/* ========== ③ 检测样品 ========== */}
+                <Divider orientation="left" orientationMargin="0">③ 检测样品</Divider>
                 <SampleTestItemTable
                     bizType="consultation"
                     bizId={bizId || undefined}
@@ -254,8 +280,8 @@ export default function ConsultationForm({
                     showAssessment={true}
                 />
 
-                {/* ========== ③ 附件信息 ========== */}
-                <Divider orientation="left" orientationMargin="0">③ 附件信息</Divider>
+                {/* ========== ④ 附件信息 ========== */}
+                <Divider orientation="left" orientationMargin="0">④ 附件信息</Divider>
                 <div style={{ marginBottom: 8, color: '#666' }}>支持图片、PDF、Word、Excel，单个文件最大5MB，最多5个文件</div>
                 <Upload
                     action="/api/upload/consultation"
