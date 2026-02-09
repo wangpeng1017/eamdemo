@@ -7,7 +7,9 @@ import dayjs from 'dayjs'
 
 // 委托单状态标签
 const entrustmentStatusMap: Record<string, { text: string; color: string }> = {
+    pending: { text: '待受理', color: 'default' },
     draft: { text: '草稿', color: 'default' },
+    accepted: { text: '已受理', color: 'processing' },
     submitted: { text: '已提交', color: 'processing' },
     testing: { text: '检测中', color: 'blue' },
     completed: { text: '已完成', color: 'green' },
