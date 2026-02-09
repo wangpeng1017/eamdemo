@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { showSuccess, showError } from '@/lib/confirm'
-import { Table, Button, Space, Modal, Form, Input, message, Card } from 'antd'
+import { Table, Button, Space, Modal, Form, Input, message, Card, Popconfirm } from 'antd'
 import { PlusOutlined, EditOutlined, DeleteOutlined } from '@ant-design/icons'
 import type { ColumnsType } from 'antd/es/table'
 import dayjs from 'dayjs'
@@ -103,8 +103,10 @@ export default function ReportCategoriesPage() {
       title: '操作', fixed: 'right',
       render: (_, record) => (
         <Space size="small" style={{ whiteSpace: 'nowrap' }}>
-          <Button size="small" icon={<EditOutlined />} onClick={() => handleEdit(record)}/>
-          <Button size="small" danger icon={<DeleteOutlined />} onClick={() => handleDelete(record.id)} />
+          <Button size="small" icon={<EditOutlined />} onClick={() => handleEdit(record)} />
+          <Popconfirm title="确认删除该报告分类？" onConfirm={() => handleDelete(record.id)} okText="确定" cancelText="取消" okButtonProps={{ danger: true }}>
+            <Button size="small" danger icon={<DeleteOutlined />} />
+          </Popconfirm>
         </Space>
       )
     }
@@ -147,7 +149,7 @@ export default function ReportCategoriesPage() {
               {(fields, { add, remove }) => (
                 <>
                   {fields.map((field, index) => (
-                    <Space key={field.key} style={{ display: 'flex', marginBottom: 8 }} align="baseline" style={{ whiteSpace: 'nowrap' }}>
+                    <Space key={field.key} style={{ display: 'flex', marginBottom: 8, whiteSpace: 'nowrap' }} align="baseline">
                       <Form.Item
                         {...field}
                         style={{ marginBottom: 0, flex: 1 }}
@@ -156,7 +158,7 @@ export default function ReportCategoriesPage() {
                         <Input placeholder="如：抗压强度" />
                       </Form.Item>
                       {fields.length > 1 && (
-                        <Button type="link" danger onClick={() => remove(field.name)}/>
+                        <Button type="link" danger onClick={() => remove(field.name)} />
                       )}
                     </Space>
                   ))}

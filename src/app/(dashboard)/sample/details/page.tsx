@@ -228,9 +228,9 @@ export default function SampleDetailsPage() {
   }
 
   const columns: ColumnsType<Sample> = [
-    { title: "样品编号", dataIndex: "sampleNo", width: 140 },
-    { title: "样品名称", dataIndex: "name", width: 140, ellipsis: true },
-    { title: "规格型号", dataIndex: "specification", width: 120 },
+    { title: "样品编号", dataIndex: "sampleNo", width: 160 },
+    { title: "样品名称", dataIndex: "name", width: 180, ellipsis: true },
+    { title: "规格型号", dataIndex: "specification", width: 150 },
     {
       title: "总量",
       dataIndex: "totalQuantity",
@@ -251,13 +251,15 @@ export default function SampleDetailsPage() {
     {
       title: "收样日期",
       dataIndex: "receiptDate",
-      width: 100,
+      width: 120,
       render: (d) => d ? dayjs(d).format("YYYY-MM-DD") : "-",
     },
     { title: "收样人", dataIndex: "receiptPerson", width: 80 },
     {
       title: '操作',
       fixed: "right" as const,
+      onCell: () => ({ style: { whiteSpace: 'nowrap' as const } }),
+      onHeaderCell: () => ({ style: { whiteSpace: 'nowrap' as const } }),
       render: (_, record) => (
         <Space size="small" style={{ whiteSpace: 'nowrap' }}>
           <Button
@@ -383,7 +385,7 @@ export default function SampleDetailsPage() {
           dataSource={data}
           rowKey="id"
           loading={loading}
-          scroll={{ x: 1100 }}
+          scroll={{ x: 1200 }}
           pagination={{
             current: page,
             pageSize: 10,

@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { showSuccess, showError } from '@/lib/confirm'
-import { Table, Button, Space, Tag, Modal, Form, Input, Select, DatePicker, message } from 'antd'
+import { Table, Button, Space, Tag, Modal, Form, Input, Select, DatePicker, message, Popconfirm } from 'antd'
 import { PlusOutlined, EditOutlined, DeleteOutlined } from '@ant-design/icons'
 import type { ColumnsType } from 'antd/es/table'
 import dayjs from 'dayjs'
@@ -44,12 +44,12 @@ export default function TestTaskPage() {
       setTotal(json.data.total || 0)
     } else {
       if (json.success && json.data) {
-      setData(json.data.list || [])
-      setTotal(json.data.total || 0)
-    } else {
-      setData(json.list || [])
-      setTotal(json.total || 0)
-    }
+        setData(json.data.list || [])
+        setTotal(json.data.total || 0)
+      } else {
+        setData(json.list || [])
+        setTotal(json.total || 0)
+      }
     }
     setLoading(false)
   }
@@ -115,11 +115,13 @@ export default function TestTaskPage() {
       render: (t: string) => t ? dayjs(t).format('YYYY-MM-DD HH:mm:ss') : '-'
     },
     {
-      title: '操作', fixed: 'right', 
+      title: '操作', fixed: 'right',
       render: (_, record) => (
         <Space style={{ whiteSpace: 'nowrap' }}>
           <Button size="small" icon={<EditOutlined />} onClick={() => handleEdit(record)} />
-          <Button size="small" danger icon={<DeleteOutlined />} onClick={() => handleDelete(record.id)} />
+          <Popconfirm title="确认删除该检测任务？" onConfirm={() => handleDelete(record.id)} okText="确定" cancelText="取消" okButtonProps={{ danger: true }}>
+            <Button size="small" danger icon={<DeleteOutlined />} />
+          </Popconfirm>
         </Space>
       )
     }

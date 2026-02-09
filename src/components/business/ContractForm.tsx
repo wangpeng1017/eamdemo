@@ -146,8 +146,11 @@ export default function ContractForm({ initialValues, mode, onSubmit, loading }:
     }
 
     return (
-        <Form form={form} layout="vertical" onFinish={onFinish}>
-            <Card title="基本信息" style={{ marginBottom: 16 }}>
+        <Card bordered={false}>
+            <Form form={form} layout="vertical" onFinish={onFinish}>
+
+                {/* ========== ① 基本信息 ========== */}
+                <Divider orientation="left" orientationMargin="0">① 基本信息</Divider>
                 <Row gutter={16}>
                     <Col span={8}>
                         <Form.Item name="clientId" label="客户名称" rules={[{ required: true, message: '请选择客户' }]}>
@@ -176,19 +179,12 @@ export default function ContractForm({ initialValues, mode, onSubmit, loading }:
                         </Form.Item>
                     </Col>
                 </Row>
+                <Form.Item name="clientAddress" label="客户地址">
+                    <Input placeholder="请输入客户地址" />
+                </Form.Item>
 
-                <Row gutter={16}>
-                    <Col span={24}>
-                        <Form.Item name="clientAddress" label="客户地址">
-                            <Input placeholder="请输入客户地址" />
-                        </Form.Item>
-                    </Col>
-                </Row>
-            </Card>
-
-            <Card title="报价明细" style={{ marginBottom: 16 }} extra={
-                <Button type="dashed" size="small" onClick={handleAddItem} icon={<PlusOutlined />}>添加项目</Button>
-            }>
+                {/* ========== ② 报价明细 ========== */}
+                <Divider orientation="left" orientationMargin="0">② 报价明细</Divider>
                 <Table
                     dataSource={contractItems}
                     rowKey={(record, index) => index!.toString()}
@@ -255,10 +251,15 @@ export default function ContractForm({ initialValues, mode, onSubmit, loading }:
                             )
                         }
                     ]}
+                    footer={() => (
+                        <Button type="dashed" onClick={handleAddItem} block icon={<PlusOutlined />}>
+                            添加项目
+                        </Button>
+                    )}
                 />
-            </Card>
 
-            <Card title="合同条款 & 金额" style={{ marginBottom: 16 }}>
+                {/* ========== ③ 合同条款与金额 ========== */}
+                <Divider orientation="left" orientationMargin="0">③ 合同条款与金额</Divider>
                 <Row gutter={16}>
                     <Col span={8}>
                         <Form.Item name="amount" label="合同金额" rules={[{ required: true, message: '请输入合同金额' }]}>
@@ -303,7 +304,6 @@ export default function ContractForm({ initialValues, mode, onSubmit, loading }:
                         </Form.Item>
                     </Col>
                 </Row>
-
                 <Row gutter={16}>
                     <Col span={8}>
                         <Form.Item name="signDate" label="签订日期" rules={[{ required: true, message: '请选择签订日期' }]}>
@@ -321,41 +321,43 @@ export default function ContractForm({ initialValues, mode, onSubmit, loading }:
                         </Form.Item>
                     </Col>
                 </Row>
-
                 <Form.Item name="paymentTerms" label="付款条款">
                     <Input.TextArea
                         rows={2}
                         placeholder="例如：合同签订后预付30%，检测完成后支付剩余70%"
                     />
                 </Form.Item>
-
                 <Form.Item name="deliveryTerms" label="交付条款">
                     <Input.TextArea
                         rows={2}
                         placeholder="例如：检测完成后5个工作日内出具检测报告，报告以电子版和纸质版形式交付"
                     />
                 </Form.Item>
-
                 <Form.Item name="remark" label="备注">
                     <Input.TextArea rows={2} placeholder="请输入备注" />
                 </Form.Item>
-            </Card>
 
-            <Card title="样品及检测要求" style={{ marginBottom: 16 }}>
+                {/* ========== ④ 样品及检测要求 ========== */}
+                <Divider orientation="left" orientationMargin="0">④ 样品及检测要求</Divider>
                 <SampleTestItemTable
                     bizType="contract"
                     bizId={initialValues?.id}
                     value={sampleTestItems}
                     onChange={setSampleTestItems}
                 />
-            </Card>
 
-            <div style={{ position: 'sticky', bottom: 0, background: '#fff', padding: '10px 24px', borderTop: '1px solid #e8e8e8', display: 'flex', justifyContent: 'flex-end', gap: 8, zIndex: 10 }}>
-                <Button onClick={() => router.back()}>取消</Button>
-                <Button type="primary" htmlType="submit" loading={loading}>
-                    {mode === 'create' ? '创建合同' : '保存修改'}
-                </Button>
-            </div>
-        </Form>
+                {/* 底部操作栏 */}
+                <div style={{ marginTop: 24 }}>
+                    <Form.Item>
+                        <Space size="middle">
+                            <Button onClick={() => router.back()} size="large">取消</Button>
+                            <Button type="primary" htmlType="submit" loading={loading} size="large">
+                                {mode === 'create' ? '创建合同' : '保存修改'}
+                            </Button>
+                        </Space>
+                    </Form.Item>
+                </div>
+            </Form>
+        </Card>
     )
 }

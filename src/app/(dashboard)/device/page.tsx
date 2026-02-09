@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { showSuccess, showError } from '@/lib/confirm'
-import { Table, Button, Space, Tag, Form, Input, Select, DatePicker, Drawer, Descriptions } from 'antd'
+import { Table, Button, Space, Tag, Form, Input, Select, DatePicker, Drawer, Descriptions, Popconfirm } from 'antd'
 import { PlusOutlined, EditOutlined, DeleteOutlined, EyeOutlined } from '@ant-design/icons'
 import { useRouter } from 'next/navigation'
 import type { ColumnsType } from 'antd/es/table'
@@ -104,7 +104,9 @@ export default function DevicePage() {
         <Space style={{ whiteSpace: 'nowrap' }}>
           <Button size="small" icon={<EyeOutlined />} onClick={() => handleView(record)} />
           <Button size="small" icon={<EditOutlined />} onClick={() => handleEdit(record)} />
-          <Button size="small" danger icon={<DeleteOutlined />} onClick={() => handleDelete(record.id)} />
+          <Popconfirm title="确认删除该设备？" onConfirm={() => handleDelete(record.id)} okText="确定" cancelText="取消" okButtonProps={{ danger: true }}>
+            <Button size="small" danger icon={<DeleteOutlined />} />
+          </Popconfirm>
         </Space>
       )
     }

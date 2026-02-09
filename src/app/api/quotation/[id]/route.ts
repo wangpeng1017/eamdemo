@@ -76,12 +76,27 @@ export const GET = withAuth(async (
     })
   }
 
-  // 格式化数据以匹配前端期望的字段名
+  // 格式化数据：统一字段名与列表API一致
+  const subtotal = Number(quotation.subtotal) || 0
+  const taxRate = Number(quotation.taxRate) || 0.06
+  const taxTotal = Number(quotation.taxTotal) || subtotal * (1 + taxRate)
+  const discountTotal = Number(quotation.discountTotal) || taxTotal
+  const discountAmount = taxTotal - discountTotal
+
   const formatted = {
     ...quotation,
-    // 客户信息从关联对象获取
+    // 金额字段映射（与列表API一致）
+    totalAmount: subtotal,
+    taxRate,
+    taxAmount: subtotal * taxRate,
+    totalWithTax: taxTotal,
+    discountAmount,
+    finalAmount: discountTotal,
+    // 其他字段映射
+    quotationDate: quotation.createdAt,
+    paymentTerms: quotation.clientRemark,
     clientResponse: quotation.clientStatus,
-    follower: quotation.follower,
+    followerId: quotation.followerId,
     // 审批实例信息
     approvalInstance,
     approvalFlow,
@@ -121,15 +136,19 @@ export const PUT = withAuth(async (
 
   // 如果更新了明细项，需要重新计算金额
   if (data.items) {
-    const subtotal = data.items.reduce((sum: number, item: { quantity?: number; unitPrice?: number }) => {
-      return sum + (item.quantity || 1) * (item.unitPrice || 0)
+    const subtotal = data.items.reduce((sum: number, item: any) => {
+      const qty = parseFloat(String(item.quantity)) || 1
+      return sum + qty * (Number(item.unitPrice) || 0)
     }, 0)
-    const taxTotal = subtotal // 需求4：报价默认为含税
-    const discountTotal = data.finalAmount || taxTotal
+    const taxRate = 0.06 // 固定 6%
+    const taxTotal = subtotal * (1 + taxRate)
+    const discountAmount = Number(data.discountAmount) || 0
+    const discountTotal = data.finalAmount || (taxTotal - discountAmount)
 
     data.subtotal = subtotal
     data.taxTotal = taxTotal
     data.discountTotal = discountTotal
+    data.taxRate = taxRate
 
     // 删除旧明细，创建新明细
     await prisma.quotationItem.deleteMany({
@@ -141,16 +160,25 @@ export const PUT = withAuth(async (
   const updateData: Record<string, unknown> = {}
   if (data.clientId !== undefined) updateData.clientId = data.clientId
   if (data.clientContactPerson !== undefined) updateData.clientContactPerson = data.clientContactPerson
+  if (data.clientPhone !== undefined) updateData.clientPhone = data.clientPhone
+  if (data.clientEmail !== undefined) updateData.clientEmail = data.clientEmail
+  if (data.clientAddress !== undefined) updateData.clientAddress = data.clientAddress
   if (data.subtotal !== undefined) updateData.subtotal = data.subtotal
   if (data.taxTotal !== undefined) updateData.taxTotal = data.taxTotal
+  if (data.taxRate !== undefined) updateData.taxRate = data.taxRate
   if (data.discountTotal !== undefined) updateData.discountTotal = data.discountTotal
+  if (data.clientRemark !== undefined) updateData.clientRemark = data.clientRemark
   if (data.paymentTerms !== undefined) updateData.clientRemark = data.paymentTerms
   if (data.clientResponse !== undefined) updateData.clientStatus = data.clientResponse
-  if (data.sampleName !== undefined) updateData.sampleName = data.sampleName
-  if (data.sampleModel !== undefined) updateData.sampleModel = data.sampleModel
-  if (data.sampleMaterial !== undefined) updateData.sampleMaterial = data.sampleMaterial
-  if (data.sampleQuantity !== undefined) updateData.sampleQuantity = data.sampleQuantity
-  if (data.follower !== undefined) updateData.follower = data.follower
+  if (data.followerId !== undefined) updateData.followerId = data.followerId
+  // 服务方信息
+  if (data.serviceContact !== undefined) updateData.serviceContact = data.serviceContact
+  if (data.serviceTel !== undefined) updateData.serviceTel = data.serviceTel
+  if (data.serviceEmail !== undefined) updateData.serviceEmail = data.serviceEmail
+  if (data.serviceAddress !== undefined) updateData.serviceAddress = data.serviceAddress
+  if (data.clientReportDeadline !== undefined) {
+    updateData.clientReportDeadline = data.clientReportDeadline ? new Date(data.clientReportDeadline) : null
+  }
   // 归档操作允许修改 status
   if (isArchiveOnly && data.status === 'archived') updateData.status = 'archived'
 
@@ -159,12 +187,15 @@ export const PUT = withAuth(async (
     data: {
       ...updateData,
       items: data.items ? {
-        create: data.items.map((item: { serviceItem: string; methodStandard: string; quantity?: number; unitPrice?: number }) => ({
-          serviceItem: item.serviceItem,
-          methodStandard: item.methodStandard,
-          quantity: item.quantity || 1,
-          unitPrice: item.unitPrice || 0,
-          totalPrice: (item.quantity || 1) * (item.unitPrice || 0),
+        create: data.items.map((item: any, idx: number) => ({
+          sampleName: item.sampleName || '',
+          serviceItem: item.serviceItem || '',
+          methodStandard: item.methodStandard || '',
+          quantity: String(item.quantity || '1'),
+          unitPrice: Number(item.unitPrice) || 0,
+          totalPrice: (parseFloat(String(item.quantity)) || 1) * (Number(item.unitPrice) || 0),
+          remark: item.remark || null,
+          sort: idx,
         })),
       } : undefined,
     },

@@ -49,7 +49,7 @@ export default function UserSelect({ value, onChange, ...props }: UserSelectProp
             value={value}
             onChange={onChange}
             options={users.map(u => ({
-                value: u.name,
+                value: u.id,
                 label: `${u.name}${u.dept ? ` (${u.dept.name})` : ''}`,
             }))}
             {...props}

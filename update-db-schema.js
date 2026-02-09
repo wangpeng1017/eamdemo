@@ -330,6 +330,69 @@ async function main() {
         }
     }
 
+    // ==================== 2026-02-09 报价单迭代 - 新增字段 ====================
+
+    // QuotationItem: remark 字段
+    try {
+        console.log('Adding remark column to biz_quotation_item...')
+        await prisma.$executeRawUnsafe(`ALTER TABLE biz_quotation_item ADD COLUMN remark VARCHAR(500);`)
+        console.log('✅ remark column added to biz_quotation_item.')
+    } catch (e) {
+        if (e.message.includes('Duplicate column name')) {
+            console.log('ℹ️ remark column already exists in biz_quotation_item.')
+        } else {
+            console.error('❌ Error:', e.message)
+        }
+    }
+
+    // QuotationItem: quantity 类型变更 Int → VARCHAR(20)
+    try {
+        console.log('Changing quantity column type in biz_quotation_item to VARCHAR(20)...')
+        await prisma.$executeRawUnsafe(`ALTER TABLE biz_quotation_item MODIFY COLUMN quantity VARCHAR(20) NOT NULL DEFAULT '1';`)
+        console.log('✅ quantity column type changed to VARCHAR(20).')
+    } catch (e) {
+        console.error('❌ Error modifying quantity column:', e.message)
+    }
+
+    // Quotation: serviceEmail 字段
+    try {
+        console.log('Adding serviceEmail column to biz_quotation...')
+        await prisma.$executeRawUnsafe(`ALTER TABLE biz_quotation ADD COLUMN serviceEmail VARCHAR(100);`)
+        console.log('✅ serviceEmail column added.')
+    } catch (e) {
+        if (e.message.includes('Duplicate column name')) {
+            console.log('ℹ️ serviceEmail already exists.')
+        } else {
+            console.error('❌ Error:', e.message)
+        }
+    }
+
+    // Quotation: serviceAddress 字段
+    try {
+        console.log('Adding serviceAddress column to biz_quotation...')
+        await prisma.$executeRawUnsafe(`ALTER TABLE biz_quotation ADD COLUMN serviceAddress VARCHAR(500);`)
+        console.log('✅ serviceAddress column added.')
+    } catch (e) {
+        if (e.message.includes('Duplicate column name')) {
+            console.log('ℹ️ serviceAddress already exists.')
+        } else {
+            console.error('❌ Error:', e.message)
+        }
+    }
+
+    // Quotation: taxRate 字段（默认 0.06）
+    try {
+        console.log('Adding taxRate column to biz_quotation...')
+        await prisma.$executeRawUnsafe(`ALTER TABLE biz_quotation ADD COLUMN taxRate DECIMAL(5,4) NOT NULL DEFAULT 0.0600;`)
+        console.log('✅ taxRate column added.')
+    } catch (e) {
+        if (e.message.includes('Duplicate column name')) {
+            console.log('ℹ️ taxRate already exists.')
+        } else {
+            console.error('❌ Error:', e.message)
+        }
+    }
+
     // ==================== Quotation Rejection Fields ====================
     try {
         console.log('Adding rejection fields to biz_quotation...')

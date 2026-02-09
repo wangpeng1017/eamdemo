@@ -64,6 +64,7 @@ const menuItems = [
     icon: <FileTextOutlined />,
     label: '报告管理',
     children: [
+      { key: '/report/my', label: '我的报告' },
       { key: '/report/task-generate', label: '任务报告生成' },
       { key: '/report/client-generate', label: '客户报告生成' },
       { key: '/report/client-template', label: '客户报告模板' },

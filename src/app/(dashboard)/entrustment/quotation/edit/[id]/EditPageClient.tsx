@@ -155,7 +155,7 @@ export default function EditQuotationPage({ id }: { id: string }) {
                         currentStep={initialValues?.approvalStep || 0}
                         status={initialValues?.approvalStatus || initialValues?.status || 'pending'}
                         records={formatRecords(initialValues?.approvals)}
-                        submitterName={initialValues?.follower} // 假设跟进人是提交人，或者后端有 submitterName
+                        submitterName={initialValues?.followerUser?.name || initialValues?.createdBy?.name} // 跟单人或创建人名称
                         submittedAt={initialValues?.createdAt}
                     />
                 </div>

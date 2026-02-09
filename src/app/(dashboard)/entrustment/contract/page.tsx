@@ -206,6 +206,14 @@ export default function ContractPage() {
       params.set('projects', JSON.stringify(testProjects))
     }
 
+    // 传递报告时间和跟单人
+    if ((contract as any).clientReportDeadline) {
+      params.set('clientReportDeadline', (contract as any).clientReportDeadline)
+    }
+    if ((contract as any).followerId) {
+      params.set('followerId', (contract as any).followerId)
+    }
+
     router.push(`/entrustment/list/create?${params.toString()}`)
     setSelectedRowKeys([])
   }
@@ -292,6 +300,8 @@ export default function ContractPage() {
       title: '操作',
       key: 'action',
       fixed: 'right',
+      onCell: () => ({ style: { whiteSpace: 'nowrap' as const } }),
+      onHeaderCell: () => ({ style: { whiteSpace: 'nowrap' as const } }),
       render: (_, record) => (
         <Space size="small" style={{ whiteSpace: 'nowrap' }}>
           {/* 业务按钮（带文字） */}
@@ -303,11 +313,18 @@ export default function ContractPage() {
             const params = new URLSearchParams({
               contractId: record.id, // 添加合同ID用于复制样品检测项
               contractNo: record.contractNo,
-              clientName: record.clientName || '',
+              clientName: record.partyACompany || record.client?.name || record.clientName || '',
               contactPerson: record.clientContact || '',
               contactPhone: record.clientPhone || '',
               clientAddress: record.clientAddress || '',
             })
+            // 传递报告时间和跟单人
+            if ((record as any).clientReportDeadline) {
+              params.set('clientReportDeadline', (record as any).clientReportDeadline)
+            }
+            if ((record as any).followerId) {
+              params.set('followerId', (record as any).followerId)
+            }
             router.push(`/entrustment/list/create?${params.toString()}`)
           }}>生成委托单</Button>
           {/* 通用按钮（仅图标） */}
@@ -354,7 +371,7 @@ export default function ContractPage() {
         columns={columns}
         dataSource={data}
         loading={loading}
-        scroll={{ x: 1200 }}
+        scroll={{ x: 1600 }}
         pagination={{ current: page, total, pageSize: 10, onChange: setPage, showSizeChanger: false }}
         rowSelection={{
           type: 'radio',

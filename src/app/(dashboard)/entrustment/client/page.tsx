@@ -222,6 +222,8 @@ export default function ClientPage() {
       title: '操作',
       key: 'action',
       fixed: 'right',
+      onCell: () => ({ style: { whiteSpace: 'nowrap' as const } }),
+      onHeaderCell: () => ({ style: { whiteSpace: 'nowrap' as const } }),
       render: (_, record) => (
         <Space size="small" style={{ whiteSpace: 'nowrap' }}>
           {/* 业务按钮 */}
@@ -274,7 +276,7 @@ export default function ClientPage() {
         columns={columns}
         dataSource={data}
         loading={loading}
-        scroll={{ x: 1400 }}
+        scroll={{ x: 1600 }}
         pagination={{ current: page, total, pageSize: 10, onChange: setPage, showSizeChanger: false }}
       />
       <Modal

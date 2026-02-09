@@ -1,19 +1,18 @@
-
 'use client'
 
 import { useState, useEffect } from 'react'
 import { showSuccess, showError } from '@/lib/confirm'
-import { Table, Button, Space, Modal, Form, Input, Select, Tag, message, Tree, Card, Row, Col } from 'antd'
-import { PlusOutlined, EditOutlined, DeleteOutlined, FolderOutlined } from '@ant-design/icons'
+import { Table, Button, Space, Modal, Form, Input, InputNumber, Select, Tag, Tree, Card, Row, Col, Popconfirm, Tooltip } from 'antd'
+import { PlusOutlined, EditOutlined, DeleteOutlined, FolderOutlined, ExperimentOutlined } from '@ant-design/icons'
 import type { ColumnsType } from 'antd/es/table'
 import type { DataNode } from 'antd/es/tree'
-import dayjs from 'dayjs'
 
 interface Category {
   id: string
   name: string
   code: string | null
-  children?: Category[]
+  description?: string | null
+  sort: number
 }
 
 interface InspectionStandard {
@@ -23,11 +22,7 @@ interface InspectionStandard {
   description?: string
   validity: string
   categoryId: string | null
-  category?: {
-    id: string
-    name: string
-    code: string | null
-  }
+  category?: { id: string; name: string; code: string | null }
   createdAt: string
 }
 
@@ -40,15 +35,6 @@ interface InspectionItem {
   requirement?: string
   sort: number
   status: number
-  standard?: {
-    id: string
-    standardNo: string
-    name: string
-    category?: {
-      id: string
-      name: string
-    }
-  }
 }
 
 const validityMap: Record<string, { text: string; color: string }> = {
@@ -57,55 +43,117 @@ const validityMap: Record<string, { text: string; color: string }> = {
 }
 
 export default function InspectionStandardsPage() {
-  const [categories, setCategories] = useState<DataNode[]>([])
+  // 分类
+  const [categories, setCategories] = useState<Category[]>([])
+  const [treeData, setTreeData] = useState<DataNode[]>([])
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null)
-  const [standards, setStandards] = useState<InspectionStandard[]>([])
-  const [selectedStandard, setSelectedStandard] = useState<string | null>(null)
-  const [items, setItems] = useState<InspectionItem[]>([])
-  const [loadingItems, setLoadingItems] = useState(false)
-  const [itemsTotal, setItemsTotal] = useState(0)
-  const [itemsPage, setItemsPage] = useState(1)
+  const [categoryModalOpen, setCategoryModalOpen] = useState(false)
+  const [editingCategory, setEditingCategory] = useState<Category | null>(null)
+  const [categoryForm] = Form.useForm()
 
-  // Modal states
+  // 标准
+  const [standards, setStandards] = useState<InspectionStandard[]>([])
+  const [loadingStandards, setLoadingStandards] = useState(false)
   const [standardModalOpen, setStandardModalOpen] = useState(false)
-  const [itemModalOpen, setItemModalOpen] = useState(false)
   const [editingStandard, setEditingStandard] = useState<string | null>(null)
-  const [editingItem, setEditingItem] = useState<string | null>(null)
   const [standardForm] = Form.useForm()
+
+  // 检测项目 - 按标准 ID 缓存
+  const [itemsMap, setItemsMap] = useState<Record<string, InspectionItem[]>>({})
+  const [loadingItemsFor, setLoadingItemsFor] = useState<string | null>(null)
+  const [itemModalOpen, setItemModalOpen] = useState(false)
+  const [editingItem, setEditingItem] = useState<string | null>(null)
+  const [currentStandardId, setCurrentStandardId] = useState<string | null>(null)
   const [itemForm] = Form.useForm()
+
   const [submitting, setSubmitting] = useState(false)
 
-  // 加载分类树
+  // ==================== 分类管理 ====================
+
   const fetchCategories = async () => {
     try {
-      const res = await fetch('/api/inspection-standard-category/tree')
+      const res = await fetch('/api/inspection-standard-category?limit=100')
       const json = await res.json()
       if (json.success && json.data) {
-        const buildTree = (nodes: Category[]): DataNode[] => {
-          return nodes.map(node => ({
-            key: node.id,
-            title: node.name,
-            children: node.children ? buildTree(node.children) : undefined,
-          }))
-        }
-        setCategories(buildTree(json.data))
+        const list: Category[] = Array.isArray(json.data) ? json.data : []
+        setCategories(list)
+        setTreeData(list.map(cat => ({
+          key: cat.id,
+          title: cat.name,
+          icon: <FolderOutlined />,
+        })))
       }
     } catch (err) {
       console.error('加载分类失败:', err)
     }
   }
 
-  // 加载标准列表
+  const handleAddCategory = () => {
+    setEditingCategory(null)
+    categoryForm.resetFields()
+    setCategoryModalOpen(true)
+  }
+
+  const handleEditCategory = (cat: Category) => {
+    setEditingCategory(cat)
+    categoryForm.setFieldsValue(cat)
+    setCategoryModalOpen(true)
+  }
+
+  const handleCategorySubmit = async () => {
+    try {
+      const values = await categoryForm.validateFields()
+      setSubmitting(true)
+      const url = editingCategory
+        ? `/api/inspection-standard-category/${editingCategory.id}`
+        : '/api/inspection-standard-category'
+      const method = editingCategory ? 'PUT' : 'POST'
+      const res = await fetch(url, { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(values) })
+      const json = await res.json()
+      if (res.ok && json.success) {
+        showSuccess(editingCategory ? '更新分类成功' : '创建分类成功')
+        setCategoryModalOpen(false)
+        fetchCategories()
+      } else {
+        showError(json.error || '操作失败')
+      }
+    } catch (err: any) {
+      if (err?.errorFields) return
+      showError(err.message || '操作失败')
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
+  const handleDeleteCategory = async (id: string) => {
+    try {
+      const res = await fetch(`/api/inspection-standard-category/${id}`, { method: 'DELETE' })
+      const json = await res.json()
+      if (res.ok && json.success) {
+        showSuccess('删除成功')
+        if (selectedCategory === id) {
+          setSelectedCategory(null)
+          setStandards([])
+        }
+        fetchCategories()
+      } else {
+        showError(json.error || '删除失败')
+      }
+    } catch {
+      showError('删除失败')
+    }
+  }
+
+  // ==================== 标准管理 ====================
+
   const fetchStandards = async (categoryId: string) => {
+    setLoadingStandards(true)
     try {
       const res = await fetch(`/api/inspection-standard?categoryId=${categoryId}&pageSize=100`)
       const json = await res.json()
       if (json.success && json.data) {
-        setStandards(json.data.list || [])
-        // 默认选中第一个标准
-        if (json.data.list?.length > 0 && !selectedStandard) {
-          setSelectedStandard(json.data.list[0].id)
-        }
+        const list = json.data.list || json.data || []
+        setStandards(Array.isArray(list) ? list : [])
       } else {
         setStandards([])
       }
@@ -113,58 +161,13 @@ export default function InspectionStandardsPage() {
       console.error('加载标准失败:', err)
       showError('加载标准失败')
     }
+    setLoadingStandards(false)
   }
 
-  // 加载检测项目
-  const fetchItems = async (standardId: string, page = 1) => {
-    setLoadingItems(true)
-    try {
-      const res = await fetch(`/api/inspection-item?standardId=${standardId}&page=${page}&pageSize=10`)
-      const json = await res.json()
-      if (json.success && json.data) {
-        setItems(json.data.list || [])
-        setItemsTotal(json.data.total || 0)
-      } else {
-        setItems([])
-        setItemsTotal(0)
-      }
-    } catch (err) {
-      console.error('加载检测项目失败:', err)
-      showError('加载检测项目失败')
-    }
-    setLoadingItems(false)
-  }
-
-  useEffect(() => {
-    fetchCategories()
-  }, [])
-
-  useEffect(() => {
-    if (selectedStandard) {
-      fetchItems(selectedStandard, itemsPage)
-    }
-  }, [selectedStandard, itemsPage])
-
-  const handleCategorySelect = (selectedKeys: React.Key[]) => {
-    const categoryId = selectedKeys[0] as string
-    setSelectedCategory(categoryId)
-    setSelectedStandard(null)
-    setItems([])
-    fetchStandards(categoryId)
-  }
-
-  const handleStandardSelect = (standardId: string) => {
-    setSelectedStandard(standardId)
-    setItemsPage(1)
-  }
-
-  // 标准CRUD
   const handleAddStandard = () => {
     setEditingStandard(null)
     standardForm.resetFields()
-    if (selectedCategory) {
-      standardForm.setFieldValue('categoryId', selectedCategory)
-    }
+    if (selectedCategory) standardForm.setFieldValue('categoryId', selectedCategory)
     setStandardModalOpen(true)
   }
 
@@ -175,13 +178,17 @@ export default function InspectionStandardsPage() {
   }
 
   const handleDeleteStandard = async (id: string) => {
-    const res = await fetch(`/api/inspection-standard/${id}`, { method: 'DELETE' })
-    const json = await res.json()
-    if (res.ok && json.success) {
-      showSuccess('删除成功')
-      if (selectedCategory) fetchStandards(selectedCategory)
-    } else {
-      showError(json.error || '删除失败')
+    try {
+      const res = await fetch(`/api/inspection-standard/${id}`, { method: 'DELETE' })
+      const json = await res.json()
+      if (res.ok && json.success) {
+        showSuccess('删除成功')
+        if (selectedCategory) fetchStandards(selectedCategory)
+      } else {
+        showError(json.error || '删除失败')
+      }
+    } catch {
+      showError('删除失败')
     }
   }
 
@@ -189,16 +196,9 @@ export default function InspectionStandardsPage() {
     try {
       const values = await standardForm.validateFields()
       setSubmitting(true)
-
       const url = editingStandard ? `/api/inspection-standard/${editingStandard}` : '/api/inspection-standard'
       const method = editingStandard ? 'PUT' : 'POST'
-
-      const res = await fetch(url, {
-        method,
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(values)
-      })
-
+      const res = await fetch(url, { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(values) })
       const json = await res.json()
       if (res.ok && json.success) {
         showSuccess(editingStandard ? '更新成功' : '创建成功')
@@ -208,38 +208,57 @@ export default function InspectionStandardsPage() {
         showError(json.error || '操作失败')
       }
     } catch (err: any) {
+      if (err?.errorFields) return
       showError(err.message || '操作失败')
     } finally {
       setSubmitting(false)
     }
   }
 
-  // 检测项目CRUD
-  const handleAddItem = () => {
-    if (!selectedStandard) {
-      showError('请先选择一个标准')
-      return
+  // ==================== 检测项目管理 ====================
+
+  const fetchItems = async (standardId: string) => {
+    setLoadingItemsFor(standardId)
+    try {
+      const res = await fetch(`/api/inspection-item?standardId=${standardId}`)
+      const json = await res.json()
+      if (json.success && json.data) {
+        const list = Array.isArray(json.data) ? json.data : (json.data.list || [])
+        setItemsMap(prev => ({ ...prev, [standardId]: list }))
+      }
+    } catch (err) {
+      console.error('加载检测项目失败:', err)
     }
+    setLoadingItemsFor(null)
+  }
+
+  const handleAddItem = (standardId: string) => {
+    setCurrentStandardId(standardId)
     setEditingItem(null)
     itemForm.resetFields()
-    itemForm.setFieldValue('standardId', selectedStandard)
+    itemForm.setFieldValue('standardId', standardId)
     setItemModalOpen(true)
   }
 
   const handleEditItem = (record: InspectionItem) => {
+    setCurrentStandardId(record.standardId)
     setEditingItem(record.id)
     itemForm.setFieldsValue(record)
     setItemModalOpen(true)
   }
 
-  const handleDeleteItem = async (id: string) => {
-    const res = await fetch(`/api/inspection-item/${id}`, { method: 'DELETE' })
-    const json = await res.json()
-    if (res.ok && json.success) {
-      showSuccess('删除成功')
-      if (selectedStandard) fetchItems(selectedStandard, itemsPage)
-    } else {
-      showError(json.error || '删除失败')
+  const handleDeleteItem = async (item: InspectionItem) => {
+    try {
+      const res = await fetch(`/api/inspection-item/${item.id}`, { method: 'DELETE' })
+      const json = await res.json()
+      if (res.ok && json.success) {
+        showSuccess('删除成功')
+        fetchItems(item.standardId)
+      } else {
+        showError(json.error || '删除失败')
+      }
+    } catch {
+      showError('删除失败')
     }
   }
 
@@ -247,68 +266,117 @@ export default function InspectionStandardsPage() {
     try {
       const values = await itemForm.validateFields()
       setSubmitting(true)
-
       const url = editingItem ? `/api/inspection-item/${editingItem}` : '/api/inspection-item'
       const method = editingItem ? 'PUT' : 'POST'
-
-      const res = await fetch(url, {
-        method,
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(values)
-      })
-
+      const res = await fetch(url, { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(values) })
       const json = await res.json()
       if (res.ok && json.success) {
         showSuccess(editingItem ? '更新成功' : '创建成功')
         setItemModalOpen(false)
-        if (selectedStandard) fetchItems(selectedStandard, itemsPage)
+        if (currentStandardId) fetchItems(currentStandardId)
       } else {
         showError(json.error || '操作失败')
       }
     } catch (err: any) {
+      if (err?.errorFields) return
       showError(err.message || '操作失败')
     } finally {
       setSubmitting(false)
     }
   }
 
-  const standardColumns: ColumnsType<InspectionStandard> = [
-    { title: '标准编号', dataIndex: 'standardNo', width: 150 },
-    { title: '标准名称', dataIndex: 'name', ellipsis: true },
+  // ==================== 生命周期 ====================
+
+  useEffect(() => { fetchCategories() }, [])
+
+  const handleCategorySelect = (selectedKeys: React.Key[]) => {
+    const categoryId = selectedKeys[0] as string
+    setSelectedCategory(categoryId)
+    setItemsMap({})
+    fetchStandards(categoryId)
+  }
+
+  const selectedCategoryName = categories.find(c => c.id === selectedCategory)?.name
+
+  // ==================== 展开行：检测项目 ====================
+
+  const itemColumns: ColumnsType<InspectionItem> = [
+    { title: '序号', width: 60, render: (_: unknown, __: unknown, i: number) => i + 1 },
+    { title: '检测项目名称', dataIndex: 'name' },
+    { title: '检测方法', dataIndex: 'method', render: (v) => v || '-' },
+    { title: '单位', dataIndex: 'unit', width: 80, render: (v) => v || '-' },
+    { title: '技术要求', dataIndex: 'requirement', ellipsis: true, render: (v) => v || '-' },
+    { title: '排序', dataIndex: 'sort', width: 60 },
     {
-      title: '有效性', dataIndex: 'validity', width: 100,
-      render: (v) => <Tag color={validityMap[v]?.color}>{validityMap[v]?.text || v}</Tag>
-    },
-    { title: '备注', dataIndex: 'description', ellipsis: true, render: (v) => v || '-' },
-    {
-      title: '操作', width: 150, fixed: 'right',
+      title: '操作', width: 100, fixed: 'right',
       render: (_, record) => (
         <Space size="small">
-          <Button size="small" onClick={() => handleStandardSelect(record.id)}>查看项目</Button>
-          <Button size="small" icon={<EditOutlined />} onClick={() => handleEditStandard(record)} />
-          <Button size="small" danger icon={<DeleteOutlined />} onClick={() => handleDeleteStandard(record.id)} />
+          <Button size="small" icon={<EditOutlined />} onClick={(e) => { e.stopPropagation(); handleEditItem(record) }} />
+          <Popconfirm title="确认删除?" onConfirm={() => handleDeleteItem(record)} okText="确认" cancelText="取消">
+            <Button size="small" danger icon={<DeleteOutlined />} onClick={(e) => e.stopPropagation()} />
+          </Popconfirm>
         </Space>
       )
     }
   ]
 
-  const itemColumns: ColumnsType<InspectionItem> = [
-    { title: '序号', width: 60, render: (_: unknown, __: unknown, index: number) => index + 1 },
-    { title: '检测项目名称', dataIndex: 'name', ellipsis: true },
-    { title: '检测方法', dataIndex: 'method', ellipsis: true, render: (v) => v || '-' },
-    { title: '单位', dataIndex: 'unit', width: 80, render: (v) => v || '-' },
-    { title: '技术要求', dataIndex: 'requirement', ellipsis: true, render: (v) => v || '-' },
-    { title: '排序', dataIndex: 'sort', width: 80 },
+  const expandedRowRender = (standard: InspectionStandard) => {
+    const items = itemsMap[standard.id] || []
+    const loading = loadingItemsFor === standard.id
+
+    return (
+      <div style={{ padding: '8px 0' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+          <span style={{ fontWeight: 500, color: '#1677ff' }}>
+            <ExperimentOutlined /> 检测项目（{items.length} 项）
+          </span>
+          <Button size="small" type="primary" icon={<PlusOutlined />} onClick={() => handleAddItem(standard.id)}>
+            新增项目
+          </Button>
+        </div>
+        <Table
+          rowKey="id"
+          columns={itemColumns}
+          dataSource={items}
+          loading={loading}
+          size="small"
+          pagination={false}
+          locale={{ emptyText: '暂无检测项目' }}
+        />
+      </div>
+    )
+  }
+
+  const handleExpand = (expanded: boolean, record: InspectionStandard) => {
+    if (expanded && !itemsMap[record.id]) {
+      fetchItems(record.id)
+    }
+  }
+
+  // ==================== 标准表格列 ====================
+
+  const standardColumns: ColumnsType<InspectionStandard> = [
+    { title: '标准编号', dataIndex: 'standardNo', width: 180 },
+    { title: '标准名称', dataIndex: 'name', ellipsis: true },
     {
-      title: '操作', width: 120, fixed: 'right',
+      title: '有效性', dataIndex: 'validity', width: 100,
+      render: (v) => <Tag color={validityMap[v]?.color}>{validityMap[v]?.text || v}</Tag>
+    },
+    { title: '备注', dataIndex: 'description', ellipsis: true, width: 150, render: (v) => v || '-' },
+    {
+      title: '操作', width: 100, fixed: 'right',
       render: (_, record) => (
         <Space size="small">
-          <Button size="small" icon={<EditOutlined />} onClick={() => handleEditItem(record)} />
-          <Button size="small" danger icon={<DeleteOutlined />} onClick={() => handleDeleteItem(record.id)} />
+          <Button size="small" icon={<EditOutlined />} onClick={() => handleEditStandard(record)} />
+          <Popconfirm title="确认删除?" description="将同时删除关联的检测项目" onConfirm={() => handleDeleteStandard(record.id)} okText="确认" cancelText="取消">
+            <Button size="small" danger icon={<DeleteOutlined />} />
+          </Popconfirm>
         </Space>
       )
     }
   ]
+
+  // ==================== 渲染 ====================
 
   return (
     <div>
@@ -316,85 +384,124 @@ export default function InspectionStandardsPage() {
         <h2 style={{ margin: 0 }}>检查标准/依据管理</h2>
       </div>
       <Row gutter={16}>
-        {/* 左侧：分类树 + 标准列表 */}
-        <Col span={10}>
+        {/* 左侧：分类树 */}
+        <Col span={4}>
           <Card
-            title="分类"
-            size="small"
-            style={{ marginBottom: 16 }}
-            bodyStyle={{ maxHeight: 300, overflow: 'auto' }}
-          >
-            <Tree
-              showIcon
-              defaultExpandAll
-              selectedKeys={selectedCategory ? [selectedCategory] : []}
-              onSelect={handleCategorySelect}
-              treeData={categories}
-              icon={<FolderOutlined />}
-            />
-          </Card>
-
-          {selectedCategory && (
-            <Card
-              title="标准列表"
-              size="small"
-              extra={
-                <Button size="small" type="primary" icon={<PlusOutlined />} onClick={handleAddStandard}>
-                  新增
-                </Button>
-              }
-            >
-              <Table
-                rowKey="id"
-                columns={standardColumns}
-                dataSource={standards}
-                size="small"
-                pagination={false}
-                scroll={{ y: 400 }}
-              />
-            </Card>
-          )}
-        </Col>
-
-        {/* 右侧：检测项目列表 */}
-        <Col span={14}>
-          <Card
-            title="检测项目"
+            title="标准分类"
             size="small"
             extra={
-              selectedStandard ? (
-                <Button size="small" type="primary" icon={<PlusOutlined />} onClick={handleAddItem}>
-                  新增
+              <Tooltip title="新增分类">
+                <Button size="small" type="primary" icon={<PlusOutlined />} onClick={handleAddCategory} />
+              </Tooltip>
+            }
+            bodyStyle={{ maxHeight: 'calc(100vh - 200px)', overflow: 'auto' }}
+          >
+            {treeData.length > 0 ? (
+              <>
+                <Tree
+                  showIcon
+                  defaultExpandAll
+                  selectedKeys={selectedCategory ? [selectedCategory] : []}
+                  onSelect={handleCategorySelect}
+                  treeData={treeData}
+                />
+                {selectedCategory && (
+                  <div style={{ borderTop: '1px solid #f0f0f0', paddingTop: 8, marginTop: 8 }}>
+                    <Space size="small">
+                      <Button
+                        size="small"
+                        icon={<EditOutlined />}
+                        onClick={() => {
+                          const cat = categories.find(c => c.id === selectedCategory)
+                          if (cat) handleEditCategory(cat)
+                        }}
+                      >
+                        编辑
+                      </Button>
+                      <Popconfirm
+                        title="确认删除分类?"
+                        description="分类下有标准时无法删除"
+                        onConfirm={() => handleDeleteCategory(selectedCategory)}
+                        okText="确认"
+                        cancelText="取消"
+                      >
+                        <Button size="small" danger icon={<DeleteOutlined />}>删除</Button>
+                      </Popconfirm>
+                    </Space>
+                  </div>
+                )}
+              </>
+            ) : (
+              <div style={{ textAlign: 'center', padding: 20, color: '#999' }}>
+                暂无分类，请先新增
+              </div>
+            )}
+          </Card>
+        </Col>
+
+        {/* 右侧：标准 + 检测项目合并表格 */}
+        <Col span={20}>
+          <Card
+            title={selectedCategoryName ? `${selectedCategoryName} - 标准与检测项目` : '标准与检测项目'}
+            size="small"
+            extra={
+              selectedCategory ? (
+                <Button type="primary" icon={<PlusOutlined />} onClick={handleAddStandard}>
+                  新增标准
                 </Button>
               ) : null
             }
           >
-            {selectedStandard ? (
+            {selectedCategory ? (
               <Table
                 rowKey="id"
-                columns={itemColumns}
-                dataSource={items}
-                loading={loadingItems}
+                columns={standardColumns}
+                dataSource={standards}
+                loading={loadingStandards}
                 size="small"
-                scroll={{ y: 550 }}
-                pagination={{
-                  current: itemsPage,
-                  total: itemsTotal,
-                  pageSize: 10,
-                  onChange: setItemsPage,
-                  size: 'small',
+                pagination={false}
+                scroll={{ y: 'calc(100vh - 280px)' }}
+                expandable={{
+                  expandedRowRender,
+                  onExpand: handleExpand,
+                  rowExpandable: () => true,
                 }}
               />
             ) : (
-              <div style={{ textAlign: 'center', padding: 40, color: '#999' }}>
-                请先选择分类和标准
+              <div style={{ textAlign: 'center', padding: 80, color: '#999' }}>
+                ← 请先选择左侧分类
               </div>
             )}
           </Card>
         </Col>
       </Row>
 
-      {/* 标准编辑Modal */}
+      {/* ========== 分类编辑 Modal ========== */}
+      <Modal
+        title={editingCategory ? '编辑分类' : '新增分类'}
+        open={categoryModalOpen}
+        onOk={handleCategorySubmit}
+        onCancel={() => setCategoryModalOpen(false)}
+        confirmLoading={submitting}
+        destroyOnClose
+      >
+        <Form form={categoryForm} layout="vertical">
+          <Form.Item name="name" label="分类名称" rules={[{ required: true, message: '请输入分类名称' }]}>
+            <Input placeholder="如：企业标准、国家标准" />
+          </Form.Item>
+          <Form.Item name="code" label="分类编码">
+            <Input placeholder="如：QB、GB（可选）" />
+          </Form.Item>
+          <Form.Item name="description" label="描述">
+            <Input.TextArea rows={2} placeholder="分类说明（可选）" />
+          </Form.Item>
+          <Form.Item name="sort" label="排序" initialValue={0}>
+            <InputNumber style={{ width: '100%' }} min={0} />
+          </Form.Item>
+        </Form>
+      </Modal>
+
+      {/* ========== 标准编辑 Modal ========== */}
       <Modal
         title={editingStandard ? '编辑检查标准' : '新增检查标准'}
         open={standardModalOpen}
@@ -402,12 +509,13 @@ export default function InspectionStandardsPage() {
         onCancel={() => setStandardModalOpen(false)}
         width={600}
         confirmLoading={submitting}
+        destroyOnClose
       >
         <Form form={standardForm} layout="vertical">
           <Form.Item name="categoryId" label="所属分类" rules={[{ required: true, message: '请选择分类' }]}>
             <Select placeholder="请选择分类">
-              {categories.map((cat: any) => (
-                <Select.Option key={cat.key} value={cat.key}>{cat.title}</Select.Option>
+              {categories.map(cat => (
+                <Select.Option key={cat.id} value={cat.id}>{cat.name}</Select.Option>
               ))}
             </Select>
           </Form.Item>
@@ -417,7 +525,7 @@ export default function InspectionStandardsPage() {
           <Form.Item name="name" label="标准名称" rules={[{ required: true, message: '请输入标准名称' }]}>
             <Input placeholder="如：金属材料 拉伸试验 第1部分：室温试验方法" />
           </Form.Item>
-          <Form.Item name="validity" label="有效性" rules={[{ required: true, message: '请选择有效性' }]} initialValue="valid">
+          <Form.Item name="validity" label="有效性" rules={[{ required: true }]} initialValue="valid">
             <Select>
               <Select.Option value="valid">现行有效</Select.Option>
               <Select.Option value="invalid">已作废</Select.Option>
@@ -429,7 +537,7 @@ export default function InspectionStandardsPage() {
         </Form>
       </Modal>
 
-      {/* 检测项目编辑Modal */}
+      {/* ========== 检测项目编辑 Modal ========== */}
       <Modal
         title={editingItem ? '编辑检测项目' : '新增检测项目'}
         open={itemModalOpen}
@@ -437,29 +545,30 @@ export default function InspectionStandardsPage() {
         onCancel={() => setItemModalOpen(false)}
         width={600}
         confirmLoading={submitting}
+        destroyOnClose
       >
         <Form form={itemForm} layout="vertical">
-          <Form.Item name="standardId" label="所属标准" rules={[{ required: true, message: '请选择标准' }]}>
-            <Select placeholder="请选择标准" disabled>
-              {standards.map(std => (
-                <Select.Option key={std.id} value={std.id}>{std.standardNo} {std.name}</Select.Option>
-              ))}
-            </Select>
-          </Form.Item>
+          <Form.Item name="standardId" hidden><Input /></Form.Item>
           <Form.Item name="name" label="检测项目名称" rules={[{ required: true, message: '请输入项目名称' }]}>
             <Input placeholder="如：抗拉强度" />
           </Form.Item>
           <Form.Item name="method" label="检测方法">
             <Input placeholder="如：GB/T 228.1-2021" />
           </Form.Item>
-          <Form.Item name="unit" label="单位">
-            <Input placeholder="如：MPa" />
-          </Form.Item>
+          <Row gutter={16}>
+            <Col span={12}>
+              <Form.Item name="unit" label="单位">
+                <Input placeholder="如：MPa" />
+              </Form.Item>
+            </Col>
+            <Col span={12}>
+              <Form.Item name="sort" label="排序" initialValue={0}>
+                <InputNumber style={{ width: '100%' }} min={0} />
+              </Form.Item>
+            </Col>
+          </Row>
           <Form.Item name="requirement" label="技术要求">
-            <Input.TextArea rows={3} />
-          </Form.Item>
-          <Form.Item name="sort" label="排序" initialValue={0}>
-            <InputNumber style={{ width: '100%' }} min={0} />
+            <Input.TextArea rows={3} placeholder="如：≥ 520 MPa" />
           </Form.Item>
         </Form>
       </Modal>

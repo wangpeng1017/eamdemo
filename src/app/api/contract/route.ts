@@ -113,16 +113,16 @@ export const POST = withAuth(async (request: NextRequest, user) => {
     clientId = quotation?.clientId
   }
 
-  // 查询报价单以继承 clientReportDeadline 和 follower
+  // 查询报价单以继承 clientReportDeadline 和 followerId
   let inheritedDeadline = data.clientReportDeadline ? new Date(data.clientReportDeadline) : null
-  let inheritedFollower = data.follower || null
-  if (data.quotationId && (!inheritedDeadline || !inheritedFollower)) {
+  let inheritedFollowerId = data.followerId || null
+  if (data.quotationId && (!inheritedDeadline || !inheritedFollowerId)) {
     const quotation = await prisma.quotation.findUnique({
       where: { id: data.quotationId },
-      select: { clientReportDeadline: true, follower: true, clientEmail: true }
+      select: { clientReportDeadline: true, followerId: true, clientEmail: true }
     })
     if (!inheritedDeadline && quotation?.clientReportDeadline) inheritedDeadline = quotation.clientReportDeadline
-    if (!inheritedFollower && quotation?.follower) inheritedFollower = quotation.follower
+    if (!inheritedFollowerId && quotation?.followerId) inheritedFollowerId = quotation.followerId
     data.clientEmail = data.clientEmail || quotation?.clientEmail
   }
 
@@ -145,7 +145,7 @@ export const POST = withAuth(async (request: NextRequest, user) => {
 
     // 继承字段
     clientReportDeadline: inheritedDeadline,
-    follower: inheritedFollower,
+    followerId: inheritedFollowerId,
 
     // 样品信息 (兼容旧字段)
     sampleName: data.sampleName || (data.samples?.[0]?.name),

@@ -19,17 +19,18 @@ import {
 import { PlusOutlined, DeleteOutlined } from '@ant-design/icons'
 import dayjs from 'dayjs'
 import UserSelect from '@/components/UserSelect'
-import SampleTestItemTable, { SampleTestItemData } from '@/components/SampleTestItemTable'
 import { showError } from '@/lib/confirm'
 
+// 报价明细项（合并后的单表）
 interface QuotationItem {
     id?: string
     sampleName: string
     serviceItem: string
     methodStandard: string
-    quantity: number
+    quantity: string // 支持 "2组" 格式
     unitPrice: number
     totalPrice: number
+    remark: string
 }
 
 interface QuotationFormProps {
@@ -37,8 +38,11 @@ interface QuotationFormProps {
     onFinish: (values: any) => Promise<void>
     onCancel: () => void
     loading?: boolean
-    bizId?: string // 编辑时的ID，用于关联数据
+    bizId?: string
 }
+
+// 固定税率
+const TAX_RATE = 0.06
 
 export default function QuotationForm({
     initialValues,
@@ -53,9 +57,6 @@ export default function QuotationForm({
     const [testTemplates, setTestTemplates] = useState<any[]>([])
     const [items, setItems] = useState<QuotationItem[]>([])
 
-    // 样品检测项
-    const [sampleTestItems, setSampleTestItems] = useState<SampleTestItemData[]>([])
-
     useEffect(() => {
         fetchClients()
         fetchTestTemplates()
@@ -63,39 +64,40 @@ export default function QuotationForm({
 
     useEffect(() => {
         if (initialValues) {
-            // 深度复制 items，防止引用问题
             const safeItems = (initialValues.items || []).map((item: any) => ({
                 ...item,
-                quantity: Number(item.quantity) || 0,
+                quantity: String(item.quantity ?? '1'),
                 unitPrice: Number(item.unitPrice) || 0,
                 totalPrice: Number(item.totalPrice) || 0,
+                remark: item.remark || '',
             }))
-            setItems(safeItems)
-
-            // 设置样品检测项
-            if (initialValues.sampleTestItems) {
-                setSampleTestItems(initialValues.sampleTestItems)
-            }
+            setItems(safeItems.length > 0 ? safeItems : [createEmptyItem()])
 
             form.setFieldsValue({
                 ...initialValues,
                 quotationDate: initialValues.quotationDate ? dayjs(initialValues.quotationDate) : dayjs(),
                 clientReportDeadline: initialValues.clientReportDeadline ? dayjs(initialValues.clientReportDeadline) : null,
                 clientId: initialValues.clientId || initialValues.client?.id,
-                // 确保折扣金额是数字
                 discountAmount: Number(initialValues.discountAmount) || 0,
+                // 服务方信息
+                serviceContact: initialValues.serviceContact,
+                serviceTel: initialValues.serviceTel || '',
+                serviceEmail: initialValues.serviceEmail || '',
             })
         } else {
-            // 新增模式默认值
             form.setFieldsValue({
                 quotationDate: dayjs(),
                 validDays: 30,
-                taxRate: 0,
                 discountAmount: 0,
             })
-            setItems([{ sampleName: '', serviceItem: '', methodStandard: '', quantity: 1, unitPrice: 0, totalPrice: 0 }])
+            setItems([createEmptyItem()])
         }
     }, [initialValues, form])
+
+    const createEmptyItem = (): QuotationItem => ({
+        sampleName: '', serviceItem: '', methodStandard: '',
+        quantity: '1', unitPrice: 0, totalPrice: 0, remark: '',
+    })
 
     const fetchClients = async () => {
         setClientsLoading(true)
@@ -114,140 +116,66 @@ export default function QuotationForm({
         try {
             const res = await fetch('/api/test-template?pageSize=1000')
             const json = await res.json()
-            const templates = json.list || []
-            setTestTemplates(templates)
+            setTestTemplates(json.list || [])
         } catch (error) {
             console.error('获取检测项目失败:', error)
         }
     }
 
+    // 选择客户时自动带入联系信息
     const handleClientChange = (clientId: string) => {
         const client = clients.find(c => c.id === clientId)
         if (client) {
             form.setFieldsValue({
                 clientContactPerson: client.contact || '',
+                clientPhone: client.phone || '',
+                clientEmail: client.email || '',
+                clientAddress: client.address || '',
             })
         }
     }
 
     const handleAddItem = () => {
-        setItems([...items, { sampleName: '', serviceItem: '', methodStandard: '', quantity: 1, unitPrice: 0, totalPrice: 0 }])
+        setItems([...items, createEmptyItem()])
     }
 
     const updateItem = (index: number, field: string, value: any) => {
         const newItems = [...items]
-        const item = { ...newItems[index] }
-        // @ts-ignore
-        item[field] = value
+        const item = { ...newItems[index], [field]: value }
         // 重新计算小计
-        item.totalPrice = (item.quantity || 1) * (item.unitPrice || 0)
+        const qty = parseFloat(item.quantity) || 1
+        item.totalPrice = qty * (item.unitPrice || 0)
         newItems[index] = item
         setItems(newItems)
-
-        // 触发总金额重算
-        calculateTotal(newItems)
     }
 
     const removeItem = (index: number) => {
-        const newItems = items.filter((_, i) => i !== index)
-        setItems(newItems)
-        calculateTotal(newItems)
+        if (items.length <= 1) return
+        setItems(items.filter((_, i) => i !== index))
     }
 
-    const calculateTotal = (currentItems: QuotationItem[]) => {
-        const totalAmount = currentItems.reduce((sum, item) => sum + (item.totalPrice || 0), 0)
-        const taxRate = form.getFieldValue('taxRate') || 0
-        const discountAmount = form.getFieldValue('discountAmount') || 0
-
-        const totalWithTax = totalAmount // 假设单价已含税，或者另外计算。参考原页面逻辑
-        // 原页面逻辑：
-        // form.setFieldsValue({
-        //   totalAmount,
-        //   taxAmount: totalAmount * taxRate,
-        //   totalWithTax: totalAmount * (1 + taxRate),
-        //   finalAmount: totalAmount * (1 + taxRate) - discountAmount
-        // })
-        // 这里简化处理，保持与后端一致，具体计算逻辑需参考 getValues 时的处理
-
-        // 实际上 Form 提交时会重新计算，这里仅做展示更新可能不够，需要 Form.Item配合
-        // 简单起见，利用 Form 监听变化来更新汇总数据会更稳健，或者在 render 时计算
-    }
-
-    // 计算汇总数据
+    // 费用汇总计算
     const totalAmount = items.reduce((sum, item) => sum + (item.totalPrice || 0), 0)
     const discountAmount = Form.useWatch('discountAmount', form) || 0
-    const taxAmount = 0 // 移除税额计算，视为已含税
-    const totalWithTax = totalAmount // 价税合计即为小计合计
-    const finalAmount = totalWithTax - discountAmount // 最终金额
+    const taxAmount = totalAmount * TAX_RATE
+    const totalWithTax = totalAmount * (1 + TAX_RATE)
+    const finalAmount = totalWithTax - discountAmount
 
-    // 监听样品检测项变化，自动同步到报价明细
-    useEffect(() => {
-        if (sampleTestItems.length === 0) return
-
-        // 这一步逻辑是从原页面 copy 来的：从样品检测项生成报价明细
-        // 但是要小心不要覆盖用户已经填写的单价
-        const newItems: QuotationItem[] = sampleTestItems.map(item => ({
-            sampleName: item.sampleName || '',
-            serviceItem: item.testItemName || '',
-            methodStandard: item.testStandard || '',
-            quantity: item.quantity || 1,
-            unitPrice: 0,
-            totalPrice: 0,
-            id: undefined // 新生成的没有ID
-        }))
-
-        const mergedItems = newItems.map(newItem => {
-            // 尝试匹配已有的项，保留单价
-            const existingItem = items.find(
-                item =>
-                    item.sampleName === newItem.sampleName &&
-                    item.serviceItem === newItem.serviceItem
-            )
-
-            if (existingItem) {
-                return {
-                    ...newItem,
-                    quantity: existingItem.quantity,
-                    unitPrice: existingItem.unitPrice,
-                    totalPrice: existingItem.quantity * existingItem.unitPrice
-                }
-            }
-            return newItem
-        })
-
-        // 只有当 items 为空或者显式需要同步时才覆盖，防止用户手动修改后被重置
-        // 这里为了体验，如果 items 为空，或者数量发生显著变化... 
-        // 实战中，通常是只有“导入”动作才触发。这里原逻辑是只要 sampleTestItems 变了就尝试合并
-        // 我们保留这个逻辑，但只在 sampleTestItems 变动且确实有内容时触发，且尽量保留 original items 如果它们不仅仅是自动生成的
-
-        // 简化策略：如果 items 已经有数据，我们不自动完全覆盖，而是由用户手动添加
-        // 或者：当 sampleTestItems 更新时，仅“追加”或“更新匹配项”，不删除多余项？
-        // 原页面逻辑是 syncSampleTestItemsToQuotationItems，它会重新生成 items。
-        // 我们这里暂时只在初始化或者显式操作时同步，避免副作用。
-        // 由于 Form 模式下，用户可能先填检测项，再填报价，所以保留一种同步机制是有益的。
-        // 决定：暂不通过 effect 自动同步，以免死循环或覆盖。
-        // 将其作为一个按钮功能，或者由父组件传入 initialValues 时处理好。
-
-    }, [sampleTestItems])
-
-    // 提供一个手动同步按钮？或者在 SampleTestItemTable 变化时回调？
-    // 暂时保留手动添加明细的逻辑。
-
+    // 提交
     const handleSubmit = async () => {
         try {
             const values = await form.validateFields()
-            // 将 items 和 sampleTestItems 合并到提交数据
             const submitData = {
                 ...values,
                 items,
-                sampleTestItems, // 让父组件或后端处理这个保存
-                finalAmount, // 提交计算后的最终金额
-                // 其他汇总字段根据需要提交，或者后端计算
+                discountAmount,
+                finalAmount,
                 totalAmount,
                 taxAmount,
                 totalWithTax,
                 quotationDate: values.quotationDate?.toISOString(),
                 clientReportDeadline: values.clientReportDeadline?.toISOString(),
+                clientRemark: values.clientRemark,
             }
             await onFinish(submitData)
         } catch (error) {
@@ -255,12 +183,18 @@ export default function QuotationForm({
         }
     }
 
+    // 报价明细表列定义
     const tableColumns = [
+        {
+            title: '序号',
+            width: 50,
+            render: (_: any, __: any, index: number) => index + 1,
+        },
         {
             title: '样品名称',
             dataIndex: 'sampleName',
-            width: 150,
-            render: (value: string, record: any, index: number) => (
+            width: 160,
+            render: (value: string, _: any, index: number) => (
                 <Input
                     value={value}
                     onChange={(e) => updateItem(index, 'sampleName', e.target.value)}
@@ -269,17 +203,18 @@ export default function QuotationForm({
             ),
         },
         {
-            title: '检测项目',
+            title: '检测项目 (Service Item)',
             dataIndex: 'serviceItem',
             width: 180,
-            render: (value: string, record: any, index: number) => (
+            render: (value: string, _: any, index: number) => (
                 <Select
                     showSearch
+                    allowClear
                     optionFilterProp="label"
                     options={testTemplates.map(t => ({ value: t.name, label: t.name, method: t.method || '' }))}
                     value={value || undefined}
                     onChange={(val, option) => {
-                        updateItem(index, 'serviceItem', val)
+                        updateItem(index, 'serviceItem', val || '')
                         const method = (option as any)?.method || ''
                         if (method) {
                             updateItem(index, 'methodStandard', method)
@@ -291,9 +226,10 @@ export default function QuotationForm({
             ),
         },
         {
-            title: '检测标准',
+            title: '检测标准 (Method Standard)',
             dataIndex: 'methodStandard',
-            render: (value: string, record: any, index: number) => (
+            width: 150,
+            render: (value: string, _: any, index: number) => (
                 <Input
                     value={value}
                     onChange={(e) => updateItem(index, 'methodStandard', e.target.value)}
@@ -302,23 +238,22 @@ export default function QuotationForm({
             ),
         },
         {
-            title: '数量',
+            title: '数量 (Quantity)',
             dataIndex: 'quantity',
             width: 100,
-            render: (value: number, record: any, index: number) => (
-                <InputNumber
-                    min={1}
+            render: (value: string, _: any, index: number) => (
+                <Input
                     value={value}
-                    onChange={(val) => updateItem(index, 'quantity', val || 1)}
-                    style={{ width: '100%' }}
+                    onChange={(e) => updateItem(index, 'quantity', e.target.value)}
+                    placeholder="如: 2组"
                 />
             ),
         },
         {
-            title: '单价(元)',
+            title: '单价 (Price)',
             dataIndex: 'unitPrice',
-            width: 120,
-            render: (value: number, record: any, index: number) => (
+            width: 110,
+            render: (value: number, _: any, index: number) => (
                 <InputNumber
                     min={0}
                     precision={2}
@@ -329,21 +264,34 @@ export default function QuotationForm({
             ),
         },
         {
-            title: '小计',
+            title: '总价 (Total)',
             dataIndex: 'totalPrice',
-            width: 120,
+            width: 100,
             render: (value: number) => `¥${Number(value || 0).toFixed(2)}`,
+        },
+        {
+            title: '备注',
+            dataIndex: 'remark',
+            width: 150,
+            render: (value: string, _: any, index: number) => (
+                <Input
+                    value={value}
+                    onChange={(e) => updateItem(index, 'remark', e.target.value)}
+                    placeholder="备注"
+                />
+            ),
         },
         {
             title: '操作',
             key: 'action',
-            width: 60,
+            width: 50,
             render: (_: any, __: any, index: number) => (
                 <Button
                     type="text"
                     danger
                     icon={<DeleteOutlined />}
                     onClick={() => removeItem(index)}
+                    disabled={items.length <= 1}
                 />
             ),
         },
@@ -369,17 +317,15 @@ export default function QuotationForm({
                 />
             )}
             <Form form={form} layout="vertical">
-                {/* 🔧 隐藏字段：从咨询单创建时携带咨询单ID和单号 */}
-                <Form.Item name="consultationId" hidden>
-                    <Input />
-                </Form.Item>
-                <Form.Item name="consultationNo" hidden>
-                    <Input />
-                </Form.Item>
+                {/* 隐藏字段 */}
+                <Form.Item name="consultationId" hidden><Input /></Form.Item>
+                <Form.Item name="consultationNo" hidden><Input /></Form.Item>
 
-                <Row gutter={24}>
-                    <Col span={8}>
-                        <Form.Item name="clientId" label="客户名称" rules={[{ required: true, message: '请选择客户' }]}>
+                {/* ========== ① 委托方信息 ========== */}
+                <Divider orientation="left" orientationMargin="0">① 委托方信息 Company</Divider>
+                <Row gutter={16}>
+                    <Col span={12}>
+                        <Form.Item name="clientId" label="委托方 Company" rules={[{ required: true, message: '请选择客户' }]}>
                             <Select
                                 showSearch
                                 allowClear
@@ -391,57 +337,77 @@ export default function QuotationForm({
                             />
                         </Form.Item>
                     </Col>
-                    <Col span={8}>
-                        <Form.Item name="clientContactPerson" label="联系人" rules={[{ required: true, message: '请输入联系人' }]}>
+                    <Col span={12}>
+                        <Form.Item name="clientContactPerson" label="委托人 From" rules={[{ required: true, message: '请输入联系人' }]}>
                             <Input placeholder="联系人姓名" />
                         </Form.Item>
                     </Col>
+                </Row>
+                <Row gutter={16}>
                     <Col span={8}>
-                        <Form.Item name="quotationDate" label="报价日期" rules={[{ required: true, message: '请选择日期' }]}>
-                            <DatePicker style={{ width: '100%' }} />
+                        <Form.Item name="clientPhone" label="电话 Tel">
+                            <Input placeholder="联系电话" />
                         </Form.Item>
                     </Col>
                     <Col span={8}>
-                        <Form.Item name="follower" label="跟单人" rules={[{ required: true, message: '请选择跟单人' }]}>
-                            <UserSelect placeholder="选择跟单人" />
+                        <Form.Item name="clientEmail" label="邮箱 Email">
+                            <Input placeholder="邮箱" />
+                        </Form.Item>
+                    </Col>
+                    <Col span={8}>
+                        <Form.Item name="clientAddress" label="地址 Address">
+                            <Input placeholder="地址" />
                         </Form.Item>
                     </Col>
                 </Row>
 
-                {/* 样品检测项 (数据源) */}
-                <Divider orientation="left">样品与检测项</Divider>
-                <div style={{ marginBottom: 24 }}>
-                    <SampleTestItemTable
-                        bizType="quotation"
-                        bizId={bizId || undefined}
-                        value={sampleTestItems}
-                        onChange={(newVal) => {
-                            setSampleTestItems(newVal)
-                            // 在这里触发同步？或者让用户自己添加明细
-                            // 为了方便，如果 items 为空，自动同步一次
-                            if (items.length === 0 && newVal.length > 0) {
-                                const newItems: QuotationItem[] = newVal.map(item => ({
-                                    sampleName: item.sampleName || '',
-                                    serviceItem: item.testItemName || '',
-                                    methodStandard: item.testStandard || '',
-                                    quantity: item.quantity || 1,
-                                    unitPrice: 0,
-                                    totalPrice: 0,
-                                }))
-                                setItems(newItems)
-                            }
-                        }}
-                    />
-                </div>
+                {/* ========== ② 服务方信息 ========== */}
+                <Divider orientation="left" orientationMargin="0">② 服务方信息 Service</Divider>
+                <Row gutter={16}>
+                    <Col span={12}>
+                        <Form.Item label="服务方 Company">
+                            <Input value="江苏国轻检测技术有限公司" disabled />
+                        </Form.Item>
+                    </Col>
+                    <Col span={12}>
+                        <Form.Item name="serviceContact" label="安排人 From" rules={[{ required: true, message: '请选择安排人' }]}>
+                            <UserSelect placeholder="选择安排人" />
+                        </Form.Item>
+                    </Col>
+                </Row>
+                <Row gutter={16}>
+                    <Col span={8}>
+                        <Form.Item name="serviceTel" label="电话 Tel">
+                            <Input placeholder="服务方电话" />
+                        </Form.Item>
+                    </Col>
+                    <Col span={8}>
+                        <Form.Item name="serviceEmail" label="邮箱 Email">
+                            <Input placeholder="服务方邮箱" />
+                        </Form.Item>
+                    </Col>
+                    <Col span={8}>
+                        <Form.Item label="地址 Address">
+                            <Input value="扬州市邗江区金山路99号" disabled />
+                        </Form.Item>
+                    </Col>
+                </Row>
 
-                {/* 报价明细 */}
-                <Divider orientation="left">报价明细</Divider>
+                {/* ========== ③ 客户要求备注 ========== */}
+                <Divider orientation="left" orientationMargin="0">③ 客户要求备注</Divider>
+                <Form.Item name="clientRemark">
+                    <Input.TextArea rows={2} placeholder="客户的特殊要求或备注" />
+                </Form.Item>
+
+                {/* ========== ④ 报价明细 ========== */}
+                <Divider orientation="left" orientationMargin="0">④ 报价明细 Quotation Details</Divider>
                 <Table
                     dataSource={items}
                     columns={tableColumns}
                     rowKey={(r, i) => r.id || `temp_${i}`}
                     pagination={false}
                     size="small"
+                    scroll={{ x: 1100 }}
                     footer={() => (
                         <Button type="dashed" onClick={handleAddItem} block icon={<PlusOutlined />}>
                             添加明细项
@@ -449,66 +415,70 @@ export default function QuotationForm({
                     )}
                 />
 
-                <div style={{ marginTop: 16, display: 'flex', justifyContent: 'flex-end' }}>
-                    <div style={{ width: 300 }}>
-                        <Form.Item label="报价合计(含税)" style={{ fontWeight: 'bold' }}>
-                            <Input value={`¥${totalAmount.toFixed(2)}`} disabled />
-                        </Form.Item>
-                        <Form.Item name="discountAmount" label="折扣金额">
-                            <InputNumber style={{ width: '100%' }} prefix="¥" />
-                        </Form.Item>
-                        <Form.Item label="最终报价" style={{ fontWeight: 'bold' }}>
-                            <Input value={`¥${finalAmount.toFixed(2)}`} style={{ color: '#f5222d', fontWeight: 'bold' }} disabled />
-                        </Form.Item>
+                {/* ========== ⑤ 费用汇总 ========== */}
+                <Divider orientation="left" orientationMargin="0">⑤ 费用汇总 Summary</Divider>
+                <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+                    <div style={{ width: 380 }}>
+                        <Row style={{ marginBottom: 8 }}>
+                            <Col span={14} style={{ textAlign: 'right', paddingRight: 12 }}>报价合计：</Col>
+                            <Col span={10} style={{ fontWeight: 'bold' }}>¥{totalAmount.toFixed(2)}</Col>
+                        </Row>
+                        <Row style={{ marginBottom: 8 }}>
+                            <Col span={14} style={{ textAlign: 'right', paddingRight: 12 }}>含税合计（含税{(TAX_RATE * 100).toFixed(0)}%）：</Col>
+                            <Col span={10} style={{ fontWeight: 'bold' }}>¥{totalWithTax.toFixed(2)}</Col>
+                        </Row>
+                        <Row style={{ marginBottom: 8, alignItems: 'center' }}>
+                            <Col span={14} style={{ textAlign: 'right', paddingRight: 12 }}>优惠金额：</Col>
+                            <Col span={10}>
+                                <Form.Item name="discountAmount" noStyle>
+                                    <InputNumber style={{ width: '100%' }} min={0} precision={2} prefix="¥" />
+                                </Form.Item>
+                            </Col>
+                        </Row>
+                        <Row style={{ borderTop: '1px solid #d9d9d9', paddingTop: 8 }}>
+                            <Col span={14} style={{ textAlign: 'right', paddingRight: 12 }}>
+                                优惠后合计（含税{(TAX_RATE * 100).toFixed(0)}%）：
+                            </Col>
+                            <Col span={10} style={{ fontWeight: 'bold', color: '#f5222d', fontSize: 16 }}>
+                                ¥{finalAmount.toFixed(2)}
+                            </Col>
+                        </Row>
                     </div>
                 </div>
 
-                <Divider orientation="left">其他条款</Divider>
-                <Row gutter={24}>
-                    <Col span={8}>
+                {/* ========== ⑥ 其他信息 ========== */}
+                <Divider orientation="left" orientationMargin="0">⑥ 其他信息</Divider>
+                <Row gutter={16}>
+                    <Col span={6}>
+                        <Form.Item name="quotationDate" label="报价日期" rules={[{ required: true, message: '请选择日期' }]}>
+                            <DatePicker style={{ width: '100%' }} />
+                        </Form.Item>
+                    </Col>
+                    <Col span={6}>
                         <Form.Item name="validDays" label="有效期(天)">
                             <InputNumber style={{ width: '100%' }} min={1} />
                         </Form.Item>
                     </Col>
-                    <Col span={8}>
+                    <Col span={6}>
                         <Form.Item name="clientReportDeadline" label="报告时间">
                             <DatePicker style={{ width: '100%' }} />
                         </Form.Item>
                     </Col>
-                    <Col span={8}>
-                        <Form.Item name="paymentTerms" label="付款方式">
-                            <Input placeholder="如：预付50%" />
-                        </Form.Item>
-                    </Col>
-                    <Col span={8}>
-                        <Form.Item name="deliveryTerms" label="交付方式">
-                            <Input placeholder="如：电子版+纸质版" />
-                        </Form.Item>
-                    </Col>
-                    <Col span={16}>
-                        <Form.Item name="remark" label="备注">
-                            <Input.TextArea rows={2} />
+                    <Col span={6}>
+                        <Form.Item name="followerId" label="跟单人" rules={[{ required: true, message: '请选择跟单人' }]}>
+                            <UserSelect placeholder="选择跟单人" />
                         </Form.Item>
                     </Col>
                 </Row>
 
                 {/* 底部操作栏 */}
-                <div style={{
-                    position: 'sticky',
-                    bottom: 0,
-                    zIndex: 10,
-                    padding: '12px 24px',
-                    margin: '0 -24px -24px',
-                    background: '#fff',
-                    borderTop: '1px solid #e8e8e8',
-                    textAlign: 'right',
-                    display: 'flex',
-                    justifyContent: 'flex-end',
-                    gap: 8,
-                    boxShadow: '0 -2px 8px rgba(0,0,0,0.08)'
-                }}>
-                    <Button onClick={onCancel} size="large">取消</Button>
-                    <Button type="primary" onClick={handleSubmit} loading={loading} size="large">保存</Button>
+                <div style={{ marginTop: 24 }}>
+                    <Form.Item>
+                        <Space size="middle">
+                            <Button onClick={onCancel} size="large">取消</Button>
+                            <Button type="primary" onClick={handleSubmit} loading={loading} size="large">保存</Button>
+                        </Space>
+                    </Form.Item>
                 </div>
 
             </Form>

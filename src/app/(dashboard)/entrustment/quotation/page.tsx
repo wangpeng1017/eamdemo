@@ -9,7 +9,7 @@
 import { useState, useEffect } from 'react'
 import { showSuccess, showError, showWarningMessage } from '@/lib/confirm'
 import { Table, Button, Space, Modal, Form, Input, Select, DatePicker, Drawer, Row, Col, Divider, Popconfirm, Radio, Upload, Descriptions, Tabs, Tooltip } from 'antd'
-import { PlusOutlined, EditOutlined, DeleteOutlined, EyeOutlined, SendOutlined, FolderOutlined, UploadOutlined, FileTextOutlined } from '@ant-design/icons'
+import { PlusOutlined, EditOutlined, DeleteOutlined, EyeOutlined, SendOutlined, FolderOutlined, UploadOutlined, FileTextOutlined, PrinterOutlined } from '@ant-design/icons'
 import { StatusTag } from '@/components/StatusTag'
 import { ApprovalTimeline } from '@/components/ApprovalTimeline'
 import { RejectModal } from '@/components/RejectModal'
@@ -20,6 +20,7 @@ import type { ColumnsType } from 'antd/es/table'
 import dayjs from 'dayjs'
 import { useRouter } from 'next/navigation'
 import { useSession } from 'next-auth/react'
+import QuotationPrint from '@/components/business/QuotationPrint'
 
 interface Client {
   id: string
@@ -36,9 +37,10 @@ interface QuotationItem {
   sampleName: string
   serviceItem: string
   methodStandard: string
-  quantity: number
+  quantity: string
   unitPrice: number
   totalPrice: number
+  remark?: string
 }
 
 interface QuotationApproval {
@@ -58,6 +60,9 @@ interface Quotation {
   clientId?: string
   client?: Client
   clientContactPerson?: string
+  clientPhone?: string | null
+  clientEmail?: string | null
+  clientAddress?: string | null
   consultationId?: string | null
   quotationDate: string
   validDays: number
@@ -72,6 +77,9 @@ interface Quotation {
   deliveryTerms?: string | null
   remark?: string | null
   clientResponse?: string | null
+  clientReportDeadline?: string | null
+  followerId?: string | null
+  serviceContact?: string | null
   status: string
   createdAt: string
   items?: QuotationItem[]
@@ -121,6 +129,9 @@ export default function QuotationPage() {
   // 🆕 新功能：驳回对话框状态
   const [rejectModalVisible, setRejectModalVisible] = useState(false)
   const [selectedQuotationForReject, setSelectedQuotationForReject] = useState<Quotation | null>(null)
+
+  // 打印相关
+  const [printData, setPrintData] = useState<any>(null)
 
   const fetchData = async (p = page, f = filters) => {
     setLoading(true)
@@ -389,6 +400,25 @@ export default function QuotationPage() {
     router.push(`/entrustment/contract/create?quotationId=${record.id}`)
   }
 
+  // 打印报价单
+  const handlePrint = async (record: Quotation) => {
+    try {
+      const res = await fetch(`/api/quotation/${record.id}`)
+      const json = await res.json()
+      if (res.ok && json.success) {
+        setPrintData(json.data)
+        setTimeout(() => {
+          window.print()
+        }, 300)
+      } else {
+        showError('获取报价详情失败')
+      }
+    } catch (e) {
+      console.error('打印失败:', e)
+      showError('打印失败')
+    }
+  }
+
   const columns: ColumnsType<Quotation> = [
     { title: '报价单号', dataIndex: 'quotationNo', width: 150 },
     {
@@ -481,6 +511,8 @@ export default function QuotationPage() {
       title: '操作',
       key: 'action',
       fixed: 'right',
+      onCell: () => ({ style: { whiteSpace: 'nowrap' as const } }),
+      onHeaderCell: () => ({ style: { whiteSpace: 'nowrap' as const } }),
       render: (_, record) => {
         const canAudit = (
           (record.status === 'pending_sales' && session?.user?.roles?.includes('sales_manager')) ||
@@ -529,6 +561,7 @@ export default function QuotationPage() {
 
             {/* 通用按钮（仅图标） */}
             <Button size="small" icon={<EyeOutlined />} onClick={() => handleView(record)} />
+            <Button size="small" icon={<PrinterOutlined />} onClick={() => handlePrint(record)} title="打印" />
             <Button size="small" icon={<EditOutlined />} onClick={() => handleEdit(record)} disabled={record.status !== 'draft'} />
             <Popconfirm title="确认删除" onConfirm={() => handleDelete(record.id)} disabled={record.status !== 'draft'}>
               <Button size="small" danger icon={<DeleteOutlined />} disabled={record.status !== 'draft'} />
@@ -579,7 +612,7 @@ export default function QuotationPage() {
         columns={columns}
         dataSource={data}
         loading={loading}
-        scroll={{ x: 1300 }}
+        scroll={{ x: 1600 }}
         rowSelection={{
           selectedRowKeys,
           onChange: (keys, rows) => {
@@ -616,9 +649,14 @@ export default function QuotationPage() {
                       <Descriptions.Item label="报价单号">{currentQuotation.quotationNo}</Descriptions.Item>
                       <Descriptions.Item label="客户名称">{currentQuotation.client?.name || '-'}</Descriptions.Item>
                       <Descriptions.Item label="联系人">{currentQuotation.clientContactPerson || '-'}</Descriptions.Item>
-                      <Descriptions.Item label="联系电话">{currentQuotation.client?.phone || '-'}</Descriptions.Item>
-                      <Descriptions.Item label="客户邮箱">{currentQuotation.client?.email || '-'}</Descriptions.Item>
-                      <Descriptions.Item label="客户地址">{currentQuotation.client?.address || '-'}</Descriptions.Item>
+                      <Descriptions.Item label="联系电话">{currentQuotation.clientPhone || currentQuotation.client?.phone || '-'}</Descriptions.Item>
+                      <Descriptions.Item label="客户邮箱">{currentQuotation.clientEmail || currentQuotation.client?.email || '-'}</Descriptions.Item>
+                      <Descriptions.Item label="客户地址">{currentQuotation.clientAddress || currentQuotation.client?.address || '-'}</Descriptions.Item>
+                      <Descriptions.Item label="跟单人">{(currentQuotation as any).followerUser?.name || '-'}</Descriptions.Item>
+                      <Descriptions.Item label="服务联系人">{currentQuotation.serviceContact || '-'}</Descriptions.Item>
+                      <Descriptions.Item label="报告时间">
+                        {currentQuotation.clientReportDeadline ? dayjs(currentQuotation.clientReportDeadline).format('YYYY-MM-DD') : '-'}
+                      </Descriptions.Item>
                       <Descriptions.Item label="创建日期">
                         {dayjs(currentQuotation.createdAt).format('YYYY-MM-DD HH:mm:ss')}
                       </Descriptions.Item>
@@ -749,6 +787,18 @@ export default function QuotationPage() {
           setSelectedQuotationForReject(null)
         }}
       />
+
+      {/* 打印隐藏区域 */}
+      <style jsx global>{`
+        @media print {
+          body * { visibility: hidden !important; }
+          #quotation-print-area, #quotation-print-area * { visibility: visible !important; }
+          #quotation-print-area { position: absolute; left: 0; top: 0; width: 100%; display: block !important; }
+        }
+      `}</style>
+      <div id="quotation-print-area" style={{ display: 'none' }}>
+        {printData && <QuotationPrint data={printData} />}
+      </div>
     </div>
   )
 }

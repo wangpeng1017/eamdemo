@@ -24,6 +24,8 @@ function CreateEntrustmentContent() {
         const projectsParam = searchParams.get('projects')
         const quotationId = searchParams.get('quotationId')
         const quotationNo = searchParams.get('quotationNo')
+        const clientReportDeadline = searchParams.get('clientReportDeadline')
+        const followerId = searchParams.get('followerId')
 
         let projects = [{}]
         if (projectsParam) {
@@ -52,6 +54,8 @@ function CreateEntrustmentContent() {
                 contactPerson,
                 clientPhone: contactPhone,
                 clientAddress,
+                clientReportDeadline: clientReportDeadline ? dayjs(clientReportDeadline) : undefined,
+                followerId: followerId || undefined,
                 isSampleReturn: false,
                 sampleDate: dayjs(),
             })
@@ -67,20 +71,17 @@ function CreateEntrustmentContent() {
     const handleSubmit = async (values: any) => {
         setLoading(true)
         try {
-            // 1. Create Entrustment
+            // 1. 提交委托单主体（含样品）
             const submitData = {
                 ...values,
                 sampleDate: values.sampleDate?.toISOString() || null,
-                // Projects are not in the form, but if they were passed in initialValues and preserved?
-                // EntrustmentForm doesn't keep track of 'projects' in its state if not in Form.Item.
-                // But wait, the original logic had 'projects' logic.
-                // If EntrustmentForm doesn't have 'projects' field, values.projects will be undefined.
-                // So we might lose the 'projects' derived from contract if we don't handle it.
-                // However, the new SampleTestItemTable replaces 'projects' effectively for items.
-                // But 'projects' in Entrustment entity are still used?
-                // Use default empty projects if needed.
+                clientReportDeadline: values.clientReportDeadline?.toISOString() || null,
                 projects: [],
             }
+
+            // 清理前端临时字段
+            delete submitData.componentTests
+            delete submitData.materialTests
 
             const res = await fetch('/api/entrustment', {
                 method: 'POST',
@@ -94,23 +95,56 @@ function CreateEntrustmentContent() {
             }
 
             const json = await res.json()
-            const entrustmentId = json.id
+            const entrustmentId = json.data?.id || json.id
 
-            // 2. Save SampleTestItems
-            if (values.sampleTestItems && values.sampleTestItems.length > 0) {
+            // 2. 保存零部件级测试要求
+            const componentTests = values.componentTests || []
+            const materialTests = values.materialTests || []
+            const allTestItems = [
+                ...componentTests.map((t: any) => ({
+                    sampleName: t.sampleName || '',
+                    testItemName: t.testItemName,
+                    testStandard: t.testStandard || '',
+                    judgmentStandard: t.judgmentStandard || '',
+                    testCategory: 'component',
+                    testMethod: t.testMethod || '',
+                    samplingLocation: t.samplingLocation || '',
+                    specimenCount: t.specimenCount || '',
+                    testRemark: t.testRemark || '',
+                    quantity: 1,
+                })),
+                ...materialTests.map((t: any) => ({
+                    sampleName: t.materialName || '',
+                    testItemName: t.testItemName,
+                    testStandard: t.testStandard || '',
+                    judgmentStandard: t.judgmentStandard || '',
+                    testCategory: 'material',
+                    testMethod: t.testMethod || '',
+                    specimenCount: t.specimenCount || '',
+                    testRemark: t.testRemark || '',
+                    materialName: t.materialName || '',
+                    materialCode: t.materialCode || '',
+                    materialSupplier: t.materialSupplier || '',
+                    materialSpec: t.materialSpec || '',
+                    materialSampleStatus: t.materialSampleStatus || '',
+                    quantity: 1,
+                })),
+            ]
+
+            if (allTestItems.length > 0) {
                 await fetch('/api/sample-test-item', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
                         bizType: 'entrustment',
                         bizId: entrustmentId,
-                        items: values.sampleTestItems,
+                        items: allTestItems,
                     })
                 })
             }
 
-            // 3. Copy from Contract or Quotation if needed
-            if ((values.contractId || values.quotationId) && (!values.sampleTestItems || values.sampleTestItems.length === 0)) {
+            // 3. 如果没有手动添加测试项且来自合同/报价单，尝试复制
+            if (allTestItems.length === 0 && (values.contractId || values.quotationId)) {
                 await fetch('/api/sample-test-item/copy', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -121,7 +155,6 @@ function CreateEntrustmentContent() {
                         targetBizId: entrustmentId,
                     })
                 })
-                showSuccess(values.contractId ? '已从合同复制样品检测项数据' : '已从报价单复制样品检测项数据')
             }
 
             showSuccess('创建成功')

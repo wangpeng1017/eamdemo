@@ -1,46 +1,62 @@
 import { prisma } from '@/lib/prisma'
 import { NextRequest, NextResponse } from 'next/server'
 import { validateQuotationForPDF } from '@/lib/quotation-pdf-validation'
+import fs from 'fs'
+import path from 'path'
+
+// 读取印章图片并转为 base64
+function getStampBase64(): string {
+  try {
+    const stampPath = path.join(process.cwd(), 'public', 'images', 'quotation-stamp.png')
+    const data = fs.readFileSync(stampPath)
+    return `data:image/png;base64,${data.toString('base64')}`
+  } catch {
+    return ''
+  }
+}
 
 // 生成报价单 PDF（实际返回可打印的 HTML）
 export async function GET(
-    request: NextRequest,
-    { params }: { params: Promise<{ id: string }> }
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
 ) {
-    const { id } = await params
+  const { id } = await params
 
-    // ✅ 验证审批状态
-    const validation = await validateQuotationForPDF(id)
-    if (!validation.canGenerate) {
-        return NextResponse.json(
-            {
-                success: false,
-                error: validation.error,
-                currentStatus: validation.currentStatus
-            },
-            { status: 403 }
-        )
-    }
+  // ✅ 验证审批状态
+  const validation = await validateQuotationForPDF(id)
+  if (!validation.canGenerate) {
+    return NextResponse.json(
+      {
+        success: false,
+        error: validation.error,
+        currentStatus: validation.currentStatus
+      },
+      { status: 403 }
+    )
+  }
 
-    const quotation = await prisma.quotation.findUnique({
-        where: { id },
-        include: {
-            items: true,
-            client: true,
-        },
-    })
+  const quotation = await prisma.quotation.findUnique({
+    where: { id },
+    include: {
+      items: true,
+      client: true,
+    },
+  })
 
-    if (!quotation) {
-        return NextResponse.json({ error: '报价单不存在' }, { status: 404 })
-    }
+  if (!quotation) {
+    return NextResponse.json({ error: '报价单不存在' }, { status: 404 })
+  }
 
-    // 计算金额
-    const subtotal = quotation.subtotal ? Number(quotation.subtotal) : 0
-    const taxTotal = quotation.taxTotal ? Number(quotation.taxTotal) : subtotal * 1.06
-    const finalAmount = quotation.discountTotal ? Number(quotation.discountTotal) : taxTotal
+  // 计算金额
+  const subtotal = quotation.subtotal ? Number(quotation.subtotal) : 0
+  const taxTotal = quotation.taxTotal ? Number(quotation.taxTotal) : subtotal * 1.06
+  const finalAmount = quotation.discountTotal ? Number(quotation.discountTotal) : taxTotal
 
-    // 生成可打印的 HTML
-    const html = `
+  // 读取印章 base64
+  const stampBase64 = getStampBase64()
+
+  // 生成可打印的 HTML
+  const html = `
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
@@ -68,8 +84,21 @@ export async function GET(
     .amount-section div { margin: 5px 0; }
     .amount-section .total { font-size: 16px; font-weight: bold; color: #c00; }
     .footer { margin-top: 40px; display: flex; justify-content: space-between; font-size: 13px; }
-    .footer div { text-align: center; }
+    .footer > div { text-align: center; }
     .signature { margin-top: 30px; border-top: 1px solid #333; padding-top: 5px; width: 150px; }
+    .stamp-area {
+      position: relative;
+      display: inline-block;
+    }
+    .stamp-img {
+      position: absolute;
+      right: -30px;
+      top: -60px;
+      width: 140px;
+      height: auto;
+      opacity: 0.85;
+      pointer-events: none;
+    }
     @media print {
       body { padding: 20px; }
       .no-print { display: none; }
@@ -161,7 +190,10 @@ export async function GET(
     <div>
       <p>报价方：江苏国轻检测技术有限公司</p>
       <p>报价人：${quotation.serviceContact || '-'}</p>
-      <div class="signature">签章</div>
+      <div class="stamp-area">
+        <div class="signature">签章</div>
+        ${stampBase64 ? `<img class="stamp-img" src="${stampBase64}" alt="报价专用章" />` : ''}
+      </div>
     </div>
     <div>
       <p>委托方：${quotation.client?.name || '-'}</p>
@@ -173,9 +205,9 @@ export async function GET(
 </html>
   `
 
-    return new NextResponse(html, {
-        headers: {
-            'Content-Type': 'text/html; charset=utf-8',
-        },
-    })
+  return new NextResponse(html, {
+    headers: {
+      'Content-Type': 'text/html; charset=utf-8',
+    },
+  })
 }

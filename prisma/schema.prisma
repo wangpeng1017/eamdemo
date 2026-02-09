@@ -41,6 +41,10 @@ model User {
   capabilities        PersonnelCapability[]
   capabilityReviews   CapabilityReview[]
   consultationsCreated Consultation[]   @relation("ConsultationCreatedBy")
+  followedEntrustments Entrustment[]    @relation("Follower")
+  followedConsultations Consultation[]  @relation("ConsultationFollower")
+  followedQuotations   Quotation[]      @relation("QuotationFollower")
+  followedContracts    Contract[]       @relation("ContractFollower")
 
   @@map("sys_user")
 }
@@ -120,9 +124,11 @@ model Client {
   type           String?  @db.VarChar(50) // 客户类型
   contact        String?  @db.VarChar(50) // 联系人
   phone          String?  @db.VarChar(20)
+  fax            String?  @db.VarChar(50) // 传真
   email          String?  @db.VarChar(100)
   address        String?  @db.VarChar(500)
   creditCode     String?  @unique @db.VarChar(50) // 统一社会信用代码/税号
+  invoiceTitle   String?  @db.VarChar(200) // 开票抬头（默认=公司名）
   invoiceAddress String?  @db.VarChar(500) // 开票地址
   invoicePhone   String?  @db.VarChar(20) // 开票电话
   bankName       String?  @db.VarChar(200) // 开户行
@@ -191,7 +197,8 @@ model Consultation {
   clientReportDeadline DateTime? // 报告时间（客户要求的报告截止日期）
   budgetRange        String?   @db.VarChar(50) // 预算范围
   status             String    @default("following") // following/assessing/assessment_passed/assessment_failed/quoted/rejected/closed
-  follower           String?   @db.VarChar(50) // 跟进人
+  followerId           String?
+  followerUser         User?     @relation("ConsultationFollower", fields: [followerId], references: [id])
   feasibility        String?  @db.VarChar(20) // feasible/infeasible
   feasibilityNote    String?   @db.Text // 可行性说明
   quotationId        String?
@@ -285,9 +292,10 @@ model QuotationItem {
   sampleName     String?   @db.VarChar(200) // 样品名称
   serviceItem    String    @db.VarChar(200) // 检测项目
   methodStandard String    @db.VarChar(200) // 依据标准
-  quantity       Int       @default(1)
+  quantity       String    @default("1") @db.VarChar(20) // 支持 "2组" 格式
   unitPrice      Decimal   @db.Decimal(10, 2)
   totalPrice     Decimal   @db.Decimal(12, 2)
+  remark         String?   @db.VarChar(500) // 备注
   sort           Int       @default(0)
 
   @@map("biz_quotation_item")
@@ -320,8 +328,12 @@ model Quotation {
   serviceCompany String   @default("江苏国轻检测技术有限公司") @db.VarChar(200)
   serviceContact String?  @db.VarChar(50) // 业务员
   serviceTel     String?  @db.VarChar(20)
-  follower       String?  @db.VarChar(50)  // 跟进人
+  serviceEmail   String?  @db.VarChar(100) // 服务方邮箱
+  serviceAddress String?  @db.VarChar(500) // 服务方地址
+  followerId     String?
+  followerUser   User?    @relation("QuotationFollower", fields: [followerId], references: [id])
   clientRemark   String?  @db.Text // 客户特殊要求
+  taxRate        Decimal  @default(0.06) @db.Decimal(5, 4) // 税率，固定6%
   subtotal       Decimal? @db.Decimal(12, 2) // 报价合计
   taxTotal       Decimal? @db.Decimal(12, 2) // 含税合计
   discountTotal  Decimal? @db.Decimal(12, 2) // 优惠后合计
@@ -404,7 +416,8 @@ model Contract {
   sampleModel    String?   @db.VarChar(100)
   sampleMaterial String?   @db.VarChar(100)
   sampleQuantity Int?
-  follower       String?   @db.VarChar(50) // 跟进人
+  followerId     String?
+  followerUser   User?     @relation("ContractFollower", fields: [followerId], references: [id])
 
   status        String    @default("draft") // draft/signed/executing/completed/terminated
 
@@ -504,12 +517,34 @@ model Entrustment {
   client        Client?   @relation(fields: [clientId], references: [id])
   contactPerson String?   @db.VarChar(50)
   contactPhone  String?   @db.VarChar(50)
+  contactFax    String?   @db.VarChar(50) // 传真
   contactEmail  String?   @db.VarChar(100)
   clientAddress String?   @db.VarChar(500)
   sampleDate    DateTime? // 送样时间
   clientReportDeadline DateTime? // 客户报告截止日期
-  follower      String?   @db.VarChar(50) // 跟进人
+  followerId    String?                   // 跟进人用户ID
+  followerUser  User?     @relation("Follower", fields: [followerId], references: [id])
   isSampleReturn Boolean @default(false) // 是否退样
+
+  // 开票信息
+  invoiceTitle  String?   @db.VarChar(200) // 开票抬头
+  taxId         String?   @db.VarChar(50)  // 税号
+
+  // 服务项目
+  serviceScope        String?   @db.VarChar(50)  // CMA,CNAS
+  reportLanguage      String?   @db.VarChar(20)  // cn/en/cn_en
+  urgencyLevel        String?   @db.VarChar(20)  // normal/express/double/urgent
+  reportCopies        Int?      @default(1)      // 报告份数
+  reportDelivery      String?   @db.VarChar(20)  // courier/electronic/pickup
+  acceptSubcontract   Boolean   @default(true)   // 是否接受分包
+
+  // 试验信息
+  testType            String?   @db.VarChar(50)  // DV/PV/DV_PV/pilot/annual
+  oemFactory          String?   @db.VarChar(200) // 主机厂
+  sampleDeliveryMethod String?  @db.VarChar(50)  // customer/logistics/agency/other
+
+  // 特殊要求
+  specialRequirements String?   @db.Text
 
   sourceType String? @db.VarChar(20) // contract/quotation/direct
   status     String  @default("pending") // pending/accepted/testing/completed
@@ -569,7 +604,13 @@ model Sample {
   name              String       @db.VarChar(200) // 样品名称
   type              String?      @db.VarChar(50) // 样品类型
   specification     String?      @db.VarChar(200) // 规格型号
-  material          String?      @db.VarChar(100) // 材质信息 (Added)
+  material          String?      @db.VarChar(100) // 材质信息
+  partNo            String?      @db.VarChar(100) // 零件号 Part No.
+  color             String?      @db.VarChar(50)  // 颜色
+  weight            String?      @db.VarChar(50)  // 重量
+  supplier          String?      @db.VarChar(200) // 供应商
+  oem               String?      @db.VarChar(200) // 主机厂 OEM
+  sampleCondition   String?      @db.VarChar(200) // 样品到样状态描述
   quantity          String?      @db.VarChar(50) // 数量
   totalQuantity     String?      @db.VarChar(50) // 样品总量
   unit              String?      @db.VarChar(20) // 个/件/批/kg/g/L/mL/m/m²/m³
@@ -1459,7 +1500,21 @@ model SampleTestItem {
   testTemplateId    String?   @db.VarChar(50)  // 关联检测项目管理
   testItemName      String    @db.VarChar(200) // 检测项目名称（冗余存储）
   testStandard      String?   @db.VarChar(200) // 检测标准（冗余存储）
-  judgmentStandard  String?   @db.Text         // 评判标准
+  judgmentStandard  String?   @db.Text         // 评判标准/判定依据
+
+  // 测试要求扩展（对齐 Excel 委托单模板）
+  testCategory      String?   @db.VarChar(20)  // component/material 零部件级/材料级
+  testMethod        String?   @db.Text         // 测试方法、条件
+  samplingLocation  String?   @db.Text         // 样品描述及取样位置
+  specimenCount     String?   @db.VarChar(50)  // 送检样品数量
+  testRemark        String?   @db.Text         // 测试备注
+
+  // 材料级测试独有字段
+  materialName      String?   @db.VarChar(200) // 材料名称(材质)
+  materialCode      String?   @db.VarChar(100) // 材料牌号
+  materialSupplier  String?   @db.VarChar(200) // 材料供应商
+  materialSpec      String?   @db.VarChar(200) // 材料规格
+  materialSampleStatus String? @db.VarChar(100) // 样件状态（粒料/样条等）
 
   // 评估相关字段（v2）
   assessmentStatus      String?   @db.VarChar(20)  // pending/assessing/passed/failed
@@ -1477,6 +1532,7 @@ model SampleTestItem {
   @@index([bizType, bizId])
   @@index([testTemplateId])
   @@index([assessmentStatus])
+  @@index([testCategory])
   @@map("biz_sample_test_item")
 }
 

@@ -55,21 +55,28 @@ export const GET = withAuth(async (request: NextRequest, user) => {
   const listWithApprover = await addCurrentApproverInfo(list, prisma, 'quotation')
 
   // 格式化返回数据
-  const formattedList = listWithApprover.map((item: any) => ({
-    ...item,
-    clientName: item.client?.name || '',
-    consultationNo: item.consultationNo,
-    quotationDate: item.createdAt,
-    totalAmount: item.subtotal,
-    taxRate: 0,
-    taxAmount: 0,
-    totalWithTax: item.taxTotal || item.subtotal,
-    discountAmount: item.discountTotal ? (Number(item.taxTotal || item.subtotal) - Number(item.discountTotal)) : 0,
-    finalAmount: item.discountTotal || item.taxTotal || item.subtotal,
-    paymentTerms: item.clientRemark,
-    clientResponse: item.clientStatus,
-    currentApproverName: item.currentApproverName, // ✅ 当前审批人姓名
-  }))
+  const formattedList = listWithApprover.map((item: any) => {
+    const subtotal = Number(item.subtotal) || 0
+    const taxRate = Number(item.taxRate) || 0.06
+    const taxTotal = Number(item.taxTotal) || subtotal * (1 + taxRate)
+    const discountTotal = Number(item.discountTotal) || taxTotal
+    const discountAmount = taxTotal - discountTotal
+    return {
+      ...item,
+      clientName: item.client?.name || '',
+      consultationNo: item.consultationNo,
+      quotationDate: item.createdAt,
+      totalAmount: subtotal,
+      taxRate,
+      taxAmount: subtotal * taxRate,
+      totalWithTax: taxTotal,
+      discountAmount,
+      finalAmount: discountTotal,
+      paymentTerms: item.clientRemark,
+      clientResponse: item.clientStatus,
+      currentApproverName: item.currentApproverName,
+    }
+  })
 
   return success({ list: formattedList, total, page, pageSize })
 })
@@ -78,17 +85,17 @@ export const GET = withAuth(async (request: NextRequest, user) => {
 export const POST = withAuth(async (request: NextRequest, user) => {
   const data = await request.json()
 
-  // 如果从咨询单创建，查询咨询单以继承 clientReportDeadline 和 follower
+  // 如果从咨询单创建，查询咨询单以继承 clientReportDeadline 和 followerId
   let inheritedDeadline = null
-  let inheritedFollower = null
+  let inheritedFollowerId = null
   const consultationNo = data.consultationNo || data.consultationId
-  if (consultationNo && (!data.clientReportDeadline || !data.follower)) {
+  if (consultationNo && (!data.clientReportDeadline || !data.followerId)) {
     const consultation = await prisma.consultation.findUnique({
       where: { consultationNo },
-      select: { clientReportDeadline: true, follower: true, clientPhone: true, clientEmail: true, clientAddress: true },
+      select: { clientReportDeadline: true, followerId: true, clientPhone: true, clientEmail: true, clientAddress: true },
     })
     inheritedDeadline = consultation?.clientReportDeadline
-    inheritedFollower = consultation?.follower
+    inheritedFollowerId = consultation?.followerId
     data.clientPhone = data.clientPhone || consultation?.clientPhone
     data.clientEmail = data.clientEmail || consultation?.clientEmail
     data.clientAddress = data.clientAddress || consultation?.clientAddress
@@ -101,9 +108,15 @@ export const POST = withAuth(async (request: NextRequest, user) => {
   const quotationNo = `BJ${today}${String(count + 1).padStart(4, '0')}`
 
   const items = data.items || []
-  const subtotal = items.reduce((sum: number, item: any) => sum + (item.quantity || 1) * (item.unitPrice || 0), 0)
-  const taxTotal = subtotal // 需求4：报价默认为含税，taxTotal 等于 subtotal
-  const discountTotal = data.finalAmount || taxTotal
+  // 费用计算：报价合计 = 各项总价之和，含税合计 = 报价合计 × (1 + 6%)
+  const subtotal = items.reduce((sum: number, item: any) => {
+    const qty = parseFloat(String(item.quantity)) || 1
+    return sum + qty * (Number(item.unitPrice) || 0)
+  }, 0)
+  const taxRate = 0.06 // 固定 6%
+  const taxTotal = subtotal * (1 + taxRate)
+  const discountAmount = Number(data.discountAmount) || 0
+  const discountTotal = data.finalAmount || (taxTotal - discountAmount)
 
   // 构造创建数据
   const createData: any = {
@@ -115,26 +128,32 @@ export const POST = withAuth(async (request: NextRequest, user) => {
     clientAddress: data.clientAddress,
     consultationNo: data.consultationNo || data.consultationId || undefined,
 
-    // 注意：Quotation 模型不再包含 sampleName 等扁平化字段，这些信息在 items 或 samples 中
+    // 服务方信息
+    serviceContact: data.serviceContact,
+    serviceTel: data.serviceTel,
+    serviceEmail: data.serviceEmail,
+    serviceAddress: data.serviceAddress,
 
-    follower: data.follower || inheritedFollower,
-    clientRemark: data.paymentTerms,
+    followerId: data.followerId || inheritedFollowerId,
+    clientRemark: data.clientRemark || data.paymentTerms,
+    taxRate,
     subtotal,
     taxTotal,
     discountTotal,
     status: data.status || 'draft',
     clientStatus: data.clientResponse || 'pending',
-    // 优先使用手动提供的值，否则继承咨询单的值
     clientReportDeadline: data.clientReportDeadline ? new Date(data.clientReportDeadline) : (inheritedDeadline || null),
     createdBy: user?.id ? { connect: { id: user.id } } : undefined,
     items: {
-      create: items.map((item: any) => ({
+      create: items.map((item: any, idx: number) => ({
         sampleName: item.sampleName || '',
         serviceItem: item.serviceItem || '',
         methodStandard: item.methodStandard || '',
-        quantity: Number(item.quantity) || 1,
-        unitPrice: item.unitPrice || 0,
-        totalPrice: (Number(item.quantity) || 1) * (item.unitPrice || 0),
+        quantity: String(item.quantity || '1'),
+        unitPrice: Number(item.unitPrice) || 0,
+        totalPrice: (parseFloat(String(item.quantity)) || 1) * (Number(item.unitPrice) || 0),
+        remark: item.remark || null,
+        sort: idx,
       })),
     },
   }

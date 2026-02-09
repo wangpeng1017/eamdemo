@@ -7,7 +7,7 @@
 'use client'
 
 import React, { useState, useEffect } from 'react'
-import { Table, Button, Space, Modal, Form, Input, Select, DatePicker, Drawer, Row, Col, InputNumber, Divider, Tabs, Upload, Image, Tag, Alert, Descriptions, Popconfirm } from 'antd'
+import { Table, Button, Space, Modal, Form, Input, Select, DatePicker, Drawer, Row, Col, InputNumber, Divider, Tabs, Upload, Image, Tag, Alert, Descriptions, Popconfirm, Tooltip } from 'antd'
 import { PlusOutlined, EditOutlined, DeleteOutlined, EyeOutlined, FileTextOutlined, CloseCircleOutlined, TeamOutlined, SyncOutlined, PaperClipOutlined } from '@ant-design/icons'
 import { StatusTag } from '@/components/StatusTag'
 import UserSelect from '@/components/UserSelect'
@@ -53,14 +53,21 @@ interface Consultation {
   clientId?: string
   client?: Client
   clientContactPerson?: string
+  clientPhone?: string | null
+  clientEmail?: string | null
+  clientAddress?: string | null
   clientRequirement?: string | null // Added
   estimatedQuantity?: string | null
   testItems?: string[]
   expectedDeadline?: string | null
+  clientReportDeadline?: string | null
   budgetRange?: string | null
   feasibility?: string | null
   feasibilityNote?: string | null
-  follower?: string | null
+  followerId?: string | null
+  followerUser?: { id: string; name: string } | null
+  quotationNo?: string | null
+  quotationId?: string | null
   status: string
   createdAt: string
 }
@@ -232,6 +239,31 @@ export default function ConsultationPage() {
   // 针对单条记录生成报价单
   const handleOpenGenerateQuoteForRecord = async (consultation: Consultation) => {
     console.log('>>> [生成报价单] 开始处理, ID:', consultation.id);
+
+    // ✅ 前置状态检查：不允许在已报价/已关闭状态下重复生成
+    if (consultation.status === 'quoted') {
+      modal.info({
+        title: '已生成报价单',
+        content: (
+          <div>
+            <p>该咨询单已生成报价单{consultation.quotationNo ? `（${consultation.quotationNo}）` : ''}，无需重复操作。</p>
+            <p style={{ color: '#999', marginTop: 8 }}>如需修改报价，请前往「检测报价」模块编辑对应的报价单。</p>
+          </div>
+        ),
+        okText: '知道了',
+      })
+      return
+    }
+
+    if (consultation.status === 'closed') {
+      modal.info({
+        title: '咨询已关闭',
+        content: '该咨询单已关闭，无法生成报价单。如需继续，请先重新打开咨询单。',
+        okText: '知道了',
+      })
+      return
+    }
+
     // ✅ 需求1：评估验证 - 检查所有样品检测项是否已评估通过
     try {
       const res = await fetch(`/api/consultation/${consultation.id}`)
@@ -360,14 +392,14 @@ export default function ConsultationPage() {
     { title: '咨询单号', dataIndex: 'consultationNo', width: 140 },
     {
       title: '客户名称',
-      width: 150,
+      width: 200,
       ellipsis: true,
       render: (_, record) => record.client?.name || '-'
     },
     {
       title: '检测项目',
       dataIndex: 'testItems',
-      width: 180,
+      width: 250,
       ellipsis: true,
       render: (items: string[]) => {
         if (!items || items.length === 0) return '-'
@@ -385,13 +417,13 @@ export default function ConsultationPage() {
     {
       title: '报告时间',
       dataIndex: 'clientReportDeadline',
-      width: 160,
+      width: 180,
       render: (t: string) => t ? dayjs(t).format('YYYY-MM-DD HH:mm:ss') : '-'
     },
     {
       title: '创建时间',
       dataIndex: 'createdAt',
-      width: 160,
+      width: 180,
       render: (t: string) => dayjs(t).format('YYYY-MM-DD HH:mm:ss')
     },
     {
@@ -402,7 +434,7 @@ export default function ConsultationPage() {
     },
     {
       title: '联系人/电话',
-      width: 130,
+      width: 160,
       render: (_, record) => (
         <div>
           <div>{record.clientContactPerson || '-'}</div>
@@ -414,6 +446,8 @@ export default function ConsultationPage() {
       title: '操作',
       key: 'action',
       fixed: 'right',
+      onCell: () => ({ style: { whiteSpace: 'nowrap' as const } }),
+      onHeaderCell: () => ({ style: { whiteSpace: 'nowrap' as const } }),
       render: (_, record) => (
         <Space size="small" style={{ whiteSpace: 'nowrap' }}>
           {record.status === 'assessment_failed' && (
@@ -435,39 +469,60 @@ export default function ConsultationPage() {
               </Button>
             </>
           )}
-          <Button
-            size="small"
-            icon={<FileTextOutlined />}
-            onClick={(e) => {
-              e.stopPropagation()
-              handleOpenGenerateQuoteForRecord(record)
-            }}
-          >
-            生成报价单
-          </Button>
-          <Button size="small" icon={<EyeOutlined />} onClick={() => handleView(record)} />
-          <Button size="small" icon={<EditOutlined />} onClick={() => handleEdit(record)} />
-          <Popconfirm
-            title={record.status === 'closed' ? '彻底删除咨询单' : '确认删除咨询单'}
-            description={record.status === 'closed' ? '该咨询单已关闭，确定要彻底删除吗？删除后无法恢复' : '确定要删除这条咨询记录吗？'}
-            onConfirm={() => handleDelete(record)}
-            okText="确定"
-            cancelText="取消"
-            disabled={record.status === 'quoted'}
-            okButtonProps={{ danger: true }}
-          >
+          <Tooltip title={
+            record.status === 'quoted' ? `已生成报价单${record.quotationNo ? '（' + record.quotationNo + '）' : ''}` :
+              record.status === 'closed' ? '咨询已关闭' : ''
+          }>
             <Button
               size="small"
-              danger
-              icon={<DeleteOutlined />}
+              type={record.status === 'quoted' || record.status === 'closed' ? 'default' : 'primary'}
+              ghost={record.status !== 'quoted' && record.status !== 'closed'}
+              icon={<FileTextOutlined />}
+              disabled={false}
+              style={record.status === 'quoted' || record.status === 'closed' ? { opacity: 0.5 } : {}}
               onClick={(e) => {
-                if (record.status === 'quoted') {
-                  e.stopPropagation()
-                  showWarning('无法删除', '该咨询单已生成报价，请先处理相关报价单后再尝试删除，或将状态更改为"已关闭"。')
-                }
+                e.stopPropagation()
+                handleOpenGenerateQuoteForRecord(record)
               }}
-            />
-          </Popconfirm>
+            >
+              生成报价单
+            </Button>
+          </Tooltip>
+          <Button size="small" icon={<EyeOutlined />} onClick={() => handleView(record)} />
+          <Button size="small" icon={<EditOutlined />} onClick={() => handleEdit(record)} />
+          {record.status === 'quoted' ? (
+            <Tooltip title="已生成报价，无法删除">
+              <Button
+                size="small"
+                danger
+                icon={<DeleteOutlined />}
+                style={{ opacity: 0.5 }}
+                onClick={(e) => {
+                  e.stopPropagation()
+                  modal.warning({
+                    title: '无法删除',
+                    content: `该咨询单已生成报价单${record.quotationNo ? '（' + record.quotationNo + '）' : ''}，请先处理相关报价单后再尝试删除，或将状态更改为"已关闭"。`,
+                    okText: '知道了',
+                  })
+                }}
+              />
+            </Tooltip>
+          ) : (
+            <Popconfirm
+              title={record.status === 'closed' ? '彻底删除咨询单' : '确认删除咨询单'}
+              description={record.status === 'closed' ? '该咨询单已关闭，确定要彻底删除吗？删除后无法恢复' : '确定要删除这条咨询记录吗？'}
+              onConfirm={() => handleDelete(record)}
+              okText="确定"
+              cancelText="取消"
+              okButtonProps={{ danger: true }}
+            >
+              <Button
+                size="small"
+                danger
+                icon={<DeleteOutlined />}
+              />
+            </Popconfirm>
+          )}
         </Space>
       )
     }
@@ -520,7 +575,7 @@ export default function ConsultationPage() {
         dataSource={data}
         loading={loading}
         rowSelection={rowSelection}
-        scroll={{ x: 1050 }}
+        scroll={{ x: 1600 }}
         pagination={{ current: page, total, pageSize: 10, onChange: setPage, showSizeChanger: false }}
       />
 
@@ -545,9 +600,9 @@ export default function ConsultationPage() {
                       <Descriptions.Item label="咨询单号">{currentConsultation.consultationNo}</Descriptions.Item>
                       <Descriptions.Item label="客户名称">{currentConsultation.client?.name || '-'}</Descriptions.Item>
                       <Descriptions.Item label="联系人">{currentConsultation.clientContactPerson || '-'}</Descriptions.Item>
-                      <Descriptions.Item label="联系电话">{currentConsultation.client?.phone || '-'}</Descriptions.Item>
-                      <Descriptions.Item label="客户邮箱" span={2}>{currentConsultation.client?.email || '-'}</Descriptions.Item>
-                      <Descriptions.Item label="客户地址" span={2}>{currentConsultation.client?.address || '-'}</Descriptions.Item>
+                      <Descriptions.Item label="联系电话">{currentConsultation.clientPhone || currentConsultation.client?.phone || '-'}</Descriptions.Item>
+                      <Descriptions.Item label="客户邮箱" span={2}>{currentConsultation.clientEmail || currentConsultation.client?.email || '-'}</Descriptions.Item>
+                      <Descriptions.Item label="客户地址" span={2}>{currentConsultation.clientAddress || currentConsultation.client?.address || '-'}</Descriptions.Item>
                     </Descriptions>
 
                     <Divider style={{ margin: '16px 0' }} />
@@ -556,14 +611,14 @@ export default function ConsultationPage() {
                       <Descriptions.Item label="预估数量">{currentConsultation.estimatedQuantity || '-'}</Descriptions.Item>
                       <Descriptions.Item label="检测项目">{currentConsultation.testItems?.join('、') || '-'}</Descriptions.Item>
                       <Descriptions.Item label="报告时间">
-                        {currentConsultation.expectedDeadline ? dayjs(currentConsultation.expectedDeadline).format('YYYY-MM-DD HH:mm:ss') : '-'}
+                        {(currentConsultation.clientReportDeadline || currentConsultation.expectedDeadline) ? dayjs(currentConsultation.clientReportDeadline || currentConsultation.expectedDeadline).format('YYYY-MM-DD') : '-'}
                       </Descriptions.Item>
                       <Descriptions.Item label="预算范围">{currentConsultation.budgetRange || '-'}</Descriptions.Item>
                       <Descriptions.Item label="可行性评估">
                         <StatusTag type="feasibility" status={currentConsultation.feasibility} />
                       </Descriptions.Item>
                       <Descriptions.Item label="可行性说明">{currentConsultation.feasibilityNote || '-'}</Descriptions.Item>
-                      <Descriptions.Item label="跟单人">{currentConsultation.follower || '-'}</Descriptions.Item>
+                      <Descriptions.Item label="跟单人">{currentConsultation.followerUser?.name || '-'}</Descriptions.Item>
                       <Descriptions.Item label="提交人">{(currentConsultation as any).createdBy?.name || '-'}</Descriptions.Item>
                       <Descriptions.Item label="状态">
                         <StatusTag type="consultation" status={currentConsultation.status} />

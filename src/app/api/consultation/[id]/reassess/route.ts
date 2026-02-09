@@ -42,7 +42,7 @@ export const POST = withAuth(async (
     'clientContactPerson',
     'clientReportDeadline',
     'budgetRange',
-    'follower',
+    'followerId',
     'clientRequirement',
     'estimatedQuantity'
   ]

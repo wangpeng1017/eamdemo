@@ -1,7 +1,7 @@
 'use client'
 
 import { useRouter, useSearchParams } from 'next/navigation'
-import { Button, message, Spin } from 'antd'
+import { Button, Spin } from 'antd'
 import { ArrowLeftOutlined } from '@ant-design/icons'
 import QuotationForm from '@/components/business/QuotationForm'
 import { showSuccess, showError } from '@/lib/confirm'
@@ -31,8 +31,7 @@ function CreateQuotationContent() {
             const json = await res.json()
             if (json.success && json.data) {
                 const data = json.data
-                // 构造初始值
-                // 1. 基本信息
+                // 基本信息
                 const values: any = {
                     clientId: data.clientId || data.client?.id,
                     clientContactPerson: data.clientContactPerson,
@@ -43,39 +42,26 @@ function CreateQuotationContent() {
                     consultationNo: data.consultationNo,
                     quotationDate: dayjs(),
                     validDays: 30,
-                    taxRate: 0.06,
                     discountAmount: 0,
-                    // ✅ 自动带入业务咨询的报告时间
                     clientReportDeadline: data.clientReportDeadline ? dayjs(data.clientReportDeadline) : undefined,
-                    // ✅ 自动带入跟单人
-                    follower: data.follower || undefined,
+                    followerId: data.followerId || undefined,
+                    // 服务方安排人默认=跟单人
+                    serviceContact: undefined,
                 }
 
-                // 2. 也是最重要的，样品检测项
-                // QuotationForm 会自动处理 sampleTestItems 的同步
-                // 但我们需要先请求到样品检测项数据传递给 Form
+                // 从咨询检测项直接生成报价明细
                 try {
                     const itemRes = await fetch(`/api/sample-test-item?bizType=consultation&bizId=${id}`)
                     const itemJson = await itemRes.json()
                     if (itemJson.success && itemJson.data) {
-                        values.sampleTestItems = itemJson.data.map((item: any) => ({
-                            // 复制过来就是新记录了，去掉ID，但保留原始信息供参考
-                            ...item,
-                            id: undefined, // 关键：这是新单据的检测项，不能带ID
-                            bizType: 'quotation', // 准备变为 quotation 类型
-                            bizId: undefined,
-                            assessorId: item.assessorId || item.currentAssessorId,
-                            assessorName: item.assessorName || item.currentAssessorName,
-                        }))
-
-                        // 自动从样品检测项生成报价明细
-                        values.items = values.sampleTestItems.map((item: any) => ({
+                        values.items = itemJson.data.map((item: any) => ({
                             sampleName: item.sampleName || '',
                             serviceItem: item.testItemName || '',
                             methodStandard: item.testStandard || '',
-                            quantity: item.quantity || 1,
+                            quantity: String(item.quantity || '1'),
                             unitPrice: 0,
                             totalPrice: 0,
+                            remark: '',
                         }))
                     }
                 } catch (e) {
@@ -102,27 +88,7 @@ function CreateQuotationContent() {
             const json = await res.json()
 
             if (res.ok && (json.success || json.id)) {
-                const quotationId = json.id || json.data?.id
                 showSuccess('创建报价单成功')
-
-                // 保存样品检测项
-                if (quotationId && values.sampleTestItems && values.sampleTestItems.length > 0) {
-                    try {
-                        await fetch('/api/sample-test-item', {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({
-                                bizType: 'quotation',
-                                bizId: quotationId,
-                                items: values.sampleTestItems,
-                            })
-                        })
-                    } catch (e) {
-                        console.error('Failed to save items', e)
-                        message.warning('报价单创建成功，但样品检测项保存可能不完整')
-                    }
-                }
-
                 router.push('/entrustment/quotation')
             } else {
                 showError(json.error?.message || '创建失败')

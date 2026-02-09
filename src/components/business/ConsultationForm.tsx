@@ -198,113 +198,95 @@ export default function ConsultationForm({
     }
 
     return (
-        <div style={{ maxWidth: 1200, margin: '0 auto', padding: '24px 0' }}>
+        <Card bordered={false}>
             <Form form={form} layout="vertical">
-                <Card title="基本信息" bordered={false} style={{ marginBottom: 24 }}>
-                    <Row gutter={24}>
-                        <Col span={12}>
-                            <Form.Item name="clientId" label="客户" rules={[{ required: true, message: '请选择客户' }]}>
-                                <Select
-                                    showSearch
-                                    allowClear
-                                    placeholder="选择客户"
-                                    loading={clientsLoading}
-                                    optionFilterProp="label"
-                                    options={clients.map(c => ({ value: c.id, label: c.name }))}
-                                    onChange={handleClientChange}
-                                />
-                            </Form.Item>
-                        </Col>
-                        <Col span={12}>
-                            <Form.Item name="clientContactPerson" label="联系人" rules={[{ required: true, message: '请输入联系人' }]}>
-                                <Input placeholder="请输入联系人姓名" />
-                            </Form.Item>
-                        </Col>
-                    </Row>
 
-                    <Row gutter={24}>
-                        <Col span={12}>
-                            <Form.Item name="clientReportDeadline" label="报告时间">
-                                <DatePicker style={{ width: '100%' }} />
-                            </Form.Item>
-                        </Col>
-                        <Col span={12}>
-                            <Form.Item name="follower" label="跟单人">
-                                <UserSelect placeholder="请选择跟单人" />
-                            </Form.Item>
-                        </Col>
-                    </Row>
+                {/* ========== ① 基本信息 ========== */}
+                <Divider orientation="left" orientationMargin="0">① 基本信息</Divider>
+                <Row gutter={16}>
+                    <Col span={12}>
+                        <Form.Item name="clientId" label="客户" rules={[{ required: true, message: '请选择客户' }]}>
+                            <Select
+                                showSearch
+                                allowClear
+                                placeholder="选择客户"
+                                loading={clientsLoading}
+                                optionFilterProp="label"
+                                options={clients.map(c => ({ value: c.id, label: c.name }))}
+                                onChange={handleClientChange}
+                            />
+                        </Form.Item>
+                    </Col>
+                    <Col span={12}>
+                        <Form.Item name="clientContactPerson" label="联系人" rules={[{ required: true, message: '请输入联系人' }]}>
+                            <Input placeholder="请输入联系人姓名" />
+                        </Form.Item>
+                    </Col>
+                </Row>
+                <Row gutter={16}>
+                    <Col span={8}>
+                        <Form.Item name="clientReportDeadline" label="报告时间">
+                            <DatePicker style={{ width: '100%' }} />
+                        </Form.Item>
+                    </Col>
+                    <Col span={8}>
+                        <Form.Item name="followerId" label="跟单人">
+                            <UserSelect placeholder="请选择跟单人" />
+                        </Form.Item>
+                    </Col>
+                    <Col span={8}>
+                        <Form.Item name="budgetRange" label="预算范围">
+                            <Input placeholder="例如：5000-10000元" />
+                        </Form.Item>
+                    </Col>
+                </Row>
 
-                    <Row gutter={24}>
-                        <Col span={12}>
-                            <Form.Item name="budgetRange" label="预算范围">
-                                <Input placeholder="例如：5000-10000元" />
-                            </Form.Item>
-                        </Col>
-                    </Row>
-
-                    {/* 隐藏字段，保留兼容性 */}
-                    <Form.Item name="testItems" label="检测项目（多选）" style={{ display: 'none' }}>
-                        <Select
-                            mode="multiple"
-                            options={testTemplates.map(t => ({ value: t.name, label: t.name }))}
-                        />
-                    </Form.Item>
-                </Card>
-
-                <Card title="检测样品" bordered={false} style={{ marginBottom: 24 }}>
-                    <SampleTestItemTable
-                        bizType="consultation"
-                        bizId={bizId || undefined}
-                        value={sampleTestItems}
-                        onChange={setSampleTestItems}
-                        showAssessment={true} // 始终显示评估功能
+                {/* 隐藏字段，保留兼容性 */}
+                <Form.Item name="testItems" label="检测项目（多选）" style={{ display: 'none' }}>
+                    <Select
+                        mode="multiple"
+                        options={testTemplates.map(t => ({ value: t.name, label: t.name }))}
                     />
-                </Card>
+                </Form.Item>
 
-                <Card title="附件信息" bordered={false} style={{ marginBottom: 24 }}>
-                    <Form.Item
-                        noStyle
-                        shouldUpdate
-                    >
-                        <div style={{ marginBottom: 8, color: '#666' }}>支持图片、PDF、Word、Excel，单个文件最大5MB，最多5个文件</div>
-                        <Upload
-                            action="/api/upload/consultation"
-                            listType="picture"
-                            fileList={fileList}
-                            maxCount={5}
-                            accept="image/*,.pdf,.doc,.docx,.xls,.xlsx"
-                            beforeUpload={beforeUpload}
-                            onChange={handleUploadChange}
-                            onRemove={handleRemove}
-                        >
-                            <Button icon={<PlusOutlined />}>上传附件</Button>
-                        </Upload>
+                {/* ========== ② 检测样品 ========== */}
+                <Divider orientation="left" orientationMargin="0">② 检测样品</Divider>
+                <SampleTestItemTable
+                    bizType="consultation"
+                    bizId={bizId || undefined}
+                    value={sampleTestItems}
+                    onChange={setSampleTestItems}
+                    showAssessment={true}
+                />
+
+                {/* ========== ③ 附件信息 ========== */}
+                <Divider orientation="left" orientationMargin="0">③ 附件信息</Divider>
+                <div style={{ marginBottom: 8, color: '#666' }}>支持图片、PDF、Word、Excel，单个文件最大5MB，最多5个文件</div>
+                <Upload
+                    action="/api/upload/consultation"
+                    listType="picture"
+                    fileList={fileList}
+                    maxCount={5}
+                    accept="image/*,.pdf,.doc,.docx,.xls,.xlsx"
+                    beforeUpload={beforeUpload}
+                    onChange={handleUploadChange}
+                    onRemove={handleRemove}
+                >
+                    <Button icon={<PlusOutlined />}>上传附件</Button>
+                </Upload>
+
+                {/* 底部操作栏 */}
+                <div style={{ marginTop: 24 }}>
+                    <Form.Item>
+                        <Space size="middle">
+                            <Button onClick={onCancel} size="large">取消</Button>
+                            <Button type="primary" onClick={handleSubmit} loading={loading} size="large">
+                                保存
+                            </Button>
+                        </Space>
                     </Form.Item>
-                </Card>
-
-                <div style={{
-                    position: 'fixed',
-                    bottom: 0,
-                    left: 0,
-                    right: 0,
-                    padding: '12px 24px',
-                    background: '#fff',
-                    borderTop: '1px solid #e8e8e8',
-                    textAlign: 'right',
-                    zIndex: 100,
-                    boxShadow: '0 -2px 8px rgba(0,0,0,0.08)'
-                }}>
-                    <Space>
-                        <Button onClick={onCancel}>取消</Button>
-                        <Button type="primary" onClick={handleSubmit} loading={loading}>
-                            保存
-                        </Button>
-                    </Space>
                 </div>
-                {/* 占位，防止底部按钮遮挡内容 */}
-                <div style={{ height: 60 }} />
             </Form>
-        </div>
+        </Card>
     )
 }

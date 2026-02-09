@@ -6,10 +6,12 @@
 
 'use client'
 
-import { useState, useEffect } from 'react'
+import React, { useState, useEffect, useRef, useCallback } from 'react'
 import { showSuccess, showError } from '@/lib/confirm'
 import { Table, Button, Space, Modal, Form, Input, InputNumber, DatePicker, Select, message, Row, Col, Divider, Popconfirm, Tag, Radio, Drawer, Tabs, Descriptions } from 'antd'
-import { PlusOutlined, EditOutlined, DeleteOutlined, MinusCircleOutlined, TeamOutlined, ShareAltOutlined, EyeOutlined, ArrowLeftOutlined } from '@ant-design/icons'
+import { PlusOutlined, EditOutlined, DeleteOutlined, MinusCircleOutlined, TeamOutlined, ShareAltOutlined, EyeOutlined, ArrowLeftOutlined, PrinterOutlined } from '@ant-design/icons'
+import EntrustmentPrint from '@/components/business/EntrustmentPrint'
+import type { PrintData } from '@/components/business/EntrustmentPrint'
 import { StatusTag } from '@/components/StatusTag'
 import type { ColumnsType } from 'antd/es/table'
 import dayjs from 'dayjs'
@@ -53,7 +55,8 @@ interface Entrustment {
   clientName: string | null
   contactPerson: string | null
   sampleDate: string | null
-  follower: string | null
+  followerId: string | null
+  followerUser?: { id: string; name: string } | null
   sampleName: string | null
   sampleModel: string | null
   sampleMaterial: string | null
@@ -85,7 +88,8 @@ interface Entrustment {
     id: string
     quotationNo: string
     clientReportDeadline: string | null
-    follower: string | null
+    followerId: string | null
+    followerUser?: { id: string; name: string } | null
     items?: QuotationItem[]
   }
 }
@@ -113,7 +117,8 @@ interface Quotation {
   id: string
   quotationNo: string
   clientReportDeadline: string | null
-  follower: string | null
+  followerId: string | null
+  followerUser?: { id: string; name: string } | null
   items?: QuotationItem[]
 }
 
@@ -156,6 +161,9 @@ export default function EntrustmentListPage() {
   const [total, setTotal] = useState(0)
   const [page, setPage] = useState(1)
   const [generatingLink, setGeneratingLink] = useState<string | null>(null)
+  const [printData, setPrintData] = useState<PrintData | null>(null)
+  const [showPrint, setShowPrint] = useState(false)
+  const printRef = React.useRef<HTMLDivElement>(null)
 
   // 查看抽屉状态
   const [viewDrawerOpen, setViewDrawerOpen] = useState(false)
@@ -323,6 +331,68 @@ export default function EntrustmentListPage() {
     }
   }
 
+  // 打印委托单
+  const handlePrint = async (record: Entrustment) => {
+    try {
+      // 获取完整委托单数据（含 sampleTestItem）
+      const [entRes, testRes] = await Promise.all([
+        fetch(`/api/entrustment/${record.id}`),
+        fetch(`/api/sample-test-item?bizType=entrustment&bizId=${record.id}`),
+      ])
+      const entJson = await entRes.json()
+      const testJson = await testRes.json()
+      const ent = entJson.data || entJson
+      const testItems = testJson.data || []
+
+      const pd: PrintData = {
+        entrustmentNo: ent.entrustmentNo,
+        clientName: ent.clientName || ent.client?.name || '',
+        contactPerson: ent.contactPerson || '',
+        contactPhone: ent.contactPhone || ent.client?.phone || '',
+        contactFax: ent.contactFax || '',
+        contactEmail: ent.contactEmail || '',
+        clientAddress: ent.clientAddress || '',
+        invoiceTitle: ent.invoiceTitle || '',
+        taxId: ent.taxId || '',
+        serviceScope: ent.serviceScope || '',
+        reportLanguage: ent.reportLanguage || 'cn',
+        urgencyLevel: ent.urgencyLevel || 'normal',
+        reportCopies: ent.reportCopies || 1,
+        reportDelivery: ent.reportDelivery || '',
+        acceptSubcontract: ent.acceptSubcontract !== false,
+        isSampleReturn: ent.isSampleReturn || false,
+        testType: ent.testType || '',
+        oemFactory: ent.oemFactory || '',
+        sampleDeliveryMethod: ent.sampleDeliveryMethod || '',
+        specialRequirements: ent.specialRequirements || '',
+        samples: (ent.samples || []).map((s: any) => ({
+          name: s.name || '',
+          partNo: s.partNo || '',
+          material: s.material || '',
+          color: s.color || '',
+          weight: s.weight || '',
+          supplier: s.supplier || '',
+          oem: s.oem || '',
+          quantity: s.quantity || 1,
+          sampleCondition: s.sampleCondition || '',
+          remark: s.remark || '',
+        })),
+        componentTests: testItems.filter((t: any) => t.testCategory !== 'material'),
+        materialTests: testItems.filter((t: any) => t.testCategory === 'material'),
+      }
+
+      setPrintData(pd)
+      setShowPrint(true)
+
+      // 延迟后触发打印
+      setTimeout(() => {
+        window.print()
+      }, 500)
+    } catch (e) {
+      console.error('打印准备失败:', e)
+      showErrorMsg('准备打印数据失败')
+    }
+  }
 
   const handleGenerateExternalLink = async (record: Entrustment) => {
     setGeneratingLink(record.id)
@@ -622,7 +692,7 @@ export default function EntrustmentListPage() {
       width: 90,
       render: (s: string) => <StatusTag type="entrustment" status={s} />
     },
-    { title: '跟单人', dataIndex: 'follower', width: 80 },
+    { title: '跟单人', dataIndex: ['followerUser', 'name'], width: 80 },
     {
       title: '关联合同',
       dataIndex: 'contractNo',
@@ -650,7 +720,8 @@ export default function EntrustmentListPage() {
       title: '操作',
       key: 'action',
       fixed: 'right',
-      width: 250,
+      onCell: () => ({ style: { whiteSpace: 'nowrap' as const } }),
+      onHeaderCell: () => ({ style: { whiteSpace: 'nowrap' as const } }),
       render: (_: any, record: Entrustment) => (
         <Space size="small" style={{ whiteSpace: 'nowrap' }}>
           {/* 业务按钮（带文字） */}
@@ -667,6 +738,7 @@ export default function EntrustmentListPage() {
           {/* 通用按钮（仅图标） */}
           <Button size="small" icon={<EyeOutlined />} onClick={() => handleView(record)} />
           <Button size="small" icon={<EditOutlined />} onClick={() => handleEdit(record)} />
+          <Button size="small" icon={<PrinterOutlined />} onClick={() => handlePrint(record)} title="打印" />
           <Popconfirm title="确认删除？" onConfirm={() => handleDelete(record.id)}>
             <Button size="small" danger icon={<DeleteOutlined />} />
           </Popconfirm>
@@ -691,7 +763,7 @@ export default function EntrustmentListPage() {
         columns={columns}
         dataSource={data}
         loading={loading}
-        scroll={{ x: 1200 }}
+        scroll={{ x: 1650 }}
         rowSelection={{
           selectedRowKeys,
           onChange: (keys, rows) => {
@@ -734,18 +806,55 @@ export default function EntrustmentListPage() {
                     <Descriptions title="委托信息" column={2} bordered size="small">
                       <Descriptions.Item label="委托编号">{currentEntrustment.entrustmentNo}</Descriptions.Item>
                       <Descriptions.Item label="合同编号">{currentEntrustment.contractNo || '-'}</Descriptions.Item>
+                      <Descriptions.Item label="报价单号">{(currentEntrustment as any).quotationNo || '-'}</Descriptions.Item>
                       <Descriptions.Item label="委托单位">
                         {currentEntrustment.client?.name || currentEntrustment.clientName || '-'}
                       </Descriptions.Item>
                       <Descriptions.Item label="联系人">{currentEntrustment.contactPerson || '-'}</Descriptions.Item>
-                      <Descriptions.Item label="联系电话">{currentEntrustment.client?.phone || '-'}</Descriptions.Item>
-                      <Descriptions.Item label="跟单人">{currentEntrustment.follower || '-'}</Descriptions.Item>
+                      <Descriptions.Item label="联系电话">{(currentEntrustment as any).contactPhone || currentEntrustment.client?.phone || '-'}</Descriptions.Item>
+                      <Descriptions.Item label="联系邮箱">{(currentEntrustment as any).contactEmail || '-'}</Descriptions.Item>
+                      <Descriptions.Item label="客户地址">{(currentEntrustment as any).clientAddress || '-'}</Descriptions.Item>
+                      <Descriptions.Item label="跟单人">{currentEntrustment.followerUser?.name || '-'}</Descriptions.Item>
+                      <Descriptions.Item label="报告截止日期">
+                        {(currentEntrustment as any).clientReportDeadline ? dayjs((currentEntrustment as any).clientReportDeadline).format('YYYY-MM-DD') : '-'}
+                      </Descriptions.Item>
                       <Descriptions.Item label="状态">
                         <StatusTag type="entrustment" status={currentEntrustment.status} />
                       </Descriptions.Item>
+                      <Descriptions.Item label="来源类型">{currentEntrustment.sourceType || '-'}</Descriptions.Item>
                       <Descriptions.Item label="创建时间">
                         {dayjs(currentEntrustment.createdAt).format('YYYY-MM-DD HH:mm:ss')}
                       </Descriptions.Item>
+                    </Descriptions>
+
+                    <Divider />
+
+                    <Descriptions title="服务信息" column={2} bordered size="small">
+                      <Descriptions.Item label="认证范围">{(currentEntrustment as any).serviceScope || '-'}</Descriptions.Item>
+                      <Descriptions.Item label="紧急程度">
+                        {{
+                          normal: '常规',
+                          express: '加急',
+                          double: '特急',
+                          urgent: '紧急',
+                        }[(currentEntrustment as any).urgencyLevel as string] || (currentEntrustment as any).urgencyLevel || '-'}
+                      </Descriptions.Item>
+                      <Descriptions.Item label="报告语言">
+                        {{
+                          cn: '中文',
+                          en: '英文',
+                          cn_en: '中英文',
+                        }[(currentEntrustment as any).reportLanguage as string] || (currentEntrustment as any).reportLanguage || '-'}
+                      </Descriptions.Item>
+                      <Descriptions.Item label="报告份数">{(currentEntrustment as any).reportCopies || 1}</Descriptions.Item>
+                      <Descriptions.Item label="报告交付方式">
+                        {{
+                          courier: '快递',
+                          electronic: '电子版',
+                          pickup: '自取',
+                        }[(currentEntrustment as any).reportDelivery as string] || (currentEntrustment as any).reportDelivery || '-'}
+                      </Descriptions.Item>
+                      <Descriptions.Item label="接受分包">{(currentEntrustment as any).acceptSubcontract !== false ? '是' : '否'}</Descriptions.Item>
                     </Descriptions>
 
                     <Divider />
@@ -766,11 +875,36 @@ export default function EntrustmentListPage() {
                       <Descriptions.Item label="样品退回">
                         {currentEntrustment.isSampleReturn ? '是' : '否'}
                       </Descriptions.Item>
-                      <Descriptions.Item label="来源类型">{currentEntrustment.sourceType || '-'}</Descriptions.Item>
                       <Descriptions.Item label="到样日期">
                         {currentEntrustment.sampleDate ? dayjs(currentEntrustment.sampleDate).format('YYYY-MM-DD') : '-'}
                       </Descriptions.Item>
+                      <Descriptions.Item label="送样方式">
+                        {{
+                          customer: '客户送样',
+                          logistics: '物流邮寄',
+                          agency: '代理取样',
+                          other: '其他',
+                        }[(currentEntrustment as any).sampleDeliveryMethod as string] || (currentEntrustment as any).sampleDeliveryMethod || '-'}
+                      </Descriptions.Item>
+                      <Descriptions.Item label="试验类型">
+                        {{
+                          DV: 'DV试验',
+                          PV: 'PV试验',
+                          DV_PV: 'DV+PV试验',
+                          pilot: '中试',
+                          annual: '年度检测',
+                        }[(currentEntrustment as any).testType as string] || (currentEntrustment as any).testType || '-'}
+                      </Descriptions.Item>
                     </Descriptions>
+
+                    {(currentEntrustment as any).specialRequirements && (
+                      <>
+                        <Divider />
+                        <Descriptions title="特殊要求" column={1} bordered size="small">
+                          <Descriptions.Item label="特殊要求">{(currentEntrustment as any).specialRequirements}</Descriptions.Item>
+                        </Descriptions>
+                      </>
+                    )}
                   </div>
                 )
               },
@@ -856,6 +990,13 @@ export default function EntrustmentListPage() {
           </Form.Item>
         </Form>
       </Modal>
+
+      {/* 打印隐藏区域 */}
+      {showPrint && printData && (
+        <div style={{ position: 'fixed', top: '-9999px', left: '-9999px' }}>
+          <EntrustmentPrint ref={printRef} data={printData} />
+        </div>
+      )}
     </div>
   )
 }

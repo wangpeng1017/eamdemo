@@ -19,7 +19,7 @@ export interface CreateEntrustmentFromQuotationParams {
   quotationId: string          // 报价单ID（必填）
   contactPerson?: string       // 联系人
   sampleDate?: Date | string  // 送样时间
-  follower?: string            // 跟进人
+  followerId?: string            // 跟进人用户ID
   remark?: string              // 备注
 }
 
@@ -99,7 +99,7 @@ export async function canCreateEntrustmentFromQuotation(
  *   quotationId: 'quotation-123',
  *   contactPerson: '张三',
  *   sampleDate: new Date(),
- *   follower: '李四'
+ *   followerId: 'user-789'
  * }, 'user-456')
  * ```
  */
@@ -145,7 +145,7 @@ export async function createEntrustmentFromQuotation(
       clientAddress: quotation.clientAddress,
       sampleDate: params.sampleDate ? new Date(params.sampleDate) : undefined,
       clientReportDeadline: quotation.clientReportDeadline, // 自动带入报告时间
-      follower: params.follower || quotation.follower,
+      followerId: params.followerId || quotation.followerId,
       sourceType: 'quotation',
       status: 'pending',
       remark: params.remark,

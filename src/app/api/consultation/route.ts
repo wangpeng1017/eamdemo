@@ -16,7 +16,7 @@ export const GET = withAuth(async (request: NextRequest, user) => {
   const page = parseInt(searchParams.get('page') || '1')
   const pageSize = parseInt(searchParams.get('pageSize') || '10')
   const status = searchParams.get('status')
-  const follower = searchParams.get('follower')
+  const followerId = searchParams.get('followerId')
   const keyword = searchParams.get('keyword')
   const startDate = searchParams.get('startDate')
   const endDate = searchParams.get('endDate')
@@ -24,7 +24,7 @@ export const GET = withAuth(async (request: NextRequest, user) => {
   const where: Record<string, unknown> = {}
 
   if (status) where.status = status
-  if (follower) where.follower = follower
+  if (followerId) where.followerId = followerId
   if (keyword) {
     where.OR = [
       { client: { name: { contains: keyword } } },
@@ -48,6 +48,7 @@ export const GET = withAuth(async (request: NextRequest, user) => {
         followUps: { orderBy: { date: 'desc' }, take: 1 },
         client: true,
         createdBy: { select: { name: true } },
+        followerUser: { select: { id: true, name: true } },
       },
     }),
     prisma.consultation.count({ where }),
@@ -154,7 +155,7 @@ export const POST = withAuth(async (request: NextRequest, user) => {
     'clientContactPerson',
     'clientReportDeadline',
     'budgetRange',
-    'follower',
+    'followerId',
     'feasibility',
     'feasibilityNote',
     'quotationId',

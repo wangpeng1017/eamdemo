@@ -29,7 +29,7 @@ export async function POST(
       quotationId: id,
       contactPerson: body?.contactPerson,
       sampleDate: body?.sampleDate,
-      follower: body?.follower,
+      followerId: body?.followerId,
       remark: body?.remark
     }, session.user.id)
 

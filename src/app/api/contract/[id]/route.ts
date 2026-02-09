@@ -10,10 +10,39 @@ export const GET = withAuth(async (
   const { id } = await context!.params
   const contract = await prisma.contract.findUnique({
     where: { id },
-    include: { client: true, quotation: true, items: true },
+    include: { client: true, quotation: true, items: { orderBy: { sort: 'asc' } }, createdBy: true },
   })
   if (!contract) notFound('合同不存在')
-  return success(contract)
+
+  // 字段映射：与列表API保持一致
+  const mapped = {
+    ...contract,
+    clientName: contract.partyACompany || contract.client?.name || null,
+    clientContact: contract.partyAContact || null,
+    clientPhone: contract.partyATel || contract.client?.phone || null,
+    clientAddress: contract.partyAAddress || contract.client?.address || null,
+    clientEmail: contract.partyAEmail || null,
+    amount: contract.contractAmount ? Number(contract.contractAmount) : null,
+    prepaymentAmount: contract.advancePaymentAmount ? Number(contract.advancePaymentAmount) : null,
+    prepaymentRatio: contract.hasAdvancePayment && contract.contractAmount && contract.advancePaymentAmount
+      ? Math.round(Number(contract.advancePaymentAmount) / Number(contract.contractAmount) * 100)
+      : null,
+    quotationNo: contract.quotation?.quotationNo || null,
+    startDate: contract.effectiveDate,
+    endDate: contract.expiryDate,
+    followerId: contract.followerId || null,
+    // 合同条款字段映射
+    paymentTerms: contract.termsPaymentTerms,
+    deliveryTerms: contract.termsDeliveryTerms,
+    qualityTerms: contract.termsQualityTerms,
+    confidentialityTerms: contract.termsConfidentialityTerms,
+    breachTerms: contract.termsLiabilityTerms,
+    disputeTerms: contract.termsDisputeResolution,
+    clientReportDeadline: contract.clientReportDeadline,
+    items: contract.items || [],
+  }
+
+  return success(mapped)
 })
 
 export const PUT = withAuth(async (

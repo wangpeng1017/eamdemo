@@ -16,7 +16,7 @@ export const GET = withErrorHandler(async (request: NextRequest) => {
   const pageSize = parseInt(searchParams.get('pageSize') || '10')
   const status = searchParams.get('status')
   const keyword = searchParams.get('keyword')
-  const follower = searchParams.get('follower')
+  const followerId = searchParams.get('followerId')
   const startDate = searchParams.get('startDate')
   const endDate = searchParams.get('endDate')
   const sourceType = searchParams.get('sourceType')
@@ -28,8 +28,8 @@ export const GET = withErrorHandler(async (request: NextRequest) => {
     where.status = status
   }
 
-  if (follower) {
-    where.follower = follower
+  if (followerId) {
+    where.followerId = followerId
   }
 
   if (sourceType) {
@@ -87,7 +87,7 @@ export const GET = withErrorHandler(async (request: NextRequest) => {
             id: true,
             quotationNo: true,
             clientReportDeadline: true,
-            follower: true,
+            followerId: true,
             items: {
               select: {
                 sampleName: true,
@@ -118,8 +118,15 @@ export const GET = withErrorHandler(async (request: NextRequest) => {
             type: true,
             specification: true,
             material: true,
+            partNo: true,
+            color: true,
+            weight: true,
+            supplier: true,
+            oem: true,
+            sampleCondition: true,
             quantity: true,
             status: true,
+            remark: true,
           },
         },
         createdBy: {
@@ -151,14 +158,11 @@ export const GET = withErrorHandler(async (request: NextRequest) => {
       }
     }
 
-    // 2. 如果委托单本身没有跟单人，尝试从报价单获取 (合同暂无跟单人字段，或者需要确认) - Quotation has follower
-    if (!item.follower) {
-      if (item.quotation?.follower) {
-        item.follower = item.quotation.follower
+    // 2. 如果委托单本身没有跟单人，尝试从报价单获取
+    if (!item.followerId) {
+      if (item.quotation?.followerId) {
+        item.followerId = item.quotation.followerId
       }
-      // Contract model might not have follower directly exposed or named differently, checking schema...
-      // Schema check: Quotation has `follower`. Contract does NOT have `follower` based on previous schema view (lines 359-438).
-      // So only fallback to Quotation for follower.
     }
 
 
@@ -243,16 +247,16 @@ export const POST = withErrorHandler(async (request: NextRequest) => {
 
   // 继承字段：报告截止日期和跟单人
   let inheritedDeadline = data.clientReportDeadline ? new Date(data.clientReportDeadline) : null
-  let inheritedFollower = data.follower || null
+  let inheritedFollowerId = data.followerId || null
 
   // 如果从报价单生成
-  if (data.quotationId && (!inheritedDeadline || !inheritedFollower)) {
+  if (data.quotationId && (!inheritedDeadline || !inheritedFollowerId)) {
     const quotation = await prisma.quotation.findUnique({
       where: { id: data.quotationId },
-      select: { clientReportDeadline: true, follower: true, clientContactPerson: true, clientPhone: true, clientEmail: true, clientAddress: true }
+      select: { clientReportDeadline: true, followerId: true, clientContactPerson: true, clientPhone: true, clientEmail: true, clientAddress: true }
     })
     if (!inheritedDeadline && quotation?.clientReportDeadline) inheritedDeadline = quotation.clientReportDeadline
-    if (!inheritedFollower && quotation?.follower) inheritedFollower = quotation.follower
+    if (!inheritedFollowerId && quotation?.followerId) inheritedFollowerId = quotation.followerId
     data.contactPerson = data.contactPerson || quotation?.clientContactPerson
     data.contactPhone = data.contactPhone || quotation?.clientPhone
     data.contactEmail = data.contactEmail || quotation?.clientEmail
@@ -260,20 +264,33 @@ export const POST = withErrorHandler(async (request: NextRequest) => {
   }
 
   // 如果从合同生成
-  if (data.contractNo && (!inheritedDeadline || !inheritedFollower)) {
+  if (data.contractNo && (!inheritedDeadline || !inheritedFollowerId)) {
     const contract = await prisma.contract.findUnique({
       where: { contractNo: data.contractNo },
-      select: { clientReportDeadline: true, follower: true, partyAContact: true, partyATel: true, partyAEmail: true, partyAAddress: true }
+      select: { clientReportDeadline: true, followerId: true, partyAContact: true, partyATel: true, partyAEmail: true, partyAAddress: true }
     })
     if (!inheritedDeadline && contract?.clientReportDeadline) inheritedDeadline = contract.clientReportDeadline
-    if (!inheritedFollower && contract?.follower) inheritedFollower = contract.follower
+    if (!inheritedFollowerId && contract?.followerId) inheritedFollowerId = contract.followerId
     data.contactPerson = data.contactPerson || contract?.partyAContact
     data.contactPhone = data.contactPhone || contract?.partyATel
     data.contactEmail = data.contactEmail || contract?.partyAEmail
     data.clientAddress = data.clientAddress || contract?.partyAAddress
   }
 
-  // 只提取 schema 中存在的字段（移除sampleName等不存在的字段）
+  // 从 Client 自动带出开票信息
+  if (data.clientId) {
+    const clientInfo = await prisma.client.findUnique({
+      where: { id: data.clientId },
+      select: { fax: true, creditCode: true, invoiceTitle: true, name: true }
+    })
+    if (clientInfo) {
+      data.contactFax = data.contactFax || clientInfo.fax || null
+      data.invoiceTitle = data.invoiceTitle || clientInfo.invoiceTitle || clientInfo.name || null
+      data.taxId = data.taxId || clientInfo.creditCode || null
+    }
+  }
+
+  // 提取 schema 中存在的字段
   const createData: any = {
     entrustmentNo,
     contractNo: data.contractNo || null,
@@ -281,13 +298,29 @@ export const POST = withErrorHandler(async (request: NextRequest) => {
     client: data.clientId ? { connect: { id: data.clientId } } : undefined,
     contactPerson: data.contactPerson || null,
     contactPhone: data.contactPhone || null,
+    contactFax: data.contactFax || null,
     contactEmail: data.contactEmail || null,
     clientAddress: data.clientAddress || null,
     sampleDate: data.sampleDate ? new Date(data.sampleDate) : new Date(),
-    // 优先使用手动提供的值，否则继承
     clientReportDeadline: inheritedDeadline,
-    follower: inheritedFollower,
+    followerId: inheritedFollowerId,
     isSampleReturn: data.isSampleReturn || false,
+    // 开票信息
+    invoiceTitle: data.invoiceTitle || null,
+    taxId: data.taxId || null,
+    // 服务项目
+    serviceScope: data.serviceScope || null,
+    reportLanguage: data.reportLanguage || null,
+    urgencyLevel: data.urgencyLevel || 'normal',
+    reportCopies: data.reportCopies || 1,
+    reportDelivery: data.reportDelivery || null,
+    acceptSubcontract: data.acceptSubcontract !== false,
+    // 试验信息
+    testType: data.testType || null,
+    oemFactory: data.oemFactory || null,
+    sampleDeliveryMethod: data.sampleDeliveryMethod || null,
+    // 特殊要求
+    specialRequirements: data.specialRequirements || null,
     sourceType: data.sourceType || null,
     status: data.status || 'pending',
     remark: data.remark || null,
@@ -331,11 +364,18 @@ export const POST = withErrorHandler(async (request: NextRequest) => {
           sampleNo,
           entrustmentId: entrustment.id,
           name: sample.name,
-          type: sample.model,
-          specification: sample.model,
+          type: sample.type || sample.model,
+          specification: sample.specification || sample.model,
           material: sample.material,
+          partNo: sample.partNo || null,
+          color: sample.color || null,
+          weight: sample.weight || null,
+          supplier: sample.supplier || null,
+          oem: sample.oem || null,
+          sampleCondition: sample.sampleCondition || null,
           quantity: String(sample.quantity || 1),
           status: 'received',
+          remark: sample.remark || null,
           createdById: session?.user?.id,
         }
       })
