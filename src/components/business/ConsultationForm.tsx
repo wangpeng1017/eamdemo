@@ -225,18 +225,13 @@ export default function ConsultationForm({
                 </Row>
                 <Row gutter={16}>
                     <Col span={8}>
-                        <Form.Item name="clientReportDeadline" label="报告时间">
+                        <Form.Item name="clientReportDeadline" label="报告时间" rules={[{ required: true, message: '请选择报告时间' }]}>
                             <DatePicker style={{ width: '100%' }} />
                         </Form.Item>
                     </Col>
                     <Col span={8}>
-                        <Form.Item name="followerId" label="跟单人">
+                        <Form.Item name="followerId" label="跟单人" rules={[{ required: true, message: '请选择跟单人' }]}>
                             <UserSelect placeholder="请选择跟单人" />
-                        </Form.Item>
-                    </Col>
-                    <Col span={8}>
-                        <Form.Item name="budgetRange" label="预算范围">
-                            <Input placeholder="例如：5000-10000元" />
                         </Form.Item>
                     </Col>
                 </Row>
