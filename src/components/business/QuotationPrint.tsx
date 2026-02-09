@@ -219,8 +219,8 @@ export default function QuotationPrint({ data }: QuotationPrintProps) {
                                 alt="报价专用章"
                                 style={{
                                     position: 'absolute',
-                                    right: 20,
-                                    top: 0,
+                                    left: 0,
+                                    bottom: 0,
                                     width: 120,
                                     height: 'auto',
                                     opacity: 0.9,
