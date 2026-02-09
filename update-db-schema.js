@@ -626,6 +626,19 @@ async function main() {
     try {
         await prisma.$executeRawUnsafe(`ALTER TABLE biz_test_report ADD CONSTRAINT biz_test_report_clientReportId_fkey FOREIGN KEY (clientReportId) REFERENCES biz_client_report(id) ON DELETE SET NULL ON UPDATE CASCADE;`)
     } catch (e) { console.log('ℹ️ FK relation check.'); }
+
+    // 6. 添加 followerId 到 biz_consultation（跟单人）
+    try {
+        console.log('Adding followerId column to biz_consultation...')
+        await prisma.$executeRawUnsafe(`ALTER TABLE biz_consultation ADD COLUMN followerId VARCHAR(191) NULL;`)
+        console.log('✅ followerId column added to biz_consultation.')
+    } catch (e) {
+        if (e.message.includes('Duplicate column name')) {
+            console.log('ℹ️ followerId already exists in biz_consultation.')
+        } else {
+            console.error('❌ Error:', e.message)
+        }
+    }
 }
 
 main()
