@@ -2,8 +2,8 @@
 
 import { useState, useEffect } from 'react'
 import { showSuccess, showError } from '@/lib/confirm'
-import { Table, Button, Space, Tag, Modal, Select, message, Card, Statistic, Row, Col, Form, Input, Divider } from 'antd'
-import { PlusOutlined, EyeOutlined, FileTextOutlined } from '@ant-design/icons'
+import { Table, Button, Space, Tag, Modal, Select, Card, Statistic, Row, Col, Form, Input, Divider, Drawer, Descriptions, Tabs, Timeline, Popconfirm } from 'antd'
+import { PlusOutlined, EyeOutlined, EditOutlined, PrinterOutlined, SendOutlined, DeleteOutlined, FileTextOutlined } from '@ant-design/icons'
 import type { ColumnsType } from 'antd/es/table'
 import dayjs from 'dayjs'
 import { useRouter } from 'next/navigation'
@@ -18,7 +18,17 @@ interface ClientReport {
     overallConclusion: string | null
     status: string
     preparer: string | null
+    reviewer: string | null
+    approver: string | null
+    approvalFlow: ApprovalRecord[]
     createdAt: string
+}
+
+interface ApprovalRecord {
+    action: string
+    operator: string
+    comment: string
+    timestamp: string
 }
 
 interface Entrustment {
@@ -49,6 +59,14 @@ const statusMap: Record<string, { text: string; color: string }> = {
     issued: { text: '已发布', color: 'cyan' },
 }
 
+const actionTextMap: Record<string, string> = {
+    submit: '提交审核',
+    review: '审核通过',
+    approve: '批准通过',
+    issue: '发放报告',
+    reject: '驳回',
+}
+
 export default function ClientReportGeneratePage() {
     const router = useRouter()
     const [data, setData] = useState<ClientReport[]>([])
@@ -64,6 +82,15 @@ export default function ClientReportGeneratePage() {
     const [selectedTaskIds, setSelectedTaskIds] = useState<string[]>([])
     const [generating, setGenerating] = useState(false)
     const [form] = Form.useForm()
+
+    // 查看抽屉
+    const [viewDrawerOpen, setViewDrawerOpen] = useState(false)
+    const [currentReport, setCurrentReport] = useState<ClientReport | null>(null)
+
+    // 提交审批弹窗
+    const [submitModalOpen, setSubmitModalOpen] = useState(false)
+    const [submitForm] = Form.useForm()
+    const [submitting, setSubmitting] = useState(false)
 
     const fetchData = async (p = page) => {
         setLoading(true)
@@ -89,7 +116,6 @@ export default function ClientReportGeneratePage() {
             const res = await fetch('/api/entrustment?pageSize=100')
             const json = await res.json()
             const list = json.data?.list || json.list || []
-            // 只显示有已完成任务的委托单
             const filtered = list.filter((e: Entrustment) =>
                 e.testTasks?.some(t => t.status === 'completed')
             )
@@ -116,12 +142,12 @@ export default function ClientReportGeneratePage() {
         fetchTemplates()
     }, [page])
 
+    // 生成报告
     const handleGenerate = () => {
         fetchEntrustments()
         setSelectedEntrustment(null)
         setSelectedTaskIds([])
         form.resetFields()
-        // 默认选中第一个模板
         if (templates.length > 0) {
             form.setFieldValue('templateId', templates[0].id)
         }
@@ -161,7 +187,6 @@ export default function ClientReportGeneratePage() {
                     projectName: values.projectName,
                     sampleName: values.sampleName,
                     overallConclusion: values.overallConclusion,
-                    // 构造封底数据
                     backCoverData: values.backCoverContent ? { content: values.backCoverContent } : null
                 })
             })
@@ -182,19 +207,83 @@ export default function ClientReportGeneratePage() {
         }
     }
 
-    const handleView = (id: string) => {
-        router.push(`/report/client/${id}`)
+    // 查看详情（打开抽屉）
+    const handleView = (record: ClientReport) => {
+        setCurrentReport(record)
+        setViewDrawerOpen(true)
+    }
+
+    // 编辑
+    const handleEdit = (record: ClientReport) => {
+        router.push(`/report/client/edit/${record.id}`)
+    }
+
+    // 打印
+    const handlePrint = (record: ClientReport) => {
+        window.open(`/report/client/${record.id}`, '_blank')
+    }
+
+    // 提交审批
+    const handleSubmitApproval = (record: ClientReport) => {
+        setCurrentReport(record)
+        submitForm.resetFields()
+        setSubmitModalOpen(true)
+    }
+
+    const handleSubmitConfirm = async () => {
+        if (!currentReport) return
+        setSubmitting(true)
+        try {
+            const values = await submitForm.validateFields()
+            const res = await fetch(`/api/report/client/${currentReport.id}`, {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    action: 'submit',
+                    operator: values.operator,
+                    comment: values.comment,
+                }),
+            })
+            const json = await res.json()
+            if (json.success) {
+                showSuccess('提交审批成功')
+                setSubmitModalOpen(false)
+                fetchData()
+            } else {
+                showError(json.error?.message || '提交审批失败')
+            }
+        } catch (error: any) {
+            showError(error.message || '提交审批失败')
+        } finally {
+            setSubmitting(false)
+        }
+    }
+
+    // 删除
+    const handleDelete = async (id: string) => {
+        try {
+            const res = await fetch(`/api/report/client/${id}`, { method: 'DELETE' })
+            const json = await res.json()
+            if (json.success) {
+                showSuccess('删除成功')
+                fetchData()
+            } else {
+                showError(json.error?.message || '删除失败')
+            }
+        } catch (error) {
+            showError('删除失败')
+        }
     }
 
     const columns: ColumnsType<ClientReport> = [
         { title: '报告编号', dataIndex: 'reportNo', width: 150 },
-        { title: '项目名称', dataIndex: 'projectName', width: 150 },
-        { title: '客户名称', dataIndex: 'clientName', width: 150 },
-        { title: '样品名称', dataIndex: 'sampleName', width: 150 },
+        { title: '项目名称', dataIndex: 'projectName', width: 150, ellipsis: true },
+        { title: '客户名称', dataIndex: 'clientName', width: 150, ellipsis: true },
+        { title: '样品名称', dataIndex: 'sampleName', width: 120, ellipsis: true },
         {
             title: '包含任务',
             dataIndex: 'taskReportNos',
-            width: 150,
+            width: 100,
             render: (v: string) => {
                 if (!v) return '-'
                 try {
@@ -208,10 +297,10 @@ export default function ClientReportGeneratePage() {
         {
             title: '状态',
             dataIndex: 'status',
-            width: 100,
+            width: 90,
             render: (s: string) => <Tag color={statusMap[s]?.color}>{statusMap[s]?.text}</Tag>
         },
-        { title: '编制人', dataIndex: 'preparer', width: 100 },
+        { title: '编制人', dataIndex: 'preparer', width: 80 },
         {
             title: '创建时间',
             dataIndex: 'createdAt',
@@ -219,16 +308,30 @@ export default function ClientReportGeneratePage() {
             render: (t: string) => dayjs(t).format('YYYY-MM-DD HH:mm')
         },
         {
-            title: '操作', fixed: 'right',
+            title: '操作',
+            fixed: 'right',
+            width: 280,
+            onHeaderCell: () => ({ style: { whiteSpace: 'nowrap' as const } }),
             render: (_, record) => (
-                <Button
-                    size="small"
-                    type="link"
-                    icon={<EyeOutlined />}
-                    onClick={() => handleView(record.id)}
-                >
-                    查看详情
-                </Button>
+                <Space size="small" style={{ whiteSpace: 'nowrap' }}>
+                    <Button size="small" icon={<EyeOutlined />} onClick={() => handleView(record)} title="查看" />
+                    {record.status === 'draft' && (
+                        <Button size="small" icon={<EditOutlined />} onClick={() => handleEdit(record)} title="编辑" />
+                    )}
+                    {record.status === 'draft' && (
+                        <Button size="small" type="primary" ghost icon={<SendOutlined />} onClick={() => handleSubmitApproval(record)}>
+                            提交
+                        </Button>
+                    )}
+                    <Button size="small" icon={<PrinterOutlined />} onClick={() => handlePrint(record)}>
+                        打印
+                    </Button>
+                    {record.status === 'draft' && (
+                        <Popconfirm title="确认删除该报告?" onConfirm={() => handleDelete(record.id)}>
+                            <Button size="small" danger icon={<DeleteOutlined />} />
+                        </Popconfirm>
+                    )}
+                </Space>
             )
         }
     ]
@@ -239,21 +342,19 @@ export default function ClientReportGeneratePage() {
     return (
         <div className="p-6">
             <div className="mb-4">
-                <h1 className="text-2xl font-bold mb-4">客户报告生成</h1>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+                    <h2 style={{ margin: 0 }}>客户报告生成</h2>
+                    <Button type="primary" icon={<PlusOutlined />} onClick={handleGenerate}>
+                        生成客户报告
+                    </Button>
+                </div>
                 <Row gutter={16} className="mb-4">
                     <Col span={6}>
-                        <Card>
+                        <Card size="small">
                             <Statistic title="客户报告总数" value={total} prefix={<FileTextOutlined />} />
                         </Card>
                     </Col>
                 </Row>
-            </div>
-
-            <div className="mb-4 flex justify-between">
-                <div></div>
-                <Button type="primary" icon={<PlusOutlined />} onClick={handleGenerate}>
-                    生成客户报告
-                </Button>
             </div>
 
             <Table
@@ -261,6 +362,7 @@ export default function ClientReportGeneratePage() {
                 columns={columns}
                 dataSource={data}
                 loading={loading}
+                scroll={{ x: 1200 }}
                 pagination={{
                     current: page,
                     pageSize: 10,
@@ -270,6 +372,75 @@ export default function ClientReportGeneratePage() {
                     showTotal: (total) => `共 ${total} 条`
                 }}
             />
+
+            {/* 查看详情抽屉 */}
+            <Drawer
+                title="客户报告详情"
+                placement="right"
+                width={700}
+                open={viewDrawerOpen}
+                onClose={() => setViewDrawerOpen(false)}
+            >
+                {currentReport && (
+                    <Tabs
+                        defaultActiveKey="basic"
+                        items={[
+                            {
+                                key: 'basic',
+                                label: '基本信息',
+                                children: (
+                                    <Descriptions column={2} bordered size="small">
+                                        <Descriptions.Item label="报告编号">{currentReport.reportNo}</Descriptions.Item>
+                                        <Descriptions.Item label="状态">
+                                            <Tag color={statusMap[currentReport.status]?.color}>
+                                                {statusMap[currentReport.status]?.text}
+                                            </Tag>
+                                        </Descriptions.Item>
+                                        <Descriptions.Item label="客户名称">{currentReport.clientName}</Descriptions.Item>
+                                        <Descriptions.Item label="项目名称">{currentReport.projectName || '-'}</Descriptions.Item>
+                                        <Descriptions.Item label="样品名称">{currentReport.sampleName}</Descriptions.Item>
+                                        <Descriptions.Item label="编制人">{currentReport.preparer || '-'}</Descriptions.Item>
+                                        <Descriptions.Item label="审核人">{currentReport.reviewer || '-'}</Descriptions.Item>
+                                        <Descriptions.Item label="批准人">{currentReport.approver || '-'}</Descriptions.Item>
+                                        <Descriptions.Item label="总体结论" span={2}>
+                                            {currentReport.overallConclusion || '-'}
+                                        </Descriptions.Item>
+                                        <Descriptions.Item label="创建时间" span={2}>
+                                            {dayjs(currentReport.createdAt).format('YYYY-MM-DD HH:mm:ss')}
+                                        </Descriptions.Item>
+                                    </Descriptions>
+                                )
+                            },
+                            {
+                                key: 'approval',
+                                label: '审批记录',
+                                children: (
+                                    <div>
+                                        {currentReport.approvalFlow?.length > 0 ? (
+                                            <Timeline
+                                                items={currentReport.approvalFlow.map(item => ({
+                                                    color: item.action === 'reject' ? 'red' : 'green',
+                                                    children: (
+                                                        <div>
+                                                            <strong>{actionTextMap[item.action] || item.action}</strong>
+                                                            <span style={{ marginLeft: 8, color: '#999' }}>
+                                                                {item.operator} - {dayjs(item.timestamp).format('YYYY-MM-DD HH:mm')}
+                                                            </span>
+                                                            {item.comment && <div style={{ color: '#666' }}>{item.comment}</div>}
+                                                        </div>
+                                                    ),
+                                                }))}
+                                            />
+                                        ) : (
+                                            <div style={{ textAlign: 'center', color: '#999', padding: 40 }}>暂无审批记录</div>
+                                        )}
+                                    </div>
+                                )
+                            }
+                        ]}
+                    />
+                )}
+            </Drawer>
 
             {/* 生成客户报告弹窗 */}
             <Modal
@@ -349,6 +520,26 @@ export default function ClientReportGeneratePage() {
                         )}
                     </Form>
                 </div>
+            </Modal>
+
+            {/* 提交审批弹窗 */}
+            <Modal
+                title="提交审批"
+                open={submitModalOpen}
+                onOk={handleSubmitConfirm}
+                onCancel={() => setSubmitModalOpen(false)}
+                confirmLoading={submitting}
+                okText="确认提交"
+                cancelText="取消"
+            >
+                <Form form={submitForm} layout="vertical">
+                    <Form.Item name="operator" label="操作人">
+                        <Input placeholder="请填写操作人" />
+                    </Form.Item>
+                    <Form.Item name="comment" label="审批意见">
+                        <Input.TextArea rows={3} placeholder="选填，可以填写审批意见" />
+                    </Form.Item>
+                </Form>
             </Modal>
         </div>
     )
