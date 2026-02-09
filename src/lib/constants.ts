@@ -410,7 +410,6 @@ export const MENU_ITEMS = {
     icon: 'ExperimentOutlined',
     children: [
       { key: 'data-entry', label: '数据录入', path: '/test/data-entry' },
-      { key: 'report', label: '检测报告', path: '/test/report' },
     ],
   },
   report: {

@@ -9,12 +9,12 @@ import dynamic from 'next/dynamic'
 
 // ⚠️ 关键修复：禁用 SSR，避免 Fortune-sheet 在服务端执行 DOM 操作
 const DataSheet = dynamic(() => import('@/components/DataSheet').then(mod => ({ default: mod.default })), {
-    ssr: false,
-    loading: () => (
-        <div className="flex h-96 items-center justify-center">
-            <Spin size="large" tip="正在加载表格编辑器..." />
-        </div>
-    )
+  ssr: false,
+  loading: () => (
+    <div className="flex h-96 items-center justify-center">
+      <Spin size="large" tip="正在加载表格编辑器..." />
+    </div>
+  )
 })
 
 // 工具函数直接导入（不涉及 SSR）
@@ -206,9 +206,9 @@ export default function DataEntryPage() {
 
       if (res.ok && json.success) {
         showSuccess('报告生成成功')
-        // 跳转到报告查看页面
+        // 跳转到报告管理列表页
         setTimeout(() => {
-          window.open(`/test/report/${json.data.id}`, '_blank')
+          router.push('/report/task-generate')
         }, 500)
       } else {
         showError(json.error || '报告生成失败')

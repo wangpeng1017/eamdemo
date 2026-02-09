@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react"
 import { showSuccess, showError } from '@/lib/confirm'
 import { Table, Button, Space, Tag, Modal, Form, Select, message, Card, Statistic, DatePicker } from "antd"
-import { PlayCircleOutlined, CheckCircleOutlined, ClockCircleOutlined, SwapOutlined, EditOutlined } from "@ant-design/icons"
+import { PlayCircleOutlined, CheckCircleOutlined, ClockCircleOutlined, SwapOutlined, EditOutlined, FileTextOutlined } from "@ant-design/icons"
 import type { ColumnsType } from "antd/es/table"
 import dayjs from "dayjs"
 import { useRouter } from "next/navigation"
@@ -50,6 +50,7 @@ export default function MyTasksPage() {
   const [currentTask, setCurrentTask] = useState<Task | null>(null)
   const [transferForm] = Form.useForm()
   const [startForm] = Form.useForm() // 新增：开始任务表单
+  const [generating, setGenerating] = useState(false)
 
   const fetchData = async (p = page) => {
     setLoading(true)
@@ -175,6 +176,29 @@ export default function MyTasksPage() {
     router.push(`/task/data/${task.id}`)
   }
 
+  // 生成报告
+  const handleGenerateReport = async (task: Task) => {
+    setGenerating(true)
+    try {
+      const res = await fetch('/api/report/generate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ taskId: task.id }),
+      })
+      const json = await res.json()
+      if (res.ok && json.success) {
+        showSuccess('报告生成成功')
+        router.push('/report/task-generate')
+      } else {
+        showError(json.error || '报告生成失败')
+      }
+    } catch (error) {
+      showError('报告生成失败')
+    } finally {
+      setGenerating(false)
+    }
+  }
+
   const columns: ColumnsType<Task> = [
     { title: "任务编号", dataIndex: "taskNo", width: 130 },
     { title: "样品名称", render: (_, r) => r.sample?.name || "-", width: 150 },
@@ -221,11 +245,16 @@ export default function MyTasksPage() {
               查看数据
             </Button>
           )}
-          {/* 已完成状态：显示"查看数据"按钮 */}
+          {/* 已完成状态：显示"查看数据"和"生成报告"按钮 */}
           {record.status === "completed" && (
-            <Button size="small" icon={<EditOutlined />} onClick={() => handleDataEntry(record)}>
-              查看数据
-            </Button>
+            <>
+              <Button size="small" icon={<EditOutlined />} onClick={() => handleDataEntry(record)}>
+                查看数据
+              </Button>
+              <Button size="small" type="primary" icon={<FileTextOutlined />} loading={generating} onClick={() => handleGenerateReport(record)}>
+                生成报告
+              </Button>
+            </>
           )}
           {/* 非完成状态：显示"转交"按钮 */}
           {record.status !== "completed" && record.status !== "pending_review" && (
