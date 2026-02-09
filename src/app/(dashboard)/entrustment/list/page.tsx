@@ -545,7 +545,13 @@ export default function EntrustmentListPage() {
       width: 100,
       render: (s: string, record: EntrustmentProject) => {
         if (s === 'assigned') {
-          return <Tag color="processing">已分配: {record.assignTo}</Tag>
+          // 兼容旧数据：assignTo 可能是手机号，需查找对应人名
+          let assignName = record.assignTo || ''
+          if (/^\d+$/.test(assignName)) {
+            const found = users.find(u => u.phone === assignName)
+            if (found) assignName = found.name
+          }
+          return <Tag color="processing">已分配: {assignName}</Tag>
         }
         if (s === 'subcontracted') {
           return <Tag color="warning">已分包: {record.subcontractor}</Tag>
