@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useMemo, useCallback } from 'react'
 import { showInfo } from '@/lib/confirm'
-import { Layout, Menu, Avatar, Dropdown, Button, theme, message } from 'antd'
+import { Layout, Menu, Avatar, Dropdown, Button, theme, message, Modal, Form, Input } from 'antd'
 import {
   DashboardOutlined,
   FileTextOutlined,
@@ -19,6 +19,7 @@ import {
   TeamOutlined,
   DatabaseOutlined,
   CheckCircleOutlined,
+  LockOutlined,
 } from '@ant-design/icons'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
@@ -198,8 +199,40 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       .filter(Boolean) as MenuItem[]
   }, [userPermissions, isAdmin, permissionsLoaded])
 
+  const [passwordModalOpen, setPasswordModalOpen] = useState(false)
+  const [passwordLoading, setPasswordLoading] = useState(false)
+  const [passwordForm] = Form.useForm()
+
+  // 修改密码
+  const handleChangePassword = async () => {
+    const values = await passwordForm.validateFields()
+    setPasswordLoading(true)
+    try {
+      const res = await fetch('/api/auth/change-password', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          oldPassword: values.oldPassword,
+          newPassword: values.newPassword,
+        }),
+      })
+      const data = await res.json()
+      if (data.success !== false) {
+        Modal.success({ title: '修改成功', content: '密码已更新，下次登录请使用新密码' })
+        setPasswordModalOpen(false)
+        passwordForm.resetFields()
+      } else {
+        Modal.error({ title: '修改失败', content: data.message || data.error?.message || '请检查原密码是否正确' })
+      }
+    } catch {
+      Modal.error({ title: '修改失败', content: '网络错误，请重试' })
+    } finally {
+      setPasswordLoading(false)
+    }
+  }
+
   const userMenuItems = [
-    { key: 'profile', icon: <UserOutlined />, label: '个人中心' },
+    { key: 'change-password', icon: <LockOutlined />, label: '修改密码' },
     { type: 'divider' as const },
     {
       key: 'logout',
@@ -293,9 +326,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           <Dropdown menu={{
             items: userMenuItems,
             onClick: ({ key }) => {
-              if (key === 'profile') {
-                // TODO: Implement profile page
-                showInfo('个人中心功能开发中')
+              if (key === 'change-password') {
+                setPasswordModalOpen(true)
               }
             }
           }} placement="bottomRight">
@@ -315,6 +347,55 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           {children}
         </Content>
       </Layout>
+
+      {/* 修改密码弹窗 */}
+      <Modal
+        title="修改密码"
+        open={passwordModalOpen}
+        onOk={handleChangePassword}
+        onCancel={() => { setPasswordModalOpen(false); passwordForm.resetFields() }}
+        confirmLoading={passwordLoading}
+        okText="确认修改"
+        cancelText="取消"
+      >
+        <Form form={passwordForm} layout="vertical" style={{ marginTop: 16 }}>
+          <Form.Item
+            name="oldPassword"
+            label="原密码"
+            rules={[{ required: true, message: '请输入原密码' }]}
+          >
+            <Input.Password placeholder="请输入原密码" />
+          </Form.Item>
+          <Form.Item
+            name="newPassword"
+            label="新密码"
+            rules={[
+              { required: true, message: '请输入新密码' },
+              { min: 6, message: '密码长度不能少于6位' },
+            ]}
+          >
+            <Input.Password placeholder="请输入新密码（至少6位）" />
+          </Form.Item>
+          <Form.Item
+            name="confirmPassword"
+            label="确认新密码"
+            dependencies={['newPassword']}
+            rules={[
+              { required: true, message: '请再次输入新密码' },
+              ({ getFieldValue }) => ({
+                validator(_, value) {
+                  if (!value || getFieldValue('newPassword') === value) {
+                    return Promise.resolve()
+                  }
+                  return Promise.reject(new Error('两次输入的密码不一致'))
+                },
+              }),
+            ]}
+          >
+            <Input.Password placeholder="请再次输入新密码" />
+          </Form.Item>
+        </Form>
+      </Modal>
     </Layout>
   )
 }
