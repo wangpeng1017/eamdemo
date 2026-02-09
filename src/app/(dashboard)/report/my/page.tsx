@@ -1,250 +1,276 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
-import { Table, Card, Input, Select, Tag, Button, Space, Tooltip } from 'antd'
-import { SearchOutlined, DownloadOutlined, EyeOutlined, ReloadOutlined } from '@ant-design/icons'
+import { useState, useEffect } from 'react'
+import { showSuccess, showError } from '@/lib/confirm'
+import { Table, Button, Space, Tag, Card, Input, Select, Drawer, Descriptions, Tabs, Timeline } from 'antd'
+import { EyeOutlined, PrinterOutlined, SearchOutlined, ReloadOutlined } from '@ant-design/icons'
+import type { ColumnsType } from 'antd/es/table'
 import dayjs from 'dayjs'
+import { useRouter } from 'next/navigation'
 
-// 委托单状态标签
-const entrustmentStatusMap: Record<string, { text: string; color: string }> = {
-    pending: { text: '待受理', color: 'default' },
-    draft: { text: '草稿', color: 'default' },
-    accepted: { text: '已受理', color: 'processing' },
-    submitted: { text: '已提交', color: 'processing' },
-    in_progress: { text: '进行中', color: 'blue' },
-    testing: { text: '检测中', color: 'blue' },
-    completed: { text: '已完成', color: 'green' },
-    archived: { text: '已归档', color: 'purple' },
-}
-
-// 客户报告状态标签
-const reportStatusMap: Record<string, { text: string; color: string }> = {
-    draft: { text: '草稿', color: 'default' },
-    pending_review: { text: '待审核', color: 'processing' },
-    pending_approve: { text: '待审批', color: 'warning' },
-    approved: { text: '已审批', color: 'cyan' },
-    issued: { text: '已发布', color: 'green' },
-}
-
-interface ReportItem {
+interface ClientReport {
     id: string
     reportNo: string
+    projectName: string | null
+    clientName: string
+    sampleName: string
+    sampleNo: string | null
+    specification: string | null
+    taskReportNos: string | null
+    overallConclusion: string | null
     status: string
+    preparer: string | null
+    reviewer: string | null
+    approver: string | null
+    approvalFlow: string | null
+    createdAt: string
     issuedDate: string | null
 }
 
-interface MyReportRow {
-    id: string
-    entrustmentNo: string
-    clientName: string
-    contractNo: string | null
-    sampleNames: string
-    entrustmentStatus: string
-    createdAt: string
-    hasReport: boolean
-    reportCount: number
-    reports: ReportItem[]
-    latestReportStatus: string | null
-    latestReportNo: string | null
-    latestReportId: string | null
+const statusMap: Record<string, { text: string; color: string }> = {
+    draft: { text: '草稿', color: 'default' },
+    pending_review: { text: '待审核', color: 'processing' },
+    pending_approve: { text: '待批准', color: 'warning' },
+    approved: { text: '已批准', color: 'success' },
+    issued: { text: '已发布', color: 'cyan' },
+}
+
+const conclusionMap: Record<string, string> = {
+    qualified: '合格',
+    unqualified: '不合格',
 }
 
 export default function MyReportPage() {
-    const [data, setData] = useState<MyReportRow[]>([])
+    const router = useRouter()
+    const [data, setData] = useState<ClientReport[]>([])
     const [loading, setLoading] = useState(false)
     const [total, setTotal] = useState(0)
     const [page, setPage] = useState(1)
-    const [pageSize, setPageSize] = useState(10)
     const [keyword, setKeyword] = useState('')
-    const [reportStatus, setReportStatus] = useState<string | undefined>(undefined)
+    const [statusFilter, setStatusFilter] = useState<string | null>(null)
 
-    const fetchData = useCallback(async () => {
+    // 查看抽屉
+    const [drawerOpen, setDrawerOpen] = useState(false)
+    const [current, setCurrent] = useState<ClientReport | null>(null)
+
+    const fetchData = async (p = page) => {
         setLoading(true)
         try {
-            const params = new URLSearchParams({
-                page: page.toString(),
-                pageSize: pageSize.toString(),
-            })
-            if (keyword) params.set('keyword', keyword)
-            if (reportStatus) params.set('reportStatus', reportStatus)
+            let url = `/api/report/my?page=${p}&pageSize=10`
+            if (keyword) url += `&keyword=${encodeURIComponent(keyword)}`
+            if (statusFilter) url += `&status=${statusFilter}`
 
-            const res = await fetch(`/api/report/my?${params.toString()}`)
+            const res = await fetch(url)
             const json = await res.json()
             if (json.success && json.data) {
                 setData(json.data.list || [])
                 setTotal(json.data.total || 0)
             }
         } catch (error) {
-            console.error('获取我的报告失败:', error)
+            showError('获取报告列表失败')
         } finally {
             setLoading(false)
         }
-    }, [page, pageSize, keyword, reportStatus])
+    }
 
     useEffect(() => {
         fetchData()
-    }, [fetchData])
+    }, [page])
 
-    // 下载 PDF
-    const handleDownloadPdf = async (reportId: string, reportNo: string) => {
-        try {
-            const res = await fetch(`/api/report/client/${reportId}/export/pdf`)
-            if (!res.ok) throw new Error('下载失败')
-            const blob = await res.blob()
-            const url = URL.createObjectURL(blob)
-            const a = document.createElement('a')
-            a.href = url
-            a.download = `${reportNo}.pdf`
-            a.click()
-            URL.revokeObjectURL(url)
-        } catch (err) {
-            console.error('下载 PDF 失败:', err)
+    const handleSearch = () => {
+        setPage(1)
+        fetchData(1)
+    }
+
+    const handleView = (record: ClientReport) => {
+        setCurrent(record)
+        setDrawerOpen(true)
+    }
+
+    const handlePrint = (record: ClientReport) => {
+        const printWindow = window.open(`/report/client/${record.id}`, '_blank')
+        if (printWindow) {
+            printWindow.addEventListener('load', () => {
+                setTimeout(() => printWindow.print(), 500)
+            })
         }
     }
 
-    const columns = [
+    // 解析审批流程
+    const parseApprovalFlow = (flowStr: string | null) => {
+        if (!flowStr) return []
+        try {
+            return JSON.parse(flowStr) || []
+        } catch {
+            return []
+        }
+    }
+
+    const columns: ColumnsType<ClientReport> = [
+        { title: '报告编号', dataIndex: 'reportNo', width: 150 },
+        { title: '项目名称', dataIndex: 'projectName', width: 150, ellipsis: true },
+        { title: '客户名称', dataIndex: 'clientName', width: 150, ellipsis: true },
+        { title: '样品名称', dataIndex: 'sampleName', width: 120, ellipsis: true },
         {
-            title: '委托编号',
-            dataIndex: 'entrustmentNo',
-            width: 130,
-            render: (text: string) => <span style={{ fontWeight: 500 }}>{text}</span>,
-        },
-        {
-            title: '客户名称',
-            dataIndex: 'clientName',
-            width: 150,
-            ellipsis: true,
-        },
-        {
-            title: '样品信息',
-            dataIndex: 'sampleNames',
-            width: 150,
-            ellipsis: true,
-            render: (text: string) => text || '-',
-        },
-        {
-            title: '委托状态',
-            dataIndex: 'entrustmentStatus',
+            title: '检测结论',
+            dataIndex: 'overallConclusion',
             width: 90,
-            render: (status: string) => {
-                const config = entrustmentStatusMap[status] || { text: status, color: 'default' }
-                return <Tag color={config.color}>{config.text}</Tag>
-            },
+            render: (v: string) => conclusionMap[v] || v || '-',
         },
         {
-            title: '客户报告状态',
-            width: 110,
-            render: (_: unknown, record: MyReportRow) => {
-                if (!record.hasReport) {
-                    return <Tag>未生成</Tag>
-                }
-                const status = record.latestReportStatus || 'draft'
-                const config = reportStatusMap[status] || { text: status, color: 'default' }
-                return <Tag color={config.color}>{config.text}</Tag>
-            },
+            title: '状态',
+            dataIndex: 'status',
+            width: 90,
+            render: (s: string) => <Tag color={statusMap[s]?.color}>{statusMap[s]?.text || s}</Tag>
         },
+        { title: '编制人', dataIndex: 'preparer', width: 80 },
         {
-            title: '报告编号',
-            width: 130,
-            render: (_: unknown, record: MyReportRow) => {
-                if (!record.hasReport) return '-'
-                return (
-                    <Tooltip title={record.reportCount > 1 ? `共 ${record.reportCount} 份报告` : undefined}>
-                        <span>{record.latestReportNo}</span>
-                        {record.reportCount > 1 && <Tag style={{ marginLeft: 4 }}>+{record.reportCount - 1}</Tag>}
-                    </Tooltip>
-                )
-            },
-        },
-        {
-            title: '委托日期',
+            title: '创建时间',
             dataIndex: 'createdAt',
-            width: 100,
-            render: (date: string) => date ? dayjs(date).format('YYYY-MM-DD') : '-',
+            width: 160,
+            render: (t: string) => dayjs(t).format('YYYY-MM-DD HH:mm')
         },
         {
             title: '操作',
-            width: 140,
-            fixed: 'right' as const,
-            render: (_: unknown, record: MyReportRow) => {
-                if (!record.hasReport) return <span style={{ color: '#999' }}>暂无报告</span>
-                return (
-                    <Space size="small">
-                        <Button
-                            type="link"
-                            size="small"
-                            icon={<EyeOutlined />}
-                            onClick={() => window.open(`/report/client/${record.latestReportId}`, '_blank')}
-                        >
-                            查看
-                        </Button>
-                        {(record.latestReportStatus === 'approved' || record.latestReportStatus === 'issued') && (
-                            <Button
-                                type="link"
-                                size="small"
-                                icon={<DownloadOutlined />}
-                                onClick={() => handleDownloadPdf(record.latestReportId!, record.latestReportNo!)}
-                            >
-                                下载
-                            </Button>
-                        )}
-                    </Space>
-                )
-            },
-        },
+            fixed: 'right',
+            width: 120,
+            onHeaderCell: () => ({ style: { whiteSpace: 'nowrap' as const } }),
+            render: (_, record) => (
+                <Space size="small" style={{ whiteSpace: 'nowrap' }}>
+                    <Button size="small" icon={<PrinterOutlined />} onClick={() => handlePrint(record)}>
+                        打印
+                    </Button>
+                    <Button size="small" icon={<EyeOutlined />} onClick={() => handleView(record)} />
+                </Space>
+            )
+        }
     ]
 
+    const actionTextMap: Record<string, string> = {
+        submit: '提交审核',
+        review: '审核通过',
+        approve: '批准通过',
+        issue: '发放报告',
+        reject: '驳回',
+    }
+
     return (
-        <div style={{ padding: '0 24px 24px' }}>
-            <Card bordered={false}>
-                {/* 筛选栏 */}
-                <div style={{ display: 'flex', gap: 12, marginBottom: 16, flexWrap: 'wrap' }}>
+        <div className="p-6">
+            <Card title="我的报告">
+                <div style={{ display: 'flex', gap: 12, marginBottom: 16 }}>
                     <Input
-                        placeholder="搜索委托编号/客户名称"
+                        placeholder="搜索报告编号/客户/样品"
                         prefix={<SearchOutlined />}
-                        style={{ width: 240 }}
                         value={keyword}
                         onChange={e => setKeyword(e.target.value)}
-                        onPressEnter={() => { setPage(1); fetchData() }}
+                        onPressEnter={handleSearch}
+                        style={{ width: 250 }}
                         allowClear
                     />
                     <Select
                         placeholder="报告状态"
-                        style={{ width: 150 }}
+                        value={statusFilter}
+                        onChange={setStatusFilter}
                         allowClear
-                        value={reportStatus}
-                        onChange={v => { setReportStatus(v); setPage(1) }}
-                        options={[
-                            { value: 'none', label: '未生成' },
-                            { value: 'draft', label: '草稿' },
-                            { value: 'pending_review', label: '待审核' },
-                            { value: 'pending_approve', label: '待审批' },
-                            { value: 'approved', label: '已审批' },
-                            { value: 'issued', label: '已发布' },
-                        ]}
+                        style={{ width: 130 }}
+                        options={Object.entries(statusMap).map(([k, v]) => ({ value: k, label: v.text }))}
                     />
-                    <Button icon={<ReloadOutlined />} onClick={() => { setPage(1); fetchData() }}>
-                        刷新
-                    </Button>
+                    <Button type="primary" onClick={handleSearch}>搜索</Button>
+                    <Button icon={<ReloadOutlined />} onClick={() => { setKeyword(''); setStatusFilter(null); setPage(1); fetchData(1) }}>重置</Button>
                 </div>
 
-                {/* 数据表格 */}
                 <Table
                     rowKey="id"
                     columns={columns}
                     dataSource={data}
                     loading={loading}
-                    scroll={{ x: 1000 }}
+                    scroll={{ x: 1100 }}
                     pagination={{
                         current: page,
-                        pageSize,
+                        pageSize: 10,
                         total,
-                        showSizeChanger: true,
-                        showTotal: t => `共 ${t} 条`,
-                        onChange: (p, ps) => { setPage(p); setPageSize(ps) },
+                        onChange: setPage,
+                        showSizeChanger: false,
+                        showTotal: (t) => `共 ${t} 条`
                     }}
                 />
             </Card>
+
+            {/* 查看详情抽屉 */}
+            <Drawer
+                title="客户报告详情"
+                placement="right"
+                width={750}
+                open={drawerOpen}
+                onClose={() => setDrawerOpen(false)}
+            >
+                {current && (
+                    <Tabs
+                        defaultActiveKey="basic"
+                        items={[
+                            {
+                                key: 'basic',
+                                label: '基本信息',
+                                children: (
+                                    <div style={{ maxHeight: 'calc(100vh - 200px)', overflowY: 'auto', paddingRight: 8 }}>
+                                        <Descriptions column={2} bordered size="small">
+                                            <Descriptions.Item label="报告编号">{current.reportNo}</Descriptions.Item>
+                                            <Descriptions.Item label="状态">
+                                                <Tag color={statusMap[current.status]?.color}>{statusMap[current.status]?.text}</Tag>
+                                            </Descriptions.Item>
+                                            <Descriptions.Item label="项目名称">{current.projectName || '-'}</Descriptions.Item>
+                                            <Descriptions.Item label="客户名称">{current.clientName || '-'}</Descriptions.Item>
+                                            <Descriptions.Item label="样品名称">{current.sampleName || '-'}</Descriptions.Item>
+                                            <Descriptions.Item label="样品编号">{current.sampleNo || '-'}</Descriptions.Item>
+                                            <Descriptions.Item label="规格型号">{current.specification || '-'}</Descriptions.Item>
+                                            <Descriptions.Item label="编制人">{current.preparer || '-'}</Descriptions.Item>
+                                            <Descriptions.Item label="审核人">{current.reviewer || '-'}</Descriptions.Item>
+                                            <Descriptions.Item label="批准人">{current.approver || '-'}</Descriptions.Item>
+                                            <Descriptions.Item label="创建时间">{dayjs(current.createdAt).format('YYYY-MM-DD HH:mm')}</Descriptions.Item>
+                                            <Descriptions.Item label="发布日期">
+                                                {current.issuedDate ? dayjs(current.issuedDate).format('YYYY-MM-DD') : '-'}
+                                            </Descriptions.Item>
+                                            <Descriptions.Item label="检测结论" span={2}>
+                                                {conclusionMap[current.overallConclusion || ''] || current.overallConclusion || '-'}
+                                            </Descriptions.Item>
+                                        </Descriptions>
+                                    </div>
+                                )
+                            },
+                            {
+                                key: 'approval',
+                                label: '审批记录',
+                                children: (
+                                    <div>
+                                        {parseApprovalFlow(current.approvalFlow).length > 0 ? (
+                                            <Timeline
+                                                items={parseApprovalFlow(current.approvalFlow).map((item: any) => ({
+                                                    color: item.action === 'reject' ? 'red' : 'green',
+                                                    children: (
+                                                        <div>
+                                                            <div style={{ fontWeight: 500 }}>
+                                                                {actionTextMap[item.action] || item.action}
+                                                            </div>
+                                                            <div style={{ color: '#999', fontSize: 12 }}>
+                                                                {item.operator} · {dayjs(item.timestamp).format('YYYY-MM-DD HH:mm')}
+                                                            </div>
+                                                            {item.comment && (
+                                                                <div style={{ color: '#666', marginTop: 4 }}>{item.comment}</div>
+                                                            )}
+                                                        </div>
+                                                    )
+                                                }))}
+                                            />
+                                        ) : (
+                                            <div style={{ textAlign: 'center', color: '#999', padding: 40 }}>暂无审批记录</div>
+                                        )}
+                                    </div>
+                                )
+                            }
+                        ]}
+                    />
+                )}
+            </Drawer>
         </div>
     )
 }
