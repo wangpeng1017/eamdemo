@@ -104,20 +104,32 @@ export const POST = withAuth(async (request: NextRequest, user) => {
     badRequest('请选择委托方客户（clientId 不能为空）')
   }
 
-  // 如果从咨询单创建，查询咨询单以继承 clientReportDeadline 和 followerId
+  // 如果从咨询单创建，检查唯一性并查询咨询单继承字段
   let inheritedDeadline = null
   let inheritedFollowerId = null
   const consultationNo = data.consultationNo || data.consultationId
-  if (consultationNo && (!data.clientReportDeadline || !data.followerId)) {
-    const consultation = await prisma.consultation.findUnique({
+  if (consultationNo) {
+    // 检查该咨询单是否已经生成过报价单
+    const existingQuotation = await prisma.quotation.findFirst({
       where: { consultationNo },
-      select: { clientReportDeadline: true, followerId: true, clientPhone: true, clientEmail: true, clientAddress: true },
+      select: { quotationNo: true },
     })
-    inheritedDeadline = consultation?.clientReportDeadline
-    inheritedFollowerId = consultation?.followerId
-    data.clientPhone = data.clientPhone || consultation?.clientPhone
-    data.clientEmail = data.clientEmail || consultation?.clientEmail
-    data.clientAddress = data.clientAddress || consultation?.clientAddress
+    if (existingQuotation) {
+      badRequest(`该咨询单已生成报价单 ${existingQuotation.quotationNo}，不允许重复生成`)
+    }
+
+    // 继承咨询单的 clientReportDeadline 和 followerId
+    if (!data.clientReportDeadline || !data.followerId) {
+      const consultation = await prisma.consultation.findUnique({
+        where: { consultationNo },
+        select: { clientReportDeadline: true, followerId: true, clientPhone: true, clientEmail: true, clientAddress: true },
+      })
+      inheritedDeadline = consultation?.clientReportDeadline
+      inheritedFollowerId = consultation?.followerId
+      data.clientPhone = data.clientPhone || consultation?.clientPhone
+      data.clientEmail = data.clientEmail || consultation?.clientEmail
+      data.clientAddress = data.clientAddress || consultation?.clientAddress
+    }
   }
 
   const today = new Date().toISOString().slice(0, 10).replace(/-/g, '')
