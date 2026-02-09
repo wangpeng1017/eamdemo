@@ -145,6 +145,17 @@ export async function POST(request: NextRequest) {
       }, { status: 400 })
     }
 
+    // 检查是否已生成过报告（每个任务只能生成一次）
+    const existingReport = await prisma.testReport.findFirst({
+      where: { taskId: task.id }
+    })
+    if (existingReport) {
+      return NextResponse.json({
+        success: false,
+        error: `该任务已生成报告（${existingReport.reportNo}），不能重复生成`
+      }, { status: 400 })
+    }
+
     // 获取委托单信息
     let entrustment: any = null
     if (task.entrustmentId) {

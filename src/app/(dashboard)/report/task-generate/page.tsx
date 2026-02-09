@@ -24,6 +24,7 @@ interface TestReport {
   reviewer: string | null
   createdAt: string
   issuedDate: string | null
+  task?: { taskNo: string } | null
 }
 
 interface Approval {
@@ -260,6 +261,7 @@ export default function TestReportPage() {
 
   const columns: ColumnsType<TestReport> = [
     { title: '报告编号', dataIndex: 'reportNo', width: 160 },
+    { title: '任务编号', render: (_, r) => r.task?.taskNo || '-', width: 130 },
     { title: '样品名称', dataIndex: 'sampleName', width: 120, ellipsis: true },
     { title: '样品编号', dataIndex: 'sampleNo', width: 120 },
     { title: '客户名称', dataIndex: 'clientName', width: 150, ellipsis: true },
