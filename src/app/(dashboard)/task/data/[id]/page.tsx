@@ -4,7 +4,7 @@ import { useState, useEffect } from "react"
 import { showSuccess, showError } from '@/lib/confirm'
 import { useParams, useRouter } from "next/navigation"
 import { Card, Button, Form, Select, Input, message, Space, Modal, Descriptions, Tag, Spin } from "antd"
-import { SaveOutlined, CheckOutlined, ArrowLeftOutlined, FileTextOutlined } from "@ant-design/icons"
+import { SaveOutlined, CheckOutlined, ArrowLeftOutlined } from "@ant-design/icons"
 import dynamic from 'next/dynamic'
 
 // ⚠️ 关键修复：禁用 SSR，避免 Fortune-sheet 在服务端执行 DOM 操作
@@ -60,7 +60,7 @@ export default function DataEntryPage() {
   const [task, setTask] = useState<Task | null>(null)
   const [loading, setLoading] = useState(false)
   const [saving, setSaving] = useState(false)
-  const [generating, setGenerating] = useState(false)
+
   const [sheetData, setSheetData] = useState<any>(null)
   const [submitModalOpen, setSubmitModalOpen] = useState(false)
   const [form] = Form.useForm()
@@ -190,36 +190,7 @@ export default function DataEntryPage() {
     }
   }
 
-  // 生成报告
-  const handleGenerateReport = async () => {
-    setGenerating(true)
-    try {
-      const res = await fetch('/api/report/generate', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          taskId,
-        }),
-      })
 
-      const json = await res.json()
-
-      if (res.ok && json.success) {
-        showSuccess('报告生成成功')
-        // 跳转到报告管理列表页
-        setTimeout(() => {
-          router.push('/report/task-generate')
-        }, 500)
-      } else {
-        showError(json.error || '报告生成失败')
-      }
-    } catch (error) {
-      console.error('生成报告失败:', error)
-      showError('报告生成失败')
-    } finally {
-      setGenerating(false)
-    }
-  }
 
   if (loading || !task) {
     return <div className="p-4 text-center">加载中...</div>
@@ -241,14 +212,6 @@ export default function DataEntryPage() {
         </div>
         {/* 顶部操作按钮 */}
         <Space>
-          <Button
-            icon={<FileTextOutlined />}
-            loading={generating}
-            onClick={handleGenerateReport}
-            type="default"
-          >
-            生成报告
-          </Button>
           {!isReadOnly && (
             <>
               <Button
