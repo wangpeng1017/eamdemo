@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { showSuccess, showError, showLoading, showConfirm, showWarning } from '@/lib/confirm'
-import { Table, Button, Space, Tag, Modal, Form, Input, Select, Popconfirm, Drawer, Descriptions, Tabs, Divider } from 'antd'
+import { Table, Button, Space, Tag, Modal, Form, Input, Select, Popconfirm, Drawer, Descriptions, Tabs, Divider, Tooltip } from 'antd'
 import { PlusOutlined, EditOutlined, DeleteOutlined, ExclamationCircleOutlined, EyeOutlined } from '@ant-design/icons'
 import { StatusTag } from '@/components/StatusTag'
 import { ApprovalRecords } from '@/components/approval/ApprovalRecords'
@@ -226,23 +226,28 @@ export default function ClientPage() {
       onHeaderCell: () => ({ style: { whiteSpace: 'nowrap' as const } }),
       render: (_, record) => (
         <Space size="small" style={{ whiteSpace: 'nowrap' }}>
-          {/* 业务按钮 */}
+          {/* 提交审批按钮 */}
           <ClientApprovalButtons
             clientId={record.id}
             clientStatus={record.status}
             onSuccess={() => fetchData()}
-            showLabel={false}
+            showLabel={true}
           />
 
           {/* 通用操作按钮 */}
           <Button size="small" icon={<EyeOutlined />} onClick={() => handleView(record)} />
-          <Button size="small" icon={<EditOutlined />} onClick={() => handleEdit(record)} />
-          <Button
-            size="small"
-            danger
-            icon={<DeleteOutlined />}
-            onClick={() => handleDelete(record.id, record.name)}
-          />
+          <Tooltip title={record.status !== 'draft' ? '仅草稿状态可编辑' : ''}>
+            <Button size="small" icon={<EditOutlined />} onClick={() => handleEdit(record)} disabled={record.status !== 'draft'} />
+          </Tooltip>
+          <Tooltip title={record.status !== 'draft' ? '仅草稿状态可删除' : ''}>
+            <Button
+              size="small"
+              danger
+              icon={<DeleteOutlined />}
+              onClick={() => handleDelete(record.id, record.name)}
+              disabled={record.status !== 'draft'}
+            />
+          </Tooltip>
         </Space>
       )
     }

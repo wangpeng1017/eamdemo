@@ -34,31 +34,14 @@ export async function POST(request: NextRequest) {
   const session = await auth()
   const data = await request.json()
 
-  // 新增委托单位时,状态默认为pending,需要通过审批
+  // 新增委托单位时，状态默认为 draft（草稿），需用户手动提交审批
   const client = await prisma.client.create({
     data: {
       ...data,
-      status: 'pending', // 默认待审批状态
+      status: 'draft',
       createdById: session?.user?.id,
     }
   })
-
-  // 自动创建二级审批实例
-  if (session?.user?.id) {
-    try {
-      const engine = new ApprovalEngine()
-      await engine.submit({
-        bizType: 'client',
-        bizId: client.id,
-        flowCode: 'client_approval', // 委托单位审批流程编码
-        submitterId: session.user.id,
-        submitterName: session.user.name || '提交人',
-      })
-    } catch (error) {
-      console.error('创建审批实例失败:', error)
-      // 审批创建失败不影响委托单位创建
-    }
-  }
 
   return NextResponse.json(client)
 }
