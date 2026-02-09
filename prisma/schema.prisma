@@ -1172,9 +1172,23 @@ model ReportTemplate {
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
 
-  // 需求7：自定义封面封底配置
-  coverConfig     String? @db.Text // JSON 封面配置
-  backCoverConfig String? @db.Text // JSON 封底配置
+  // 封面配置（结构化字段）
+  coverTitle       String?  @db.VarChar(200) // 报告标题
+  coverSubtitle    String?  @db.VarChar(200) // 报告副标题
+  coverLogo        String?  @db.VarChar(500) // Logo 图片 URL
+  coverShowDate    Boolean  @default(true)   // 是否显示日期
+
+  // 封底配置（结构化字段）
+  backCoverStatement  String? @db.Text       // 声明语句
+  backCoverCustomText String? @db.Text       // 自定义结语
+
+  // 印章配置
+  stampImageUrl    String?  @db.VarChar(500) // 印章图片 URL
+  stampPosition    String?  @db.VarChar(50)  // 印章位置：bottom-right/center 等
+
+  // 旧字段保留兼容
+  coverConfig     String? @db.Text // JSON 封面配置（旧）
+  backCoverConfig String? @db.Text // JSON 封底配置（旧）
 
   clientReports   ClientReport[]
 
