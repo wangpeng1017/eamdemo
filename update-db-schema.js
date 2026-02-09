@@ -627,16 +627,19 @@ async function main() {
         await prisma.$executeRawUnsafe(`ALTER TABLE biz_test_report ADD CONSTRAINT biz_test_report_clientReportId_fkey FOREIGN KEY (clientReportId) REFERENCES biz_client_report(id) ON DELETE SET NULL ON UPDATE CASCADE;`)
     } catch (e) { console.log('ℹ️ FK relation check.'); }
 
-    // 6. 添加 followerId 到 biz_consultation（跟单人）
-    try {
-        console.log('Adding followerId column to biz_consultation...')
-        await prisma.$executeRawUnsafe(`ALTER TABLE biz_consultation ADD COLUMN followerId VARCHAR(191) NULL;`)
-        console.log('✅ followerId column added to biz_consultation.')
-    } catch (e) {
-        if (e.message.includes('Duplicate column name')) {
-            console.log('ℹ️ followerId already exists in biz_consultation.')
-        } else {
-            console.error('❌ Error:', e.message)
+    // 6. 添加 followerId 到业务表（跟单人）
+    const followerTables = ['biz_consultation', 'biz_quotation', 'biz_contract', 'biz_entrustment']
+    for (const table of followerTables) {
+        try {
+            console.log(`Adding followerId column to ${table}...`)
+            await prisma.$executeRawUnsafe(`ALTER TABLE ${table} ADD COLUMN followerId VARCHAR(191) NULL;`)
+            console.log(`✅ followerId column added to ${table}.`)
+        } catch (e) {
+            if (e.message.includes('Duplicate column name')) {
+                console.log(`ℹ️ followerId already exists in ${table}.`)
+            } else {
+                console.error(`❌ Error on ${table}:`, e.message)
+            }
         }
     }
 }
