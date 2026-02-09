@@ -556,13 +556,17 @@ export default function QuotationPage() {
             {/* 通用按钮（仅图标） */}
             <Button size="small" icon={<EyeOutlined />} onClick={() => handleView(record)} />
             <Button size="small" icon={<PrinterOutlined />} onClick={() => handlePrint(record)} title="打印" />
-            <Tooltip title={record.status !== 'draft' ? '仅草稿状态可编辑' : ''}>
-              <Button size="small" icon={<EditOutlined />} onClick={() => handleEdit(record)} disabled={record.status !== 'draft'} />
+            <Tooltip title={record.status !== 'draft' ? '仅草稿状态可编辑' : '编辑'}>
+              <span>
+                <Button size="small" icon={<EditOutlined />} onClick={() => handleEdit(record)} disabled={record.status !== 'draft'} />
+              </span>
             </Tooltip>
-            <Tooltip title={record.status !== 'draft' ? '仅草稿状态可删除' : ''}>
-              <Popconfirm title="确认删除" onConfirm={() => handleDelete(record.id)} disabled={record.status !== 'draft'}>
-                <Button size="small" danger icon={<DeleteOutlined />} disabled={record.status !== 'draft'} />
-              </Popconfirm>
+            <Tooltip title={record.status !== 'draft' ? '仅草稿状态可删除' : '删除'}>
+              <span>
+                <Popconfirm title="确认删除" onConfirm={() => handleDelete(record.id)} disabled={record.status !== 'draft'}>
+                  <Button size="small" danger icon={<DeleteOutlined />} disabled={record.status !== 'draft'} />
+                </Popconfirm>
+              </span>
             </Tooltip>
           </Space>
         )
