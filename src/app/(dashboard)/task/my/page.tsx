@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from "react"
-import { showSuccess, showError } from '@/lib/confirm'
+import { showSuccess, showError, showWarning } from '@/lib/confirm'
 import { Table, Button, Space, Tag, Modal, Form, Select, message, Card, Statistic, DatePicker } from "antd"
 import { PlayCircleOutlined, CheckCircleOutlined, ClockCircleOutlined, SwapOutlined, EditOutlined, FileTextOutlined } from "@ant-design/icons"
 import type { ColumnsType } from "antd/es/table"
@@ -190,10 +190,10 @@ export default function MyTasksPage() {
         showSuccess('报告生成成功')
         router.push('/report/task-generate')
       } else {
-        showError(json.error || '报告生成失败')
+        showWarning('操作提示', json.error || '报告生成失败')
       }
     } catch (error) {
-      showError('报告生成失败')
+      showWarning('操作提示', '报告生成失败，请稍后重试')
     } finally {
       setGenerating(false)
     }

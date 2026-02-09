@@ -87,9 +87,7 @@ export default function ClientReportGeneratePage() {
     const [viewDrawerOpen, setViewDrawerOpen] = useState(false)
     const [currentReport, setCurrentReport] = useState<ClientReport | null>(null)
 
-    // 提交审批弹窗
-    const [submitModalOpen, setSubmitModalOpen] = useState(false)
-    const [submitForm] = Form.useForm()
+    // 提交审批状态
     const [submitting, setSubmitting] = useState(false)
 
     const fetchData = async (p = page) => {
@@ -223,31 +221,22 @@ export default function ClientReportGeneratePage() {
         window.open(`/report/client/${record.id}`, '_blank')
     }
 
-    // 提交审批
-    const handleSubmitApproval = (record: ClientReport) => {
-        setCurrentReport(record)
-        submitForm.resetFields()
-        setSubmitModalOpen(true)
-    }
-
-    const handleSubmitConfirm = async () => {
-        if (!currentReport) return
+    // 提交审批（直接更新状态，不弹窗）
+    const handleSubmitApproval = async (record: ClientReport) => {
         setSubmitting(true)
         try {
-            const values = await submitForm.validateFields()
-            const res = await fetch(`/api/report/client/${currentReport.id}`, {
+            const res = await fetch(`/api/report/client/${record.id}`, {
                 method: 'PATCH',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     action: 'submit',
-                    operator: values.operator,
-                    comment: values.comment,
+                    operator: '',
+                    comment: '',
                 }),
             })
             const json = await res.json()
             if (json.success) {
                 showSuccess('提交审批成功')
-                setSubmitModalOpen(false)
                 fetchData()
             } else {
                 showError(json.error?.message || '提交审批失败')
@@ -522,25 +511,7 @@ export default function ClientReportGeneratePage() {
                 </div>
             </Modal>
 
-            {/* 提交审批弹窗 */}
-            <Modal
-                title="提交审批"
-                open={submitModalOpen}
-                onOk={handleSubmitConfirm}
-                onCancel={() => setSubmitModalOpen(false)}
-                confirmLoading={submitting}
-                okText="确认提交"
-                cancelText="取消"
-            >
-                <Form form={submitForm} layout="vertical">
-                    <Form.Item name="operator" label="操作人">
-                        <Input placeholder="请填写操作人" />
-                    </Form.Item>
-                    <Form.Item name="comment" label="审批意见">
-                        <Input.TextArea rows={3} placeholder="选填，可以填写审批意见" />
-                    </Form.Item>
-                </Form>
-            </Modal>
+
         </div>
     )
 }
