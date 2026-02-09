@@ -543,16 +543,12 @@ export default function EntrustmentListPage() {
       title: '状态',
       dataIndex: 'status',
       width: 100,
-      render: (s: string) => {
+      render: (s: string, record: EntrustmentProject) => {
         if (s === 'assigned') {
-          const record = data.find(d => d.projects?.some(p => p.status === s))
-          const project = record?.projects?.find(p => p.status === s)
-          return <Tag color="processing">已分配: {project?.assignTo}</Tag>
+          return <Tag color="processing">已分配: {record.assignTo}</Tag>
         }
         if (s === 'subcontracted') {
-          const record = data.find(d => d.projects?.some(p => p.status === s))
-          const project = record?.projects?.find(p => p.status === s)
-          return <Tag color="warning">已分包: {project?.subcontractor}</Tag>
+          return <Tag color="warning">已分包: {record.subcontractor}</Tag>
         }
         return <StatusTag type="project" status={s} />
       }
@@ -940,17 +936,7 @@ export default function EntrustmentListPage() {
               showSearch
               placeholder="选择检测人员"
               optionFilterProp="label"
-              options={users.map(u => ({ value: u.phone, label: `${u.name} (${u.phone})` }))}
-
-            />
-          </Form.Item>
-          <Form.Item name="deviceId" label="检测设备">
-            <Select
-              showSearch
-              allowClear
-              placeholder="选择检测设备"
-              optionFilterProp="label"
-              options={devices.map(d => ({ value: d.id, label: `${d.deviceNo} - ${d.name}` }))}
+              options={users.map(u => ({ value: u.name, label: u.name }))}
             />
           </Form.Item>
           <Form.Item name="deadline" label="截止日期">
@@ -981,8 +967,7 @@ export default function EntrustmentListPage() {
               showSearch
               placeholder="选择检测人员"
               optionFilterProp="label"
-              options={users.map(u => ({ value: u.phone, label: `${u.name} (${u.phone})` }))}
-
+              options={users.map(u => ({ value: u.name, label: u.name }))}
             />
           </Form.Item>
           <Form.Item name="deadline" label="截止日期">
