@@ -2,13 +2,12 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { showSuccess, showError } from '@/lib/confirm'
+import { showError } from '@/lib/confirm'
 import { useParams, useRouter } from 'next/navigation'
-import { Card, Descriptions, Button, Table, message, Tag, Space, Modal, Form, Input, Timeline } from 'antd'
-import { ArrowLeftOutlined, PrinterOutlined, DownloadOutlined, CheckCircleOutlined, CloseCircleOutlined, SendOutlined, FileTextOutlined, EditOutlined } from '@ant-design/icons'
+import { Card, Descriptions, Table, Tag, Timeline } from 'antd'
+import { ArrowLeftOutlined } from '@ant-design/icons'
 import type { ColumnsType } from 'antd/es/table'
 import dayjs from 'dayjs'
-import RichTextEditor from '@/components/editor/RichTextEditor'
 
 interface TestData {
     id: string
@@ -72,12 +71,6 @@ export default function ReportDetailPage() {
     const [testData, setTestData] = useState<TestData[]>([])
     const [approvals, setApprovals] = useState<Approval[]>([])
     const [loading, setLoading] = useState(false)
-    const [approvalModalOpen, setApprovalModalOpen] = useState(false)
-    const [approvalAction, setApprovalAction] = useState<string>('')
-    const [richContentModalOpen, setRichContentModalOpen] = useState(false)
-    const [richContent, setRichContent] = useState('')
-    const [submitting, setSubmitting] = useState(false)
-    const [form] = Form.useForm()
 
     useEffect(() => {
         fetchReport()
@@ -94,11 +87,6 @@ export default function ReportDetailPage() {
             const reportData = json.data || json
             setReport(reportData)
 
-            // 设置富文本内容
-            if (reportData.richContent) {
-                setRichContent(reportData.richContent)
-            }
-
             // 解析 testResults
             if (reportData.testResults) {
                 try {
@@ -108,7 +96,6 @@ export default function ReportDetailPage() {
                     setTestData(Array.isArray(parsed) ? parsed : [])
                 } catch (e) {
                     console.error('[Report] 解析检测结果失败:', e)
-                    showError('检测结果解析失败', '无法解析检测结果，请检查数据格式')
                 }
             }
         } catch (error) {
@@ -127,109 +114,6 @@ export default function ReportDetailPage() {
             }
         } catch (error) {
             console.error('[Report] 获取审批历史失败:', error)
-            // 静默失败，不影响主要功能
-        }
-    }
-
-    const handlePrint = () => {
-        window.print()
-    }
-
-    const handleExport = async () => {
-        try {
-            message.loading({ content: '正在生成 Excel...', key: 'export' })
-            const response = await fetch(`/api/report/${reportId}/export`)
-
-            if (!response.ok) {
-                throw new Error('导出失败')
-            }
-
-            const blob = await response.blob()
-            const url = window.URL.createObjectURL(blob)
-            const a = document.createElement('a')
-            a.href = url
-            a.download = `检测报告_${report?.reportNo}.xlsx`
-            document.body.appendChild(a)
-            a.click()
-            window.URL.revokeObjectURL(url)
-            document.body.removeChild(a)
-
-            showSuccess({ content: '导出成功', key: 'export' })
-        } catch (error) {
-            showError({ content: '导出失败', key: 'export' })
-        }
-    }
-
-    // 打开富文本编辑Modal
-    const handleEditRichContent = () => {
-        if (report?.richContent) {
-            setRichContent(report.richContent)
-        }
-        setRichContentModalOpen(true)
-    }
-
-    // 保存富文本内容
-    const handleSaveRichContent = async () => {
-        try {
-            setSubmitting(true)
-
-            const res = await fetch(`/api/test-report/${reportId}`, {
-                method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    richContent: richContent
-                })
-            })
-
-            const json = await res.json()
-            if (res.ok && json.success) {
-                showSuccess('保存成功')
-                setRichContentModalOpen(false)
-                fetchReport() // 刷新报告数据
-            } else {
-                showError(json.error || '保存失败')
-            }
-        } catch (error) {
-            console.error('保存富文本失败:', error)
-            showError('保存失败')
-        } finally {
-            setSubmitting(false)
-        }
-    }
-
-    const handleApprovalAction = (action: string) => {
-        setApprovalAction(action)
-        setApprovalModalOpen(true)
-    }
-
-    const handleApprovalSubmit = async () => {
-        try {
-            const values = await form.validateFields()
-            setLoading(true)
-
-            const res = await fetch(`/api/report/${reportId}/approval`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    action: approvalAction,
-                    comment: values.comment
-                })
-            })
-
-            const json = await res.json()
-            if (res.ok && json.success) {
-                showSuccess(json.message)
-                setApprovalModalOpen(false)
-                form.resetFields()
-                fetchReport()
-                fetchApprovals()
-            } else {
-                showError(json.error || '操作失败')
-            }
-        } catch (error) {
-            showError('操作失败')
-        } finally {
-            setLoading(false)
         }
     }
 
@@ -251,73 +135,19 @@ export default function ReportDetailPage() {
         { title: '备注', dataIndex: 'remark', ellipsis: true },
     ]
 
-    const getApprovalButtons = () => {
-        if (!report) return null
-
-        switch (report.status) {
-            case 'draft':
-                return (
-                    <>
-                        <Button icon={<EditOutlined />} onClick={handleEditRichContent} className="mr-2">
-                            编辑富文本
-                        </Button>
-                        <Button type="primary" icon={<SendOutlined />} onClick={() => handleApprovalAction('submit')}>
-                            提交审核
-                        </Button>
-                    </>
-                )
-            case 'reviewing':
-                return (
-                    <>
-                        <Button icon={<EditOutlined />} onClick={handleEditRichContent} className="mr-2">
-                            编辑富文本
-                        </Button>
-                        <Button danger icon={<CloseCircleOutlined />} onClick={() => handleApprovalAction('reject')}>
-                            驳回
-                        </Button>
-                        <Button type="primary" icon={<CheckCircleOutlined />} onClick={() => handleApprovalAction('approve')}>
-                            审核通过
-                        </Button>
-                    </>
-                )
-            case 'approved':
-                return (
-                    <>
-                        <Button icon={<EditOutlined />} onClick={handleEditRichContent} className="mr-2">
-                            编辑富文本
-                        </Button>
-                        <Button type="primary" icon={<FileTextOutlined />} onClick={() => handleApprovalAction('issue')}>
-                            发布报告
-                        </Button>
-                    </>
-                )
-            default:
-                return (
-                    <Button icon={<EditOutlined />} onClick={handleEditRichContent}>
-                        查看富文本
-                    </Button>
-                )
-        }
-    }
-
     if (!report) {
         return <div className="p-6">加载中...</div>
     }
 
     return (
         <div className="p-6">
-            <div className="mb-4 flex justify-between items-center no-print">
-                <h1 className="text-2xl font-bold">检测报告详情</h1>
-                <Space>
-                    <Button icon={<ArrowLeftOutlined />} onClick={() => router.back()}>
-                        返回
-                    </Button>
-                    <Button icon={<PrinterOutlined />} onClick={handlePrint}>
-                        打印
-                    </Button>
-
-                    {getApprovalButtons()}
-                </Space>
+            {/* 左上角返回 */}
+            <div className="mb-4 flex justify-between items-center">
+                <a onClick={() => router.back()} style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4, color: '#1677ff' }}>
+                    <ArrowLeftOutlined /> 返回
+                </a>
+                <h1 className="text-2xl font-bold" style={{ margin: 0 }}>检测报告详情</h1>
+                <div style={{ width: 60 }} />
             </div>
 
             {/* 报告基本信息 */}
@@ -365,21 +195,8 @@ export default function ReportDetailPage() {
                 />
             </Card>
 
-            {/* 检测结论 - 支持富文本 */}
-            <Card
-                title="检测结论"
-                className="mb-4"
-                extra={
-                    <Button
-                        size="small"
-                        icon={<EditOutlined />}
-                        onClick={handleEditRichContent}
-                        className="no-print"
-                    >
-                        编辑
-                    </Button>
-                }
-            >
+            {/* 检测结论 */}
+            <Card title="检测结论" className="mb-4">
                 {report.richContent ? (
                     <div
                         className="p-4 bg-gray-50 rounded"
@@ -396,7 +213,7 @@ export default function ReportDetailPage() {
 
             {/* 审批历史 */}
             {approvals.length > 0 && (
-                <Card title="审批历史" className="no-print">
+                <Card title="审批历史">
                     <Timeline
                         items={approvals.map(item => ({
                             color: item.result === 'pass' ? 'green' : 'red',
@@ -420,65 +237,6 @@ export default function ReportDetailPage() {
                     />
                 </Card>
             )}
-
-            {/* 审批确认弹窗 */}
-            <Modal
-                title={approvalAction === 'reject' ? '驳回报告' : '确认操作'}
-                open={approvalModalOpen}
-                onOk={handleApprovalSubmit}
-                onCancel={() => {
-                    setApprovalModalOpen(false)
-                    form.resetFields()
-                }}
-                confirmLoading={loading}
-                okText="确定"
-                cancelText="取消"
-            >
-                <Form form={form} layout="vertical">
-                    <Form.Item
-                        name="comment"
-                        label="审批意见"
-                        rules={approvalAction === 'reject' ? [{ required: true, message: '驳回时必须填写原因' }] : []}
-                    >
-                        <Input.TextArea
-                            rows={4}
-                            placeholder={approvalAction === 'reject' ? '必填，请说明驳回原因' : '选填，可以填写审批意见'}
-                        />
-                    </Form.Item>
-                </Form>
-            </Modal>
-
-            {/* 富文本编辑弹窗 */}
-            <Modal
-                title="编辑检测结论（富文本）"
-                open={richContentModalOpen}
-                onOk={handleSaveRichContent}
-                onCancel={() => setRichContentModalOpen(false)}
-                confirmLoading={submitting}
-                width={1000}
-                okText="保存"
-                cancelText="取消"
-                style={{ top: 20 }}
-            >
-                <RichTextEditor
-                    value={richContent}
-                    onChange={setRichContent}
-                    placeholder="请输入检测结论..."
-                    height="600px"
-                />
-            </Modal>
-
-            <style jsx global>{`
-        @media print {
-          .no-print {
-            display: none !important;
-          }
-          .ant-card {
-            box-shadow: none !important;
-            border: 1px solid #d9d9d9 !important;
-          }
-        }
-      `}</style>
         </div>
     )
 }

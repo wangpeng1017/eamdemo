@@ -2,8 +2,8 @@
 
 import { useState, useEffect } from 'react'
 import { showError } from '@/lib/confirm'
-import { Card, Descriptions, Table, Tag, Button, Space, message, Divider, Image } from 'antd'
-import { ArrowLeftOutlined, PrinterOutlined, DownloadOutlined, FilePdfOutlined, FileWordOutlined } from '@ant-design/icons'
+import { Card, Descriptions, Table, Tag } from 'antd'
+import { ArrowLeftOutlined } from '@ant-design/icons'
 import { useParams, useRouter } from 'next/navigation'
 import dayjs from 'dayjs'
 
@@ -32,7 +32,7 @@ interface ClientReport {
     testItems: string | null
     testStandards: string | null
     overallConclusion: string | null
-    backCoverData: string | null // JSON { content: "..." }
+    backCoverData: string | null
     preparer: string | null
     reviewer: string | null
     approver: string | null
@@ -60,7 +60,6 @@ export default function ClientReportDetailPage() {
 
     const [report, setReport] = useState<ClientReport | null>(null)
     const [loading, setLoading] = useState(true)
-    const [exporting, setExporting] = useState(false)
 
     useEffect(() => {
         fetchReport()
@@ -83,70 +82,6 @@ export default function ClientReportDetailPage() {
         }
     }
 
-    const handlePrint = () => {
-        window.print()
-    }
-
-    const handleExportPDF = async () => {
-        try {
-            setExporting(true)
-            message.loading({ content: '正在生成 PDF...', key: 'export' })
-
-            const response = await fetch(`/api/report/client/${reportId}/export/pdf`)
-
-            if (!response.ok) {
-                throw new Error('导出失败')
-            }
-
-            const blob = await response.blob()
-            const url = window.URL.createObjectURL(blob)
-            const a = document.createElement('a')
-            a.href = url
-            a.download = `${report?.reportNo || 'report'}.pdf`
-            document.body.appendChild(a)
-            a.click()
-            window.URL.revokeObjectURL(url)
-            document.body.removeChild(a)
-
-            message.success({ content: 'PDF 导出成功', key: 'export' })
-        } catch (error) {
-            console.error('PDF 导出失败:', error)
-            message.error({ content: 'PDF 导出失败', key: 'export' })
-        } finally {
-            setExporting(false)
-        }
-    }
-
-    const handleExportWord = async () => {
-        try {
-            setExporting(true)
-            message.loading({ content: '正在生成 Word...', key: 'export' })
-
-            const response = await fetch(`/api/report/client/${reportId}/export/docx`)
-
-            if (!response.ok) {
-                throw new Error('导出失败')
-            }
-
-            const blob = await response.blob()
-            const url = window.URL.createObjectURL(blob)
-            const a = document.createElement('a')
-            a.href = url
-            a.download = `${report?.reportNo || 'report'}.docx`
-            document.body.appendChild(a)
-            a.click()
-            window.URL.revokeObjectURL(url)
-            document.body.removeChild(a)
-
-            message.success({ content: 'Word 导出成功', key: 'export' })
-        } catch (error) {
-            console.error('Word 导出失败:', error)
-            message.error({ content: 'Word 导出失败', key: 'export' })
-        } finally {
-            setExporting(false)
-        }
-    }
-
     if (loading) {
         return <div className="p-6 text-center">加载中...</div>
     }
@@ -164,15 +99,6 @@ export default function ClientReportDetailPage() {
         }
     } catch (e) { }
 
-    // 组合所有数据用于详情展示（也可以用于打印的第二页）
-    const allTestData = report.taskReports?.flatMap(tr =>
-        (tr.task?.testData || []).map(td => ({
-            ...td,
-            taskNo: tr.task?.taskNo,
-            reportNo: tr.reportNo
-        }))
-    ) || []
-
     const columns = [
         { title: '任务编号', dataIndex: 'taskNo', width: 120 },
         { title: '检测项目', dataIndex: 'parameter', width: 150 },
@@ -184,35 +110,15 @@ export default function ClientReportDetailPage() {
 
     return (
         <div className="p-6 max-w-5xl mx-auto">
-            {/* 操作栏 (打印时隐藏) */}
-            <div className="mb-4 flex justify-between items-center no-print">
-                <Button icon={<ArrowLeftOutlined />} onClick={() => router.back()}>
-                    返回列表
-                </Button>
-                <Space>
-                    <Button type="primary" icon={<PrinterOutlined />} onClick={handlePrint}>
-                        打印报告
-                    </Button>
-                    <Button
-                        icon={<FilePdfOutlined />}
-                        onClick={handleExportPDF}
-                        loading={exporting}
-                    >
-                        导出 PDF
-                    </Button>
-                    <Button
-                        icon={<FileWordOutlined />}
-                        onClick={handleExportWord}
-                        loading={exporting}
-                    >
-                        导出 Word
-                    </Button>
-                </Space>
+            {/* 左上角返回 */}
+            <div className="mb-4 flex items-center no-print">
+                <a onClick={() => router.back()} style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4, color: '#1677ff' }}>
+                    <ArrowLeftOutlined /> 返回列表
+                </a>
             </div>
 
-            {/* ==================== 封面页 (Page 1) ==================== */}
+            {/* 封面页 */}
             <div className="print-page cover-page flex flex-col items-center justify-center text-center p-12 bg-white mb-8 shadow-sm">
-                {/* Logo */}
                 <div className="mb-16">
                     {report.template?.fileUrl ? (
                         <img src={report.template.fileUrl} alt="Logo" className="h-20" />
@@ -247,11 +153,13 @@ export default function ClientReportDetailPage() {
                 </div>
             </div>
 
-            {/* ==================== 内容页 (Page 2+) ==================== */}
+            {/* 内容页 */}
             <div className="print-page content-page p-8 bg-white mb-8 shadow-sm">
                 <div className="flex justify-between border-b pb-2 mb-6">
                     <span className="text-sm text-gray-500">报告编号：{report.reportNo}</span>
-                    <span className="text-sm text-gray-500">第 1 页 / 共 2 页</span>
+                    <span className="text-sm text-gray-500">
+                        <Tag color={statusMap[report.status]?.color}>{statusMap[report.status]?.text}</Tag>
+                    </span>
                 </div>
 
                 <h2 className="text-xl font-bold mb-6 text-center">检测结果汇总</h2>
@@ -269,7 +177,6 @@ export default function ClientReportDetailPage() {
                     </Descriptions.Item>
                 </Descriptions>
 
-                {/* 循环渲染每个任务的数据 */}
                 {report.taskReports?.map((tr, index) => (
                     <div key={tr.reportNo} className="mb-8">
                         <div className="font-bold mb-2 bg-gray-100 p-2">任务 #{index + 1}: {tr.task?.taskNo}</div>
@@ -298,14 +205,14 @@ export default function ClientReportDetailPage() {
                 </div>
             </div>
 
-            {/* ==================== 封底页 (Last Page) ==================== */}
+            {/* 封底页 */}
             <div className="print-page back-cover-page flex flex-col justify-between p-12 bg-white shadow-sm min-h-[1100px]">
                 <div>
                     <h2 className="text-xl font-bold mb-6 border-b pb-2">声明 / 注意事项</h2>
                     <div className="text-base leading-relaxed whitespace-pre-wrap">
                         {backCoverContent || (
                             <>
-                                1. 本报告无“检验检测专用章”无效。<br />
+                                1. 本报告无"检验检测专用章"无效。<br />
                                 2. 报告无编制、审核、批准人签字无效。<br />
                                 3. 报告涂改无效。<br />
                                 4. 对检测报告若有异议，请于收到报告之日起十五日内向本公司提出。<br />
@@ -325,43 +232,22 @@ export default function ClientReportDetailPage() {
             </div>
 
             <style jsx global>{`
-                /* 屏幕样式微调 */
                 .print-page {
-                    min-height: 297mm; /* A4 height */
-                    width: 210mm;      /* A4 width */
+                    min-height: 297mm;
+                    width: 210mm;
                     margin: 0 auto 20px auto;
                     border: 1px solid #eee;
                 }
-
                 @media print {
-                    @page { 
-                        size: A4; 
-                        margin: 0; 
-                    }
-                    body { 
-                        background: white; 
-                        -webkit-print-color-adjust: exact;
-                    }
-                    .no-print { 
-                        display: none !important; 
-                    }
+                    @page { size: A4; margin: 0; }
+                    body { background: white; -webkit-print-color-adjust: exact; }
+                    .no-print { display: none !important; }
                     .print-page {
-                        border: none;
-                        margin: 0;
-                        box-shadow: none;
-                        page-break-after: always; /* 强制分页 */
-                        width: 100%;
-                        min-height: 100vh;
-                        padding: 20mm; /* 打印时的内边距 */
+                        border: none; margin: 0; box-shadow: none;
+                        page-break-after: always; width: 100%; min-height: 100vh; padding: 20mm;
                     }
-                    .print-page:last-child {
-                        page-break-after: auto;
-                    }
-                    
-                    /* 覆盖 AntD 表格打印样式问题 */
-                    .ant-table-wrapper {
-                        margin-bottom: 0 !important;
-                    }
+                    .print-page:last-child { page-break-after: auto; }
+                    .ant-table-wrapper { margin-bottom: 0 !important; }
                 }
             `}</style>
         </div>
