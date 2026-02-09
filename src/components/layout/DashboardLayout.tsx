@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect, useMemo, useCallback } from 'react'
 import { showInfo } from '@/lib/confirm'
 import { Layout, Menu, Avatar, Dropdown, Button, theme, message } from 'antd'
 import {
@@ -26,105 +26,125 @@ import { signOut, useSession } from 'next-auth/react'
 
 const { Header, Sider, Content } = Layout
 
-const menuItems = [
-  { key: '/', icon: <DashboardOutlined />, label: '工作台' },
+// 菜单项类型（带权限编码）
+interface MenuItem {
+  key: string
+  icon?: React.ReactNode
+  label: string
+  permissionCode: string
+  children?: MenuItem[]
+}
+
+// 完整菜单配置（带权限编码，与 sync-permissions.js 保持一致）
+const allMenuItems: MenuItem[] = [
+  { key: '/', icon: <DashboardOutlined />, label: '工作台', permissionCode: 'menu:dashboard' },
   {
     key: '/entrustment',
     icon: <FileTextOutlined />,
     label: '业务管理',
+    permissionCode: 'menu:entrustment',
     children: [
-      { key: '/entrustment/consultation', label: '业务咨询' },
-      { key: '/entrustment/quotation', label: '检测报价' },
-      { key: '/entrustment/contract', label: '检测合同' },
-      { key: '/entrustment/list', label: '检测委托单' },
-      { key: '/entrustment/client', label: '业务单位' },
+      { key: '/entrustment/consultation', label: '业务咨询', permissionCode: 'menu:entrustment:consultation' },
+      { key: '/entrustment/quotation', label: '检测报价', permissionCode: 'menu:entrustment:quotation' },
+      { key: '/entrustment/contract', label: '检测合同', permissionCode: 'menu:entrustment:contract' },
+      { key: '/entrustment/list', label: '检测委托单', permissionCode: 'menu:entrustment:list' },
+      { key: '/entrustment/client', label: '业务单位', permissionCode: 'menu:entrustment:client' },
     ],
   },
   {
     key: '/sample',
     icon: <ExperimentOutlined />,
     label: '样品管理',
+    permissionCode: 'menu:sample',
     children: [
-      { key: '/sample/receipt', label: '收样登记' },
-      { key: '/sample/details', label: '样品明细' },
-      { key: '/sample/my', label: '我的样品' },
+      { key: '/sample/receipt', label: '收样登记', permissionCode: 'menu:sample:receipt' },
+      { key: '/sample/details', label: '样品明细', permissionCode: 'menu:sample:details' },
+      { key: '/sample/my', label: '我的样品', permissionCode: 'menu:sample:my' },
     ],
   },
   {
     key: '/task',
     icon: <ExperimentOutlined />,
     label: '检测任务',
+    permissionCode: 'menu:task',
     children: [
-      { key: '/task/all', label: '全部任务' },
-      { key: '/task/my', label: '我的任务' },
+      { key: '/task/all', label: '全部任务', permissionCode: 'menu:task:all' },
+      { key: '/task/my', label: '我的任务', permissionCode: 'menu:task:my' },
     ],
   },
   {
     key: '/report',
     icon: <FileTextOutlined />,
     label: '报告管理',
+    permissionCode: 'menu:report',
     children: [
-      { key: '/report/my', label: '我的报告' },
-      { key: '/report/task-generate', label: '任务报告生成' },
-      { key: '/report/client-generate', label: '客户报告生成' },
-      { key: '/report/client-template', label: '客户报告模板' },
+      { key: '/report/my', label: '我的报告', permissionCode: 'menu:report:my' },
+      { key: '/report/task-generate', label: '任务报告生成', permissionCode: 'menu:report:task-generate' },
+      { key: '/report/client-generate', label: '客户报告生成', permissionCode: 'menu:report:client-generate' },
+      { key: '/report/client-template', label: '客户报告模板', permissionCode: 'menu:report:client-template' },
     ],
   },
   {
     key: '/device',
     icon: <ToolOutlined />,
     label: '设备管理',
+    permissionCode: 'menu:device',
     children: [
-      { key: '/device', label: '设备台账' },
-      { key: '/device/maintenance-plan', label: '保养计划' },
-      { key: '/device/calibration-plan', label: '定检计划' },
-      { key: '/device/maintenance', label: '维护记录' },
+      { key: '/device', label: '设备台账', permissionCode: 'menu:device:index' },
+      { key: '/device/maintenance-plan', label: '保养计划', permissionCode: 'menu:device:maintenance-plan' },
+      { key: '/device/calibration-plan', label: '定检计划', permissionCode: 'menu:device:calibration-plan' },
+      { key: '/device/maintenance', label: '维护记录', permissionCode: 'menu:device:maintenance' },
     ],
   },
   {
     key: '/outsource',
     icon: <BankOutlined />,
     label: '外包管理',
+    permissionCode: 'menu:outsource',
     children: [
-      { key: '/outsource/supplier', label: '供应商' },
-      { key: '/outsource/order', label: '外包订单' },
+      { key: '/outsource/supplier', label: '供应商', permissionCode: 'menu:outsource:supplier' },
+      { key: '/outsource/order', label: '外包订单', permissionCode: 'menu:outsource:order' },
     ],
   },
   {
     key: '/finance',
     icon: <AuditOutlined />,
     label: '财务管理',
+    permissionCode: 'menu:finance',
     children: [
-      { key: '/finance/receivable', label: '应收款' },
-      { key: '/finance/invoice', label: '发票管理' },
+      { key: '/finance/receivable', label: '应收款', permissionCode: 'menu:finance:receivable' },
+      { key: '/finance/invoice', label: '发票管理', permissionCode: 'menu:finance:invoice' },
     ],
   },
   {
     key: '/statistics',
     icon: <BarChartOutlined />,
     label: '统计报表',
+    permissionCode: 'menu:statistics',
   },
   {
     key: '/basic-data',
     icon: <DatabaseOutlined />,
     label: '基础数据配置',
+    permissionCode: 'menu:basic-data',
     children: [
-      { key: '/basic-data/test-templates', label: '检测项目' },
-      { key: '/basic-data/inspection-standards', label: '检查标准/依据' },
-      { key: '/basic-data/report-categories', label: '报告分类' },
-      { key: '/basic-data/personnel-capability', label: '人员资质' },
-      { key: '/basic-data/capability-review', label: '能力评审' },
+      { key: '/basic-data/test-templates', label: '检测项目', permissionCode: 'menu:basic-data:test-templates' },
+      { key: '/basic-data/inspection-standards', label: '检查标准/依据', permissionCode: 'menu:basic-data:inspection-standards' },
+      { key: '/basic-data/report-categories', label: '报告分类', permissionCode: 'menu:basic-data:report-categories' },
+      { key: '/basic-data/personnel-capability', label: '人员资质', permissionCode: 'menu:basic-data:personnel-capability' },
+      { key: '/basic-data/capability-review', label: '能力评审', permissionCode: 'menu:basic-data:capability-review' },
     ],
   },
   {
     key: '/system',
     icon: <SettingOutlined />,
     label: '系统设置',
+    permissionCode: 'menu:system',
     children: [
-      { key: '/system/user', label: '用户管理' },
-      { key: '/system/role', label: '角色管理' },
-      { key: '/system/approval-flow', label: '审批流程' },
-      { key: '/system/permission', label: '权限配置' },
+      { key: '/system/user', label: '用户管理', permissionCode: 'menu:system:user' },
+      { key: '/system/role', label: '角色管理', permissionCode: 'menu:system:role' },
+      { key: '/system/approval-flow', label: '审批流程', permissionCode: 'menu:system:approval-flow' },
+      { key: '/system/permission', label: '权限配置', permissionCode: 'menu:system:permission' },
     ],
   },
 ]
@@ -133,8 +153,50 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const session = useSession()
   const router = useRouter()
   const [collapsed, setCollapsed] = useState(false)
+  const [userPermissions, setUserPermissions] = useState<string[]>([])
+  const [isAdmin, setIsAdmin] = useState(false)
+  const [permissionsLoaded, setPermissionsLoaded] = useState(false)
   const pathname = usePathname()
   const { token: { colorBgContainer, borderRadiusLG } } = theme.useToken()
+
+  // 加载用户权限
+  useEffect(() => {
+    const loadPermissions = async () => {
+      try {
+        const res = await fetch('/api/auth/me')
+        const data = await res.json()
+        if (data.success && data.data) {
+          setUserPermissions(data.data.permissions || [])
+          // 管理员角色直接显示全部菜单
+          setIsAdmin(data.data.roles?.includes('admin') || false)
+        }
+      } catch {
+        // 加载失败不影响基础功能
+      } finally {
+        setPermissionsLoaded(true)
+      }
+    }
+    loadPermissions()
+  }, [])
+
+  // 根据权限过滤菜单
+  const menuItems = useMemo(() => {
+    if (!permissionsLoaded) return [] // 权限未加载完时不显示菜单
+    if (isAdmin) return allMenuItems // 管理员显示全部
+
+    const permSet = new Set(userPermissions)
+
+    return allMenuItems
+      .filter(item => permSet.has(item.permissionCode))
+      .map(item => {
+        if (!item.children) return item
+        const filteredChildren = item.children.filter(child => permSet.has(child.permissionCode))
+        // 如果子菜单全被过滤掉，则不显示父菜单
+        if (filteredChildren.length === 0) return null
+        return { ...item, children: filteredChildren }
+      })
+      .filter(Boolean) as MenuItem[]
+  }, [userPermissions, isAdmin, permissionsLoaded])
 
   const userMenuItems = [
     { key: 'profile', icon: <UserOutlined />, label: '个人中心' },
@@ -151,8 +213,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   ]
 
   // 获取当前选中的菜单项
-  const getSelectedKeys = () => {
-    for (const item of menuItems) {
+  const getSelectedKeys = useCallback(() => {
+    for (const item of allMenuItems) {
       if (item.key === pathname) return [item.key]
       if (item.children) {
         for (const child of item.children) {
@@ -161,11 +223,11 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       }
     }
     return ['/']
-  }
+  }, [pathname])
 
   // 获取展开的子菜单
-  const getOpenKeys = () => {
-    for (const item of menuItems) {
+  const getOpenKeys = useCallback(() => {
+    for (const item of allMenuItems) {
       if (item.children) {
         for (const child of item.children) {
           if (child.key === pathname) return [item.key]
@@ -173,7 +235,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       }
     }
     return []
-  }
+  }, [pathname])
 
   return (
     <Layout style={{ minHeight: '100vh' }}>
@@ -204,7 +266,10 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           mode="inline"
           selectedKeys={getSelectedKeys()}
           defaultOpenKeys={getOpenKeys()}
-          items={menuItems}
+          items={menuItems.map(({ permissionCode, children, ...item }) => ({
+            ...item,
+            children: children?.map(({ permissionCode: _, ...child }) => child),
+          }))}
           style={{ borderRight: 0 }}
           onClick={({ key }) => {
             router.push(key)
