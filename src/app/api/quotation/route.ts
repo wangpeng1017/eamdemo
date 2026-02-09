@@ -1,9 +1,10 @@
 import { prisma } from '@/lib/prisma'
 import { NextRequest } from 'next/server'
-import { withAuth, success } from '@/lib/api-handler'
+import { withAuth, success, badRequest } from '@/lib/api-handler'
 import { auth } from '@/lib/auth'
 import { getDataFilter } from '@/lib/data-permission'
 import { addCurrentApproverInfo } from '@/lib/approval/utils'
+import { logger } from '@/lib/logger'
 
 // 获取报价列表
 export const GET = withAuth(async (request: NextRequest, user) => {
@@ -85,6 +86,24 @@ export const GET = withAuth(async (request: NextRequest, user) => {
 export const POST = withAuth(async (request: NextRequest, user) => {
   const data = await request.json()
 
+  // 记录请求数据用于调试
+  logger.info('创建报价单请求', {
+    data: {
+      clientId: data.clientId,
+      clientContactPerson: data.clientContactPerson,
+      consultationNo: data.consultationNo,
+      itemsCount: data.items?.length,
+      followerId: data.followerId,
+      userId: user?.id,
+    }
+  })
+
+  // 输入校验：clientId 必须为有效非空字符串
+  const clientId = (typeof data.clientId === 'string' && data.clientId.trim() !== '') ? data.clientId.trim() : null
+  if (!clientId) {
+    badRequest('请选择委托方客户（clientId 不能为空）')
+  }
+
   // 如果从咨询单创建，查询咨询单以继承 clientReportDeadline 和 followerId
   let inheritedDeadline = null
   let inheritedFollowerId = null
@@ -118,28 +137,36 @@ export const POST = withAuth(async (request: NextRequest, user) => {
   const discountAmount = Number(data.discountAmount) || 0
   const discountTotal = data.finalAmount || (taxTotal - discountAmount)
 
+  // 确保金额为有效数值，防止 NaN 传入 Prisma Decimal 字段
+  const safeSubtotal = isFinite(subtotal) ? subtotal : 0
+  const safeTaxTotal = isFinite(taxTotal) ? taxTotal : 0
+  const safeDiscountTotal = isFinite(Number(discountTotal)) ? Number(discountTotal) : 0
+
+  // 安全处理 followerId：空字符串视为 null
+  const followerId = (data.followerId && String(data.followerId).trim() !== '') ? data.followerId : inheritedFollowerId || undefined
+
   // 构造创建数据
   const createData: any = {
     quotationNo,
-    client: data.clientId ? { connect: { id: data.clientId } } : undefined,
-    clientContactPerson: data.clientContactPerson,
-    clientPhone: data.clientPhone,
-    clientEmail: data.clientEmail,
-    clientAddress: data.clientAddress,
+    client: { connect: { id: clientId } },
+    clientContactPerson: data.clientContactPerson || '',
+    clientPhone: data.clientPhone || undefined,
+    clientEmail: data.clientEmail || undefined,
+    clientAddress: data.clientAddress || undefined,
     consultationNo: data.consultationNo || data.consultationId || undefined,
 
     // 服务方信息
-    serviceContact: data.serviceContact,
-    serviceTel: data.serviceTel,
-    serviceEmail: data.serviceEmail,
-    serviceAddress: data.serviceAddress,
+    serviceContact: data.serviceContact || undefined,
+    serviceTel: data.serviceTel || undefined,
+    serviceEmail: data.serviceEmail || undefined,
+    serviceAddress: data.serviceAddress || undefined,
 
-    followerId: data.followerId || inheritedFollowerId,
-    clientRemark: data.clientRemark || data.paymentTerms,
+    followerId,
+    clientRemark: data.clientRemark || data.paymentTerms || undefined,
     taxRate,
-    subtotal,
-    taxTotal,
-    discountTotal,
+    subtotal: safeSubtotal,
+    taxTotal: safeTaxTotal,
+    discountTotal: safeDiscountTotal,
     status: data.status || 'draft',
     clientStatus: data.clientResponse || 'pending',
     clientReportDeadline: data.clientReportDeadline ? new Date(data.clientReportDeadline) : (inheritedDeadline || null),

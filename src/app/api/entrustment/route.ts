@@ -8,6 +8,7 @@ import {
 import { auth } from '@/lib/auth'
 import { getDataFilter } from '@/lib/data-permission'
 import { generateNo, NumberPrefixes } from '@/lib/generate-no'
+import { logger } from '@/lib/logger'
 
 // 获取委托单列表（含筛选和关联数据）
 export const GET = withErrorHandler(async (request: NextRequest) => {
@@ -232,8 +233,17 @@ export const POST = withErrorHandler(async (request: NextRequest) => {
   const session = await auth()
   const data = await request.json()
 
-  // 详细日志
-  console.log('[Entrustment Create] Received data:', JSON.stringify(data, null, 2))
+  // 记录请求数据用于调试
+  logger.info('创建委托单请求', {
+    data: {
+      clientId: data.clientId,
+      clientName: data.clientName,
+      contractNo: data.contractNo,
+      quotationId: data.quotationId,
+      followerId: data.followerId,
+      userId: session?.user?.id,
+    }
+  })
 
   // 验证必填字段 - 只验证 clientName
   if (!data.clientName) {
@@ -290,12 +300,18 @@ export const POST = withErrorHandler(async (request: NextRequest) => {
     }
   }
 
+  // 安全处理 clientId 和 quotationId：空字符串视为 null，防止 Prisma connect 外键错误
+  const safeClientId = (typeof data.clientId === 'string' && data.clientId.trim() !== '') ? data.clientId.trim() : null
+  const safeQuotationId = (typeof data.quotationId === 'string' && data.quotationId.trim() !== '') ? data.quotationId.trim() : null
+  // 安全处理 followerId
+  const safeFollowerId = (inheritedFollowerId && String(inheritedFollowerId).trim() !== '') ? inheritedFollowerId : null
+
   // 提取 schema 中存在的字段
   const createData: any = {
     entrustmentNo,
     contractNo: data.contractNo || null,
-    quotation: data.quotationId ? { connect: { id: data.quotationId } } : undefined,
-    client: data.clientId ? { connect: { id: data.clientId } } : undefined,
+    quotation: safeQuotationId ? { connect: { id: safeQuotationId } } : undefined,
+    client: safeClientId ? { connect: { id: safeClientId } } : undefined,
     contactPerson: data.contactPerson || null,
     contactPhone: data.contactPhone || null,
     contactFax: data.contactFax || null,
@@ -303,7 +319,7 @@ export const POST = withErrorHandler(async (request: NextRequest) => {
     clientAddress: data.clientAddress || null,
     sampleDate: data.sampleDate ? new Date(data.sampleDate) : new Date(),
     clientReportDeadline: inheritedDeadline,
-    followerId: inheritedFollowerId,
+    followerId: safeFollowerId,
     isSampleReturn: data.isSampleReturn || false,
     // 开票信息
     invoiceTitle: data.invoiceTitle || null,

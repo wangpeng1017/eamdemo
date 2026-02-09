@@ -1,9 +1,10 @@
 import { prisma } from '@/lib/prisma'
 import { NextRequest } from 'next/server'
-import { withAuth, success } from '@/lib/api-handler'
+import { withAuth, success, badRequest } from '@/lib/api-handler'
 import { auth } from '@/lib/auth'
 import { getDataFilter } from '@/lib/data-permission'
 import { addCurrentApproverInfo } from '@/lib/approval/utils'
+import { logger } from '@/lib/logger'
 
 export const GET = withAuth(async (request: NextRequest, user) => {
   const { searchParams } = new URL(request.url)
@@ -94,7 +95,22 @@ export const GET = withAuth(async (request: NextRequest, user) => {
 
 export const POST = withAuth(async (request: NextRequest, user) => {
   const data = await request.json()
-  console.log('[Contract Create] Received Payload:', JSON.stringify(data, null, 2))
+
+  // 记录请求数据用于调试
+  logger.info('创建合同请求', {
+    data: {
+      clientId: data.clientId,
+      quotationId: data.quotationId,
+      contractName: data.contractName,
+      itemsCount: data.items?.length,
+      userId: user?.id,
+    }
+  })
+
+  // 输入校验
+  if (!data.contractName || String(data.contractName).trim() === '') {
+    badRequest('合同名称不能为空')
+  }
 
   // 生成合同编号
   const today = new Date().toISOString().slice(0, 10).replace(/-/g, '')
@@ -126,26 +142,35 @@ export const POST = withAuth(async (request: NextRequest, user) => {
     data.clientEmail = data.clientEmail || quotation?.clientEmail
   }
 
+  // 安全处理 clientId 和 quotationId：空字符串视为 null
+  const safeClientId = (typeof clientId === 'string' && clientId.trim() !== '') ? clientId.trim() : null
+  const safeQuotationId = (typeof data.quotationId === 'string' && data.quotationId.trim() !== '') ? data.quotationId.trim() : null
+  // 安全处理 followerId
+  const safeFollowerId = (inheritedFollowerId && String(inheritedFollowerId).trim() !== '') ? inheritedFollowerId : null
+  // 安全处理金额
+  const safeAmount = data.amount != null && isFinite(Number(data.amount)) ? Number(data.amount) : null
+  const safePrepayment = data.prepaymentAmount != null && isFinite(Number(data.prepaymentAmount)) ? Number(data.prepaymentAmount) : null
+
   // 构建合同创建数据
   const createData: any = {
     createdBy: user?.id ? { connect: { id: user.id } } : undefined,
     contractNo,
     contractName: data.contractName,
-    quotation: data.quotationId ? { connect: { id: data.quotationId } } : undefined,
+    quotation: safeQuotationId ? { connect: { id: safeQuotationId } } : undefined,
     // quotationNo removed as it does not exist in Contract schema
-    client: clientId ? { connect: { id: clientId } } : undefined,
+    client: safeClientId ? { connect: { id: safeClientId } } : undefined,
     partyACompany: data.clientName,
     partyAContact: data.clientContact,
     partyATel: data.clientPhone,
     partyAEmail: data.clientEmail,
-    partyAAddress: data.clientAddress,
-    contractAmount: data.amount != null ? Number(data.amount) : null,
-    hasAdvancePayment: data.prepaymentAmount != null && data.prepaymentAmount > 0,
-    advancePaymentAmount: data.prepaymentAmount != null ? Number(data.prepaymentAmount) : null,
+    partyAAddress: data.clientAddress || undefined,
+    contractAmount: safeAmount,
+    hasAdvancePayment: safePrepayment != null && safePrepayment > 0,
+    advancePaymentAmount: safePrepayment,
 
     // 继承字段
     clientReportDeadline: inheritedDeadline,
-    followerId: inheritedFollowerId,
+    followerId: safeFollowerId,
 
     // 样品信息 (兼容旧字段)
     sampleName: data.sampleName || (data.samples?.[0]?.name),
@@ -165,21 +190,21 @@ export const POST = withAuth(async (request: NextRequest, user) => {
     // termsOtherTerms 字段在 schema 中不存在，已移除
     status: 'draft',
     items: {
-      create: data.items?.map((item: any, index: number) => ({
-        serviceItem: item.serviceItem,
-        methodStandard: item.methodStandard,
+      create: (data.items || []).map((item: any, index: number) => ({
+        serviceItem: item.serviceItem || '',
+        methodStandard: item.methodStandard || '',
         quantity: Number(item.quantity) || 1,
-        unitPrice: Number(item.unitPrice) || 0,
-        totalPrice: Number(item.totalPrice) || 0,
+        unitPrice: isFinite(Number(item.unitPrice)) ? Number(item.unitPrice) : 0,
+        totalPrice: isFinite(Number(item.totalPrice)) ? Number(item.totalPrice) : 0,
         sort: index
-      })) || []
+      }))
     }
   }
 
   // 处理样品列表 - 功能已移除，跳过contractSamples
   // if (Array.isArray(data.samples) && data.samples.length > 0) {...}
 
-  console.log('[Contract Create] Prisma Data:', JSON.stringify(createData, null, 2))
+  logger.info('合同创建数据构建完成', { data: { contractNo } })
 
   try {
     const contract = await prisma.contract.create({
