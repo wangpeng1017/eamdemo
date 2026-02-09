@@ -993,7 +993,7 @@ export default function EntrustmentListPage() {
 
       {/* 打印隐藏区域 */}
       {showPrint && printData && (
-        <div style={{ position: 'fixed', top: '-9999px', left: '-9999px' }}>
+        <div id="entrustment-print-wrapper" style={{ position: 'fixed', top: '-9999px', left: '-9999px' }}>
           <EntrustmentPrint ref={printRef} data={printData} />
         </div>
       )}

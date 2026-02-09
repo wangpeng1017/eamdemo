@@ -70,8 +70,22 @@ export interface PrintData {
 const printStyles = `
 @media print {
   body * { visibility: hidden; }
+  #entrustment-print-wrapper {
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
+    width: 100% !important;
+    height: auto !important;
+    z-index: 99999 !important;
+    overflow: visible !important;
+  }
   #entrustment-print, #entrustment-print * { visibility: visible; }
-  #entrustment-print { position: absolute; left: 0; top: 0; width: 100%; }
+  #entrustment-print {
+    position: relative !important;
+    left: 0;
+    top: 0;
+    width: 100%;
+  }
   @page { size: A4 landscape; margin: 10mm; }
 }
 `
