@@ -531,18 +531,20 @@ export default function QuotationPage() {
             )}
 
             {/* 生成委托单按钮（只对approved状态） */}
-            <CreateEntrustmentButton
-              quotationId={record.id}
-              quotationStatus={record.status as any}
-              onSuccess={() => {
-                showSuccess('委托单创建成功')
-                fetchData()
-              }}
-              buttonText="生成委托单"
-              icon={<FileTextOutlined />}
-              size="small"
-              type="default"
-            />
+            <Tooltip title={record.status !== 'approved' ? '需审批通过后才能生成委托单' : ''}>
+              <CreateEntrustmentButton
+                quotationId={record.id}
+                quotationStatus={record.status as any}
+                onSuccess={() => {
+                  showSuccess('委托单创建成功')
+                  fetchData()
+                }}
+                buttonText="生成委托单"
+                icon={<FileTextOutlined />}
+                size="small"
+                type="default"
+              />
+            </Tooltip>
 
             {/* PDF打印按钮 */}
             <QuotationPDFButton
@@ -562,10 +564,14 @@ export default function QuotationPage() {
             {/* 通用按钮（仅图标） */}
             <Button size="small" icon={<EyeOutlined />} onClick={() => handleView(record)} />
             <Button size="small" icon={<PrinterOutlined />} onClick={() => handlePrint(record)} title="打印" />
-            <Button size="small" icon={<EditOutlined />} onClick={() => handleEdit(record)} disabled={record.status !== 'draft'} />
-            <Popconfirm title="确认删除" onConfirm={() => handleDelete(record.id)} disabled={record.status !== 'draft'}>
-              <Button size="small" danger icon={<DeleteOutlined />} disabled={record.status !== 'draft'} />
-            </Popconfirm>
+            <Tooltip title={record.status !== 'draft' ? '仅草稿状态可编辑' : ''}>
+              <Button size="small" icon={<EditOutlined />} onClick={() => handleEdit(record)} disabled={record.status !== 'draft'} />
+            </Tooltip>
+            <Tooltip title={record.status !== 'draft' ? '仅草稿状态可删除' : ''}>
+              <Popconfirm title="确认删除" onConfirm={() => handleDelete(record.id)} disabled={record.status !== 'draft'}>
+                <Button size="small" danger icon={<DeleteOutlined />} disabled={record.status !== 'draft'} />
+              </Popconfirm>
+            </Tooltip>
           </Space>
         )
       },
