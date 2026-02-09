@@ -30,13 +30,32 @@ export const GET = withAuth(async (request: NextRequest, user) => {
   const [list, total] = await Promise.all([
     prisma.entrustment.findMany({
       where,
-      include: {
+      select: {
+        id: true,
+        entrustmentNo: true,
+        invoiceTitle: true,
+        taxId: true,
+        contactPerson: true,
+        contactPhone: true,
+        contactEmail: true,
         client: {
           select: {
             name: true,
-            contact: true
+            contact: true,
           }
-        }
+        },
+        quotation: {
+          select: {
+            subtotal: true,
+            taxTotal: true,
+            discountTotal: true,
+          }
+        },
+        contract: {
+          select: {
+            contractAmount: true,
+          }
+        },
       },
       orderBy: { createdAt: 'desc' },
       skip: (page - 1) * pageSize,

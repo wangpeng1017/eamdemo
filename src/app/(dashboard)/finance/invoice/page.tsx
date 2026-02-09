@@ -43,10 +43,23 @@ interface Invoice {
 interface AvailableEntrustment {
   id: string
   entrustmentNo: string
+  invoiceTitle?: string | null
+  taxId?: string | null
+  contactPerson?: string | null
+  contactPhone?: string | null
+  contactEmail?: string | null
   client?: {
     name: string
     contact: string | null
   }
+  quotation?: {
+    subtotal?: number | null
+    taxTotal?: number | null
+    discountTotal?: number | null
+  } | null
+  contract?: {
+    contractAmount?: number | null
+  } | null
 }
 
 const statusMap: Record<string, { text: string; color: string }> = {
@@ -109,6 +122,36 @@ export default function InvoicePage() {
     form.resetFields()
     fetchAvailableEntrustments()
     setModalOpen(true)
+  }
+
+  // 选择委托单时自动填充客户名称、税号、金额等信息
+  const handleEntrustmentChange = (entrustmentNo: string) => {
+    if (!entrustmentNo) {
+      // 清空时不操作
+      return
+    }
+    const selected = availableEntrustments.find(e => e.entrustmentNo === entrustmentNo)
+    if (!selected) return
+
+    // 自动填充客户名称：优先开票抬头，其次客户名称
+    const clientName = selected.invoiceTitle || selected.client?.name || ''
+    // 自动填充税号
+    const clientTaxNo = selected.taxId || ''
+    // 自动填充金额：优先合同金额，其次报价单含税金额，再次报价单小计
+    let invoiceAmount: number | undefined = undefined
+    if (selected.contract?.contractAmount != null) {
+      invoiceAmount = Number(selected.contract.contractAmount)
+    } else if (selected.quotation?.discountTotal != null && Number(selected.quotation.discountTotal) > 0) {
+      invoiceAmount = Number(selected.quotation.discountTotal)
+    } else if (selected.quotation?.subtotal != null) {
+      invoiceAmount = Number(selected.quotation.subtotal)
+    }
+
+    form.setFieldsValue({
+      clientName,
+      clientTaxNo,
+      ...(invoiceAmount != null && isFinite(invoiceAmount) ? { invoiceAmount } : {}),
+    })
   }
 
   const handleEdit = (record: Invoice) => {
@@ -246,8 +289,10 @@ export default function InvoicePage() {
             <Select
               placeholder="请选择委托单"
               showSearch
+              allowClear
               loading={loadingEntrustments}
               onSearch={(value) => fetchAvailableEntrustments(value)}
+              onChange={handleEntrustmentChange}
               filterOption={false}
               options={availableEntrustments.map(e => ({
                 value: e.entrustmentNo,
