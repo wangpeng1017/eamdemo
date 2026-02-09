@@ -319,7 +319,7 @@ export const POST = withErrorHandler(async (request: NextRequest) => {
     clientAddress: data.clientAddress || null,
     sampleDate: data.sampleDate ? new Date(data.sampleDate) : new Date(),
     clientReportDeadline: inheritedDeadline,
-    followerId: safeFollowerId,
+    followerUser: safeFollowerId ? { connect: { id: safeFollowerId } } : undefined,
     isSampleReturn: data.isSampleReturn || false,
     // 开票信息
     invoiceTitle: data.invoiceTitle || null,

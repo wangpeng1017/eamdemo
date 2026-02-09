@@ -161,7 +161,7 @@ export const POST = withAuth(async (request: NextRequest, user) => {
     serviceEmail: data.serviceEmail || undefined,
     serviceAddress: data.serviceAddress || undefined,
 
-    followerId,
+    followerUser: followerId ? { connect: { id: followerId } } : undefined,
     clientRemark: data.clientRemark || data.paymentTerms || undefined,
     taxRate,
     subtotal: safeSubtotal,

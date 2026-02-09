@@ -170,7 +170,7 @@ export const POST = withAuth(async (request: NextRequest, user) => {
 
     // 继承字段
     clientReportDeadline: inheritedDeadline,
-    followerId: safeFollowerId,
+    followerUser: safeFollowerId ? { connect: { id: safeFollowerId } } : undefined,
 
     // 样品信息 (兼容旧字段)
     sampleName: data.sampleName || (data.samples?.[0]?.name),
