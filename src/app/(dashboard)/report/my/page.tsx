@@ -11,6 +11,7 @@ const entrustmentStatusMap: Record<string, { text: string; color: string }> = {
     draft: { text: '草稿', color: 'default' },
     accepted: { text: '已受理', color: 'processing' },
     submitted: { text: '已提交', color: 'processing' },
+    in_progress: { text: '进行中', color: 'blue' },
     testing: { text: '检测中', color: 'blue' },
     completed: { text: '已完成', color: 'green' },
     archived: { text: '已归档', color: 'purple' },
