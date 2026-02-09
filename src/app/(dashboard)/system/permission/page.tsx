@@ -190,10 +190,7 @@ export default function PermissionPage() {
       })
       const data = await res.json()
       if (data.success !== false) {
-        Modal.success({
-          title: '保存成功',
-          content: `${selectedRole.name} 的权限配置已保存`,
-        })
+        showSuccess(`${selectedRole.name} 的权限配置已保存成功`)
         loadRoles()
       } else {
         showError(data.message || '保存失败')
