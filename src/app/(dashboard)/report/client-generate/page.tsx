@@ -314,10 +314,6 @@ export default function ClientReportGeneratePage() {
             onHeaderCell: () => ({ style: { whiteSpace: 'nowrap' as const } }),
             render: (_, record) => (
                 <Space size="small" style={{ whiteSpace: 'nowrap' }}>
-                    <Button size="small" icon={<EyeOutlined />} onClick={() => handleView(record)} title="查看" />
-                    {record.status === 'draft' && (
-                        <Button size="small" icon={<EditOutlined />} onClick={() => handleEdit(record)} title="编辑" />
-                    )}
                     {record.status === 'draft' && (
                         <Button size="small" type="primary" ghost icon={<SendOutlined />} onClick={() => handleSubmitApproval(record)}>
                             提交
@@ -326,6 +322,10 @@ export default function ClientReportGeneratePage() {
                     <Button size="small" icon={<PrinterOutlined />} onClick={() => handlePrint(record)}>
                         打印
                     </Button>
+                    <Button size="small" icon={<EyeOutlined />} onClick={() => handleView(record)} />
+                    {record.status === 'draft' && (
+                        <Button size="small" icon={<EditOutlined />} onClick={() => handleEdit(record)} />
+                    )}
                     {record.status === 'draft' && (
                         <Popconfirm title="确认删除该报告?" onConfirm={() => handleDelete(record.id)}>
                             <Button size="small" danger icon={<DeleteOutlined />} />

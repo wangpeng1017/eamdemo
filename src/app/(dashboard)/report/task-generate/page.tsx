@@ -290,8 +290,6 @@ export default function TestReportPage() {
       onHeaderCell: () => ({ style: { whiteSpace: 'nowrap' as const } }),
       render: (_, record) => (
         <Space size="small" style={{ whiteSpace: 'nowrap' }}>
-          <Button size="small" icon={<EyeOutlined />} onClick={() => handleView(record)} title="查看" />
-          <Button size="small" icon={<EditOutlined />} onClick={() => handleEdit(record)} title="编辑" />
           {record.status === 'draft' && (
             <Button
               size="small"
@@ -310,6 +308,8 @@ export default function TestReportPage() {
           >
             打印
           </Button>
+          <Button size="small" icon={<EyeOutlined />} onClick={() => handleView(record)} />
+          <Button size="small" icon={<EditOutlined />} onClick={() => handleEdit(record)} />
           {record.status === 'draft' && (
             <Popconfirm title="确认删除该报告?" onConfirm={() => handleDelete(record.id)}>
               <Button size="small" danger icon={<DeleteOutlined />} />
