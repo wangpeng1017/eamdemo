@@ -188,11 +188,14 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     const permSet = new Set(userPermissions)
 
     return allMenuItems
-      .filter(item => permSet.has(item.permissionCode))
       .map(item => {
-        if (!item.children) return item
+        // 无子菜单的顶级项，直接判断权限
+        if (!item.children) {
+          return permSet.has(item.permissionCode) ? item : null
+        }
+        // 有子菜单时，先过滤子菜单
         const filteredChildren = item.children.filter(child => permSet.has(child.permissionCode))
-        // 如果子菜单全被过滤掉，则不显示父菜单
+        // 如果有任意子菜单有权限，则显示父菜单（即使父菜单权限未勾选）
         if (filteredChildren.length === 0) return null
         return { ...item, children: filteredChildren }
       })
