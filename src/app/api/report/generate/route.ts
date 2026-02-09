@@ -118,6 +118,9 @@ export async function POST(request: NextRequest) {
           assignedTo: {
             select: { name: true }
           },
+          entrustmentProject: {
+            select: { name: true, method: true }
+          },
         },
       })
     } catch (error) {
@@ -202,6 +205,8 @@ export async function POST(request: NextRequest) {
             taskId: task.id,
             entrustmentId: task.entrustmentId,
             clientName: entrustment?.client?.name,
+            projectName: task.entrustmentProject?.name,
+            standardName: task.entrustmentProject?.method,
             sampleNo: task.sample?.sampleNo,
             sampleName: task.sampleName,
             specification: task.sample?.specification,

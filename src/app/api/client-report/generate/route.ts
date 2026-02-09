@@ -79,6 +79,13 @@ export async function POST(request: NextRequest) {
         })
     })
 
+    // 获取委托单和样品信息，自动带出字段
+    const entrustment = await prisma.entrustment.findUnique({
+        where: { id: entrustmentId },
+        include: { client: true, samples: true }
+    })
+    const sample = entrustment?.samples?.[0]
+
     // 创建客户报告
     const report = await prisma.clientReport.create({
         data: {
@@ -86,7 +93,12 @@ export async function POST(request: NextRequest) {
             entrustmentId,
             projectName,
             clientName,
+            clientAddress: (entrustment?.client as any)?.address || entrustment?.clientAddress || null,
             sampleName,
+            sampleNo: sample?.sampleNo || null,
+            specification: sample?.specification || null,
+            sampleQuantity: sample?.quantity || null,
+            receivedDate: sample?.receiptDate || null,
             taskReportNos: JSON.stringify(taskReports.map(r => r.reportNo)),
             testItems: JSON.stringify(testItems),
             testStandards: JSON.stringify(testStandards),
@@ -97,7 +109,7 @@ export async function POST(request: NextRequest) {
             // 新增字段
             templateId: templateId || null,
             coverData: coverData ? JSON.stringify(coverData) : null,
-            backCoverData: backCoverData ? JSON.stringify(backCoverData) : null, // 存储封底内容作为 JSON 字符串 { content: "..." }
+            backCoverData: backCoverData ? JSON.stringify(backCoverData) : null,
 
             // 建立关联
             tasks: {
