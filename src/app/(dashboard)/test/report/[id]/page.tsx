@@ -315,9 +315,7 @@ export default function ReportDetailPage() {
                     <Button icon={<PrinterOutlined />} onClick={handlePrint}>
                         打印
                     </Button>
-                    <Button type="primary" icon={<DownloadOutlined />} onClick={handleExport}>
-                        导出 Excel
-                    </Button>
+
                     {getApprovalButtons()}
                 </Space>
             </div>

@@ -73,6 +73,25 @@ export const PATCH = withAuth(async (
     return NextResponse.json({ success: false, error: { message: '报告不存在' } }, { status: 404 })
   }
 
+  // 无 action 时视为编辑保存
+  if (!action) {
+    const { action: _, comment: _c, approver: _a, submitterName: _s, ...editData } = data
+    await prisma.testReport.update({
+      where: { id },
+      data: {
+        ...editData,
+        lastEditedAt: new Date(),
+        lastEditedBy: user.name || '未知用户',
+      }
+    })
+
+    const updated = await prisma.testReport.findUnique({
+      where: { id },
+      include: { task: true }
+    })
+    return NextResponse.json({ success: true, data: updated })
+  }
+
   const { approvalEngine } = await import('@/lib/approval/engine')
 
   if (action === 'submit') {
@@ -110,7 +129,6 @@ export const PATCH = withAuth(async (
       comment,
     })
   } else if (action === 'review') {
-    // 兼容前端原有的 action: 'review'
     const instance = await prisma.approvalInstance.findFirst({
       where: {
         bizType: 'test_report',
@@ -129,7 +147,6 @@ export const PATCH = withAuth(async (
         comment,
       })
     } else {
-      // 如果没有实例，可能是旧流程，暂时手动更新
       await prisma.testReport.update({
         where: { id },
         data: { status: 'approved' }
