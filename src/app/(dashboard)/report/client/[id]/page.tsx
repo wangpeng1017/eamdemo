@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { showError } from '@/lib/confirm'
-import { Card, Descriptions, Table, Tag } from 'antd'
+import { Descriptions, Table, Tag } from 'antd'
 import { ArrowLeftOutlined } from '@ant-design/icons'
 import { useParams, useRouter } from 'next/navigation'
 import dayjs from 'dayjs'
@@ -82,13 +82,8 @@ export default function ClientReportDetailPage() {
         }
     }
 
-    if (loading) {
-        return <div className="p-6 text-center">加载中...</div>
-    }
-
-    if (!report) {
-        return <div className="p-6 text-center">报告不存在</div>
-    }
+    if (loading) return <div className="p-6 text-center">加载中...</div>
+    if (!report) return <div className="p-6 text-center">报告不存在</div>
 
     // 解析封底数据
     let backCoverContent = ''
@@ -110,7 +105,7 @@ export default function ClientReportDetailPage() {
 
     return (
         <div className="p-6 max-w-5xl mx-auto">
-            {/* 左上角返回 */}
+            {/* 左上角返回（打印时隐藏） */}
             <div className="mb-4 flex items-center no-print">
                 <a onClick={() => router.back()} style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4, color: '#1677ff' }}>
                     <ArrowLeftOutlined /> 返回列表
@@ -133,24 +128,18 @@ export default function ClientReportDetailPage() {
                     <div className="grid grid-cols-3 gap-y-6 mb-4">
                         <div className="font-bold text-gray-600">报告编号：</div>
                         <div className="col-span-2 border-b border-black">{report.reportNo}</div>
-
                         <div className="font-bold text-gray-600">项目名称：</div>
                         <div className="col-span-2 border-b border-black">{report.projectName || '-'}</div>
-
                         <div className="font-bold text-gray-600">委托单位：</div>
                         <div className="col-span-2 border-b border-black">{report.clientName}</div>
-
                         <div className="font-bold text-gray-600">样品名称：</div>
                         <div className="col-span-2 border-b border-black">{report.sampleName}</div>
-
                         <div className="font-bold text-gray-600">报告日期：</div>
                         <div className="col-span-2 border-b border-black">{dayjs(report.createdAt).format('YYYY年MM月DD日')}</div>
                     </div>
                 </div>
 
-                <div className="mt-20 text-sm text-gray-500">
-                    本报告未经授权不得复制
-                </div>
+                <div className="mt-20 text-sm text-gray-500">本报告未经授权不得复制</div>
             </div>
 
             {/* 内容页 */}
@@ -193,9 +182,7 @@ export default function ClientReportDetailPage() {
 
                 <div className="mt-6 border-t pt-4">
                     <h3 className="font-bold mb-2">总体结论：</h3>
-                    <p className="p-4 bg-gray-50 rounded min-h-[80px]">
-                        {report.overallConclusion || '（无结论）'}
-                    </p>
+                    <p className="p-4 bg-gray-50 rounded min-h-[80px]">{report.overallConclusion || '（无结论）'}</p>
                 </div>
 
                 <div className="mt-8 flex justify-end space-x-12">
@@ -222,7 +209,6 @@ export default function ClientReportDetailPage() {
                         )}
                     </div>
                 </div>
-
                 <div className="text-center mt-20">
                     <div className="mb-4 text-xl font-bold">江苏国轻检测技术有限公司</div>
                     <div className="text-gray-600">地址：江苏省某某市某某区某某路88号</div>
@@ -233,10 +219,7 @@ export default function ClientReportDetailPage() {
 
             <style jsx global>{`
                 .print-page {
-                    min-height: 297mm;
-                    width: 210mm;
-                    margin: 0 auto 20px auto;
-                    border: 1px solid #eee;
+                    min-height: 297mm; width: 210mm; margin: 0 auto 20px auto; border: 1px solid #eee;
                 }
                 @media print {
                     @page { size: A4; margin: 0; }

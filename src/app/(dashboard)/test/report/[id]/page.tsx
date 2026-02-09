@@ -2,10 +2,10 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { showError } from '@/lib/confirm'
+import { showSuccess, showError } from '@/lib/confirm'
 import { useParams, useRouter } from 'next/navigation'
-import { Card, Descriptions, Table, Tag, Timeline } from 'antd'
-import { ArrowLeftOutlined } from '@ant-design/icons'
+import { Card, Descriptions, Button, Table, Tag, Space, Form, Input, DatePicker } from 'antd'
+import { ArrowLeftOutlined, SaveOutlined } from '@ant-design/icons'
 import type { ColumnsType } from 'antd/es/table'
 import dayjs from 'dayjs'
 
@@ -36,17 +36,6 @@ interface Report {
     status: string
     createdAt: string
     issuedDate: string | null
-    lastEditedAt?: string | null
-    lastEditedBy?: string | null
-}
-
-interface Approval {
-    id: string
-    reviewType: string
-    reviewer: string
-    result: string
-    comments: string | null
-    reviewDate: string
 }
 
 const statusMap: Record<string, { text: string; color: string }> = {
@@ -56,25 +45,19 @@ const statusMap: Record<string, { text: string; color: string }> = {
     issued: { text: '已发布', color: 'cyan' },
 }
 
-const reviewTypeMap: Record<string, string> = {
-    submit: '提交审核',
-    review: '审核',
-    issue: '发布'
-}
-
-export default function ReportDetailPage() {
+export default function ReportEditPage() {
     const params = useParams()
     const router = useRouter()
     const reportId = params.id as string
 
     const [report, setReport] = useState<Report | null>(null)
     const [testData, setTestData] = useState<TestData[]>([])
-    const [approvals, setApprovals] = useState<Approval[]>([])
     const [loading, setLoading] = useState(false)
+    const [saving, setSaving] = useState(false)
+    const [form] = Form.useForm()
 
     useEffect(() => {
         fetchReport()
-        fetchApprovals()
     }, [reportId])
 
     const fetchReport = async () => {
@@ -86,6 +69,19 @@ export default function ReportDetailPage() {
             const json = await res.json()
             const reportData = json.data || json
             setReport(reportData)
+
+            // 填充表单
+            form.setFieldsValue({
+                sampleName: reportData.sampleName,
+                sampleNo: reportData.sampleNo,
+                clientName: reportData.clientName,
+                specification: reportData.specification,
+                sampleQuantity: reportData.sampleQuantity,
+                receivedDate: reportData.receivedDate ? dayjs(reportData.receivedDate) : null,
+                tester: reportData.tester,
+                reviewer: reportData.reviewer,
+                overallConclusion: reportData.overallConclusion,
+            })
 
             // 解析 testResults
             if (reportData.testResults) {
@@ -105,15 +101,38 @@ export default function ReportDetailPage() {
         }
     }
 
-    const fetchApprovals = async () => {
+    const handleSave = async () => {
         try {
-            const res = await fetch(`/api/report/${reportId}/approval`)
+            const values = await form.validateFields()
+            setSaving(true)
+
+            const res = await fetch(`/api/test-report/${reportId}`, {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    sampleName: values.sampleName,
+                    sampleNo: values.sampleNo,
+                    clientName: values.clientName,
+                    specification: values.specification,
+                    sampleQuantity: values.sampleQuantity,
+                    receivedDate: values.receivedDate ? values.receivedDate.toISOString() : null,
+                    tester: values.tester,
+                    reviewer: values.reviewer,
+                    overallConclusion: values.overallConclusion,
+                }),
+            })
+
             const json = await res.json()
-            if (json.success) {
-                setApprovals(json.data || [])
+            if (res.ok && (json.success || json.data)) {
+                showSuccess('保存成功')
+                fetchReport()
+            } else {
+                showError(json.error?.message || json.error || '保存失败')
             }
-        } catch (error) {
-            console.error('[Report] 获取审批历史失败:', error)
+        } catch (error: any) {
+            showError(error.message || '保存失败')
+        } finally {
+            setSaving(false)
         }
     }
 
@@ -135,55 +154,77 @@ export default function ReportDetailPage() {
         { title: '备注', dataIndex: 'remark', ellipsis: true },
     ]
 
+    const isEditable = report?.status === 'draft'
+
     if (!report) {
         return <div className="p-6">加载中...</div>
     }
 
     return (
         <div className="p-6">
-            {/* 左上角返回 */}
+            {/* 顶部操作栏 */}
             <div className="mb-4 flex justify-between items-center">
                 <a onClick={() => router.back()} style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4, color: '#1677ff' }}>
                     <ArrowLeftOutlined /> 返回
                 </a>
-                <h1 className="text-2xl font-bold" style={{ margin: 0 }}>检测报告详情</h1>
-                <div style={{ width: 60 }} />
+                <h2 style={{ margin: 0 }}>编辑检测报告</h2>
+                <Space>
+                    {isEditable && (
+                        <Button type="primary" icon={<SaveOutlined />} onClick={handleSave} loading={saving}>
+                            保存
+                        </Button>
+                    )}
+                </Space>
             </div>
 
-            {/* 报告基本信息 */}
-            <Card title="报告信息" className="mb-4">
-                <Descriptions column={2} bordered>
+            {/* 状态信息 */}
+            <Card className="mb-4" size="small">
+                <Descriptions column={4}>
                     <Descriptions.Item label="报告编号">{report.reportNo}</Descriptions.Item>
-                    <Descriptions.Item label="报告状态">
-                        <Tag color={statusMap[report.status]?.color}>
-                            {statusMap[report.status]?.text}
-                        </Tag>
+                    <Descriptions.Item label="状态">
+                        <Tag color={statusMap[report.status]?.color}>{statusMap[report.status]?.text}</Tag>
                     </Descriptions.Item>
-                    <Descriptions.Item label="客户名称">{report.clientName || '-'}</Descriptions.Item>
-                    <Descriptions.Item label="样品名称">{report.sampleName || '-'}</Descriptions.Item>
-                    <Descriptions.Item label="样品编号">{report.sampleNo || '-'}</Descriptions.Item>
-                    <Descriptions.Item label="样品规格">{report.specification || '-'}</Descriptions.Item>
-                    <Descriptions.Item label="样品数量">{report.sampleQuantity || '-'}</Descriptions.Item>
-                    <Descriptions.Item label="收样日期">
-                        {report.receivedDate ? dayjs(report.receivedDate).format('YYYY-MM-DD') : '-'}
-                    </Descriptions.Item>
-                    <Descriptions.Item label="检测人员">{report.tester || '-'}</Descriptions.Item>
-                    <Descriptions.Item label="审核人员">{report.reviewer || '-'}</Descriptions.Item>
-                    <Descriptions.Item label="报告日期">
-                        {dayjs(report.createdAt).format('YYYY-MM-DD')}
-                    </Descriptions.Item>
-                    <Descriptions.Item label="发布日期">
-                        {report.issuedDate ? dayjs(report.issuedDate).format('YYYY-MM-DD') : '-'}
-                    </Descriptions.Item>
-                    {report.lastEditedAt && (
-                        <Descriptions.Item label="最后编辑" span={2}>
-                            {report.lastEditedBy} · {dayjs(report.lastEditedAt).format('YYYY-MM-DD HH:mm')}
-                        </Descriptions.Item>
-                    )}
+                    <Descriptions.Item label="创建时间">{dayjs(report.createdAt).format('YYYY-MM-DD')}</Descriptions.Item>
+                    <Descriptions.Item label="发布日期">{report.issuedDate ? dayjs(report.issuedDate).format('YYYY-MM-DD') : '-'}</Descriptions.Item>
                 </Descriptions>
             </Card>
 
-            {/* 检测数据 */}
+            {/* 报告表单 */}
+            <Card title="报告信息" className="mb-4">
+                <Form form={form} layout="vertical" disabled={!isEditable}>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0 24px' }}>
+                        <Form.Item name="clientName" label="客户名称">
+                            <Input />
+                        </Form.Item>
+                        <Form.Item name="sampleName" label="样品名称">
+                            <Input />
+                        </Form.Item>
+                        <Form.Item name="sampleNo" label="样品编号">
+                            <Input />
+                        </Form.Item>
+                        <Form.Item name="specification" label="规格型号">
+                            <Input />
+                        </Form.Item>
+                        <Form.Item name="sampleQuantity" label="样品数量">
+                            <Input />
+                        </Form.Item>
+                        <Form.Item name="receivedDate" label="收样日期">
+                            <DatePicker style={{ width: '100%' }} />
+                        </Form.Item>
+                        <Form.Item name="tester" label="检测人员">
+                            <Input />
+                        </Form.Item>
+                        <Form.Item name="reviewer" label="审核人员">
+                            <Input />
+                        </Form.Item>
+                    </div>
+                    <Form.Item name="overallConclusion" label="检测结论">
+                        <Input.TextArea rows={4} />
+                    </Form.Item>
+                </Form>
+            </Card>
+
+            {/* 检测数据（只读） */}
             <Card title="检测数据" className="mb-4">
                 <Table
                     columns={columns}
@@ -194,49 +235,6 @@ export default function ReportDetailPage() {
                     size="middle"
                 />
             </Card>
-
-            {/* 检测结论 */}
-            <Card title="检测结论" className="mb-4">
-                {report.richContent ? (
-                    <div
-                        className="p-4 bg-gray-50 rounded"
-                        dangerouslySetInnerHTML={{ __html: report.richContent }}
-                    />
-                ) : (
-                    <div className="p-4 bg-gray-50 rounded">
-                        <p className="text-base whitespace-pre-wrap">
-                            {report.overallConclusion || '暂无结论'}
-                        </p>
-                    </div>
-                )}
-            </Card>
-
-            {/* 审批历史 */}
-            {approvals.length > 0 && (
-                <Card title="审批历史">
-                    <Timeline
-                        items={approvals.map(item => ({
-                            color: item.result === 'pass' ? 'green' : 'red',
-                            children: (
-                                <div>
-                                    <div className="font-medium">
-                                        {reviewTypeMap[item.reviewType] || item.reviewType}
-                                        <Tag color={item.result === 'pass' ? 'success' : 'error'} className="ml-2">
-                                            {item.result === 'pass' ? '通过' : '驳回'}
-                                        </Tag>
-                                    </div>
-                                    <div className="text-gray-500 text-sm">
-                                        {item.reviewer} · {dayjs(item.reviewDate).format('YYYY-MM-DD HH:mm')}
-                                    </div>
-                                    {item.comments && (
-                                        <div className="text-gray-600 mt-1">{item.comments}</div>
-                                    )}
-                                </div>
-                            )
-                        }))}
-                    />
-                </Card>
-            )}
         </div>
     )
 }

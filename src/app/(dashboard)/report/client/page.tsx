@@ -3,12 +3,12 @@
 import { useState, useEffect } from 'react'
 import { showSuccess, showError } from '@/lib/confirm'
 import {
-  Table, Button, Space, Tag, Modal, Form, Input, Select, message,
+  Table, Button, Space, Tag, Modal, Form, Input, Select,
   Card, Row, Col, Statistic, Descriptions, Timeline, Popconfirm, Drawer, Tabs
 } from 'antd'
 import {
   PlusOutlined, EditOutlined, DeleteOutlined, EyeOutlined,
-  SendOutlined, CheckOutlined, CloseOutlined
+  SendOutlined, PrinterOutlined
 } from '@ant-design/icons'
 import { useRouter } from 'next/navigation'
 import type { ColumnsType } from 'antd/es/table'
@@ -74,14 +74,14 @@ export default function ClientReportPage() {
   const [statusFilter, setStatusFilter] = useState<string | null>(null)
   const [keyword, setKeyword] = useState('')
 
-  const [approvalOpen, setApprovalOpen] = useState(false)
+  // 提交审批弹窗
+  const [submitModalOpen, setSubmitModalOpen] = useState(false)
   const [currentReport, setCurrentReport] = useState<ClientReport | null>(null)
-  const [approvalAction, setApprovalAction] = useState<string>('')
+  const [submitForm] = Form.useForm()
+  const [submitting, setSubmitting] = useState(false)
 
-  // 查看抽屉状态
+  // 查看抽屉
   const [viewDrawerOpen, setViewDrawerOpen] = useState(false)
-
-  const [approvalForm] = Form.useForm()
 
   const fetchData = async (p = page) => {
     setLoading(true)
@@ -117,7 +117,7 @@ export default function ClientReportPage() {
     router.push(`/report/client/edit/${record.id}`)
   }
 
-  const handleView = async (record: ClientReport) => {
+  const handleView = (record: ClientReport) => {
     setCurrentReport(record)
     setViewDrawerOpen(true)
   }
@@ -133,123 +133,95 @@ export default function ClientReportPage() {
     }
   }
 
-  const openApprovalModal = (record: ClientReport, action: string) => {
-    setCurrentReport(record)
-    setApprovalAction(action)
-    approvalForm.resetFields()
-    setApprovalOpen(true)
+  // 打印
+  const handlePrint = (record: ClientReport) => {
+    window.open(`/report/client/${record.id}`, '_blank')
   }
 
-  const handleApproval = async () => {
+  // 提交审批
+  const handleSubmitApproval = (record: ClientReport) => {
+    setCurrentReport(record)
+    submitForm.resetFields()
+    setSubmitModalOpen(true)
+  }
+
+  const handleSubmitConfirm = async () => {
     if (!currentReport) return
-
-    const values = await approvalForm.validateFields()
-    const res = await fetch(`/api/report/client/${currentReport.id}`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        action: approvalAction,
-        operator: values.operator,
-        comment: values.comment,
-      }),
-    })
-    const json = await res.json()
-
-    if (json.success) {
-      showSuccess('操作成功')
-      setApprovalOpen(false)
-      fetchData()
-    } else {
-      showError(json.error?.message || '操作失败')
+    setSubmitting(true)
+    try {
+      const values = await submitForm.validateFields()
+      const res = await fetch(`/api/report/client/${currentReport.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'submit',
+          operator: values.operator,
+          comment: values.comment,
+        }),
+      })
+      const json = await res.json()
+      if (json.success) {
+        showSuccess('提交审批成功')
+        setSubmitModalOpen(false)
+        fetchData()
+      } else {
+        showError(json.error?.message || '提交审批失败')
+      }
+    } catch (error: any) {
+      showError(error.message || '提交审批失败')
+    } finally {
+      setSubmitting(false)
     }
   }
 
   const getActions = (record: ClientReport) => {
     const actions = []
 
+    // 查看
     actions.push(
       <Button key="view" size="small" icon={<EyeOutlined />} onClick={() => handleView(record)} />
     )
 
+    // 编辑（草稿可编辑）
     if (record.status === 'draft') {
       actions.push(
-        <Button key="edit" size="small" icon={<EditOutlined />} onClick={() => handleEdit(record)} />,
+        <Button key="edit" size="small" icon={<EditOutlined />} onClick={() => handleEdit(record)} />
+      )
+    }
+
+    // 提交审批（草稿可提交）
+    if (record.status === 'draft') {
+      actions.push(
         <Button
           key="submit"
           size="small"
           type="primary"
+          ghost
           icon={<SendOutlined />}
-          onClick={() => openApprovalModal(record, 'submit')}
+          onClick={() => handleSubmitApproval(record)}
         >
-          提交
-        </Button>,
+          提交审批
+        </Button>
+      )
+    }
+
+    // 打印
+    actions.push(
+      <Button key="print" size="small" icon={<PrinterOutlined />} onClick={() => handlePrint(record)}>
+        打印
+      </Button>
+    )
+
+    // 删除（草稿可删除）
+    if (record.status === 'draft') {
+      actions.push(
         <Popconfirm key="delete" title="确认删除?" onConfirm={() => handleDelete(record.id)}>
           <Button size="small" danger icon={<DeleteOutlined />} />
         </Popconfirm>
       )
     }
 
-    if (record.status === 'pending_review') {
-      actions.push(
-        <Button
-          key="review"
-          size="small"
-          type="primary"
-          icon={<CheckOutlined />}
-          onClick={() => openApprovalModal(record, 'review')}
-        >
-          审核
-        </Button>,
-        <Button
-          key="reject1"
-          size="small"
-          danger
-          icon={<CloseOutlined />}
-          onClick={() => openApprovalModal(record, 'reject')}
-        >
-          驳回
-        </Button>
-      )
-    }
-
-    if (record.status === 'pending_approve') {
-      actions.push(
-        <Button
-          key="approve"
-          size="small"
-          type="primary"
-          icon={<CheckOutlined />}
-          onClick={() => openApprovalModal(record, 'approve')}
-        >
-          批准
-        </Button>,
-        <Button
-          key="reject2"
-          size="small"
-          danger
-          icon={<CloseOutlined />}
-          onClick={() => openApprovalModal(record, 'reject')}
-        >
-          驳回
-        </Button>
-      )
-    }
-
-    if (record.status === 'approved') {
-      actions.push(
-        <Button
-          key="issue"
-          size="small"
-          type="primary"
-          icon={<SendOutlined />}
-          onClick={() => openApprovalModal(record, 'issue')}
-        >
-          发放
-        </Button>
-      )
-    }
-
-    return <Space wrap style={{ whiteSpace: 'nowrap' }}>{actions}</Space>
+    return <Space size="small" style={{ whiteSpace: 'nowrap' }}>{actions}</Space>
   }
 
   const columns: ColumnsType<ClientReport> = [
@@ -267,7 +239,8 @@ export default function ClientReportPage() {
       render: (t: string) => dayjs(t).format('YYYY-MM-DD HH:mm:ss'),
     },
     {
-      title: '操作', fixed: 'right',
+      title: '操作', fixed: 'right', width: 300,
+      onHeaderCell: () => ({ style: { whiteSpace: 'nowrap' as const } }),
       render: (_, record) => getActions(record),
     },
   ]
@@ -317,7 +290,7 @@ export default function ClientReportPage() {
         scroll={{ x: 1200 }}
       />
 
-      {/* 查看抽屉 */}
+      {/* 查看抽屉（带审批记录Tab） */}
       <Drawer
         title="报告详情"
         placement="right"
@@ -361,22 +334,28 @@ export default function ClientReportPage() {
               },
               {
                 key: 'approval',
-                label: '审批流程',
+                label: '审批记录',
                 children: (
-                  <Timeline
-                    items={currentReport.approvalFlow?.map((item) => ({
-                      children: (
-                        <div>
-                          <strong>{actionTextMap[item.action] || item.action}</strong>
-                          <span style={{ marginLeft: 8, color: '#999' }}>
-                            {item.operator} - {dayjs(item.timestamp).format('YYYY-MM-DD HH:mm')}
-                          </span>
-                          {item.comment && <div style={{ color: '#666' }}>{item.comment}</div>}
-                        </div>
-                      ),
-                    })) || []
-                    }
-                  />
+                  <div>
+                    {currentReport.approvalFlow?.length > 0 ? (
+                      <Timeline
+                        items={currentReport.approvalFlow.map((item) => ({
+                          color: item.action === 'reject' ? 'red' : 'green',
+                          children: (
+                            <div>
+                              <strong>{actionTextMap[item.action] || item.action}</strong>
+                              <span style={{ marginLeft: 8, color: '#999' }}>
+                                {item.operator} - {dayjs(item.timestamp).format('YYYY-MM-DD HH:mm')}
+                              </span>
+                              {item.comment && <div style={{ color: '#666' }}>{item.comment}</div>}
+                            </div>
+                          ),
+                        }))}
+                      />
+                    ) : (
+                      <div style={{ textAlign: 'center', color: '#999', padding: 40 }}>暂无审批记录</div>
+                    )}
+                  </div>
                 )
               }
             ]}
@@ -384,27 +363,22 @@ export default function ClientReportPage() {
         )}
       </Drawer>
 
-      {/* 审批弹窗 */}
+      {/* 提交审批弹窗 */}
       <Modal
-        title={actionTextMap[approvalAction] || '操作'}
-        open={approvalOpen}
-        onOk={handleApproval}
-        onCancel={() => setApprovalOpen(false)}
+        title="提交审批"
+        open={submitModalOpen}
+        onOk={handleSubmitConfirm}
+        onCancel={() => setSubmitModalOpen(false)}
+        confirmLoading={submitting}
+        okText="确认提交"
+        cancelText="取消"
       >
-        <Form form={approvalForm} layout="vertical">
-          <Form.Item
-            name="operator"
-            label="操作人"
-            rules={[{ required: ['review', 'approve'].includes(approvalAction) }]}
-          >
-            <Input />
+        <Form form={submitForm} layout="vertical">
+          <Form.Item name="operator" label="操作人">
+            <Input placeholder="请填写操作人" />
           </Form.Item>
-          <Form.Item
-            name="comment"
-            label="备注"
-            rules={[{ required: approvalAction === 'reject', message: '驳回时必须填写原因' }]}
-          >
-            <Input.TextArea rows={3} placeholder={approvalAction === 'reject' ? '请填写驳回原因' : '可选'} />
+          <Form.Item name="comment" label="审批意见">
+            <Input.TextArea rows={3} placeholder="选填，可以填写审批意见" />
           </Form.Item>
         </Form>
       </Modal>
