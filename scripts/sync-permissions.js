@@ -1,8 +1,11 @@
 /**
- * 权限树同步脚本
+ * 权限树同步脚本（安全版）
  * 
  * 从 DashboardLayout 菜单配置自动生成权限树
- * 支持幂等执行（upsert by code）
+ * 使用 upsert by code 保证幂等：
+ *   - 已有权限：更新名称/排序/路径，保留 ID（不破坏 RolePermission 关联）
+ *   - 新增权限：创建记录
+ *   - 多余权限：不主动删除（避免误删自定义权限）
  * 
  * 使用方式：node scripts/sync-permissions.js
  */
@@ -119,63 +122,86 @@ const MENU_TREE = [
 ]
 
 async function syncPermissions() {
-    console.log('🔄 开始权限树同步...\n')
+    console.log('🔄 开始权限树同步（安全模式 - 保留已有权限）\n')
 
-    // 第一步：清空旧权限数据（所有角色 permCount=0，可安全清空）
-    console.log('🗑️ 第一步：清空旧权限数据')
-    const deletedRP = await prisma.rolePermission.deleteMany({})
-    console.log(`  删除 RolePermission: ${deletedRP.count} 条`)
-    const deletedP = await prisma.permission.deleteMany({})
-    console.log(`  删除 Permission: ${deletedP.count} 条\n`)
-
-    // 第二步：创建新权限树
-    console.log('📝 第二步：创建权限树')
+    let upsertCount = 0
+    let createdCount = 0
+    let updatedCount = 0
     let sortCounter = 0
-    let totalCreated = 0
 
     for (const menu of MENU_TREE) {
         sortCounter += 10
 
-        // 创建一级菜单
-        const parent = await prisma.permission.create({
-            data: {
-                name: menu.label,
-                code: menu.code,
-                parentId: null,
-                type: 1, // 菜单类型
-                sort: sortCounter,
-                status: 1,
-            }
-        })
-        totalCreated++
-        const childCount = menu.children?.length || 0
-        console.log(`  ✅ ${menu.label} (${menu.code})${childCount > 0 ? ` [${childCount} 子菜单]` : ''}`)
+        // upsert 一级菜单（按 code 查找）
+        const existing = await prisma.permission.findFirst({ where: { code: menu.code } })
+        let parent
+        if (existing) {
+            parent = await prisma.permission.update({
+                where: { id: existing.id },
+                data: { name: menu.label, sort: sortCounter, status: 1 }
+            })
+            updatedCount++
+            console.log(`  ♻️ 更新: ${menu.label} (${menu.code})`)
+        } else {
+            parent = await prisma.permission.create({
+                data: {
+                    name: menu.label,
+                    code: menu.code,
+                    parentId: null,
+                    type: 1,
+                    sort: sortCounter,
+                    status: 1,
+                }
+            })
+            createdCount++
+            console.log(`  ✅ 新增: ${menu.label} (${menu.code})`)
+        }
+        upsertCount++
 
-        // 创建二级菜单
+        // upsert 二级菜单
         if (menu.children) {
             for (let i = 0; i < menu.children.length; i++) {
                 const child = menu.children[i]
-                await prisma.permission.create({
-                    data: {
-                        name: child.label,
-                        code: child.code,
-                        parentId: parent.id,
-                        type: 1,
-                        sort: sortCounter + i + 1,
-                        status: 1,
-                    }
-                })
-                totalCreated++
-                console.log(`     └── ${child.label} (${child.code})`)
+                const existingChild = await prisma.permission.findFirst({ where: { code: child.code } })
+
+                if (existingChild) {
+                    await prisma.permission.update({
+                        where: { id: existingChild.id },
+                        data: {
+                            name: child.label,
+                            parentId: parent.id,
+                            sort: sortCounter + i + 1,
+                            status: 1,
+                        }
+                    })
+                    updatedCount++
+                    console.log(`     ♻️ 更新: ${child.label} (${child.code})`)
+                } else {
+                    await prisma.permission.create({
+                        data: {
+                            name: child.label,
+                            code: child.code,
+                            parentId: parent.id,
+                            type: 1,
+                            sort: sortCounter + i + 1,
+                            status: 1,
+                        }
+                    })
+                    createdCount++
+                    console.log(`     ✅ 新增: ${child.label} (${child.code})`)
+                }
+                upsertCount++
             }
         }
     }
 
     console.log()
     console.log('='.repeat(50))
-    console.log(`✅ 权限树同步完成！共创建 ${totalCreated} 条权限记录`)
-    console.log(`  一级菜单: ${MENU_TREE.length} 个`)
-    console.log(`  二级菜单: ${totalCreated - MENU_TREE.length} 个`)
+    console.log(`✅ 权限树同步完成！`)
+    console.log(`  总计: ${upsertCount} 条`)
+    console.log(`  新增: ${createdCount} 条`)
+    console.log(`  更新: ${updatedCount} 条`)
+    console.log(`  ⚠️ 已有的 RolePermission 关联完整保留`)
     console.log('='.repeat(50))
 
     await prisma.$disconnect()
