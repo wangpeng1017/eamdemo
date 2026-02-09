@@ -546,14 +546,6 @@ export default function QuotationPage() {
               />
             </Tooltip>
 
-            {/* PDF打印按钮 */}
-            <QuotationPDFButton
-              quotationId={record.id}
-              quotationStatus={record.status as any}
-              buttonType="default"
-              size="small"
-              showLabel={true}
-            />
 
             {/* 审批操作已移至"工作台-审批中心"统一处理 */}
 
