@@ -1,61 +1,43 @@
 /**
  * @file route.ts
- * @desc 检测标准分类 API - 获取列表和创建分类
- * @input 依赖: Prisma Client
- * @output 导出: GET/POST 处理函数
- * @see PRD: docs/PRD.md
+ * @desc 检测标准分类 API - 获取树形列表和创建分类
  */
 
 import { NextRequest, NextResponse } from 'next/server'
-import { PrismaClient } from '@prisma/client'
+import { prisma } from '@/lib/prisma'
 
-const prisma = new PrismaClient()
-
-// GET - 获取分类列表（支持分页和排序）
+// GET - 获取分类树形列表（一级+二级）
 export async function GET(request: NextRequest) {
   try {
     const searchParams = request.nextUrl.searchParams
-    const page = parseInt(searchParams.get('page') || '1')
-    const limit = parseInt(searchParams.get('limit') || '10')
-    const sortBy = searchParams.get('sortBy') || 'sort'
-    const sortOrder = searchParams.get('sortOrder') || 'asc'
+    const flat = searchParams.get('flat') === 'true' // 是否返回扁平列表
 
-    const skip = (page - 1) * limit
+    if (flat) {
+      // 扁平列表模式（兼容旧逻辑）
+      const categories = await prisma.inspectionStandardCategory.findMany({
+        where: { status: 1 },
+        orderBy: { sort: 'asc' },
+      })
+      return NextResponse.json({ success: true, data: categories })
+    }
 
-    // 获取总数
-    const total = await prisma.inspectionStandardCategory.count({
-      where: { status: 1 }
-    })
-
-    // 获取数据
+    // 树形模式：获取一级分类（parentId 为 null）+ 其子分类
     const categories = await prisma.inspectionStandardCategory.findMany({
-      where: { status: 1 },
-      skip,
-      take: limit,
-      orderBy: { [sortBy]: sortOrder === 'asc' ? 'asc' : 'desc' },
+      where: { status: 1, parentId: null },
+      orderBy: { sort: 'asc' },
       include: {
-        standards: {
-          select: {
-            id: true,
-            standardNo: true,
-            name: true,
-            validity: true
+        children: {
+          where: { status: 1 },
+          orderBy: { sort: 'asc' },
+          include: {
+            _count: { select: { items: true } },
           },
-          where: { validity: 'valid' }
-        }
-      }
+        },
+        _count: { select: { items: true } },
+      },
     })
 
-    return NextResponse.json({
-      success: true,
-      data: categories,
-      meta: {
-        total,
-        page,
-        limit,
-        totalPages: Math.ceil(total / limit)
-      }
-    })
+    return NextResponse.json({ success: true, data: categories })
   } catch (error) {
     console.error('获取分类列表失败:', error)
     return NextResponse.json(
@@ -69,9 +51,8 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
-    const { name, code, description, sort } = body
+    const { name, code, description, sort, parentId } = body
 
-    // 验证必填字段
     if (!name) {
       return NextResponse.json(
         { success: false, error: '分类名称不能为空' },
@@ -82,7 +63,7 @@ export async function POST(request: NextRequest) {
     // 检查编码是否重复
     if (code) {
       const existing = await prisma.inspectionStandardCategory.findUnique({
-        where: { code }
+        where: { code },
       })
       if (existing) {
         return NextResponse.json(
@@ -95,27 +76,15 @@ export async function POST(request: NextRequest) {
     const category = await prisma.inspectionStandardCategory.create({
       data: {
         name,
-        code,
+        code: code || null,
         description,
         sort: sort || 0,
-        status: 1
+        parentId: parentId || null,
+        status: 1,
       },
-      include: {
-        standards: {
-          select: {
-            id: true,
-            standardNo: true,
-            name: true,
-            validity: true
-          }
-        }
-      }
     })
 
-    return NextResponse.json({
-      success: true,
-      data: category
-    }, { status: 201 })
+    return NextResponse.json({ success: true, data: category }, { status: 201 })
   } catch (error) {
     console.error('创建分类失败:', error)
     return NextResponse.json(

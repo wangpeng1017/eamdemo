@@ -132,38 +132,26 @@ export async function POST(
         },
       })
 
-      // 4. 计算新的评估统计
-      // 如果之前是 pending，现在变成 passed/failed
-      let passedCount = consultation.assessmentPassedCount
-      let failedCount = consultation.assessmentFailedCount
-      let pendingCount = consultation.assessmentPendingCount
+      // 4. 实时查询统计（避免增量计数导致的不一致）
+      const allItems = await tx.sampleTestItem.findMany({
+        where: { bizId: consultationId, bizType: 'consultation' },
+        select: { id: true, assessmentStatus: true },
+      })
 
-      if (sampleTestItem.assessmentStatus === 'assessing') {
-        // 从 assessing 变为 passed/failed
-        if (feasibility === 'feasible') {
-          passedCount += 1
-        } else {
-          failedCount += 1
-        }
-        pendingCount -= 1
-      } else if (sampleTestItem.assessmentStatus === 'passed') {
-        // 重新评估：从 passed 变为 failed
-        if (feasibility !== 'feasible') {
-          passedCount -= 1
-          failedCount += 1
-        }
-      } else if (sampleTestItem.assessmentStatus === 'failed') {
-        // 重新评估：从 failed 变为 passed
-        if (feasibility === 'feasible') {
-          failedCount -= 1
-          passedCount += 1
-        }
+      let passedCount = 0
+      let failedCount = 0
+      let pendingCount = 0
+      for (const item of allItems) {
+        // 当前这条刚更新过，用新状态
+        const status = item.id === sampleTestItemId ? itemStatus : item.assessmentStatus
+        if (status === 'passed') passedCount++
+        else if (status === 'failed') failedCount++
+        else pendingCount++ // assessing / pending
       }
 
       // 5. 确定新状态
       let newConsultationStatus = consultation.status
       if (pendingCount === 0) {
-        // 所有项都已评估
         if (failedCount > 0) {
           newConsultationStatus = 'assessment_failed'
         } else {

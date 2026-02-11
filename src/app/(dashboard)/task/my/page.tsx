@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react"
 import { showSuccess, showError, showWarning } from '@/lib/confirm'
-import { Table, Button, Space, Tag, Modal, Form, Select, message, Card, Statistic, DatePicker } from "antd"
+import { Table, Button, Space, Tag, Modal, Form, Select, message, Card, Statistic, DatePicker, App } from "antd"
 import { PlayCircleOutlined, CheckCircleOutlined, ClockCircleOutlined, SwapOutlined, EditOutlined, FileTextOutlined } from "@ant-design/icons"
 import type { ColumnsType } from "antd/es/table"
 import dayjs from "dayjs"
@@ -35,6 +35,7 @@ const statusMap: Record<string, { text: string; color: string }> = {
 
 export default function MyTasksPage() {
   const router = useRouter()
+  const { modal } = App.useApp()
   const [data, setData] = useState([])
   const [loading, setLoading] = useState(false)
   const [total, setTotal] = useState(0)
@@ -190,10 +191,21 @@ export default function MyTasksPage() {
         showSuccess('报告生成成功')
         router.push('/report/task-generate')
       } else {
-        showWarning('操作提示', json.error || '报告生成失败')
+        // 使用上下文化的 modal 实例，确保弹窗正确渲染
+        modal.warning({
+          title: '操作提示',
+          content: json.error || '报告生成失败',
+          okText: '知道了',
+          centered: true,
+        })
       }
     } catch (error) {
-      showWarning('操作提示', '报告生成失败，请稍后重试')
+      modal.warning({
+        title: '操作提示',
+        content: '报告生成失败，请稍后重试',
+        okText: '知道了',
+        centered: true,
+      })
     } finally {
       setGenerating(false)
     }

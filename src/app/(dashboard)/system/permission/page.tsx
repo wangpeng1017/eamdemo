@@ -41,6 +41,7 @@ const typeColors: Record<string, string> = {
 }
 
 export default function PermissionPage() {
+  const [modal, modalContextHolder] = Modal.useModal()
   const [permissions, setPermissions] = useState<Permission[]>([])
   const [roles, setRoles] = useState<Role[]>([])
   const [loading, setLoading] = useState(false)
@@ -188,15 +189,19 @@ export default function PermissionPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ permissions: checkedKeys }),
       })
+      if (!res.ok) {
+        modal.error({ title: '保存失败', content: `服务器错误（${res.status}），请稍后重试` })
+        return
+      }
       const data = await res.json()
       if (data.success !== false) {
-        showSuccess(`${selectedRole.name} 的权限配置已保存成功`)
+        modal.success({ title: '保存成功', content: `${selectedRole.name} 的权限配置已保存` })
         loadRoles()
       } else {
-        showError(data.message || '保存失败')
+        modal.error({ title: '保存失败', content: data.message || '保存失败' })
       }
     } catch {
-      showError('保存失败')
+      modal.error({ title: '保存失败', content: '网络错误，请稍后重试' })
     }
   }
 
@@ -281,6 +286,7 @@ export default function PermissionPage() {
 
   return (
     <div>
+      {modalContextHolder}
       <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'space-between' }}>
         <h2 style={{ margin: 0 }}>权限配置</h2>
         <Button icon={<ReloadOutlined />} onClick={() => { loadPermissions(); loadRoles() }}>刷新</Button>

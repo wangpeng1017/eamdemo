@@ -442,6 +442,40 @@ export class ApprovalEngine {
           },
         })
         break
+      case 'inspection_item':
+        // 检测标准审批
+        if (approvalStatus === 'approved') {
+          // 检查是否是删除审批
+          const item = await prisma.inspectionItem.findUnique({ where: { id: bizId } })
+          if (item?.approvalStatus === 'pending_delete') {
+            // 删除审批通过 → 删除记录及关联 TestTemplate
+            const code = `IT-${bizId.slice(-8).toUpperCase()}`
+            await prisma.testTemplate.deleteMany({ where: { code } })
+            await prisma.approvalInstance.delete({ where: { id: instanceId! } })
+            await prisma.inspectionItem.delete({ where: { id: bizId } })
+          } else {
+            // 新增/编辑审批通过 → 设为现行有效
+            await prisma.inspectionItem.update({
+              where: { id: bizId },
+              data: { ...updateData, approvalStatus: 'effective' },
+            })
+          }
+        } else if (approvalStatus === 'rejected' || approvalStatus === 'cancelled') {
+          // 驳回/撤回 → 回到草稿（如果是删除审批也回到草稿/现行有效）
+          const itemForReject = await prisma.inspectionItem.findUnique({ where: { id: bizId } })
+          const revertStatus = itemForReject?.approvalStatus === 'pending_delete' ? 'effective' : 'draft'
+          await prisma.inspectionItem.update({
+            where: { id: bizId },
+            data: { ...updateData, approvalStatus: revertStatus },
+          })
+        } else {
+          // pending
+          await prisma.inspectionItem.update({
+            where: { id: bizId },
+            data: updateData,
+          })
+        }
+        break
       default:
         throw new Error(`不支持的业务类型: ${bizType}`)
 

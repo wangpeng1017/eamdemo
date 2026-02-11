@@ -286,7 +286,7 @@ export default function TestReportPage() {
               icon={<SendOutlined />}
               onClick={() => handleSubmitApproval(record)}
             >
-              提交
+              提交审批
             </Button>
           )}
           <Button

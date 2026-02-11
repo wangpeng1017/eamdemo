@@ -1069,6 +1069,7 @@ model ApprovalInstance {
   contract      Contract?
   client        Client?
   testReport    TestReport?
+  inspectionItem InspectionItem?
 
 
   @@unique([bizType, bizId])
@@ -1366,24 +1367,32 @@ model TestTemplate {
 }
 
 
-// 检测标准分类（一级分类 - 需求2）
+// 检测标准分类（支持二级树结构）
 model InspectionStandardCategory {
- id  String @id @default(cuid())
- name String @db.VarChar(100) // 分类名称：企业标准、奇瑞汽车标准等
- code  String? @unique @db.VarChar(50) // 分类编码
-  description String? @db.Text
- sort Int  @default(0)
- status  Int  @default(1)
- createdAt DateTime @default(now())
- updatedAt DateTime @updatedAt
+  id          String   @id @default(cuid())
+  name        String   @db.VarChar(100) // 分类名称
+  code        String?  @unique @db.VarChar(50) // 分类编码
+  description String?  @db.Text
+  sort        Int      @default(0)
+  status      Int      @default(1)
 
- // 关联标准项
- standards InspectionStandard[]
+  // 二级树结构（自引用）
+  parentId    String?
+  parent      InspectionStandardCategory?  @relation("InspectionCategoryTree", fields: [parentId], references: [id])
+  children    InspectionStandardCategory[] @relation("InspectionCategoryTree")
 
- @@map("biz_inspection_standard_category")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // 关联标准项（旧，保留兼容）
+  standards   InspectionStandard[]
+  // 关联检测项目（新）
+  items       InspectionItem[] @relation("ItemCategory")
+
+  @@map("biz_inspection_standard_category")
 }
 
-// 检查标准/依据
+// 检查标准/依据（旧表保留兼容，不再主要使用）
 model InspectionStandard {
   id         String   @id @default(cuid())
   standardNo String   @unique @db.VarChar(100) // 标准编号
@@ -1391,7 +1400,7 @@ model InspectionStandard {
   description String?  @db.Text                 // 描述/备注
   validity   String   @default("valid")        // valid/invalid
   
-  // 分类外键（需求2）
+  // 分类外键
   categoryId String?
   category   InspectionStandardCategory? @relation(fields: [categoryId], references: [id])
 
@@ -1404,24 +1413,39 @@ model InspectionStandard {
   @@map("biz_inspection_standard")
 }
 
-// 检测项目表（关联到具体标准 - 需求2）
+// 检测项目表（直接关联分类，支持执行标准文本）
 model InspectionItem {
- id  String    @id @default(cuid())
- standardId String
- standard InspectionStandard @relation(fields: [standardId], references: [id], onDelete: Cascade)
+  id              String    @id @default(cuid())
+  standardId      String?
+  standard        InspectionStandard? @relation(fields: [standardId], references: [id], onDelete: Cascade)
 
- name  String @db.VarChar(200) // 检测项目名称
- method  String? @db.VarChar(200) // 检测方法
- unit  String? @db.VarChar(50) // 单位
-  requirement String? @db.Text  // 技术要求
- remark String? @db.Text
-  sort  Int  @default(0)
- status  Int  @default(1)
- createdAt  DateTime @default(now())
- updatedAt DateTime @updatedAt
+  // 直接关联分类（新）
+  categoryId      String?
+  category        InspectionStandardCategory? @relation("ItemCategory", fields: [categoryId], references: [id])
 
- @@index([standardId])
- @@map("biz_inspection_item")
+  name            String   @db.VarChar(200)  // 检测项目名称
+  executionStandard String? @db.VarChar(500) // 执行标准（如 GB/T 1040.2-2022）
+  sampleQuantity  String?  @db.VarChar(50)   // 样本容量
+  method          String?  @db.VarChar(200)  // 检测方法
+  unit            String?  @db.VarChar(50)   // 单位
+  requirement     String?  @db.Text          // 技术要求
+  materialFile    String?  @db.VarChar(500) // 检验材料 PDF 文件路径
+  remark          String?  @db.Text
+  sort            Int      @default(0)
+  status          Int      @default(1)
+
+  // 审批相关
+  approvalStatus     String   @default("draft") @db.VarChar(30) // draft/pending/effective/pending_delete
+  approvalStep       Int      @default(0) // 当前审批步骤
+  approvalInstanceId String?  @unique
+  approvalInstance   ApprovalInstance? @relation(fields: [approvalInstanceId], references: [id])
+
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([standardId])
+  @@index([categoryId])
+  @@map("biz_inspection_item")
 }
 
 // 样品报告分类

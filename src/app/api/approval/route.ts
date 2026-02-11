@@ -71,6 +71,13 @@ export const GET = withAuth(async (request: NextRequest, user) => {
           projectName: true,
           clientName: true,
         }
+      },
+      inspectionItem: {
+        select: {
+          name: true,
+          executionStandard: true,
+          approvalStatus: true,
+        }
       }
 
     },

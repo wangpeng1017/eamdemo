@@ -129,8 +129,8 @@ const allMenuItems: MenuItem[] = [
     label: '基础数据配置',
     permissionCode: 'menu:basic-data',
     children: [
+      { key: '/basic-data/inspection-standards', label: '检测标准', permissionCode: 'menu:basic-data:inspection-standards' },
       { key: '/basic-data/test-templates', label: '检测项目', permissionCode: 'menu:basic-data:test-templates' },
-      { key: '/basic-data/inspection-standards', label: '检查标准/依据', permissionCode: 'menu:basic-data:inspection-standards' },
       { key: '/basic-data/report-categories', label: '报告分类', permissionCode: 'menu:basic-data:report-categories' },
       { key: '/basic-data/personnel-capability', label: '人员资质', permissionCode: 'menu:basic-data:personnel-capability' },
       { key: '/basic-data/capability-review', label: '能力评审', permissionCode: 'menu:basic-data:capability-review' },
