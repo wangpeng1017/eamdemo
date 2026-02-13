@@ -5,6 +5,7 @@
  */
 
 import { prisma } from '@/lib/prisma'
+import { approvalEngine } from '@/lib/approval/engine'
 
 /**
  * 业务单位审批状态
@@ -72,6 +73,9 @@ export const CLIENT_STATUS_CONFIG: Record<ClientApprovalStatus, {
 /**
  * 提交业务单位审批
  *
+ * 通过审批引擎创建审批实例，引擎会自动更新 Client 表的
+ * status、approvalStep、approvalInstanceId 字段。
+ *
  * @param clientId - 业务单位ID
  * @param params - 提交参数
  * @param submittedBy - 提交人ID
@@ -106,14 +110,28 @@ export async function submitClientForApproval(
     throw new Error('当前状态无法提交审批')
   }
 
-  // 更新状态为 pending
-  const now = new Date()
+  // 查询提交人姓名
+  const submitter = await prisma.user.findUnique({
+    where: { id: submittedBy },
+    select: { name: true }
+  })
+
+  // 通过审批引擎创建审批实例
+  // 引擎内部 updateBizStatus 会自动更新 Client.status='pending'、approvalStep=1、approvalInstanceId
+  await approvalEngine.submit({
+    bizType: 'client',
+    bizId: clientId,
+    flowCode: 'CLIENT_APPROVAL',
+    submitterId: submittedBy,
+    submitterName: submitter?.name || '提交人',
+  })
+
+  // 补充更新提交时间和提交人字段（审批引擎不处理这些业务字段）
   await prisma.client.update({
     where: { id: clientId },
     data: {
-      status: 'pending',
-      submittedAt: now,
-      submittedBy: submittedBy
+      submittedAt: new Date(),
+      submittedBy: submittedBy,
     }
   })
 

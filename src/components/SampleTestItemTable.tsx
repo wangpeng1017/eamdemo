@@ -8,7 +8,7 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import { showError } from '@/lib/confirm'
-import { Table, Button, Input, InputNumber, Select, Space, message, Popconfirm, Tag } from 'antd'
+import { Table, Button, Input, InputNumber, Select, AutoComplete, Space, message, Popconfirm, Tag } from 'antd'
 import { PlusOutlined, DeleteOutlined, CopyOutlined } from '@ant-design/icons'
 import type { ColumnsType } from 'antd/es/table'
 
@@ -53,6 +53,36 @@ const ASSIGNMENT_STATE_MAP: Record<string, { text: string; color: string }> = {
   none: { text: '待分配', color: 'default' },
   selecting: { text: '选择中', color: 'processing' },
   assigned: { text: '已分配', color: 'success' },
+}
+
+/**
+ * 解析检测项目变更 — 纯函数，便于测试
+ * 1. 如果 value 是某个模板的 ID → 关联模板
+ * 2. 如果 value 是文本且与模板名称完全匹配 → 关联模板
+ * 3. 否则视为自定义输入
+ */
+export function resolveTestItemChange(
+  value: string,
+  templates: TestTemplateOption[]
+): { testTemplateId: string; testItemName: string; testStandard: string } {
+  if (!value) {
+    return { testTemplateId: '', testItemName: '', testStandard: '' }
+  }
+
+  // 先按 ID 匹配（从下拉选择时传入的是 ID）
+  const byId = templates.find((t) => t.id === value)
+  if (byId) {
+    return { testTemplateId: byId.id, testItemName: byId.name, testStandard: byId.method }
+  }
+
+  // 再按名称精确匹配（用户输入的文本恰好等于某个模板名称）
+  const byName = templates.find((t) => t.name === value)
+  if (byName) {
+    return { testTemplateId: byName.id, testItemName: byName.name, testStandard: byName.method }
+  }
+
+  // 自定义输入
+  return { testTemplateId: '', testItemName: value, testStandard: '' }
 }
 
 interface SampleTestItemTableProps {
@@ -217,7 +247,15 @@ export default function SampleTestItemTable({
         if (item.key === key) {
           const updated = { ...item, [field]: value }
 
-          // 如果选择了检测项目，自动填充检测标准
+          // 如果是检测项目变更，使用 resolveTestItemChange 处理
+          if (field === 'testItemName' && typeof value === 'string') {
+            const resolved = resolveTestItemChange(value, testTemplates)
+            updated.testTemplateId = resolved.testTemplateId
+            updated.testItemName = resolved.testItemName
+            updated.testStandard = resolved.testStandard
+          }
+
+          // 兼容旧逻辑：通过 testTemplateId 选择
           if (field === 'testTemplateId' && value) {
             const template = testTemplates.find((t) => t.id === value)
             if (template) {
@@ -305,23 +343,24 @@ export default function SampleTestItemTable({
     },
     {
       title: <span><span style={{ color: 'red' }}>*</span> 检测项目</span>,
-      dataIndex: 'testTemplateId',
+      dataIndex: 'testItemName',
       width: 180,
       render: (value, record) =>
         readonly ? (
           record.testItemName
         ) : (
-          <Select
-            value={value || undefined}
-            placeholder="请选择"
+          <AutoComplete
+            value={record.testItemName || undefined}
+            placeholder="选择或输入"
             style={{ width: '100%' }}
-            showSearch
-            optionFilterProp="label"
-            onChange={(val) => handleCellChange(record.key, 'testTemplateId', val)}
             options={testTemplates.map((t) => ({
-              value: t.id,
+              value: t.name,
               label: t.name,
             }))}
+            filterOption={(inputValue, option) =>
+              (option?.label as string)?.toLowerCase().includes(inputValue.toLowerCase()) ?? false
+            }
+            onChange={(val: string) => handleCellChange(record.key, 'testItemName', val)}
           />
         ),
     },

@@ -157,14 +157,20 @@ export default function InvoicePage() {
   const handleEdit = (record: Invoice) => {
     setEditingId(record.id)
     form.setFieldsValue({
-      ...record,
       entrustmentId: record.entrustment?.entrustmentNo || record.entrustmentId || null,
+      clientName: record.clientName,
+      clientTaxNo: record.clientTaxNo,
+      invoiceAmount: record.invoiceAmount,
+      taxRate: record.taxRate,
+      invoiceType: record.invoiceType,
+      status: record.status,
       issuedDate: record.issuedDate ? dayjs(record.issuedDate) : null,
       paymentDate: record.paymentDate ? dayjs(record.paymentDate) : null,
     })
     fetchAvailableEntrustments()
     setModalOpen(true)
   }
+
 
   const handleDelete = async (id: string) => {
     const res = await fetch(`/api/finance/invoice/${id}`, { method: 'DELETE' })
