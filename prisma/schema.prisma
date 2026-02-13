@@ -1226,7 +1226,13 @@ model ClientReport {
   preparer          String?   @db.VarChar(50)
   reviewer          String?   @db.VarChar(50)
   approver          String?   @db.VarChar(50)
-  status            String    @default("draft") // draft/pending_review/pending_approve/approved/issued
+  // 委托单自动生成报告编号
+  sampleId             String?   @db.VarChar(50)   // 关联样品（by_sample模式）
+  entrustmentProjectId String?   @db.VarChar(50)   // 关联检测项目（by_project模式）
+  groupingType         String?   @db.VarChar(20)   // by_sample/by_project/merged
+  reportCopies         Int?      @default(1)       // 物理副本份数
+
+  status            String    @default("draft") // draft/pending_review/pending_approve/approved/issued/voided
   approvalFlow      String?   @db.Text // JSON 审批记录
   issuedDate        DateTime?
   attachmentUrl     String?   @db.VarChar(500)

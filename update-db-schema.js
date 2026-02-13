@@ -685,6 +685,27 @@ async function main() {
             }
         }
     }
+
+    // 9. 补充 biz_client_report 字段（委托单自动生成报告编号）
+    const clientReportNewColumns = [
+        ['sampleId', 'VARCHAR(50)'],
+        ['entrustmentProjectId', 'VARCHAR(50)'],
+        ['groupingType', 'VARCHAR(20)'],
+        ['reportCopies', 'INT DEFAULT 1'],
+    ]
+    console.log('Adding new columns to biz_client_report (auto report no)...')
+    for (const [col, type] of clientReportNewColumns) {
+        try {
+            await prisma.$executeRawUnsafe(`ALTER TABLE biz_client_report ADD COLUMN ${col} ${type};`)
+            console.log(`✅ ${col} column added to biz_client_report.`)
+        } catch (e) {
+            if (e.message.includes('Duplicate column name')) {
+                console.log(`ℹ️ ${col} already exists in biz_client_report.`)
+            } else {
+                console.error(`❌ Error adding ${col}:`, e.message)
+            }
+        }
+    }
 }
 
 main()

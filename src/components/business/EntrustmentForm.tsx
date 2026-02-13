@@ -32,6 +32,7 @@ export default function EntrustmentForm({ initialValues, mode, onSubmit, loading
     const [samples, setSamples] = useState<SampleInfoData[]>([])
     const [componentTests, setComponentTests] = useState<ComponentTestData[]>([])
     const [materialTests, setMaterialTests] = useState<MaterialTestData[]>([])
+    const [reportGroupingValue, setReportGroupingValue] = useState<string | undefined>()
 
     useEffect(() => {
         fetchOptions()
@@ -50,6 +51,7 @@ export default function EntrustmentForm({ initialValues, mode, onSubmit, loading
             }
 
             form.setFieldsValue(formValues)
+            if (formValues.reportGrouping) setReportGroupingValue(formValues.reportGrouping)
 
             // 样品信息
             if (initialValues.samples && Array.isArray(initialValues.samples)) {
@@ -353,7 +355,7 @@ export default function EntrustmentForm({ initialValues, mode, onSubmit, loading
                     </Col>
                     <Col span={8}>
                         <Form.Item name="reportGrouping" label="报告出具方式">
-                            <Select placeholder="选择出具方式" allowClear options={[
+                            <Select placeholder="选择出具方式" allowClear onChange={(val) => setReportGroupingValue(val)} options={[
                                 { value: 'by_sample', label: '按样品出具' },
                                 { value: 'by_project', label: '按项目出具' },
                                 { value: 'merged', label: '合并出具' },
@@ -366,6 +368,17 @@ export default function EntrustmentForm({ initialValues, mode, onSubmit, loading
                         </Form.Item>
                     </Col>
                 </Row>
+
+                {/* 报告编号预览提示 */}
+                {reportGroupingValue && (
+                    <div style={{ marginBottom: 16, padding: '8px 12px', background: '#f6ffed', border: '1px solid #b7eb8f', borderRadius: 6 }}>
+                        <Text type="success" style={{ fontSize: 13 }}>
+                            {reportGroupingValue === 'by_sample' && `按样品出具：将为每个样品生成独立报告编号（当前 ${samples.filter(s => s.name).length} 个样品）`}
+                            {reportGroupingValue === 'by_project' && '按项目出具：将为每个检测项目生成独立报告编号'}
+                            {reportGroupingValue === 'merged' && '合并出具：所有样品和检测项目合并为 1 份报告'}
+                        </Text>
+                    </div>
+                )}
 
                 {/* ========== 第④段：样品信息 ========== */}
                 <Divider orientation="left" orientationMargin="0">④ 样品信息 Sample Information</Divider>

@@ -188,6 +188,39 @@ export const PUT = withErrorHandler(async (request: NextRequest, context?: { par
     }
   }
 
+  // 同步客户报告编号（当 reportGrouping 变更时）
+  if (entrustmentData.reportGrouping !== undefined) {
+    const { generateClientReportsForEntrustment } = await import('@/lib/generate-client-reports')
+    // 删除旧的草稿报告（已审批/签发的报告保留）
+    await prisma.clientReport.deleteMany({
+      where: { entrustmentId: id, status: 'draft' },
+    })
+
+    if (entrustmentData.reportGrouping) {
+      const currentSamples = await prisma.sample.findMany({
+        where: { entrustmentId: id },
+        select: { id: true, name: true },
+      })
+      const currentProjects = await prisma.entrustmentProject.findMany({
+        where: { entrustmentId: id },
+        select: { id: true, name: true },
+      })
+      const ent = await prisma.entrustment.findUnique({
+        where: { id },
+        include: { client: { select: { name: true } } },
+      })
+
+      await generateClientReportsForEntrustment({
+        entrustmentId: id,
+        reportGrouping: entrustmentData.reportGrouping,
+        reportCopies: entrustmentData.reportCopies || 1,
+        samples: currentSamples,
+        projects: currentProjects,
+        clientName: ent?.client?.name || '',
+      })
+    }
+  }
+
   // 返回更新后的完整数据
   const result = await prisma.entrustment.findUnique({
     where: { id },

@@ -415,6 +415,29 @@ export const POST = withErrorHandler(async (request: NextRequest) => {
     console.log('[Entrustment Create] Created samples:', data.samples.length)
   }
 
+  // 自动生成客户报告编号
+  if (data.reportGrouping) {
+    const { generateClientReportsForEntrustment } = await import('@/lib/generate-client-reports')
+    const createdSamples = await prisma.sample.findMany({
+      where: { entrustmentId: entrustment.id },
+      select: { id: true, name: true },
+    })
+    const createdProjects = await prisma.entrustmentProject.findMany({
+      where: { entrustmentId: entrustment.id },
+      select: { id: true, name: true },
+    })
+
+    await generateClientReportsForEntrustment({
+      entrustmentId: entrustment.id,
+      reportGrouping: data.reportGrouping,
+      reportCopies: data.reportCopies || 1,
+      samples: createdSamples,
+      projects: createdProjects,
+      clientName: data.clientName,
+    })
+    console.log('[Entrustment Create] Client reports generated for grouping:', data.reportGrouping)
+  }
+
   // 返回完整数据
   const result = await prisma.entrustment.findUnique({
     where: { id: entrustment.id },
