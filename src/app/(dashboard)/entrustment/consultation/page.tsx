@@ -12,7 +12,7 @@ import { PlusOutlined, EditOutlined, DeleteOutlined, EyeOutlined, FileTextOutlin
 import { StatusTag } from '@/components/StatusTag'
 import UserSelect from '@/components/UserSelect'
 import SampleTestItemTable, { SampleTestItemData } from '@/components/SampleTestItemTable'
-import AssessmentResultTab from '@/components/AssessmentResultTab'
+import SampleItemAssessmentDetailsTab from '@/components/SampleItemAssessmentDetailsTab'
 import type { ColumnsType } from 'antd/es/table'
 import dayjs from 'dayjs'
 import { useRouter } from 'next/navigation'
@@ -642,9 +642,8 @@ export default function ConsultationPage() {
                 key: 'assessment',
                 label: '评估结果',
                 children: (
-                  <AssessmentResultTab
+                  <SampleItemAssessmentDetailsTab
                     consultationId={currentConsultation.id}
-                    consultationNo={currentConsultation.consultationNo}
                     currentUserId={currentUser?.id}
                   />
                 )

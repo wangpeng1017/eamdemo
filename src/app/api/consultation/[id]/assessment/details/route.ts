@@ -36,6 +36,7 @@ export async function GET(
         assessmentPassedCount: true,
         assessmentFailedCount: true,
         assessmentPendingCount: true,
+        createdBy: { select: { name: true } },
       },
     })
 
@@ -137,6 +138,7 @@ export async function GET(
           assessmentPassedCount: consultation.assessmentPassedCount,
           assessmentFailedCount: consultation.assessmentFailedCount,
           assessmentPendingCount: consultation.assessmentPendingCount,
+          createdByName: consultation.createdBy?.name || null,
         },
         sampleItems,
       },

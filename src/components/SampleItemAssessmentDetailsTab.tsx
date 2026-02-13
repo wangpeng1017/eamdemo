@@ -8,8 +8,8 @@
 
 import { useState, useEffect } from 'react'
 import { showError } from '@/lib/confirm'
-import { Card, Table, Button, Space, Tag, Statistic, Row, Col, Modal, Timeline, message, Tooltip } from 'antd'
-import { EyeOutlined, CheckCircleOutlined, CloseCircleOutlined, ClockCircleOutlined } from '@ant-design/icons'
+import { Card, Table, Button, Space, Tag, Statistic, Row, Col, Modal, Timeline, message, Tooltip, Descriptions, Alert } from 'antd'
+import { EyeOutlined, CheckCircleOutlined, CloseCircleOutlined, ClockCircleOutlined, UserOutlined } from '@ant-design/icons'
 import type { ColumnsType } from 'antd/es/table'
 
 interface Assessment {
@@ -46,6 +46,7 @@ interface AssessmentDetails {
     assessmentPassedCount: number
     assessmentFailedCount: number
     assessmentPendingCount: number
+    createdByName: string | null
   }
   sampleItems: SampleItem[]
 }
@@ -222,6 +223,24 @@ export default function SampleItemAssessmentDetailsTab({
 
   return (
     <Space direction="vertical" style={{ width: '100%' }} size="large">
+      {/* 评估流程信息 */}
+      <Descriptions bordered size="small" column={2}>
+        <Descriptions.Item label="发起人">
+          {data.consultation.createdByName || '-'}
+        </Descriptions.Item>
+        <Descriptions.Item label="当前待评估人">
+          {(() => {
+            const pendingAssessors = data.sampleItems
+              .filter(item => item.assessmentStatus === 'assessing' && item.currentAssessor)
+              .map(item => item.currentAssessor!)
+            const uniqueAssessors = [...new Set(pendingAssessors)]
+            return uniqueAssessors.length > 0
+              ? uniqueAssessors.map(name => <Tag key={name} icon={<UserOutlined />} color="processing">{name}</Tag>)
+              : <span style={{ color: '#999' }}>无</span>
+          })()}
+        </Descriptions.Item>
+      </Descriptions>
+
       {/* 评估进度总览 */}
       <Card title="评估进度总览">
         <Row gutter={16}>

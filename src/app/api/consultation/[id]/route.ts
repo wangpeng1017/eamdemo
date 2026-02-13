@@ -168,6 +168,22 @@ export const PUT = withErrorHandler(async (
       )
     }
 
+    // 4. 根据评估人分配情况更新咨询单状态和计数
+    const hasAssessors = sampleTestItems.some((item: any) => item.assessorId)
+    if (hasAssessors) {
+      const assessingCount = sampleTestItems.filter((item: any) => item.assessorId).length
+      await tx.consultation.update({
+        where: { id },
+        data: {
+          status: 'assessing',
+          assessmentTotalCount: assessingCount,
+          assessmentPendingCount: assessingCount,
+          assessmentPassedCount: 0,
+          assessmentFailedCount: 0,
+        },
+      })
+    }
+
     return updatedConsultation
   })
 
