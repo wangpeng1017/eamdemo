@@ -368,7 +368,16 @@ export default function SampleTestItemTable({
       title: '检测标准',
       dataIndex: 'testStandard',
       width: 150,
-      render: (text) => text || '-',
+      render: (text, record) =>
+        readonly ? (
+          text || '-'
+        ) : (
+          <Input
+            value={text}
+            placeholder="选择模板自动填充或手动输入"
+            onChange={(e) => handleCellChange(record.key, 'testStandard', e.target.value)}
+          />
+        ),
     },
     {
       title: '评判标准',
