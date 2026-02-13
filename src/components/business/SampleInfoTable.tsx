@@ -6,8 +6,9 @@
  */
 
 import { useState, useCallback } from 'react'
-import { Table, Input, InputNumber, Button, Space, Popconfirm } from 'antd'
+import { Table, Input, InputNumber, Button, Space, Popconfirm, DatePicker } from 'antd'
 import { PlusOutlined, DeleteOutlined } from '@ant-design/icons'
+import dayjs from 'dayjs'
 
 export interface SampleInfoData {
     key: string
@@ -18,6 +19,11 @@ export interface SampleInfoData {
     weight?: string           // 重量
     supplier?: string         // 供应商
     oem?: string              // 主机厂 OEM
+    vehicleModel?: string     // 车型
+    manufactureDate?: string  // 生产日期
+    manufactureLotNo?: string // 生产批号
+    packingDate?: string      // 包装日期
+    projectDeadline?: string  // 项目节点日期
     quantity: number           // 数量
     sampleCondition?: string  // 样品状态描述
     remark?: string           // 备注
@@ -131,6 +137,59 @@ export default function SampleInfoTable({ value = [], onChange, readonly = false
                 ),
         },
         {
+            title: '车型',
+            dataIndex: 'vehicleModel',
+            width: 100,
+            render: (text: string, record: SampleInfoData) =>
+                readonly ? text : (
+                    <Input size="small" value={text} placeholder="车型"
+                        onChange={e => updateItem(record.key, 'vehicleModel', e.target.value)} />
+                ),
+        },
+        {
+            title: '生产日期',
+            dataIndex: 'manufactureDate',
+            width: 130,
+            render: (text: string, record: SampleInfoData) =>
+                readonly ? (text ? dayjs(text).format('YYYY-MM-DD') : '') : (
+                    <DatePicker size="small" style={{ width: '100%' }}
+                        value={text ? dayjs(text) : null}
+                        onChange={(d) => updateItem(record.key, 'manufactureDate', d ? d.toISOString() : '')} />
+                ),
+        },
+        {
+            title: '生产批号',
+            dataIndex: 'manufactureLotNo',
+            width: 110,
+            render: (text: string, record: SampleInfoData) =>
+                readonly ? text : (
+                    <Input size="small" value={text} placeholder="批号"
+                        onChange={e => updateItem(record.key, 'manufactureLotNo', e.target.value)} />
+                ),
+        },
+        {
+            title: '包装日期',
+            dataIndex: 'packingDate',
+            width: 130,
+            render: (text: string, record: SampleInfoData) =>
+                readonly ? (text ? dayjs(text).format('YYYY-MM-DD') : '') : (
+                    <DatePicker size="small" style={{ width: '100%' }}
+                        value={text ? dayjs(text) : null}
+                        onChange={(d) => updateItem(record.key, 'packingDate', d ? d.toISOString() : '')} />
+                ),
+        },
+        {
+            title: '项目节点',
+            dataIndex: 'projectDeadline',
+            width: 130,
+            render: (text: string, record: SampleInfoData) =>
+                readonly ? (text ? dayjs(text).format('YYYY-MM-DD') : '') : (
+                    <DatePicker size="small" style={{ width: '100%' }}
+                        value={text ? dayjs(text) : null}
+                        onChange={(d) => updateItem(record.key, 'projectDeadline', d ? d.toISOString() : '')} />
+                ),
+        },
+        {
             title: '数量',
             dataIndex: 'quantity',
             width: 70,
@@ -186,7 +245,7 @@ export default function SampleInfoTable({ value = [], onChange, readonly = false
                 rowKey="key"
                 size="small"
                 pagination={false}
-                scroll={{ x: 1100 }}
+                scroll={{ x: 1800 }}
                 locale={{ emptyText: '暂无样品，点击"添加样品"开始录入' }}
             />
         </div>

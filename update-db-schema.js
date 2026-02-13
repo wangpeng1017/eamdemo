@@ -642,6 +642,49 @@ async function main() {
             }
         }
     }
+
+    // 7. 补充委托单字段（对齐 XLS 模板）
+    const entrustmentNewColumns = [
+        ['invoiceAddress', 'VARCHAR(500)'],
+        ['reportFormat', 'VARCHAR(50)'],
+        ['reportGrouping', 'VARCHAR(50)'],
+        ['reportDeliveryAddress', 'VARCHAR(500)'],
+    ]
+    console.log('Adding new columns to biz_entrustment (XLS template alignment)...')
+    for (const [col, type] of entrustmentNewColumns) {
+        try {
+            await prisma.$executeRawUnsafe(`ALTER TABLE biz_entrustment ADD COLUMN ${col} ${type};`)
+            console.log(`✅ ${col} column added to biz_entrustment.`)
+        } catch (e) {
+            if (e.message.includes('Duplicate column name')) {
+                console.log(`ℹ️ ${col} already exists in biz_entrustment.`)
+            } else {
+                console.error(`❌ Error adding ${col}:`, e.message)
+            }
+        }
+    }
+
+    // 8. 补充样品表字段（对齐 XLS 模板样品信息区域）
+    const sampleNewColumns = [
+        ['vehicleModel', 'VARCHAR(100)'],
+        ['manufactureDate', 'DATETIME(3)'],
+        ['manufactureLotNo', 'VARCHAR(100)'],
+        ['packingDate', 'DATETIME(3)'],
+        ['projectDeadline', 'DATETIME(3)'],
+    ]
+    console.log('Adding new columns to biz_sample (XLS template alignment)...')
+    for (const [col, type] of sampleNewColumns) {
+        try {
+            await prisma.$executeRawUnsafe(`ALTER TABLE biz_sample ADD COLUMN ${col} ${type};`)
+            console.log(`✅ ${col} column added to biz_sample.`)
+        } catch (e) {
+            if (e.message.includes('Duplicate column name')) {
+                console.log(`ℹ️ ${col} already exists in biz_sample.`)
+            } else {
+                console.error(`❌ Error adding ${col}:`, e.message)
+            }
+        }
+    }
 }
 
 main()

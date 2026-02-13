@@ -529,6 +529,7 @@ model Entrustment {
   // 开票信息
   invoiceTitle  String?   @db.VarChar(200) // 开票抬头
   taxId         String?   @db.VarChar(50)  // 税号
+  invoiceAddress String?  @db.VarChar(500) // 发票地址
 
   // 服务项目
   serviceScope        String?   @db.VarChar(50)  // CMA,CNAS
@@ -536,6 +537,9 @@ model Entrustment {
   urgencyLevel        String?   @db.VarChar(20)  // normal/express/double/urgent
   reportCopies        Int?      @default(1)      // 报告份数
   reportDelivery      String?   @db.VarChar(20)  // courier/electronic/pickup
+  reportFormat        String?   @db.VarChar(50)  // 报告类型: original/copy/electronic
+  reportGrouping      String?   @db.VarChar(50)  // 报告出具方式: by_sample/by_project/merged
+  reportDeliveryAddress String? @db.VarChar(500) // 报告寄送地址
   acceptSubcontract   Boolean   @default(true)   // 是否接受分包
 
   // 试验信息
@@ -610,6 +614,11 @@ model Sample {
   weight            String?      @db.VarChar(50)  // 重量
   supplier          String?      @db.VarChar(200) // 供应商
   oem               String?      @db.VarChar(200) // 主机厂 OEM
+  vehicleModel      String?      @db.VarChar(100) // 车型
+  manufactureDate   DateTime?    // 生产日期
+  manufactureLotNo  String?      @db.VarChar(100) // 生产批号
+  packingDate       DateTime?    // 包装日期
+  projectDeadline   DateTime?    // 项目节点日期
   sampleCondition   String?      @db.VarChar(200) // 样品到样状态描述
   quantity          String?      @db.VarChar(50) // 数量
   totalQuantity     String?      @db.VarChar(50) // 样品总量

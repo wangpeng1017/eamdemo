@@ -128,6 +128,11 @@ export const GET = withErrorHandler(async (request: NextRequest) => {
             quantity: true,
             status: true,
             remark: true,
+            vehicleModel: true,
+            manufactureDate: true,
+            manufactureLotNo: true,
+            packingDate: true,
+            projectDeadline: true,
           },
         },
         createdBy: {
@@ -291,12 +296,13 @@ export const POST = withErrorHandler(async (request: NextRequest) => {
   if (data.clientId) {
     const clientInfo = await prisma.client.findUnique({
       where: { id: data.clientId },
-      select: { fax: true, creditCode: true, invoiceTitle: true, name: true }
+      select: { fax: true, creditCode: true, invoiceTitle: true, invoiceAddress: true, name: true }
     })
     if (clientInfo) {
       data.contactFax = data.contactFax || clientInfo.fax || null
       data.invoiceTitle = data.invoiceTitle || clientInfo.invoiceTitle || clientInfo.name || null
       data.taxId = data.taxId || clientInfo.creditCode || null
+      data.invoiceAddress = data.invoiceAddress || clientInfo.invoiceAddress || null
     }
   }
 
@@ -324,6 +330,11 @@ export const POST = withErrorHandler(async (request: NextRequest) => {
     // 开票信息
     invoiceTitle: data.invoiceTitle || null,
     taxId: data.taxId || null,
+    invoiceAddress: data.invoiceAddress || null,
+    // 报告配置
+    reportFormat: data.reportFormat || null,
+    reportGrouping: data.reportGrouping || null,
+    reportDeliveryAddress: data.reportDeliveryAddress || null,
     // 服务项目
     serviceScope: data.serviceScope || null,
     reportLanguage: data.reportLanguage || null,
@@ -389,6 +400,11 @@ export const POST = withErrorHandler(async (request: NextRequest) => {
           supplier: sample.supplier || null,
           oem: sample.oem || null,
           sampleCondition: sample.sampleCondition || null,
+          vehicleModel: sample.vehicleModel || null,
+          manufactureDate: sample.manufactureDate ? new Date(sample.manufactureDate) : null,
+          manufactureLotNo: sample.manufactureLotNo || null,
+          packingDate: sample.packingDate ? new Date(sample.packingDate) : null,
+          projectDeadline: sample.projectDeadline ? new Date(sample.projectDeadline) : null,
           quantity: String(sample.quantity || 1),
           status: 'received',
           remark: sample.remark || null,

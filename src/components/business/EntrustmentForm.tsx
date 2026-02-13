@@ -65,6 +65,11 @@ export default function EntrustmentForm({ initialValues, mode, onSubmit, loading
                     quantity: parseInt(s.quantity) || 1,
                     sampleCondition: s.sampleCondition || '',
                     remark: s.remark || '',
+                    vehicleModel: s.vehicleModel || '',
+                    manufactureDate: s.manufactureDate || '',
+                    manufactureLotNo: s.manufactureLotNo || '',
+                    packingDate: s.packingDate || '',
+                    projectDeadline: s.projectDeadline || '',
                 })))
             }
 
@@ -146,6 +151,7 @@ export default function EntrustmentForm({ initialValues, mode, onSubmit, loading
                 clientAddress: contract.partyAAddress || client?.address,
                 invoiceTitle: client?.invoiceTitle || client?.name || '',
                 taxId: client?.creditCode || '',
+                invoiceAddress: client?.invoiceAddress || '',
                 followerId: contract.salesPerson || undefined,
                 sampleDate: dayjs(),
             })
@@ -165,6 +171,7 @@ export default function EntrustmentForm({ initialValues, mode, onSubmit, loading
                 clientAddress: client.address || '',
                 invoiceTitle: client.invoiceTitle || client.name || '',
                 taxId: client.creditCode || '',
+                invoiceAddress: client.invoiceAddress || '',
             })
         }
     }
@@ -267,6 +274,9 @@ export default function EntrustmentForm({ initialValues, mode, onSubmit, loading
                         </Form.Item>
                     </Col>
                 </Row>
+                <Form.Item name="invoiceAddress" label="发票地址">
+                    <Input placeholder="发票地址" />
+                </Form.Item>
 
                 {/* ========== 第③段：服务项目 ========== */}
                 <Divider orientation="left" orientationMargin="0">③ 服务项目 Service Application</Divider>
@@ -328,6 +338,31 @@ export default function EntrustmentForm({ initialValues, mode, onSubmit, loading
                                 <Radio value={true}>是</Radio>
                                 <Radio value={false}>否</Radio>
                             </Radio.Group>
+                        </Form.Item>
+                    </Col>
+                </Row>
+                <Row gutter={16}>
+                    <Col span={8}>
+                        <Form.Item name="reportFormat" label="报告类型">
+                            <Select placeholder="选择报告类型" allowClear options={[
+                                { value: 'original', label: '正本' },
+                                { value: 'copy', label: '副本' },
+                                { value: 'electronic', label: '电子版' },
+                            ]} />
+                        </Form.Item>
+                    </Col>
+                    <Col span={8}>
+                        <Form.Item name="reportGrouping" label="报告出具方式">
+                            <Select placeholder="选择出具方式" allowClear options={[
+                                { value: 'by_sample', label: '按样品出具' },
+                                { value: 'by_project', label: '按项目出具' },
+                                { value: 'merged', label: '合并出具' },
+                            ]} />
+                        </Form.Item>
+                    </Col>
+                    <Col span={8}>
+                        <Form.Item name="reportDeliveryAddress" label="报告寄送地址">
+                            <Input placeholder="报告寄送地址" />
                         </Form.Item>
                     </Col>
                 </Row>
