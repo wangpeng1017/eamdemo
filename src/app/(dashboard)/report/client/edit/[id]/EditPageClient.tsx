@@ -3,7 +3,7 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { Button, Form, Input, Row, Col, Spin, Tabs } from 'antd'
+import { Button, Form, Input, Row, Col, Spin, Tabs, AutoComplete } from 'antd'
 import { ArrowLeftOutlined } from '@ant-design/icons'
 import { showSuccess, showError } from '@/lib/confirm'
 import ImageUpload from '@/components/upload/ImageUpload'
@@ -14,9 +14,9 @@ interface EditPageClientProps {
 }
 
 interface TestReport {
-  id: string
-  reportNo: string
-  projectName?: string
+    id: string
+    reportNo: string
+    projectName?: string
 }
 
 export default function EditClientReportPageClient({ id }: EditPageClientProps) {
@@ -26,10 +26,24 @@ export default function EditClientReportPageClient({ id }: EditPageClientProps) 
     const [initializing, setInitializing] = useState(true)
     const [availableReports, setAvailableReports] = useState<TestReport[]>([])
     const [selectedReports, setSelectedReports] = useState<TestReport[]>([])
+    const [testTemplateOptions, setTestTemplateOptions] = useState<{ value: string, label: string }[]>([])
 
     useEffect(() => {
         fetchData()
         fetchAvailableReports()
+        // 加载检测模板选项
+        fetch('/api/test-template?pageSize=200')
+            .then(res => res.json())
+            .then(json => {
+                const list = json.data?.list || json.list || json.data || []
+                if (Array.isArray(list)) {
+                    setTestTemplateOptions(list.map((t: any) => ({
+                        value: t.name,
+                        label: `${t.name}（${t.method || t.code}）`,
+                    })))
+                }
+            })
+            .catch(() => { })
     }, [id])
 
     const fetchData = async () => {
@@ -227,7 +241,14 @@ export default function EditClientReportPageClient({ id }: EditPageClientProps) 
                     <Row gutter={16}>
                         <Col span={12}>
                             <Form.Item name="projectName" label="检测项目">
-                                <Input placeholder="请输入检测项目" />
+                                <AutoComplete
+                                    placeholder="搜索或输入检测项目"
+                                    options={testTemplateOptions}
+                                    filterOption={(input, option) =>
+                                        (option?.value ?? '').toLowerCase().includes(input.toLowerCase()) ||
+                                        (option?.label?.toString() ?? '').toLowerCase().includes(input.toLowerCase())
+                                    }
+                                />
                             </Form.Item>
                         </Col>
                         <Col span={12}>
