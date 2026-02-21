@@ -21,6 +21,7 @@ export const NumberPrefixes = {
   STOCK_IN: 'RK',        // 入库
   STOCK_OUT: 'CK',       // 出库
   OUTSOURCE: 'WW',       // 委外订单
+  PROCESSING: 'PRC',     // 样品加工
 } as const
 
 export type NumberPrefix = typeof NumberPrefixes[keyof typeof NumberPrefixes]
@@ -175,6 +176,11 @@ async function generateNoFallback(
     case 'WW':
       count = await prisma.outsourceOrder.count({
         where: { orderNo: { startsWith: searchPattern } }
+      })
+      break
+    case 'PRC':
+      count = await prisma.sampleProcessing.count({
+        where: { processNo: { startsWith: searchPattern } }
       })
       break
     default:

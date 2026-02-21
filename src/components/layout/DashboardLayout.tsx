@@ -59,6 +59,7 @@ const allMenuItems: MenuItem[] = [
     permissionCode: 'menu:sample',
     children: [
       { key: '/sample/receipt', label: '收样登记', permissionCode: 'menu:sample:receipt' },
+      { key: '/sample/processing', label: '样品加工', permissionCode: 'menu:sample:processing' },
       { key: '/sample/details', label: '样品明细', permissionCode: 'menu:sample:details' },
       { key: '/sample/my', label: '我的样品', permissionCode: 'menu:sample:my' },
     ],

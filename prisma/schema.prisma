@@ -35,6 +35,7 @@ model User {
   approvalLogs        ApprovalLog[]
   todos               Todo[]
   createdSamples      Sample[]      @relation("SampleCreatedBy")
+  createdProcessings  SampleProcessing[] @relation("ProcessingCreatedBy")
   createdClients      Client[]      @relation("CreatedClient")
   createdQuotations   Quotation[]   @relation("CreatedQuotation")
   createdContracts    Contract[]    @relation("CreatedContract")
@@ -637,6 +638,7 @@ model Sample {
 
   testTasks    TestTask[]
   requisitions SampleRequisition[]
+  processings  SampleProcessing[]
 
   @@index([entrustmentId])
   @@index([status])
@@ -644,7 +646,34 @@ model Sample {
   @@map("biz_sample")
 }
 
-// ==================== 检测管理 ====================
+// 样品加工记录
+model SampleProcessing {
+  id                 String    @id @default(cuid())
+  processNo          String    @unique @db.VarChar(50) // PRC+年月日+序号
+  sampleId           String
+  sample             Sample    @relation(fields: [sampleId], references: [id])
+  processorName      String    @db.VarChar(200)        // 加工商名称
+  processType        String    @db.VarChar(50)         // cutting/grinding/mounting/polishing/other
+  description        String?   @db.Text                // 加工描述
+  sentDate           DateTime                          // 送出日期
+  expectedReturnDate DateTime?                         // 预计回样日期
+  actualReturnDate   DateTime?                         // 实际回样日期
+  result             String?   @db.VarChar(50)         // qualified/unqualified/partial
+  quantity           String?   @db.VarChar(50)         // 加工数量
+  cost               Decimal?  @db.Decimal(10, 2)      // 加工费用
+  remark             String?   @db.Text
+  status             String    @default("pending")     // pending/processing/completed/cancelled
+  createdById        String?
+  createdBy          User?     @relation("ProcessingCreatedBy", fields: [createdById], references: [id])
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+
+  @@index([sampleId])
+  @@index([status])
+  @@index([createdAt])
+  @@map("biz_sample_processing")
+}
+
 
 model TestTask {
   id            String    @id @default(cuid())
