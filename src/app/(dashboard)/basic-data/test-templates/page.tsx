@@ -230,16 +230,6 @@ export default function TestTemplatesPage() {
             onSearch={(v) => { setPage(1); setKeyword(v) }}
             enterButton
           />
-          <Select
-            placeholder="分类筛选"
-            allowClear
-            style={{ width: 150 }}
-            value={selectedCategory}
-            onChange={(v) => {
-              setSelectedCategory(v || undefined)
-            }}
-            options={categoryOptions}
-          />
           <Button type="primary" icon={<PlusOutlined />} onClick={handleAdd}>新增检测项目</Button>
         </Space>
       </div>
