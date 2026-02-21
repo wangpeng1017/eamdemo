@@ -5,8 +5,8 @@
  * @desc 对齐 Excel 委托单模板的零部件级测试区域，含禁用物质预置模板
  */
 
-import { useState, useCallback } from 'react'
-import { Table, Input, InputNumber, Button, Space, Popconfirm, Dropdown } from 'antd'
+import { useState, useCallback, useEffect } from 'react'
+import { Table, Input, InputNumber, Button, Space, Popconfirm, Dropdown, AutoComplete } from 'antd'
 import { PlusOutlined, DeleteOutlined, ExperimentOutlined } from '@ant-design/icons'
 import type { MenuProps } from 'antd'
 
@@ -14,7 +14,7 @@ export interface ComponentTestData {
     key: string
     sampleIndex?: string        // 对应样品序号
     sampleName: string          // 样品名称
-    testItemName: string        // 测试项目
+    testItemName: string        // 检测项目
     testStandard?: string       // 测试标准
     testMethod?: string         // 测试方法/条件
     judgmentStandard?: string   // 判定依据
@@ -144,6 +144,24 @@ export default function ComponentTestTable({ value = [], onChange, readonly = fa
         onChange?.(newItems)
     }, [onChange])
 
+    // 加载检测模板列表（用于检测项目下拉）
+    const [testTemplates, setTestTemplates] = useState<{ value: string, label: string, method: string }[]>([])
+    useEffect(() => {
+        fetch('/api/test-template?pageSize=200')
+            .then(res => res.json())
+            .then(json => {
+                const list = json.data?.list || json.list || json.data || []
+                if (Array.isArray(list)) {
+                    setTestTemplates(list.map((t: any) => ({
+                        value: t.name,
+                        label: `${t.name}（${t.method || t.code}）`,
+                        method: t.method || '',
+                    })))
+                }
+            })
+            .catch(() => { })
+    }, [])
+
     const handleAdd = () => {
         const newItem: ComponentTestData = {
             key: `comp_${Date.now()}`,
@@ -215,13 +233,31 @@ export default function ComponentTestTable({ value = [], onChange, readonly = fa
                 ),
         },
         {
-            title: '测试项目 *',
+            title: '检测项目 *',
             dataIndex: 'testItemName',
             width: 150,
             render: (text: string, record: ComponentTestData) =>
                 readonly ? text : (
-                    <Input size="small" value={text} placeholder="测试项目"
-                        onChange={e => updateItem(record.key, 'testItemName', e.target.value)} />
+                    <AutoComplete
+                        size="small"
+                        value={text}
+                        placeholder="搜索或输入检测项目"
+                        options={testTemplates}
+                        filterOption={(input, option) =>
+                            (option?.value ?? '').toLowerCase().includes(input.toLowerCase()) ||
+                            (option?.label?.toString() ?? '').toLowerCase().includes(input.toLowerCase())
+                        }
+                        onSelect={(val: string) => {
+                            updateItem(record.key, 'testItemName', val)
+                            // 联动填充测试标准
+                            const tpl = testTemplates.find(t => t.value === val)
+                            if (tpl?.method) {
+                                updateItem(record.key, 'testStandard', tpl.method)
+                            }
+                        }}
+                        onChange={(val: string) => updateItem(record.key, 'testItemName', val)}
+                        style={{ width: '100%' }}
+                    />
                 ),
         },
         {

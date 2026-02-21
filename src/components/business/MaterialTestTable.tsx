@@ -5,8 +5,8 @@
  * @desc 对齐 Excel 委托单模板的材料级测试区域
  */
 
-import { useState, useCallback } from 'react'
-import { Table, Input, Button, Popconfirm } from 'antd'
+import { useState, useCallback, useEffect } from 'react'
+import { Table, Input, Button, Popconfirm, AutoComplete } from 'antd'
 import { PlusOutlined, DeleteOutlined } from '@ant-design/icons'
 
 export interface MaterialTestData {
@@ -14,7 +14,7 @@ export interface MaterialTestData {
     sampleIndex?: string          // 对应样品序号
     materialName: string          // 材料名称(材质)
     materialCode?: string         // 材料牌号
-    testItemName: string          // 测试项目
+    testItemName: string          // 检测项目
     testStandard?: string         // 测试标准
     testMethod?: string           // 测试方法/条件
     judgmentStandard?: string     // 判定依据
@@ -38,6 +38,24 @@ export default function MaterialTestTable({ value = [], onChange, readonly = fal
         setItems(newItems)
         onChange?.(newItems)
     }, [onChange])
+
+    // 加载检测模板列表
+    const [testTemplates, setTestTemplates] = useState<{ value: string, label: string, method: string }[]>([])
+    useEffect(() => {
+        fetch('/api/test-template?pageSize=200')
+            .then(res => res.json())
+            .then(json => {
+                const list = json.data?.list || json.list || json.data || []
+                if (Array.isArray(list)) {
+                    setTestTemplates(list.map((t: any) => ({
+                        value: t.name,
+                        label: `${t.name}（${t.method || t.code}）`,
+                        method: t.method || '',
+                    })))
+                }
+            })
+            .catch(() => { })
+    }, [])
 
     const handleAdd = () => {
         const newItem: MaterialTestData = {
@@ -93,13 +111,30 @@ export default function MaterialTestTable({ value = [], onChange, readonly = fal
                 ),
         },
         {
-            title: '测试项目 *',
+            title: '检测项目 *',
             dataIndex: 'testItemName',
             width: 130,
             render: (text: string, record: MaterialTestData) =>
                 readonly ? text : (
-                    <Input size="small" value={text} placeholder="测试项目"
-                        onChange={e => updateItem(record.key, 'testItemName', e.target.value)} />
+                    <AutoComplete
+                        size="small"
+                        value={text}
+                        placeholder="搜索或输入检测项目"
+                        options={testTemplates}
+                        filterOption={(input, option) =>
+                            (option?.value ?? '').toLowerCase().includes(input.toLowerCase()) ||
+                            (option?.label?.toString() ?? '').toLowerCase().includes(input.toLowerCase())
+                        }
+                        onSelect={(val: string) => {
+                            updateItem(record.key, 'testItemName', val)
+                            const tpl = testTemplates.find(t => t.value === val)
+                            if (tpl?.method) {
+                                updateItem(record.key, 'testStandard', tpl.method)
+                            }
+                        }}
+                        onChange={(val: string) => updateItem(record.key, 'testItemName', val)}
+                        style={{ width: '100%' }}
+                    />
                 ),
         },
         {
