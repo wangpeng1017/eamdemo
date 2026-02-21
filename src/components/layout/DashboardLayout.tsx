@@ -133,11 +133,9 @@ const allMenuItems: MenuItem[] = [
     label: '统计报表',
     permissionCode: 'menu:statistics',
     children: [
-      { key: '/statistics', label: '业务概览', permissionCode: 'menu:statistics' },
       { key: '/statistics/entrustment', label: '委托统计', permissionCode: 'menu:statistics' },
       { key: '/statistics/sample', label: '样品统计', permissionCode: 'menu:statistics' },
       { key: '/statistics/task', label: '任务统计', permissionCode: 'menu:statistics' },
-      { key: '/statistics/finance', label: '财务统计', permissionCode: 'menu:statistics' },
     ],
   },
   {
