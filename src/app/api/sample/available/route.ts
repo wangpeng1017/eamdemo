@@ -11,7 +11,7 @@ export async function GET(request: NextRequest) {
   const [list, total] = await Promise.all([
     prisma.sample.findMany({
       where: {
-        status: { in: ['received', 'allocated'] },
+        status: { in: ['received', 'allocated', 'processed'] },
       },
       select: {
         id: true,

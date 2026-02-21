@@ -482,7 +482,7 @@ export default function SampleReceiptPage() {
           </Row>
           <Row gutter={16}>
             <Col span={12}>
-              <Form.Item name="quantity" label="加工数量">
+              <Form.Item name="quantity" label="加工数量" rules={[{ required: true, message: '请输入加工数量' }]}>
                 <Input placeholder="如：5件" />
               </Form.Item>
             </Col>
