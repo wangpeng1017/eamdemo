@@ -177,7 +177,7 @@ export default function CapabilityReviewPage() {
         width={600}
       >
         <Form form={form} layout="vertical">
-          <Form.Item name="userId" label="员工" rules={[{ required: true }]}>
+          <Form.Item name="userId" label="员工" rules={[{ required: true, message: '请输入员工' }]}>
             <Select
               placeholder="选择员工"
               onChange={handleUserChange}
@@ -202,10 +202,10 @@ export default function CapabilityReviewPage() {
               }
             />
           </Form.Item>
-          <Form.Item name="trainingContent" label="培训/考核内容" rules={[{ required: true }]}>
+          <Form.Item name="trainingContent" label="培训/考核内容" rules={[{ required: true, message: '请输入培训/考核内容' }]}>
             <Input.TextArea rows={3} placeholder="请输入培训或考核的具体内容" />
           </Form.Item>
-          <Form.Item name="examDate" label="考核日期" rules={[{ required: true }]}>
+          <Form.Item name="examDate" label="考核日期" rules={[{ required: true, message: '请选择考核日期' }]}>
             <input
               type="date"
               style={{ width: '100%', padding: 6, border: '1px solid #d9d9d9', borderRadius: 4 }}
@@ -216,7 +216,7 @@ export default function CapabilityReviewPage() {
               }}
             />
           </Form.Item>
-          <Form.Item name="examResult" label="考核结果" rules={[{ required: true }]}>
+          <Form.Item name="examResult" label="考核结果" rules={[{ required: true, message: '请输入考核结果' }]}>
             <Select>
               <Select.Option value="Pass">合格</Select.Option>
               <Select.Option value="Fail">不合格</Select.Option>

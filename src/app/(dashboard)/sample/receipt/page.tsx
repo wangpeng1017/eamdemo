@@ -369,7 +369,7 @@ export default function SampleReceiptPage() {
             </Card>
           )}
 
-          <Form.Item label="收样日期" name="receiptDate" rules={[{ required: true }]}>
+          <Form.Item label="收样日期" name="receiptDate" rules={[{ required: true, message: '此项为必填' }]}>
             <DatePicker style={{ width: "100%" }} />
           </Form.Item>
           <Form.Item label="存放位置" name="storageLocation">

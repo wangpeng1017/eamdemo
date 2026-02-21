@@ -604,7 +604,7 @@ export default function InspectionStandardsPage() {
                 title="确认删除?"
                 description="删除后同时移除关联的检测模板"
                 onConfirm={() => handleDeleteItem(record)}
-                okText="确认" cancelText="取消"
+                okText="确定" cancelText="取消"
               >
                 <Tooltip title="删除">
                   <Button size="small" danger icon={<DeleteOutlined />} />
@@ -679,7 +679,7 @@ export default function InspectionStandardsPage() {
                         title="确认删除分类?"
                         description={selectedIsParent ? '需先删除子分类' : '需先删除检测项目'}
                         onConfirm={handleDeleteCategory}
-                        okText="确认" cancelText="取消"
+                        okText="确定" cancelText="取消"
                       >
                         <Button size="small" danger icon={<DeleteOutlined />}>删除</Button>
                       </Popconfirm>

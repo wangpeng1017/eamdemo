@@ -353,10 +353,10 @@ export default function EvaluationTemplatePage() {
         width={500}
       >
         <Form form={form} layout="vertical">
-          <Form.Item name="name" label="模板名称" rules={[{ required: true }]}>
+          <Form.Item name="name" label="模板名称" rules={[{ required: true, message: '请输入模板名称' }]}>
             <Input />
           </Form.Item>
-          <Form.Item name="code" label="模板编码" rules={[{ required: true }]}>
+          <Form.Item name="code" label="模板编码" rules={[{ required: true, message: '请输入模板编码' }]}>
             <Input placeholder="如: TPL_TEST_SERVICE" />
           </Form.Item>
           <Form.Item name="categoryId" label="适用分类">
@@ -388,13 +388,13 @@ export default function EvaluationTemplatePage() {
         width={400}
       >
         <Form form={itemForm} layout="vertical">
-          <Form.Item name="name" label="评价项名称" rules={[{ required: true }]}>
+          <Form.Item name="name" label="评价项名称" rules={[{ required: true, message: '请输入评价项名称' }]}>
             <Input placeholder="如: 检测质量" />
           </Form.Item>
-          <Form.Item name="weight" label="权重 (%)" rules={[{ required: true }]}>
+          <Form.Item name="weight" label="权重 (%)" rules={[{ required: true, message: '请输入权重 (%' }]}>
             <InputNumber min={1} max={100} style={{ width: '100%' }} />
           </Form.Item>
-          <Form.Item name="maxScore" label="满分" rules={[{ required: true }]}>
+          <Form.Item name="maxScore" label="满分" rules={[{ required: true, message: '请输入满分' }]}>
             <InputNumber min={1} max={100} style={{ width: '100%' }} />
           </Form.Item>
           <Form.Item name="description" label="说明">

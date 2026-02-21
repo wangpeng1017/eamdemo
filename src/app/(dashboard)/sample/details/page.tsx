@@ -435,10 +435,10 @@ export default function SampleDetailsPage() {
           <Form.Item label="用途说明" name="purpose" rules={[{ required: true, message: '请输入用途说明' }]}>
             <Input.TextArea rows={2} placeholder="请详细描述用途" />
           </Form.Item>
-          <Form.Item label="领用日期" name="requisitionDate" rules={[{ required: true }]}>
+          <Form.Item label="领用日期" name="requisitionDate" rules={[{ required: true, message: '此项为必填' }]}>
             <DatePicker style={{ width: '100%' }} />
           </Form.Item>
-          <Form.Item label="预计归还日期" name="expectedReturnDate" rules={[{ required: true }]}>
+          <Form.Item label="预计归还日期" name="expectedReturnDate" rules={[{ required: true, message: '此项为必填' }]}>
             <DatePicker style={{ width: '100%' }} />
           </Form.Item>
         </Form>
@@ -480,10 +480,10 @@ export default function SampleDetailsPage() {
               <Select.Option value="其他">其他</Select.Option>
             </Select>
           </Form.Item>
-          <Form.Item label="分配日期" name="allocationDate" rules={[{ required: true }]}>
+          <Form.Item label="分配日期" name="allocationDate" rules={[{ required: true, message: '此项为必填' }]}>
             <DatePicker style={{ width: '100%' }} />
           </Form.Item>
-          <Form.Item label="截止日期" name="deadline" rules={[{ required: true }]}>
+          <Form.Item label="截止日期" name="deadline" rules={[{ required: true, message: '此项为必填' }]}>
             <DatePicker style={{ width: '100%' }} />
           </Form.Item>
           <Form.Item label="备注" name="remark">

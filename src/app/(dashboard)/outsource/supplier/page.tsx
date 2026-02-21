@@ -134,7 +134,7 @@ export default function SupplierPage() {
         width={600}
       >
         <Form form={form} layout="vertical">
-          <Form.Item name="name" label="供应商名称" rules={[{ required: true }]}>
+          <Form.Item name="name" label="供应商名称" rules={[{ required: true, message: '请输入供应商名称' }]}>
             <Input />
           </Form.Item>
           <Form.Item name="type" label="类型">

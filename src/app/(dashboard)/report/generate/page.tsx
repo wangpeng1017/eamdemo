@@ -306,7 +306,7 @@ export default function ReportGeneratePage() {
             <Form.Item label="报告模板" name="templateId" rules={[{ required: true, message: '请选择模板' }]}>
               <Select placeholder="选择报告模板" options={templates.map(t => ({ label: t.name, value: t.id }))} />
             </Form.Item>
-            <Form.Item label="检测结论" name="conclusion" rules={[{ required: true }]}>
+            <Form.Item label="检测结论" name="conclusion" rules={[{ required: true, message: '此项为必填' }]}>
               <Select options={[
                 { label: '合格', value: 'qualified' },
                 { label: '不合格', value: 'unqualified' },
@@ -356,7 +356,7 @@ export default function ReportGeneratePage() {
                   {
                     title: '实测值',
                     render: (_, field) => (
-                      <Form.Item {...field} name={[field.name, 'value']} noStyle rules={[{ required: true }]}>
+                      <Form.Item {...field} name={[field.name, 'value']} noStyle rules={[{ required: true, message: '此项为必填' }]}>
                         <Input placeholder="输入实测值" />
                       </Form.Item>
                     ),

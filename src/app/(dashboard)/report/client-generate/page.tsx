@@ -532,7 +532,7 @@ export default function ClientReportGeneratePage() {
                                 </Form.Item>
 
                                 <div className="grid grid-cols-2 gap-4">
-                                    <Form.Item name="clientName" label="客户名称" rules={[{ required: true }]}>
+                                    <Form.Item name="clientName" label="客户名称" rules={[{ required: true, message: '请输入客户名称' }]}>
                                         <Input />
                                     </Form.Item>
                                     <Form.Item name="projectName" label="项目名称">
@@ -540,7 +540,7 @@ export default function ClientReportGeneratePage() {
                                     </Form.Item>
                                 </div>
 
-                                <Form.Item name="sampleName" label="样品名称" rules={[{ required: true }]}>
+                                <Form.Item name="sampleName" label="样品名称" rules={[{ required: true, message: '请输入样品名称' }]}>
                                     <Input />
                                 </Form.Item>
 

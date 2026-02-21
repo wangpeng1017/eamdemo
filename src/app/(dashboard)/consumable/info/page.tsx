@@ -409,7 +409,7 @@ export default function ConsumableInfoPage() {
                         title="确认删除分类?"
                         description={selectedIsParent ? '需先删除子分类和关联耗材' : '需先删除关联耗材'}
                         onConfirm={handleDeleteCategory}
-                        okText="确认" cancelText="取消"
+                        okText="确定" cancelText="取消"
                       >
                         <Button size="small" danger icon={<DeleteOutlined />}>删除</Button>
                       </Popconfirm>

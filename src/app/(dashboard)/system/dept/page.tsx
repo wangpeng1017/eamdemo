@@ -111,7 +111,7 @@ export default function DeptPage() {
         width={500}
       >
         <Form form={form} layout="vertical">
-          <Form.Item name="name" label="部门名称" rules={[{ required: true }]}>
+          <Form.Item name="name" label="部门名称" rules={[{ required: true, message: '请输入部门名称' }]}>
             <Input />
           </Form.Item>
           <Form.Item name="sort" label="排序" initialValue={0}>

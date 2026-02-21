@@ -327,10 +327,10 @@ export default function ReceivablePage() {
               }}
             />
           </Form.Item>
-          <Form.Item name="clientName" label="客户名称" rules={[{ required: true }]}>
+          <Form.Item name="clientName" label="客户名称" rules={[{ required: true, message: '请输入客户名称' }]}>
             <Input />
           </Form.Item>
-          <Form.Item name="amount" label="应收金额" rules={[{ required: true }]}>
+          <Form.Item name="amount" label="应收金额" rules={[{ required: true, message: '请输入应收金额' }]}>
             <InputNumber style={{ width: '100%' }} prefix="¥" min={0} precision={2} />
           </Form.Item>
           {editingId && (

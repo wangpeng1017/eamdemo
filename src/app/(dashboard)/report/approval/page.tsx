@@ -425,7 +425,7 @@ export default function ReportApprovalPage() {
         onCancel={() => setApprovalOpen(false)}
       >
         <Form form={approvalForm} layout="vertical">
-          <Form.Item name="operator" label="操作人" rules={[{ required: true }]}>
+          <Form.Item name="operator" label="操作人" rules={[{ required: true, message: '请输入操作人' }]}>
             <Input />
           </Form.Item>
           <Form.Item

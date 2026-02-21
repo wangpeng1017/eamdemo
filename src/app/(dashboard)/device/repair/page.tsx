@@ -311,7 +311,7 @@ export default function DeviceRepairPage() {
         width={600}
       >
         <Form form={form} layout="vertical">
-          <Form.Item name="deviceId" label="选择设备" rules={[{ required: true }]}>
+          <Form.Item name="deviceId" label="选择设备" rules={[{ required: true, message: '请输入选择设备' }]}>
             <Select
               placeholder="选择需要维修的设备"
               showSearch
@@ -338,7 +338,7 @@ export default function DeviceRepairPage() {
             </Col>
           </Row>
 
-          <Form.Item name="faultDesc" label="故障描述" rules={[{ required: true }]}>
+          <Form.Item name="faultDesc" label="故障描述" rules={[{ required: true, message: '请输入故障描述' }]}>
             <Input.TextArea rows={3} placeholder="描述设备故障情况" />
           </Form.Item>
 
@@ -370,7 +370,7 @@ export default function DeviceRepairPage() {
         width={600}
       >
         <Form form={editForm} layout="vertical">
-          <Form.Item name="faultDesc" label="故障描述" rules={[{ required: true }]}>
+          <Form.Item name="faultDesc" label="故障描述" rules={[{ required: true, message: '请输入故障描述' }]}>
             <Input.TextArea rows={3} />
           </Form.Item>
 

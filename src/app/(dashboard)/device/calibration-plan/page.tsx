@@ -381,7 +381,7 @@ export default function CalibrationPlanPage() {
 
           <Row gutter={16}>
             <Col span={8}>
-              <Form.Item name="cycleType" label="周期类型" rules={[{ required: true }]}>
+              <Form.Item name="cycleType" label="周期类型" rules={[{ required: true, message: '请选择周期类型' }]}>
                 <Select
                   options={CYCLE_TYPE_OPTIONS}
                   onChange={(val) => {
@@ -391,12 +391,12 @@ export default function CalibrationPlanPage() {
               </Form.Item>
             </Col>
             <Col span={8}>
-              <Form.Item name="cycleMonths" label="周期月数" rules={[{ required: true }]}>
+              <Form.Item name="cycleMonths" label="周期月数" rules={[{ required: true, message: '请输入周期月数' }]}>
                 <InputNumber min={1} style={{ width: '100%' }} />
               </Form.Item>
             </Col>
             <Col span={8}>
-              <Form.Item name="status" label="状态" rules={[{ required: true }]}>
+              <Form.Item name="status" label="状态" rules={[{ required: true, message: '请选择状态' }]}>
                 <Select options={STATUS_OPTIONS} />
               </Form.Item>
             </Col>
@@ -409,7 +409,7 @@ export default function CalibrationPlanPage() {
               </Form.Item>
             </Col>
             <Col span={12}>
-              <Form.Item name="nextCalibrationDate" label="下次检定日期" rules={[{ required: true }]}>
+              <Form.Item name="nextCalibrationDate" label="下次检定日期" rules={[{ required: true, message: '请选择下次检定日期' }]}>
                 <DatePicker style={{ width: '100%' }} />
               </Form.Item>
             </Col>

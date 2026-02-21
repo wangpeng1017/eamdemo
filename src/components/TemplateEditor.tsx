@@ -306,7 +306,7 @@ export default function TemplateEditor({ initialValue, onSave, onCancel }: Templ
           <Card title="属性配置">
             <Form form={form} layout="vertical">
               {/* 基本信息 */}
-              <Form.Item label="模版名称" name="name" rules={[{ required: true }]}>
+              <Form.Item label="模版名称" name="name" rules={[{ required: true, message: '此项为必填' }]}>
                 <Input
                   placeholder="如: 拉伸性能测试"
                   value={localTitle}

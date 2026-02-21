@@ -364,7 +364,7 @@ export default function MaintenancePlanPage() {
 
           <Row gutter={16}>
             <Col span={8}>
-              <Form.Item name="planType" label="周期类型" rules={[{ required: true }]}>
+              <Form.Item name="planType" label="周期类型" rules={[{ required: true, message: '请选择周期类型' }]}>
                 <Select
                   options={PLAN_TYPE_OPTIONS}
                   onChange={(val) => {
@@ -374,12 +374,12 @@ export default function MaintenancePlanPage() {
               </Form.Item>
             </Col>
             <Col span={8}>
-              <Form.Item name="interval" label="间隔天数" rules={[{ required: true }]}>
+              <Form.Item name="interval" label="间隔天数" rules={[{ required: true, message: '请输入间隔天数' }]}>
                 <InputNumber min={1} style={{ width: '100%' }} />
               </Form.Item>
             </Col>
             <Col span={8}>
-              <Form.Item name="nextDate" label="下次保养日期" rules={[{ required: true }]}>
+              <Form.Item name="nextDate" label="下次保养日期" rules={[{ required: true, message: '请选择下次保养日期' }]}>
                 <DatePicker style={{ width: '100%' }} />
               </Form.Item>
             </Col>
@@ -387,12 +387,12 @@ export default function MaintenancePlanPage() {
 
           <Row gutter={16}>
             <Col span={12}>
-              <Form.Item name="responsiblePerson" label="负责人" rules={[{ required: true }]}>
+              <Form.Item name="responsiblePerson" label="负责人" rules={[{ required: true, message: '请输入负责人' }]}>
                 <UserSelect placeholder="请选择负责人" />
               </Form.Item>
             </Col>
             <Col span={12}>
-              <Form.Item name="status" label="状态" rules={[{ required: true }]}>
+              <Form.Item name="status" label="状态" rules={[{ required: true, message: '请选择状态' }]}>
                 <Select options={STATUS_OPTIONS} />
               </Form.Item>
             </Col>

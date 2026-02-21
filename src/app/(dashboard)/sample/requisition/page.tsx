@@ -239,7 +239,7 @@ export default function SampleRequisitionPage() {
         width={600}
       >
         <Form form={form} layout="vertical">
-          <Form.Item label="选择样品" name="sampleId" rules={[{ required: true }]}>
+          <Form.Item label="选择样品" name="sampleId" rules={[{ required: true, message: '此项为必填' }]}>
             <Select
               showSearch
               placeholder="请选择样品"
@@ -253,13 +253,13 @@ export default function SampleRequisitionPage() {
               }))}
             />
           </Form.Item>
-          <Form.Item label="借用数量" name="quantity" rules={[{ required: true }]}>
+          <Form.Item label="借用数量" name="quantity" rules={[{ required: true, message: '此项为必填' }]}>
             <Input placeholder="请输入借用数量" />
           </Form.Item>
-          <Form.Item label="借用人" name="requisitionBy" rules={[{ required: true }]}>
+          <Form.Item label="借用人" name="requisitionBy" rules={[{ required: true, message: '此项为必填' }]}>
             <Input placeholder="请输入借用人姓名" />
           </Form.Item>
-          <Form.Item label="借用日期" name="requisitionDate" rules={[{ required: true }]}>
+          <Form.Item label="借用日期" name="requisitionDate" rules={[{ required: true, message: '此项为必填' }]}>
             <DatePicker style={{ width: "100%" }} />
           </Form.Item>
           <Form.Item label="应还日期" name="expectedReturnDate">

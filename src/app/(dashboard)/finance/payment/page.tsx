@@ -217,7 +217,7 @@ export default function PaymentPage() {
         width={600}
       >
         <Form form={form} layout="vertical">
-          <Form.Item name="receivableId" label="应收账款" rules={[{ required: true }]}>
+          <Form.Item name="receivableId" label="应收账款" rules={[{ required: true, message: '请输入应收账款' }]}>
             <Select
               placeholder="选择应收账款"
               onChange={handleReceivableChange}
@@ -252,7 +252,7 @@ export default function PaymentPage() {
 
           <Row gutter={16}>
             <Col span={12}>
-              <Form.Item name="amount" label="收款金额" rules={[{ required: true }]}>
+              <Form.Item name="amount" label="收款金额" rules={[{ required: true, message: '请输入收款金额' }]}>
                 <InputNumber
                   style={{ width: '100%' }}
                   min={0.01}
@@ -263,7 +263,7 @@ export default function PaymentPage() {
               </Form.Item>
             </Col>
             <Col span={12}>
-              <Form.Item name="paymentDate" label="收款日期" rules={[{ required: true }]}>
+              <Form.Item name="paymentDate" label="收款日期" rules={[{ required: true, message: '请选择收款日期' }]}>
                 <DatePicker style={{ width: '100%' }} />
               </Form.Item>
             </Col>
@@ -271,7 +271,7 @@ export default function PaymentPage() {
 
           <Row gutter={16}>
             <Col span={12}>
-              <Form.Item name="paymentMethod" label="收款方式" rules={[{ required: true }]}>
+              <Form.Item name="paymentMethod" label="收款方式" rules={[{ required: true, message: '请选择收款方式' }]}>
                 <Select options={paymentMethodOptions} />
               </Form.Item>
             </Col>

@@ -166,7 +166,7 @@ export default function TemplateEditPage() {
                     <Form.Item name="name" label="模板名称" rules={[{ required: true, message: '请输入模板名称' }]}>
                         <Input placeholder="如：客户检测报告模板-标准版" />
                     </Form.Item>
-                    <Form.Item name="category" label="分类" rules={[{ required: true }]} initialValue="client_report">
+                    <Form.Item name="category" label="分类" rules={[{ required: true, message: '请输入分类' }]} initialValue="client_report">
                         <Select options={categoryOptions} placeholder="选择分类" />
                     </Form.Item>
                     {!isNew && (

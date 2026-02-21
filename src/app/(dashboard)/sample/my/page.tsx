@@ -312,7 +312,7 @@ export default function MySamplesPage() {
           <Form.Item label="样品名称">
             <Input value={selectedRecord?.name} disabled />
           </Form.Item>
-          <Form.Item label="归还日期" name="returnDate" rules={[{ required: true }]}>
+          <Form.Item label="归还日期" name="returnDate" rules={[{ required: true, message: '此项为必填' }]}>
             <DatePicker style={{ width: "100%" }} />
           </Form.Item>
           <Form.Item label="备注" name="returnRemark">

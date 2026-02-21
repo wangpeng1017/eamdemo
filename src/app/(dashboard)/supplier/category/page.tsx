@@ -253,10 +253,10 @@ export default function SupplierCategoryPage() {
         width={500}
       >
         <Form form={form} layout="vertical">
-          <Form.Item name="name" label="分类名称" rules={[{ required: true }]}>
+          <Form.Item name="name" label="分类名称" rules={[{ required: true, message: '请输入分类名称' }]}>
             <Input />
           </Form.Item>
-          <Form.Item name="code" label="分类编码" rules={[{ required: true }]}>
+          <Form.Item name="code" label="分类编码" rules={[{ required: true, message: '请输入分类编码' }]}>
             <Input placeholder="如: TEST_SERVICE" />
           </Form.Item>
           <Form.Item name="parentId" label="上级分类">

@@ -734,7 +734,7 @@ export default function QuotationPage() {
         onCancel={() => setApprovalModalOpen(false)}
       >
         <Form form={approvalForm} layout="vertical">
-          <Form.Item name="action" label="审批结果" rules={[{ required: true }]} initialValue="approve">
+          <Form.Item name="action" label="审批结果" rules={[{ required: true, message: '请输入审批结果' }]} initialValue="approve">
             <Radio.Group>
               <Radio value="approve">通过</Radio>
               <Radio value="reject">拒绝</Radio>

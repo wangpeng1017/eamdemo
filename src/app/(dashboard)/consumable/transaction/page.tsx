@@ -330,7 +330,7 @@ export default function StockTransactionPage() {
         width={500}
       >
         <Form form={form} layout="vertical">
-          <Form.Item name="consumableId" label="易耗品" rules={[{ required: true }]}>
+          <Form.Item name="consumableId" label="易耗品" rules={[{ required: true, message: '请输入易耗品' }]}>
             <Select
               showSearch
               placeholder="选择易耗品"
@@ -341,16 +341,16 @@ export default function StockTransactionPage() {
               }))}
             />
           </Form.Item>
-          <Form.Item name="quantity" label="数量" rules={[{ required: true }]}>
+          <Form.Item name="quantity" label="数量" rules={[{ required: true, message: '请输入数量' }]}>
             <InputNumber min={1} style={{ width: '100%' }} />
           </Form.Item>
-          <Form.Item name="reason" label="原因" rules={[{ required: true }]}>
+          <Form.Item name="reason" label="原因" rules={[{ required: true, message: '请输入原因' }]}>
             <Select options={reasonOptions[transactionType]} />
           </Form.Item>
-          <Form.Item name="operator" label="操作人" rules={[{ required: true }]}>
+          <Form.Item name="operator" label="操作人" rules={[{ required: true, message: '请输入操作人' }]}>
             <Input />
           </Form.Item>
-          <Form.Item name="transactionDate" label="日期" rules={[{ required: true }]}>
+          <Form.Item name="transactionDate" label="日期" rules={[{ required: true, message: '请选择日期' }]}>
             <Input type="date" />
           </Form.Item>
           {transactionType === 'out' && (

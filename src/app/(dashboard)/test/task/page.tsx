@@ -148,7 +148,7 @@ export default function TestTaskPage() {
         width={600}
       >
         <Form form={form} layout="vertical">
-          <Form.Item name="testItem" label="检测项目" rules={[{ required: true }]}>
+          <Form.Item name="testItem" label="检测项目" rules={[{ required: true, message: '请输入检测项目' }]}>
             <Input />
           </Form.Item>
           <Form.Item name="testMethod" label="检测方法">

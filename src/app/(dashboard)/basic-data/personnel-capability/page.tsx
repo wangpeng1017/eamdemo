@@ -193,7 +193,7 @@ export default function PersonnelCapabilityPage() {
         width={600}
       >
         <Form form={form} layout="vertical">
-          <Form.Item name="userId" label="员工" rules={[{ required: true }]}>
+          <Form.Item name="userId" label="员工" rules={[{ required: true, message: '请输入员工' }]}>
             <Select
               placeholder="选择员工"
               options={users.map((u: any) => ({ value: u.id, label: u.name }))}
@@ -203,7 +203,7 @@ export default function PersonnelCapabilityPage() {
               }
             />
           </Form.Item>
-          <Form.Item name="standardId" label="检查标准" rules={[{ required: true }]}>
+          <Form.Item name="standardId" label="检查标准" rules={[{ required: true, message: '请输入检查标准' }]}>
             <Select
               placeholder="选择检查标准"
               options={standards.map((s: any) => ({
@@ -224,7 +224,7 @@ export default function PersonnelCapabilityPage() {
               const standard = standards.find(s => s.id === standardId)
               const parameters = standard?.parameters || []
               return (
-                <Form.Item name="parameter" label="检测参数" rules={[{ required: true }]}>
+                <Form.Item name="parameter" label="检测参数" rules={[{ required: true, message: '请输入检测参数' }]}>
                   {parameters.length > 0 ? (
                     <Select
                       placeholder="选择检测参数"
@@ -237,10 +237,10 @@ export default function PersonnelCapabilityPage() {
               )
             }}
           </Form.Item>
-          <Form.Item name="certificate" label="证书/资质" rules={[{ required: true }]}>
+          <Form.Item name="certificate" label="证书/资质" rules={[{ required: true, message: '请输入证书/资质' }]}>
             <Input placeholder="如：力学检测员证" />
           </Form.Item>
-          <Form.Item name="expiryDate" label="有效期至" rules={[{ required: true }]}>
+          <Form.Item name="expiryDate" label="有效期至" rules={[{ required: true, message: '请输入有效期至' }]}>
             <DatePicker style={{ width: '100%' }} />
           </Form.Item>
         </Form>

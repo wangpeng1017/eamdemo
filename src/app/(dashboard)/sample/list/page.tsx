@@ -190,7 +190,7 @@ export default function SampleListPage() {
         width={600}
       >
         <Form form={form} layout="vertical">
-          <Form.Item name="name" label="样品名称" rules={[{ required: true }]}>
+          <Form.Item name="name" label="样品名称" rules={[{ required: true, message: '请输入样品名称' }]}>
             <Input />
           </Form.Item>
           <Form.Item name="type" label="样品类型">

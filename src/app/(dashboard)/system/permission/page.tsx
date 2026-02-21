@@ -354,13 +354,13 @@ export default function PermissionPage() {
         width={500}
       >
         <Form form={form} layout="vertical">
-          <Form.Item name="name" label="权限名称" rules={[{ required: true }]}>
+          <Form.Item name="name" label="权限名称" rules={[{ required: true, message: '请输入权限名称' }]}>
             <Input />
           </Form.Item>
           <Form.Item name="code" label="权限编码">
             <Input placeholder="可选，系统自动生成" />
           </Form.Item>
-          <Form.Item name="type" label="类型" rules={[{ required: true }]}>
+          <Form.Item name="type" label="类型" rules={[{ required: true, message: '请选择类型' }]}>
             <Select options={typeOptions} />
           </Form.Item>
           <Form.Item name="parentId" label="上级权限">

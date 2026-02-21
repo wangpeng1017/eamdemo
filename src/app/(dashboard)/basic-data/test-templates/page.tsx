@@ -208,7 +208,7 @@ export default function TestTemplatesPage() {
             title="确认删除"
             description="确定要删除这个检测项目吗？"
             onConfirm={() => handleDelete(record.id)}
-            okText="确认"
+            okText="确定"
             cancelText="取消"
           >
             <Button size="small" danger icon={<DeleteOutlined />} />

@@ -317,7 +317,7 @@ export default function SupplierEvaluationPage() {
         <Form form={form} layout="vertical">
           <Row gutter={16}>
             <Col span={12}>
-              <Form.Item name="supplierId" label="供应商" rules={[{ required: true }]}>
+              <Form.Item name="supplierId" label="供应商" rules={[{ required: true, message: '请输入供应商' }]}>
                 <Select
                   showSearch
                   placeholder="选择供应商"
@@ -330,14 +330,14 @@ export default function SupplierEvaluationPage() {
               </Form.Item>
             </Col>
             <Col span={12}>
-              <Form.Item name="period" label="评价周期" rules={[{ required: true }]}>
+              <Form.Item name="period" label="评价周期" rules={[{ required: true, message: '请输入评价周期' }]}>
                 <Input placeholder="如: 2025-Q4" />
               </Form.Item>
             </Col>
           </Row>
           <Row gutter={16}>
             <Col span={12}>
-              <Form.Item name="evaluator" label="评价人" rules={[{ required: true }]}>
+              <Form.Item name="evaluator" label="评价人" rules={[{ required: true, message: '请输入评价人' }]}>
                 <Input />
               </Form.Item>
             </Col>
@@ -347,29 +347,29 @@ export default function SupplierEvaluationPage() {
 
           <Row gutter={16}>
             <Col span={8}>
-              <Form.Item name="score1" label="检测质量 (30%)" rules={[{ required: true }]}>
+              <Form.Item name="score1" label="检测质量 (30%)" rules={[{ required: true, message: '请输入检测质量 (30%' }]}>
                 <InputNumber min={0} max={100} style={{ width: '100%' }} />
               </Form.Item>
             </Col>
             <Col span={8}>
-              <Form.Item name="score2" label="交付时效 (25%)" rules={[{ required: true }]}>
+              <Form.Item name="score2" label="交付时效 (25%)" rules={[{ required: true, message: '请输入交付时效 (25%' }]}>
                 <InputNumber min={0} max={100} style={{ width: '100%' }} />
               </Form.Item>
             </Col>
             <Col span={8}>
-              <Form.Item name="score3" label="服务态度 (15%)" rules={[{ required: true }]}>
+              <Form.Item name="score3" label="服务态度 (15%)" rules={[{ required: true, message: '请输入服务态度 (15%' }]}>
                 <InputNumber min={0} max={100} style={{ width: '100%' }} />
               </Form.Item>
             </Col>
           </Row>
           <Row gutter={16}>
             <Col span={8}>
-              <Form.Item name="score4" label="价格合理性 (20%)" rules={[{ required: true }]}>
+              <Form.Item name="score4" label="价格合理性 (20%)" rules={[{ required: true, message: '请输入价格合理性 (20%' }]}>
                 <InputNumber min={0} max={100} style={{ width: '100%' }} />
               </Form.Item>
             </Col>
             <Col span={8}>
-              <Form.Item name="score5" label="资质能力 (10%)" rules={[{ required: true }]}>
+              <Form.Item name="score5" label="资质能力 (10%)" rules={[{ required: true, message: '请输入资质能力 (10%' }]}>
                 <InputNumber min={0} max={100} style={{ width: '100%' }} />
               </Form.Item>
             </Col>

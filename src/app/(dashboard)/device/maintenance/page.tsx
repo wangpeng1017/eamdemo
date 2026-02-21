@@ -216,7 +216,7 @@ export default function DeviceMaintenancePage() {
         width={600}
       >
         <Form form={form} layout="vertical">
-          <Form.Item label="设备" name="deviceId" rules={[{ required: true }]}>
+          <Form.Item label="设备" name="deviceId" rules={[{ required: true, message: '此项为必填' }]}>
             <Select
               showSearch
               placeholder="请选择设备"
@@ -227,7 +227,7 @@ export default function DeviceMaintenancePage() {
               }))}
             />
           </Form.Item>
-          <Form.Item label="维护类型" name="maintenanceType" rules={[{ required: true }]}>
+          <Form.Item label="维护类型" name="maintenanceType" rules={[{ required: true, message: '此项为必填' }]}>
             <Select>
               <Select.Option value="routine">例行保养</Select.Option>
               <Select.Option value="calibration">校准</Select.Option>
@@ -235,16 +235,16 @@ export default function DeviceMaintenancePage() {
               <Select.Option value="upgrade">升级改造</Select.Option>
             </Select>
           </Form.Item>
-          <Form.Item label="维护日期" name="maintenanceDate" rules={[{ required: true }]}>
+          <Form.Item label="维护日期" name="maintenanceDate" rules={[{ required: true, message: '此项为必填' }]}>
             <DatePicker style={{ width: '100%' }} />
           </Form.Item>
-          <Form.Item label="维护人" name="maintainer" rules={[{ required: true }]}>
+          <Form.Item label="维护人" name="maintainer" rules={[{ required: true, message: '此项为必填' }]}>
             <Input placeholder="请输入维护人姓名" />
           </Form.Item>
           <Form.Item label="费用" name="cost">
             <Input type="number" placeholder="请输入费用（元）" />
           </Form.Item>
-          <Form.Item label="状态" name="status" rules={[{ required: true }]}>
+          <Form.Item label="状态" name="status" rules={[{ required: true, message: '此项为必填' }]}>
             <Select>
               <Select.Option value="pending">待处理</Select.Option>
               <Select.Option value="in_progress">进行中</Select.Option>

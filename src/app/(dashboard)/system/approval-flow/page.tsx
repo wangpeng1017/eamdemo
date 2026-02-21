@@ -428,13 +428,13 @@ export default function ApprovalFlowPage() {
         width={500}
       >
         <Form form={form} layout="vertical">
-          <Form.Item name="name" label="流程名称" rules={[{ required: true }]}>
+          <Form.Item name="name" label="流程名称" rules={[{ required: true, message: '请输入流程名称' }]}>
             <Input />
           </Form.Item>
           <Form.Item name="code" label="流程编码">
             <Input placeholder="可选，系统自动生成" />
           </Form.Item>
-          <Form.Item name="businessType" label="业务类型" rules={[{ required: true }]}>
+          <Form.Item name="businessType" label="业务类型" rules={[{ required: true, message: '请选择业务类型' }]}>
             <Select options={businessTypes} />
           </Form.Item>
           <Form.Item name="description" label="描述">
@@ -461,10 +461,10 @@ export default function ApprovalFlowPage() {
         width={500}
       >
         <Form form={nodeForm} layout="vertical">
-          <Form.Item name="name" label="节点名称" rules={[{ required: true }]}>
+          <Form.Item name="name" label="节点名称" rules={[{ required: true, message: '请输入节点名称' }]}>
             <Input placeholder="如: 销售经理审批" />
           </Form.Item>
-          <Form.Item name="type" label="审批类型" rules={[{ required: true }]}>
+          <Form.Item name="type" label="审批类型" rules={[{ required: true, message: '请选择审批类型' }]}>
             <Select
               options={nodeTypes}
               onChange={(value) => {
@@ -478,7 +478,7 @@ export default function ApprovalFlowPage() {
           {/* 根据审批类型显示不同的选择器 */}
           {selectedNodeType === 'role' && (
             <>
-              <Form.Item name="targetId" label="选择角色" rules={[{ required: true }]}>
+              <Form.Item name="targetId" label="选择角色" rules={[{ required: true, message: '请输入选择角色' }]}>
                 <Select
                   placeholder="请选择角色"
                   showSearch
@@ -497,7 +497,7 @@ export default function ApprovalFlowPage() {
 
           {selectedNodeType === 'user' && (
             <>
-              <Form.Item name="targetId" label="选择用户" rules={[{ required: true }]}>
+              <Form.Item name="targetId" label="选择用户" rules={[{ required: true, message: '请输入选择用户' }]}>
                 <Select
                   placeholder="请选择用户"
                   showSearch
@@ -516,7 +516,7 @@ export default function ApprovalFlowPage() {
 
           {selectedNodeType === 'department' && (
             <>
-              <Form.Item name="targetId" label="选择部门" rules={[{ required: true }]}>
+              <Form.Item name="targetId" label="选择部门" rules={[{ required: true, message: '请输入选择部门' }]}>
                 <Select
                   placeholder="请选择部门"
                   showSearch
@@ -533,7 +533,7 @@ export default function ApprovalFlowPage() {
             </>
           )}
 
-          <Form.Item name="targetName" label="显示名称" rules={[{ required: true }]}>
+          <Form.Item name="targetName" label="显示名称" rules={[{ required: true, message: '请输入显示名称' }]}>
             <Input placeholder="自动填充，可修改" />
           </Form.Item>
         </Form>
