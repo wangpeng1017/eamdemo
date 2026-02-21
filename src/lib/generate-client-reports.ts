@@ -53,6 +53,26 @@ export async function generateClientReportsForEntrustment(
   if (reportGrouping === 'by_sample' && samples.length === 0) return []
   if (reportGrouping === 'by_project' && projects.length === 0) return []
 
+  // 查询委托单补充信息（客户地址、报告截止日期）
+  const entrustment = await prisma.entrustment.findUnique({
+    where: { id: entrustmentId },
+    select: {
+      clientAddress: true,
+      clientReportDeadline: true,
+      sampleDate: true,
+    },
+  })
+
+  // 查询样品详细信息（编号、规格等）
+  const sampleIds = samples.map(s => s.id)
+  const sampleDetails = sampleIds.length > 0
+    ? await prisma.sample.findMany({
+      where: { id: { in: sampleIds } },
+      select: { id: true, sampleNo: true, specification: true, quantity: true },
+    })
+    : []
+  const sampleDetailMap = new Map(sampleDetails.map(s => [s.id, s]))
+
   const results: CreatedReport[] = []
 
   // 生成一个基础编号，同一委托单下的所有报告共享基础编号
@@ -63,12 +83,18 @@ export async function generateClientReportsForEntrustment(
     for (const sample of samples) {
       subIndex++
       const reportNo = generateClientReportSubNo(baseNo, subIndex)
+      const detail = sampleDetailMap.get(sample.id)
       const record = await prisma.clientReport.create({
         data: {
           reportNo,
           entrustmentId,
           clientName,
+          clientAddress: entrustment?.clientAddress || null,
           sampleName: sample.name,
+          sampleNo: detail?.sampleNo || null,
+          specification: detail?.specification || null,
+          sampleQuantity: detail?.quantity || null,
+          receivedDate: entrustment?.sampleDate || null,
           sampleId: sample.id,
           entrustmentProjectId: null,
           groupingType: 'by_sample',
@@ -87,6 +113,7 @@ export async function generateClientReportsForEntrustment(
           reportNo,
           entrustmentId,
           clientName,
+          clientAddress: entrustment?.clientAddress || null,
           sampleName: project.name,
           projectName: project.name,
           sampleId: null,
@@ -105,6 +132,7 @@ export async function generateClientReportsForEntrustment(
         reportNo,
         entrustmentId,
         clientName,
+        clientAddress: entrustment?.clientAddress || null,
         sampleName: clientName,
         sampleId: null,
         entrustmentProjectId: null,
@@ -118,3 +146,4 @@ export async function generateClientReportsForEntrustment(
 
   return results
 }
+

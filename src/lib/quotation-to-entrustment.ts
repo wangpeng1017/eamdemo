@@ -158,7 +158,11 @@ export async function createEntrustmentFromQuotation(
       sourceType: 'quotation',
       status: 'pending',
       remark: params.remark,
-      createdById: createdBy
+      createdById: createdBy,
+      // 从客户信息继承开票信息
+      invoiceTitle: quotation.client?.invoiceTitle || quotation.client?.name || null,
+      taxId: quotation.client?.creditCode || null,
+      invoiceAddress: quotation.client?.invoiceAddress || null,
     }
   })
 
