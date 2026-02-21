@@ -219,7 +219,7 @@ export default function SystemDocumentPage() {
             render: (_, record) => (
                 <Space>
                     <Button size="small" icon={<EditOutlined />} onClick={() => handleEdit(record)}>编辑</Button>
-                    <Popconfirm title="确认删除该文件？" onConfirm={() => handleDelete(record.id)} okText="确定" cancelText="取消" okButtonProps={{ danger: true }}>
+                    <Popconfirm title="确认删除？" onConfirm={() => handleDelete(record.id)} okText="确定" cancelText="取消" okButtonProps={{ danger: true }}>
                         <Button size="small" danger icon={<DeleteOutlined />}>删除</Button>
                     </Popconfirm>
                 </Space>

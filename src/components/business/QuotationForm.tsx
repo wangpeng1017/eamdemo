@@ -325,7 +325,7 @@ export default function QuotationForm({
                 <Divider orientation="left" orientationMargin="0">① 委托方信息 Company</Divider>
                 <Row gutter={16}>
                     <Col span={12}>
-                        <Form.Item name="clientId" label="委托方 Company" rules={[{ required: true, message: '请选择客户' }]}>
+                        <Form.Item name="clientId" label="委托方" rules={[{ required: true, message: '请选择客户' }]}>
                             <Select
                                 showSearch
                                 allowClear
@@ -338,24 +338,24 @@ export default function QuotationForm({
                         </Form.Item>
                     </Col>
                     <Col span={12}>
-                        <Form.Item name="clientContactPerson" label="委托人 From" rules={[{ required: true, message: '请输入联系人' }]}>
+                        <Form.Item name="clientContactPerson" label="委托人" rules={[{ required: true, message: '请输入联系人' }]}>
                             <Input placeholder="联系人姓名" />
                         </Form.Item>
                     </Col>
                 </Row>
                 <Row gutter={16}>
                     <Col span={8}>
-                        <Form.Item name="clientPhone" label="电话 Tel">
+                        <Form.Item name="clientPhone" label="电话">
                             <Input placeholder="联系电话" />
                         </Form.Item>
                     </Col>
                     <Col span={8}>
-                        <Form.Item name="clientEmail" label="邮箱 Email">
+                        <Form.Item name="clientEmail" label="邮箱" rules={[{ type: 'email', message: '请输入正确的邮箱格式' }]}>
                             <Input placeholder="邮箱" />
                         </Form.Item>
                     </Col>
                     <Col span={8}>
-                        <Form.Item name="clientAddress" label="地址 Address">
+                        <Form.Item name="clientAddress" label="地址">
                             <Input placeholder="地址" />
                         </Form.Item>
                     </Col>
@@ -377,17 +377,17 @@ export default function QuotationForm({
                 </Row>
                 <Row gutter={16}>
                     <Col span={8}>
-                        <Form.Item name="serviceTel" label="电话 Tel">
+                        <Form.Item name="serviceTel" label="电话">
                             <Input placeholder="服务方电话" />
                         </Form.Item>
                     </Col>
                     <Col span={8}>
-                        <Form.Item name="serviceEmail" label="邮箱 Email">
+                        <Form.Item name="serviceEmail" label="邮箱" rules={[{ type: 'email', message: '请输入正确的邮箱格式' }]}>
                             <Input placeholder="服务方邮箱" />
                         </Form.Item>
                     </Col>
                     <Col span={8}>
-                        <Form.Item label="地址 Address">
+                        <Form.Item label="地址">
                             <Input value="扬州市邗江区金山路99号" disabled />
                         </Form.Item>
                     </Col>

@@ -122,7 +122,7 @@ export default function ClientTemplatePage() {
                 <Space size="small" style={{ whiteSpace: 'nowrap' }}>
                     <Button size="small" icon={<EyeOutlined />} onClick={() => handleView(record)} />
                     <Button size="small" icon={<EditOutlined />} onClick={() => handleEdit(record)} />
-                    <Popconfirm title="确认删除该模板?" onConfirm={() => handleDelete(record.id)}>
+                    <Popconfirm title="确认删除？" onConfirm={() => handleDelete(record.id)} okText="确定" cancelText="取消">
                         <Button size="small" danger icon={<DeleteOutlined />} />
                     </Popconfirm>
                 </Space>

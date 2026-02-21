@@ -205,7 +205,7 @@ export default function SampleProcessingPage() {
                             >
                                 记录回样
                             </Button>
-                            <Popconfirm title="确认取消加工？" onConfirm={() => handleCancel(record.id)}>
+                            <Popconfirm title="确认取消加工？" onConfirm={() => handleCancel(record.id)} okText="确定" cancelText="取消">
                                 <Button size="small" danger icon={<CloseCircleOutlined />} />
                             </Popconfirm>
                         </>

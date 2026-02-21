@@ -273,7 +273,7 @@ export default function MaintenancePlanPage() {
             完成
           </Button>
           <Button size="small" icon={<EditOutlined />} onClick={() => handleEdit(record)} />
-          <Popconfirm title="确认删除" onConfirm={() => handleDelete(record.id)}>
+          <Popconfirm title="确认删除？" onConfirm={() => handleDelete(record.id)} okText="确定" cancelText="取消">
             <Button size="small" danger icon={<DeleteOutlined />} />
           </Popconfirm>
         </Space>

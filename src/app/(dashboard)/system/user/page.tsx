@@ -291,15 +291,15 @@ export default function UserPage() {
         <Space style={{ whiteSpace: 'nowrap' }}>
           <Button size="small" icon={<EditOutlined />} onClick={() => handleEditUser(record)} />
           {record.status === 1 ? (
-            <Popconfirm title="确认禁用此用户?" onConfirm={() => handleToggleStatus(record)}>
+            <Popconfirm title="确认禁用此用户?" onConfirm={() => handleToggleStatus(record)} okText="确定" cancelText="取消">
               <Button size="small" icon={<StopOutlined />} danger>禁用</Button>
             </Popconfirm>
           ) : (
-            <Popconfirm title="确认启用此用户?" onConfirm={() => handleToggleStatus(record)}>
+            <Popconfirm title="确认启用此用户?" onConfirm={() => handleToggleStatus(record)} okText="确定" cancelText="取消">
               <Button size="small" icon={<CheckCircleOutlined />} style={{ color: '#52c41a', borderColor: '#52c41a' }}>启用</Button>
             </Popconfirm>
           )}
-          <Popconfirm title="确认删除?" onConfirm={() => handleDeleteUser(record.id)}>
+          <Popconfirm title="确认删除？" onConfirm={() => handleDeleteUser(record.id)} okText="确定" cancelText="取消">
             <Button size="small" danger icon={<DeleteOutlined />} />
           </Popconfirm>
         </Space>
@@ -378,7 +378,7 @@ export default function UserPage() {
           <Form.Item name="name" label="姓名" rules={[{ required: true, message: '请输入姓名' }]}>
             <Input placeholder="请输入用户姓名" />
           </Form.Item>
-          <Form.Item name="phone" label="手机号" rules={[{ required: true, message: '请输入手机号' }]}>
+          <Form.Item name="phone" label="手机号" rules={[{ required: true, message: '请输入手机号' }, { pattern: /^1[3-9]\d{9}$/, message: '请输入正确的手机号' }]}>
             <Input placeholder="请输入手机号(用于登录)" />
           </Form.Item>
           <Form.Item name="deptId" label="所属部门">
@@ -399,7 +399,7 @@ export default function UserPage() {
           <Form.Item name="password" label="密码" rules={editingUserId ? [] : [{ required: true, message: '请输入密码' }]}>
             <Input.Password placeholder={editingUserId ? '留空则不修改' : '请输入密码'} />
           </Form.Item>
-          <Form.Item name="email" label="邮箱">
+          <Form.Item name="email" label="邮箱" rules={[{ type: 'email', message: '请输入正确的邮箱格式' }]}>
             <Input placeholder="可选" />
           </Form.Item>
           <Form.Item name="status" label="状态" initialValue={1}>

@@ -341,15 +341,15 @@ export default function ApprovalFlowPage() {
           <Button size="small" onClick={() => handleAddNode(record.id)}>添加节点</Button>
           <Button size="small" icon={<EditOutlined />} onClick={() => handleEdit(record)} />
           {record.status ? (
-            <Popconfirm title="确认禁用?" onConfirm={() => handleToggleStatus(record)}>
+            <Popconfirm title="确认禁用?" onConfirm={() => handleToggleStatus(record)} okText="确定" cancelText="取消">
               <Button size="small" icon={<StopOutlined />} danger>禁用</Button>
             </Popconfirm>
           ) : (
-            <Popconfirm title="确认启用?" onConfirm={() => handleToggleStatus(record)}>
+            <Popconfirm title="确认启用?" onConfirm={() => handleToggleStatus(record)} okText="确定" cancelText="取消">
               <Button size="small" icon={<CheckCircleOutlined />} style={{ color: '#52c41a', borderColor: '#52c41a' }}>启用</Button>
             </Popconfirm>
           )}
-          <Popconfirm title="确认删除?" onConfirm={() => handleDelete(record.id)}>
+          <Popconfirm title="确认删除？" onConfirm={() => handleDelete(record.id)} okText="确定" cancelText="取消">
             <Button size="small" danger icon={<DeleteOutlined />} />
           </Popconfirm>
         </Space>
@@ -376,7 +376,7 @@ export default function ApprovalFlowPage() {
         render: (_, node) => (
           <Space style={{ whiteSpace: 'nowrap' }}>
             <Button size="small" icon={<EditOutlined />} onClick={() => handleEditNode(record.id, node)} />
-            <Popconfirm title="确认删除?" onConfirm={() => handleDeleteNode(record.id, node.id)}>
+            <Popconfirm title="确认删除？" onConfirm={() => handleDeleteNode(record.id, node.id)} okText="确定" cancelText="取消">
               <Button size="small" danger icon={<DeleteOutlined />} />
             </Popconfirm>
           </Space>

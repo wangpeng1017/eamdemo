@@ -563,7 +563,7 @@ export default function QuotationPage() {
             </Tooltip>
             <Tooltip title={record.status !== 'draft' ? '仅草稿状态可删除' : '删除'}>
               <span>
-                <Popconfirm title="确认删除" onConfirm={() => handleDelete(record.id)} disabled={record.status !== 'draft'}>
+                <Popconfirm title="确认删除？" onConfirm={() => handleDelete(record.id)} disabled={record.status !== 'draft'}>
                   <Button size="small" danger icon={<DeleteOutlined />} disabled={record.status !== 'draft'} />
                 </Popconfirm>
               </span>

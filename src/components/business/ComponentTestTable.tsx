@@ -334,7 +334,7 @@ export default function ComponentTestTable({ value = [], onChange, readonly = fa
             title: '操作',
             width: 50,
             render: (_: any, record: ComponentTestData) => (
-                <Popconfirm title="确定删除？" onConfirm={() => handleDelete(record.key)}>
+                <Popconfirm title="确认删除？" onConfirm={() => handleDelete(record.key)} okText="确定" cancelText="取消">
                     <Button type="link" danger size="small" icon={<DeleteOutlined />} />
                 </Popconfirm>
             ),

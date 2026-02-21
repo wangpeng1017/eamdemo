@@ -222,7 +222,7 @@ export default function EntrustmentForm({ initialValues, mode, onSubmit, loading
                         </Form.Item>
                     </Col>
                     <Col span={8}>
-                        <Form.Item name="clientName" label="委托单位 Applicant" rules={[{ required: true, message: '请选择委托单位' }]}>
+                        <Form.Item name="clientName" label="委托单位" rules={[{ required: true, message: '请选择委托单位' }]}>
                             <Select
                                 showSearch allowClear
                                 placeholder="选择或输入客户"
@@ -237,28 +237,28 @@ export default function EntrustmentForm({ initialValues, mode, onSubmit, loading
 
                 <Row gutter={16}>
                     <Col span={6}>
-                        <Form.Item name="contactPerson" label="联系人 Person in Charge">
+                        <Form.Item name="contactPerson" label="联系人">
                             <Input placeholder="联系人" />
                         </Form.Item>
                     </Col>
                     <Col span={6}>
-                        <Form.Item name="contactPhone" label="电话 Telephone">
+                        <Form.Item name="contactPhone" label="电话">
                             <Input placeholder="电话" />
                         </Form.Item>
                     </Col>
                     <Col span={6}>
-                        <Form.Item name="contactFax" label="传真 Fax">
+                        <Form.Item name="contactFax" label="传真">
                             <Input placeholder="传真" />
                         </Form.Item>
                     </Col>
                     <Col span={6}>
-                        <Form.Item name="contactEmail" label="电子邮箱 Email">
+                        <Form.Item name="contactEmail" label="电子邮箱" rules={[{ type: 'email', message: '请输入正确的邮箱格式' }]}>
                             <Input placeholder="邮箱" />
                         </Form.Item>
                     </Col>
                 </Row>
 
-                <Form.Item name="clientAddress" label="地址 Address">
+                <Form.Item name="clientAddress" label="地址">
                     <Input placeholder="地址" />
                 </Form.Item>
 

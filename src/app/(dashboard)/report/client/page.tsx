@@ -215,7 +215,7 @@ export default function ClientReportPage() {
     // 删除（草稿可删除）
     if (record.status === 'draft') {
       actions.push(
-        <Popconfirm key="delete" title="确认删除?" onConfirm={() => handleDelete(record.id)}>
+        <Popconfirm key="delete" title="确认删除？" onConfirm={() => handleDelete(record.id)} okText="确定" cancelText="取消">
           <Button size="small" danger icon={<DeleteOutlined />} />
         </Popconfirm>
       )

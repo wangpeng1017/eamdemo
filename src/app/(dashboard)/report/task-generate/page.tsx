@@ -341,7 +341,7 @@ export default function TestReportPage() {
           <Button size="small" icon={<EyeOutlined />} onClick={() => handleView(record)} />
           <Button size="small" icon={<EditOutlined />} onClick={() => handleEdit(record)} />
           {record.status === 'draft' && (
-            <Popconfirm title="确认删除该报告?" onConfirm={() => handleDelete(record.id)}>
+            <Popconfirm title="确认删除？" onConfirm={() => handleDelete(record.id)} okText="确定" cancelText="取消">
               <Button size="small" danger icon={<DeleteOutlined />} />
             </Popconfirm>
           )}

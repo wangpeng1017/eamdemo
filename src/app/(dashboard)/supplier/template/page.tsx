@@ -269,7 +269,7 @@ export default function EvaluationTemplatePage() {
         <Space style={{ whiteSpace: 'nowrap' }}>
           <Button size="small" onClick={() => handleAddItem(record.id)}>添加评价项</Button>
           <Button size="small" icon={<EditOutlined />} onClick={() => handleEdit(record)} />
-          <Popconfirm title="确认删除?" onConfirm={() => handleDelete(record.id)}>
+          <Popconfirm title="确认删除？" onConfirm={() => handleDelete(record.id)} okText="确定" cancelText="取消">
             <Button size="small" danger icon={<DeleteOutlined />} />
           </Popconfirm>
         </Space>
@@ -294,7 +294,7 @@ export default function EvaluationTemplatePage() {
         render: (_, item) => (
           <Space style={{ whiteSpace: 'nowrap' }}>
             <Button size="small" icon={<EditOutlined />} onClick={() => handleEditItem(record.id, item)} />
-            <Popconfirm title="确认删除?" onConfirm={() => handleDeleteItem(record.id, item.id)}>
+            <Popconfirm title="确认删除？" onConfirm={() => handleDeleteItem(record.id, item.id)} okText="确定" cancelText="取消">
               <Button size="small" danger icon={<DeleteOutlined />} />
             </Popconfirm>
           </Space>

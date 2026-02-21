@@ -203,27 +203,27 @@ export default function ExternalEntrustmentPage() {
             <Divider orientation="left" orientationMargin="0">① 联系信息 Contact Information</Divider>
             <Row gutter={16}>
               <Col xs={24} sm={12} md={6}>
-                <Form.Item name="contactPerson" label="联系人 Contact Person">
+                <Form.Item name="contactPerson" label="联系人">
                   <Input placeholder="请输入联系人" />
                 </Form.Item>
               </Col>
               <Col xs={24} sm={12} md={6}>
-                <Form.Item name="contactPhone" label="电话 Telephone">
+                <Form.Item name="contactPhone" label="电话">
                   <Input placeholder="请输入电话" />
                 </Form.Item>
               </Col>
               <Col xs={24} sm={12} md={6}>
-                <Form.Item name="contactFax" label="传真 Fax">
+                <Form.Item name="contactFax" label="传真">
                   <Input placeholder="请输入传真" />
                 </Form.Item>
               </Col>
               <Col xs={24} sm={12} md={6}>
-                <Form.Item name="contactEmail" label="电子邮箱 Email">
+                <Form.Item name="contactEmail" label="电子邮箱" rules={[{ type: 'email', message: '请输入正确的邮箱格式' }]}>
                   <Input placeholder="请输入邮箱" />
                 </Form.Item>
               </Col>
             </Row>
-            <Form.Item name="clientAddress" label="地址 Address">
+            <Form.Item name="clientAddress" label="地址">
               <Input placeholder="请输入地址" />
             </Form.Item>
 
@@ -233,7 +233,7 @@ export default function ExternalEntrustmentPage() {
               <Col xs={24} sm={12} md={8}>
                 <Form.Item
                   name="sampleName"
-                  label="样品名称 Sample Name"
+                  label="样品名称"
                   rules={[{ required: true, message: '请输入样品名称' }]}
                 >
                   <Input placeholder="请输入样品名称" />

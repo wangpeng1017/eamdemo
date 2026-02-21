@@ -205,7 +205,7 @@ export default function TestTemplatesPage() {
             {record.status === 'active' ? '禁用' : '启用'}
           </Button>
           <Popconfirm
-            title="确认删除"
+            title="确认删除？"
             description="确定要删除这个检测项目吗？"
             onConfirm={() => handleDelete(record.id)}
             okText="确定"

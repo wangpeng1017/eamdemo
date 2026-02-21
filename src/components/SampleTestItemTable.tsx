@@ -500,7 +500,7 @@ export default function SampleTestItemTable({
       align: 'center',
       render: (_, record) => (
         <Popconfirm
-          title="确认删除"
+          title="确认删除？"
           description="确定要删除这一行吗？"
           onConfirm={() => handleDelete(record.key)}
           okText="确定"

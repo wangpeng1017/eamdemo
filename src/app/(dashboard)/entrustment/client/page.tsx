@@ -302,7 +302,7 @@ export default function ClientPage() {
             <Form.Item name="phone" label="联系方式">
               <Input placeholder="请输入联系电话" />
             </Form.Item>
-            <Form.Item name="email" label="电子邮箱">
+            <Form.Item name="email" label="电子邮箱" rules={[{ type: 'email', message: '请输入正确的邮箱格式' }]}>
               <Input placeholder="请输入电子邮箱" />
             </Form.Item>
           </div>

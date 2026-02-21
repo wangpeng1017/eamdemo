@@ -601,7 +601,7 @@ export default function InspectionStandardsPage() {
             )}
             {isDraft && (
               <Popconfirm
-                title="确认删除?"
+                title="确认删除？"
                 description="删除后同时移除关联的检测模板"
                 onConfirm={() => handleDeleteItem(record)}
                 okText="确定" cancelText="取消"
