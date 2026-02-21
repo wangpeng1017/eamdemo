@@ -30,7 +30,6 @@ export const GET = withAuth(async (request: NextRequest, user) => {
     where.createdAt = {}
     if (startDate) where.createdAt.gte = new Date(startDate)
     if (endDate) where.createdAt.lte = new Date(endDate)
-    if (endDate) where.createdAt.lte = new Date(endDate)
   }
 
   // 注入数据权限过滤

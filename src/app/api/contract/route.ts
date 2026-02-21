@@ -29,7 +29,6 @@ export const GET = withAuth(async (request: NextRequest, user) => {
     where.createdAt = {}
     if (startDate) where.createdAt.gte = new Date(startDate)
     if (endDate) where.createdAt.lte = new Date(endDate)
-    if (endDate) where.createdAt.lte = new Date(endDate)
   }
 
   // 注入数据权限过滤
@@ -110,6 +109,17 @@ export const POST = withAuth(async (request: NextRequest, user) => {
   // 输入校验
   if (!data.contractName || String(data.contractName).trim() === '') {
     badRequest('合同名称不能为空')
+  }
+
+  // BUG-04: 重复生成检查（同一报价单不可重复生成合同）
+  if (data.quotationId) {
+    const existingContract = await prisma.contract.findFirst({
+      where: { quotationId: data.quotationId },
+      select: { contractNo: true },
+    })
+    if (existingContract) {
+      badRequest(`该报价单已生成合同 ${existingContract.contractNo}，不允许重复生成`)
+    }
   }
 
   // 生成合同编号
@@ -214,11 +224,11 @@ export const POST = withAuth(async (request: NextRequest, user) => {
       }
     })
 
-    // 回写报价单：更新 contractNo
+    // BUG-02: 回写报价单：更新 contractNo 和状态
     if (data.quotationId) {
       await prisma.quotation.update({
         where: { id: data.quotationId },
-        data: { contractNo },
+        data: { contractNo, status: 'contracted' },
       })
     }
 

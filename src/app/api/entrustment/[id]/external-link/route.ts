@@ -108,8 +108,8 @@ export const POST = withErrorHandler(async (
     const updatePromise = prisma.entrustment.update({
       where: { id },
       data: {
-        // 自动将状态从 pending 变为 in_progress（进行中）
-        status: entrustment.status === 'pending' ? 'in_progress' : entrustment.status,
+        // 自动将状态从 pending 变为 processing（进行中）
+        status: entrustment.status === 'pending' ? 'processing' : entrustment.status,
         remark: JSON.stringify({
           ...remarkData,
           externalLink: {

@@ -1,10 +1,7 @@
-// @input: NextRequest, Prisma Client
-// @output: JSON - 咨询列表/创建结果
-// @pos: 委托咨询API，处理咨询记录的CRUD
-
 import { prisma } from '@/lib/prisma'
 import { NextRequest } from 'next/server'
 import { withAuth, success } from '@/lib/api-handler'
+import { getDataFilter } from '@/lib/data-permission'
 import fs from 'fs-extra'
 import path from 'path'
 
@@ -37,6 +34,10 @@ export const GET = withAuth(async (request: NextRequest, user) => {
     if (startDate) (where.createdAt as Record<string, Date>).gte = new Date(startDate)
     if (endDate) (where.createdAt as Record<string, Date>).lte = new Date(endDate)
   }
+
+  // 注入数据权限过滤（与其他模块一致）
+  const permissionFilter = await getDataFilter()
+  Object.assign(where, permissionFilter)
 
   const [list, total] = await Promise.all([
     prisma.consultation.findMany({

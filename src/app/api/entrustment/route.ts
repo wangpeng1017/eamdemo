@@ -256,6 +256,26 @@ export const POST = withErrorHandler(async (request: NextRequest) => {
     throw new Error('缺少必填字段: clientName')
   }
 
+  // BUG-04: 重复生成检查
+  if (data.quotationId) {
+    const existingEntrustment = await prisma.entrustment.findFirst({
+      where: { quotationId: data.quotationId },
+      select: { entrustmentNo: true },
+    })
+    if (existingEntrustment) {
+      throw new Error(`该报价单已生成委托单 ${existingEntrustment.entrustmentNo}，不允许重复生成`)
+    }
+  }
+  if (data.contractNo) {
+    const existingEntrustment = await prisma.entrustment.findFirst({
+      where: { contractNo: data.contractNo },
+      select: { entrustmentNo: true },
+    })
+    if (existingEntrustment) {
+      throw new Error(`该合同已生成委托单 ${existingEntrustment.entrustmentNo}，不允许重复生成`)
+    }
+  }
+
   // 生成委托单号
   const entrustmentNo = await generateNo(NumberPrefixes.ENTRUSTMENT, 4)
   console.log('[Entrustment Create] Generated entrustmentNo:', entrustmentNo)
@@ -362,6 +382,20 @@ export const POST = withErrorHandler(async (request: NextRequest) => {
   })
 
   console.log('[Entrustment Create] Created entrustment:', entrustment.id)
+
+  // BUG-01: 回写上游报价单/合同状态
+  if (data.quotationId) {
+    await prisma.quotation.update({
+      where: { id: data.quotationId },
+      data: { status: 'entrusted' },
+    })
+  }
+  if (data.contractNo) {
+    await prisma.contract.updateMany({
+      where: { contractNo: data.contractNo },
+      data: { status: 'entrusted' },
+    })
+  }
 
   // 创建检测项目
   const projects = data.projects

@@ -91,10 +91,10 @@ export const PUT = withErrorHandler(async (request: NextRequest, context?: { par
   if (allCompleted && allProjects.length > 0) {
     newEntrustmentStatus = 'completed'
   }
-  // 2. 如果有项目被分配/分包，委托单状态变为 in_progress（进行中）
+  // 2. 如果有项目被分配/分包，委托单状态变为 processing（进行中）
   else if (allProjects.some(p => p.status === 'assigned' || p.status === 'subcontracted' || p.status === 'completed')) {
     if (currentEntrustment?.status !== 'completed') {
-      newEntrustmentStatus = 'in_progress'
+      newEntrustmentStatus = 'processing'
     }
   }
 

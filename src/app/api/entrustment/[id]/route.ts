@@ -67,8 +67,19 @@ export const PUT = withErrorHandler(async (request: NextRequest, context?: { par
     const toCreate = projects.filter((p: any) => !p.id && p.name)
     const toDeleteIds = existingIds.filter((eid: string) => !projects.some((p: { id?: string }) => p.id === eid))
 
-    // 删除不再需要的项目
+    // BUG-12: 删除前检查是否有关联的检测任务
     if (toDeleteIds.length > 0) {
+      const linkedProjectTasks = await prisma.testTask.findMany({
+        where: { projectId: { in: toDeleteIds } },
+        select: { id: true, taskNo: true }
+      })
+      if (linkedProjectTasks.length > 0) {
+        // 将关联任务的 projectId 置空（不阻止删除，但解除关联）
+        await prisma.testTask.updateMany({
+          where: { projectId: { in: toDeleteIds } },
+          data: { projectId: null }
+        })
+      }
       await prisma.entrustmentProject.deleteMany({
         where: { id: { in: toDeleteIds } }
       })
@@ -165,6 +176,17 @@ export const PUT = withErrorHandler(async (request: NextRequest, context?: { par
     }
 
     // 创建新样品
+    // BUG-08: 与创建委托时保持一致，根据送样时间判断状态
+    const entrustmentInfo = await prisma.entrustment.findUnique({
+      where: { id },
+      select: { sampleDate: true }
+    })
+    const sDate = entrustmentInfo?.sampleDate || new Date()
+    const tdy = new Date()
+    tdy.setHours(0, 0, 0, 0)
+    const isFutureSample = sDate.getTime() > tdy.getTime() + 86400000
+    const newSampleStatus = isFutureSample ? 'pending' : 'received'
+
     const { generateNo, NumberPrefixes } = await import('@/lib/generate-no')
     for (const sample of toCreate) {
       const sampleNo = await generateNo(NumberPrefixes.SAMPLE, 4)
@@ -187,7 +209,7 @@ export const PUT = withErrorHandler(async (request: NextRequest, context?: { par
           projectDeadline: sample.projectDeadline ? new Date(sample.projectDeadline) : null,
           sampleCondition: sample.sampleCondition || null,
           quantity: String(sample.quantity || 1),
-          status: 'received',
+          status: newSampleStatus,
           remark: sample.remark || null,
           createdById: session?.user?.id,
         }
@@ -247,6 +269,15 @@ export const DELETE = withErrorHandler(async (request: NextRequest, context?: { 
   const { params } = context!
   const { id } = await params
 
+  // 获取委托单信息（用于回滚上游状态）
+  const entrustment = await prisma.entrustment.findUnique({
+    where: { id },
+    select: { quotationId: true, contractNo: true }
+  })
+  if (!entrustment) {
+    return notFound('委托单不存在')
+  }
+
   // 检查是否有关联的检测任务
   const linkedTasks = await prisma.testTask.findMany({
     where: { entrustmentId: id },
@@ -265,6 +296,29 @@ export const DELETE = withErrorHandler(async (request: NextRequest, context?: { 
     })
   }
 
+  // BUG-07: 检查是否有关联的财务记录
+  const linkedReceivables = await prisma.financeReceivable.findMany({
+    where: { entrustmentId: id },
+    select: { id: true, receivableNo: true }
+  })
+  if (linkedReceivables.length > 0) {
+    return notFound(`无法删除：委托单已生成 ${linkedReceivables.length} 条应收账款记录`)
+  }
+
+  // 检查非草稿状态的客户报告
+  const activeReports = await prisma.clientReport.findMany({
+    where: { entrustmentId: id, status: { not: 'draft' } },
+    select: { id: true, reportNo: true }
+  })
+  if (activeReports.length > 0) {
+    return notFound(`无法删除：委托单有 ${activeReports.length} 份非草稿客户报告`)
+  }
+
+  // 删除草稿客户报告
+  await prisma.clientReport.deleteMany({
+    where: { entrustmentId: id, status: 'draft' }
+  })
+
   // 检查并删除关联的样品
   const linkedSamples = await prisma.sample.findMany({
     where: { entrustmentId: id },
@@ -272,18 +326,26 @@ export const DELETE = withErrorHandler(async (request: NextRequest, context?: { 
   })
 
   if (linkedSamples.length > 0) {
-    // 检查样品是否有关联的任务（非本委托单的任务）
     const sampleIds = linkedSamples.map(s => s.id)
+
+    // 检查样品是否有关联的任务（非本委托单的任务）
     const externalTasks = await prisma.testTask.findMany({
       where: {
         sampleId: { in: sampleIds },
         entrustmentId: { not: id }
       }
     })
-
     if (externalTasks.length > 0) {
       return notFound('无法删除：样品被其他委托单的任务引用')
     }
+
+    // BUG-06: 删除样品前先清理加工记录和借样记录
+    await prisma.sampleProcessing.deleteMany({
+      where: { sampleId: { in: sampleIds } }
+    })
+    await prisma.sampleRequisition.deleteMany({
+      where: { sampleId: { in: sampleIds } }
+    })
 
     // 安全删除样品
     await prisma.sample.deleteMany({
@@ -298,6 +360,31 @@ export const DELETE = withErrorHandler(async (request: NextRequest, context?: { 
 
   // 删除委托单
   await prisma.entrustment.delete({ where: { id } })
+
+  // BUG-03: 回滚上游报价单/合同状态
+  if (entrustment.quotationId) {
+    // 检查该报价单是否还有其他委托单引用
+    const otherEntrustments = await prisma.entrustment.count({
+      where: { quotationId: entrustment.quotationId }
+    })
+    if (otherEntrustments === 0) {
+      await prisma.quotation.update({
+        where: { id: entrustment.quotationId },
+        data: { status: 'approved' } // 恢复为已审批
+      })
+    }
+  }
+  if (entrustment.contractNo) {
+    const otherEntrustments = await prisma.entrustment.count({
+      where: { contractNo: entrustment.contractNo }
+    })
+    if (otherEntrustments === 0) {
+      await prisma.contract.update({
+        where: { contractNo: entrustment.contractNo },
+        data: { status: 'approved' } // 恢复为已审批
+      })
+    }
+  }
 
   return success({ message: '删除成功' })
 })

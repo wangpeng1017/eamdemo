@@ -144,7 +144,7 @@ export async function createEntrustmentFromQuotation(
   const entrustment = await prisma.entrustment.create({
     data: {
       entrustmentNo,
-      quotationNo: quotation.quotationNo,
+      // quotationNo 字段在 Entrustment Schema 中不存在，只使用 quotationId 关联
       quotationId: quotation.id,
       contractNo: quotation.contractNo || undefined,  // 如果有关联合同则记录
       clientId: quotation.clientId,
@@ -160,6 +160,12 @@ export async function createEntrustmentFromQuotation(
       remark: params.remark,
       createdById: createdBy
     }
+  })
+
+  // 回写报价单状态为 entrusted
+  await prisma.quotation.update({
+    where: { id: quotationId },
+    data: { status: 'entrusted' },
   })
 
   // 5. 从报价单 items + sampleTestItems 创建样品记录（按 sampleName 去重，聚合信息）
@@ -225,7 +231,7 @@ export async function createEntrustmentFromQuotation(
           material: info.material || undefined,
           manufactureLotNo: info.batchNo || undefined,
           quantity: String(info.quantity || 1),
-          status: 'received',
+          status: params.sampleDate && new Date(params.sampleDate).getTime() > Date.now() + 86400000 ? 'pending' : 'received',
           createdById: createdBy,
           // 将检测项和标准简要写入备注
           remark: [
