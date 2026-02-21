@@ -1,17 +1,17 @@
 import { prisma } from '@/lib/prisma'
 import { NextRequest } from 'next/server'
 import {
-  withErrorHandler,
+  withAuth,
   success,
   validateRequired,
 } from '@/lib/api-handler'
-import { auth } from '@/lib/auth'
+// auth 不再需要手动调用，withAuth 已包含认证
 import { getDataFilter } from '@/lib/data-permission'
 import { generateNo, NumberPrefixes } from '@/lib/generate-no'
 import { logger } from '@/lib/logger'
 
 // 获取委托单列表（含筛选和关联数据）
-export const GET = withErrorHandler(async (request: NextRequest) => {
+export const GET = withAuth(async (request: NextRequest, user) => {
   const { searchParams } = new URL(request.url)
   const page = parseInt(searchParams.get('page') || '1')
   const pageSize = parseInt(searchParams.get('pageSize') || '10')
@@ -234,8 +234,7 @@ export const GET = withErrorHandler(async (request: NextRequest) => {
 })
 
 // 创建委托单
-export const POST = withErrorHandler(async (request: NextRequest) => {
-  const session = await auth()
+export const POST = withAuth(async (request: NextRequest, user) => {
   const data = await request.json()
 
   // 记录请求数据用于调试
@@ -246,7 +245,7 @@ export const POST = withErrorHandler(async (request: NextRequest) => {
       contractNo: data.contractNo,
       quotationId: data.quotationId,
       followerId: data.followerId,
-      userId: session?.user?.id,
+      userId: user.id,
     }
   })
 
@@ -371,7 +370,7 @@ export const POST = withErrorHandler(async (request: NextRequest) => {
     sourceType: data.sourceType || null,
     status: data.status || 'pending',
     remark: data.remark || null,
-    createdBy: session?.user?.id ? { connect: { id: session.user.id } } : undefined,
+    createdBy: user.id ? { connect: { id: user.id } } : undefined,
   }
 
   console.log('[Entrustment Create] createData:', JSON.stringify(createData, null, 2))
@@ -448,7 +447,7 @@ export const POST = withErrorHandler(async (request: NextRequest) => {
           quantity: String(sample.quantity || 1),
           status: isFutureSample ? 'pending' : 'received',
           remark: sample.remark || null,
-          createdById: session?.user?.id,
+          createdById: user.id,
         }
       })
     }

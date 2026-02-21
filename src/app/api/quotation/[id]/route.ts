@@ -288,8 +288,8 @@ export const PATCH = withAuth(async (
       bizType: 'quotation',
       bizId: id,
       flowCode: 'QUOTATION_APPROVAL',
-      submitterId: approver,
-      submitterName: submitterName || '未知用户',
+      submitterId: user.id,  // 从 session 获取，防止伪造
+      submitterName: user.name || '未知用户',
     })
   }
   else if (action === 'approve' || action === 'reject') {
@@ -310,8 +310,8 @@ export const PATCH = withAuth(async (
     await approvalEngine.approve({
       instanceId: instance!.id,
       action: action,
-      approverId: approver,
-      approverName: submitterName || '未知用户',
+      approverId: user.id,  // 从 session 获取，防止伪造审批人
+      approverName: user.name || '未知用户',
       comment,
     })
   }
