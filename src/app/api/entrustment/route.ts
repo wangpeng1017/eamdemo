@@ -383,6 +383,12 @@ export const POST = withErrorHandler(async (request: NextRequest) => {
   }
 
   // 创建样品 Sample records
+  // 根据送样时间判断初始状态：未来日期 → pending（待收样），当天或过去 → received（已收样）
+  const sampleDate = data.sampleDate ? new Date(data.sampleDate) : new Date()
+  const today = new Date()
+  today.setHours(0, 0, 0, 0)
+  const isFutureSample = sampleDate.getTime() > today.getTime() + 86400000 // 明天0点之后算未来
+
   if (data.samples && Array.isArray(data.samples) && data.samples.length > 0) {
     for (const sample of data.samples) {
       const sampleNo = await generateNo(NumberPrefixes.SAMPLE, 4)
@@ -406,7 +412,7 @@ export const POST = withErrorHandler(async (request: NextRequest) => {
           packingDate: sample.packingDate ? new Date(sample.packingDate) : null,
           projectDeadline: sample.projectDeadline ? new Date(sample.projectDeadline) : null,
           quantity: String(sample.quantity || 1),
-          status: 'received',
+          status: isFutureSample ? 'pending' : 'received',
           remark: sample.remark || null,
           createdById: session?.user?.id,
         }
