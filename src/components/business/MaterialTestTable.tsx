@@ -29,9 +29,10 @@ interface MaterialTestTableProps {
     value?: MaterialTestData[]
     onChange?: (items: MaterialTestData[]) => void
     readonly?: boolean
+    sampleNames?: string[]  // 从上方样品信息表联动传入
 }
 
-export default function MaterialTestTable({ value = [], onChange, readonly = false }: MaterialTestTableProps) {
+export default function MaterialTestTable({ value = [], onChange, readonly = false, sampleNames = [] }: MaterialTestTableProps) {
     const [items, setItems] = useState<MaterialTestData[]>(value)
 
     const updateItems = useCallback((newItems: MaterialTestData[]) => {
@@ -96,8 +97,17 @@ export default function MaterialTestTable({ value = [], onChange, readonly = fal
             width: 120,
             render: (text: string, record: MaterialTestData) =>
                 readonly ? text : (
-                    <Input size="small" value={text} placeholder="材料名称(材质)"
-                        onChange={e => updateItem(record.key, 'materialName', e.target.value)} />
+                    <AutoComplete
+                        size="small"
+                        value={text}
+                        placeholder="选择或输入材料"
+                        options={sampleNames.filter(Boolean).map(n => ({ value: n, label: n }))}
+                        filterOption={(input, option) =>
+                            (option?.value ?? '').toLowerCase().includes(input.toLowerCase())
+                        }
+                        onChange={(val: string) => updateItem(record.key, 'materialName', val)}
+                        style={{ width: '100%' }}
+                    />
                 ),
         },
         {

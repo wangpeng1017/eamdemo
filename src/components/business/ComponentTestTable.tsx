@@ -134,9 +134,10 @@ interface ComponentTestTableProps {
     value?: ComponentTestData[]
     onChange?: (items: ComponentTestData[]) => void
     readonly?: boolean
+    sampleNames?: string[]  // 从上方样品信息表联动传入
 }
 
-export default function ComponentTestTable({ value = [], onChange, readonly = false }: ComponentTestTableProps) {
+export default function ComponentTestTable({ value = [], onChange, readonly = false, sampleNames = [] }: ComponentTestTableProps) {
     const [items, setItems] = useState<ComponentTestData[]>(value)
 
     const updateItems = useCallback((newItems: ComponentTestData[]) => {
@@ -228,8 +229,17 @@ export default function ComponentTestTable({ value = [], onChange, readonly = fa
             width: 120,
             render: (text: string, record: ComponentTestData) =>
                 readonly ? text : (
-                    <Input size="small" value={text} placeholder="样品名称"
-                        onChange={e => updateItem(record.key, 'sampleName', e.target.value)} />
+                    <AutoComplete
+                        size="small"
+                        value={text}
+                        placeholder="选择或输入样品"
+                        options={sampleNames.filter(Boolean).map(n => ({ value: n, label: n }))}
+                        filterOption={(input, option) =>
+                            (option?.value ?? '').toLowerCase().includes(input.toLowerCase())
+                        }
+                        onChange={(val: string) => updateItem(record.key, 'sampleName', val)}
+                        style={{ width: '100%' }}
+                    />
                 ),
         },
         {

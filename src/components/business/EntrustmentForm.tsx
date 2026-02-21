@@ -432,11 +432,11 @@ export default function EntrustmentForm({ initialValues, mode, onSubmit, loading
 
                 {/* ========== 第⑥段：零部件级测试要求 ========== */}
                 <Divider orientation="left" orientationMargin="0">⑥ 零部件级测试要求 Component Test Requirement</Divider>
-                <ComponentTestTable value={componentTests} onChange={setComponentTests} />
+                <ComponentTestTable value={componentTests} onChange={setComponentTests} sampleNames={samples.map(s => s.name).filter(Boolean)} />
 
                 {/* ========== 第⑦段：材料级测试要求 ========== */}
                 <Divider orientation="left" orientationMargin="0">⑦ 材料级测试要求 Material Test Requirement</Divider>
-                <MaterialTestTable value={materialTests} onChange={setMaterialTests} />
+                <MaterialTestTable value={materialTests} onChange={setMaterialTests} sampleNames={samples.map(s => s.name).filter(Boolean)} />
 
                 {/* 提交按钮 */}
                 <div style={{ marginTop: 24 }}>
