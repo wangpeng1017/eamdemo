@@ -3,8 +3,8 @@
 
 import { useState, useEffect } from 'react'
 import { showSuccess, showError } from '@/lib/confirm'
-import { Table, Button, Space, Tag, Modal, Form, Input, InputNumber, DatePicker, Select, message, Popconfirm } from 'antd'
-import { PlusOutlined, EditOutlined, DeleteOutlined } from '@ant-design/icons'
+import { Table, Button, Space, Tag, Modal, Form, Input, InputNumber, DatePicker, Select, message, Popconfirm, Upload, Card } from 'antd'
+import { PlusOutlined, EditOutlined, DeleteOutlined, UploadOutlined, PaperClipOutlined, DeleteOutlined as DeleteFileOutlined } from '@ant-design/icons'
 import type { ColumnsType } from 'antd/es/table'
 import dayjs from 'dayjs'
 
@@ -17,6 +17,16 @@ interface Entrustment {
   entrustmentNo: string
   clientId: string | null
   contactPerson: string | null
+}
+
+// 附件信息
+interface AttachmentInfo {
+  id: string
+  originalName: string
+  fileName: string
+  fileUrl: string
+  fileSize: number
+  mimeType: string
 }
 
 interface Invoice {
@@ -38,6 +48,7 @@ interface Invoice {
   taxRate?: number
   taxAmount?: number
   totalAmount?: number
+  attachments?: string | null
 }
 
 interface AvailableEntrustment {
@@ -75,14 +86,46 @@ export default function InvoicePage() {
   const [modalOpen, setModalOpen] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
   const [submitting, setSubmitting] = useState(false)
+  const [keyword, setKeyword] = useState('')
+  const [statusFilter, setStatusFilter] = useState<string | null>(null)
   const [availableEntrustments, setAvailableEntrustments] = useState<AvailableEntrustment[]>([])
   const [loadingEntrustments, setLoadingEntrustments] = useState(false)
+  const [uploadedFiles, setUploadedFiles] = useState<AttachmentInfo[]>([])
+  const [uploading, setUploading] = useState(false)
   const [form] = Form.useForm()
+
+  // 上传附件到服务端
+  const handleUploadFile = async (file: File) => {
+    setUploading(true)
+    try {
+      const formData = new FormData()
+      formData.append('file', file)
+      const res = await fetch('/api/upload/finance?module=invoice', { method: 'POST', body: formData })
+      const json = await res.json()
+      if (json.success && json.data) {
+        setUploadedFiles(prev => [...prev, json.data])
+        showSuccess('附件上传成功')
+      } else {
+        showError(json.error?.message || '附件上传失败')
+      }
+    } catch {
+      showError('附件上传失败')
+    }
+    setUploading(false)
+  }
+
+  // 删除已上传附件
+  const handleRemoveFile = (fileId: string) => {
+    setUploadedFiles(prev => prev.filter(f => f.id !== fileId))
+  }
 
   const fetchData = async (p = page) => {
     setLoading(true)
     try {
-      const res = await fetch(`/api/finance/invoice?page=${p}&pageSize=10`)
+      const params = new URLSearchParams({ page: String(p), pageSize: '10' })
+      if (keyword) params.append('keyword', keyword)
+      if (statusFilter) params.append('status', statusFilter)
+      const res = await fetch(`/api/finance/invoice?${params}`)
       const json = await res.json()
       if (json.success && json.data) {
         setData(json.data.list || [])
@@ -115,11 +158,12 @@ export default function InvoicePage() {
     setLoadingEntrustments(false)
   }
 
-  useEffect(() => { fetchData() }, [page])
+  useEffect(() => { fetchData() }, [page, statusFilter])
 
   const handleAdd = () => {
     setEditingId(null)
     form.resetFields()
+    setUploadedFiles([])
     fetchAvailableEntrustments()
     setModalOpen(true)
   }
@@ -156,6 +200,12 @@ export default function InvoicePage() {
 
   const handleEdit = (record: Invoice) => {
     setEditingId(record.id)
+    // 解析已有附件
+    let files: AttachmentInfo[] = []
+    if (record.attachments) {
+      try { files = JSON.parse(record.attachments) } catch { files = [] }
+    }
+    setUploadedFiles(files)
     form.setFieldsValue({
       entrustmentId: record.entrustment?.entrustmentNo || record.entrustmentId || null,
       clientName: record.clientName,
@@ -202,6 +252,7 @@ export default function InvoicePage() {
         entrustmentId,
         issuedDate: values.issuedDate?.toISOString ? values.issuedDate.toISOString() : values.issuedDate,
         paymentDate: values.paymentDate?.toISOString ? values.paymentDate.toISOString() : values.paymentDate,
+        attachments: uploadedFiles,
       }
 
       const url = editingId ? `/api/finance/invoice/${editingId}` : '/api/finance/invoice'
@@ -241,6 +292,16 @@ export default function InvoicePage() {
     },
     { title: '开票金额', dataIndex: 'totalAmount', width: 120, render: (v) => v ? `¥${v}` : '-' },
     { title: '发票类型', dataIndex: 'invoiceType', width: 120 },
+    {
+      title: '附件', dataIndex: 'attachments', width: 80, align: 'center' as const,
+      render: (v: string | null) => {
+        if (!v) return '-'
+        try {
+          const files = JSON.parse(v)
+          return files.length > 0 ? <Space><PaperClipOutlined />{files.length}</Space> : '-'
+        } catch { return '-' }
+      }
+    },
     { title: '回款日期', dataIndex: 'paymentDate', width: 120, render: (t: string) => t ? dayjs(t).format('YYYY-MM-DD') : '-' },
     { title: '开票日期', dataIndex: 'issuedDate', width: 120, render: (t: string) => t ? dayjs(t).format('YYYY-MM-DD') : '-' },
     {
@@ -270,14 +331,38 @@ export default function InvoicePage() {
         <h2 style={{ margin: 0 }}>发票管理</h2>
         <Button type="primary" icon={<PlusOutlined />} onClick={handleAdd}>新增发票</Button>
       </div>
-      <Table
-        rowKey="id"
-        columns={columns}
-        dataSource={data}
-        loading={loading}
-        scroll={{ x: 1400 }}
-        pagination={{ current: page, total, onChange: setPage }}
-      />
+      <Card size="small">
+        <Space style={{ marginBottom: 16, whiteSpace: 'nowrap' }}>
+          <Input.Search
+            placeholder="搜索发票号/客户名称"
+            value={keyword}
+            onChange={(e) => setKeyword(e.target.value)}
+            onSearch={() => { setPage(1); fetchData(1) }}
+            style={{ width: 220 }}
+            allowClear
+          />
+          <Select
+            placeholder="状态筛选"
+            allowClear
+            value={statusFilter}
+            onChange={(v) => { setStatusFilter(v); setPage(1) }}
+            options={[
+              { value: 'pending', label: '待开票' },
+              { value: 'issued', label: '已开票' },
+            ]}
+            style={{ width: 120 }}
+          />
+        </Space>
+        <Table
+          rowKey="id"
+          columns={columns}
+          dataSource={data}
+          loading={loading}
+          scroll={{ x: 1400 }}
+          pagination={{ current: page, total, onChange: setPage }}
+          size="small"
+        />
+      </Card>
       <Modal
         title={editingId ? '编辑发票' : '新增发票'}
         open={modalOpen}
@@ -350,6 +435,28 @@ export default function InvoicePage() {
               <Select.Option value="pending">待开票</Select.Option>
               <Select.Option value="issued">已开票</Select.Option>
             </Select>
+          </Form.Item>
+          <Form.Item label="附件">
+            <Upload
+              beforeUpload={(file) => { handleUploadFile(file); return false }}
+              showUploadList={false}
+              accept=".pdf,.jpg,.jpeg,.png,.doc,.docx,.xls,.xlsx"
+            >
+              <Button icon={<UploadOutlined />} loading={uploading}>上传附件</Button>
+            </Upload>
+            {uploadedFiles.length > 0 && (
+              <div style={{ marginTop: 8 }}>
+                {uploadedFiles.map(f => (
+                  <div key={f.id} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '4px 0' }}>
+                    <PaperClipOutlined />
+                    <a href={f.fileUrl} target="_blank" rel="noreferrer" style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      {f.originalName}
+                    </a>
+                    <Button type="text" size="small" danger icon={<DeleteOutlined />} onClick={() => handleRemoveFile(f.id)} />
+                  </div>
+                ))}
+              </div>
+            )}
           </Form.Item>
         </Form>
       </Modal>

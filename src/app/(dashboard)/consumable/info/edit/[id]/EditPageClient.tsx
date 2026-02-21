@@ -50,14 +50,21 @@ export default function EditConsumablePageClient({ id }: EditPageClientProps) {
             const json = await res.json()
             if (json.success) {
                 form.setFieldsValue({
-                    ...json.data,
-                    expiryDate: json.data.expiryDate ? json.data.expiryDate.split('T')[0] : null,
+                    code: json.data.code,
+                    name: json.data.name,
+                    categoryId: json.data.categoryId,
+                    specification: json.data.specification,
+                    unit: json.data.unit,
+                    stockQuantity: json.data.stockQuantity,
+                    minStock: json.data.minStock,
+                    location: json.data.location,
+                    status: json.data.status,
+                    remark: json.data.remark,
                 })
             } else {
                 showError('加载数据失败')
             }
         } catch (error) {
-            console.error(error)
             showError('加载数据失败')
         } finally {
             setInitializing(false)
@@ -77,7 +84,7 @@ export default function EditConsumablePageClient({ id }: EditPageClientProps) {
                 showSuccess('更新成功')
                 router.push('/consumable/info')
             } else {
-                showError(json.message || '更新失败')
+                showError(json.error?.message || json.message || '更新失败')
             }
         } catch (error) {
             showError('更新失败')
@@ -144,7 +151,7 @@ export default function EditConsumablePageClient({ id }: EditPageClientProps) {
                             </Form.Item>
                         </Col>
                         <Col span={8}>
-                            <Form.Item name="unitPrice" label="单价 (元)" rules={[{ required: true, message: '请输入单价' }]}>
+                            <Form.Item name="stockQuantity" label="当前库存">
                                 <InputNumber min={0} style={{ width: '100%' }} />
                             </Form.Item>
                         </Col>
@@ -152,26 +159,8 @@ export default function EditConsumablePageClient({ id }: EditPageClientProps) {
 
                     <Row gutter={16}>
                         <Col span={8}>
-                            <Form.Item name="currentStock" label="当前库存" rules={[{ required: true, message: '请输入当前库存' }]}>
+                            <Form.Item name="minStock" label="最低库存">
                                 <InputNumber min={0} style={{ width: '100%' }} />
-                            </Form.Item>
-                        </Col>
-                        <Col span={8}>
-                            <Form.Item name="minStock" label="最低库存" rules={[{ required: true, message: '请输入最低库存' }]}>
-                                <InputNumber min={0} style={{ width: '100%' }} />
-                            </Form.Item>
-                        </Col>
-                        <Col span={8}>
-                            <Form.Item name="maxStock" label="最高库存" rules={[{ required: true, message: '请输入最高库存' }]}>
-                                <InputNumber min={0} style={{ width: '100%' }} />
-                            </Form.Item>
-                        </Col>
-                    </Row>
-
-                    <Row gutter={16}>
-                        <Col span={8}>
-                            <Form.Item name="supplier" label="供应商">
-                                <Input placeholder="请输入供应商" />
                             </Form.Item>
                         </Col>
                         <Col span={8}>
@@ -180,23 +169,17 @@ export default function EditConsumablePageClient({ id }: EditPageClientProps) {
                             </Form.Item>
                         </Col>
                         <Col span={8}>
-                            <Form.Item name="expiryDate" label="有效期">
-                                <Input type="date" />
+                            <Form.Item name="status" label="状态">
+                                <Select options={[
+                                    { value: 1, label: '正常' },
+                                    { value: 0, label: '禁用' },
+                                ]} />
                             </Form.Item>
                         </Col>
                     </Row>
 
                     <Form.Item name="remark" label="备注">
                         <Input.TextArea rows={2} placeholder="请输入备注" />
-                    </Form.Item>
-
-                    <Form.Item name="status" label="状态">
-                        <Select options={[
-                            { value: 'normal', label: '正常' },
-                            { value: 'low', label: '库存不足' },
-                            { value: 'out', label: '缺货' },
-                            { value: 'expired', label: '已过期' },
-                        ]} />
                     </Form.Item>
 
                     <Form.Item>

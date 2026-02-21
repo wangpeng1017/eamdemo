@@ -100,7 +100,50 @@ const brinellHardnessSchema = {
   defaultRows: 5
 }
 
+// QCT 禁限用物质分析（XRF 筛选法） - QC/T 941~944
+const qctXrfScreeningSchema = {
+  title: 'XRF 荧光光谱筛选法检测记录',
+  header: {
+    methodBasis: 'QC/T 941~944',
+    sampleType: '汽车零部件',
+    equipment: 'XRF EDX3800PLUS',
+  },
+  columns: [
+    { title: '序号', dataIndex: 'seq', width: 60, dataType: 'number' },
+    { title: '样品编号', dataIndex: 'sampleNo', width: 120, dataType: 'string' },
+    { title: '检测项目', dataIndex: 'testItem', width: 100, dataType: 'string' },
+    { title: '测试1', dataIndex: 'test1', width: 100, dataType: 'string' },
+    { title: '测试2', dataIndex: 'test2', width: 100, dataType: 'string' },
+    { title: '平均值', dataIndex: 'avgResult', width: 100, dataType: 'string' },
+    { title: '筛选限值', dataIndex: 'screeningLimit', width: 100, dataType: 'string' },
+    { title: '结论', dataIndex: 'conclusion', width: 80, dataType: 'string' },
+    { title: '备注', dataIndex: 'remark', width: 120, dataType: 'string' },
+  ],
+  defaultData: [
+    { testItem: 'Pb', screeningLimit: '700ppm' },
+    { testItem: 'Hg', screeningLimit: '500ppm' },
+    { testItem: 'Cd', screeningLimit: '75ppm' },
+    { testItem: 'Cr', screeningLimit: '700ppm' },
+    { testItem: 'Br', screeningLimit: '300ppm' },
+    { testItem: 'PBDEs', screeningLimit: '300ppm' },
+  ],
+  environment: true,
+  equipment: true,
+  personnel: true,
+  defaultRows: 6,
+}
+
 const templates = [
+  {
+    code: 'IT-30Y9HT01',
+    name: '禁限用物质分析（XRF筛选法）',
+    category: '化学分析',
+    method: 'QC/T 941~944',
+    schema: JSON.stringify(qctXrfScreeningSchema),
+    originalRecordTemplateUrl: 'qct-original-record.docx',
+    clientReportTemplateUrl: 'qct-client-report.docx',
+    status: 'active' as const,
+  },
   {
     code: 'TPL-TENSILE-3354',
     name: '拉伸性能试验',

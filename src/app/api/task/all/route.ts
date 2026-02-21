@@ -83,7 +83,7 @@ export const POST = withAuth(async (request: NextRequest, user: AuthUser) => {
 
   // 使用统一的编号生成函数
   const { generateNo, NumberPrefixes } = await import('@/lib/generate-no')
-  const taskNo = await generateNo(NumberPrefixes.TASK, 3)
+  const taskNo = await generateNo(NumberPrefixes.TASK)
 
   const task = await prisma.testTask.create({
     data: {

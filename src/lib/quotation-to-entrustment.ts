@@ -36,16 +36,11 @@ export interface EntrustmentCreationResult {
 }
 
 /**
- * 生成委托单编号（WT+年月日+序号）
- * 格式: WT-YYYYMMDD-XXX
+ * 生成委托单编号
+ * 格式: WT + YYYYMMDD + NNNN
  */
 export async function generateEntrustmentNo(): Promise<string> {
-  const no = await generateNo(NumberPrefixes.ENTRUSTMENT, 3)
-  // generateNo 返回格式: WT20260201001，需要转换为 WT-20260201-001
-  const prefix = no.slice(0, 2)  // WT
-  const date = no.slice(2, 10)   // 20260201
-  const seq = no.slice(10)       // 001
-  return `${prefix}-${date}-${seq}`
+  return generateNo(NumberPrefixes.ENTRUSTMENT)
 }
 
 /**
@@ -57,7 +52,7 @@ export async function generateEntrustmentNo(): Promise<string> {
  */
 export async function canCreateEntrustmentFromQuotation(
   quotationId: string
-): Promise<{ canCreate: boolean; reason?: string }> {
+): Promise<{ canCreate: boolean; reason?: string; existingEntrustmentNo?: string }> {
   // 查询报价单
   const quotation = await prisma.quotation.findUnique({
     where: { id: quotationId },
@@ -75,6 +70,20 @@ export async function canCreateEntrustmentFromQuotation(
   // 验证状态
   if (quotation.status !== 'approved') {
     return { canCreate: false, reason: '报价单未审批通过，无法生成委托单' }
+  }
+
+  // 检查是否已生成过委托单（一个报价单只能生成一个委托单）
+  const existingEntrustment = await prisma.entrustment.findFirst({
+    where: { quotationId },
+    select: { entrustmentNo: true }
+  })
+
+  if (existingEntrustment) {
+    return {
+      canCreate: false,
+      reason: `该报价单已生成委托单（${existingEntrustment.entrustmentNo}），不可重复生成`,
+      existingEntrustmentNo: existingEntrustment.entrustmentNo,
+    }
   }
 
   return { canCreate: true }
@@ -153,7 +162,100 @@ export async function createEntrustmentFromQuotation(
     }
   })
 
-  // 5. 复制检测项目到委托单 (v1 兼容字段)
+  // 5. 从报价单 items + sampleTestItems 创建样品记录（按 sampleName 去重，聚合信息）
+  // 先预查 SampleTestItem，用于聚合样品详细信息
+  const quotationSampleTestItems = await prisma.sampleTestItem.findMany({
+    where: { bizType: 'quotation', bizId: quotation.id },
+    orderBy: { sortOrder: 'asc' }
+  })
+
+  // 按样品名称聚合信息（从 SampleTestItem 中提取）
+  const sampleInfoMap = new Map<string, {
+    material?: string
+    batchNo?: string
+    appearance?: string
+    quantity: number
+    testItems: string[]
+    testStandards: string[]
+  }>()
+
+  for (const item of quotationSampleTestItems) {
+    if (!item.sampleName) continue
+    const existing = sampleInfoMap.get(item.sampleName) || {
+      material: undefined,
+      batchNo: undefined,
+      appearance: undefined,
+      quantity: 1,
+      testItems: [],
+      testStandards: [],
+    }
+    // 取第一个非空值
+    if (item.material && !existing.material) existing.material = item.material
+    if (item.batchNo && !existing.batchNo) existing.batchNo = item.batchNo
+    if (item.appearance && !existing.appearance) existing.appearance = item.appearance
+    if (item.quantity > existing.quantity) existing.quantity = item.quantity
+    if (item.testItemName) existing.testItems.push(item.testItemName)
+    if (item.testStandard) existing.testStandards.push(item.testStandard)
+    sampleInfoMap.set(item.sampleName, existing)
+  }
+
+  // 补充来自 quotation.items 的信息（v1 数据源）
+  for (const item of quotation.items) {
+    if (!item.sampleName) continue
+    if (!sampleInfoMap.has(item.sampleName)) {
+      sampleInfoMap.set(item.sampleName, {
+        quantity: 1,
+        testItems: item.serviceItem ? [item.serviceItem] : [],
+        testStandards: item.methodStandard ? [item.methodStandard] : [],
+      })
+    }
+  }
+
+  // 创建 Sample 记录
+  const sampleNames = [...sampleInfoMap.keys()]
+  if (sampleNames.length > 0) {
+    for (const sampleName of sampleNames) {
+      const info = sampleInfoMap.get(sampleName)!
+      const sampleNo = await generateNo(NumberPrefixes.SAMPLE, 4)
+      await prisma.sample.create({
+        data: {
+          sampleNo,
+          entrustmentId: entrustment.id,
+          name: sampleName,
+          material: info.material || undefined,
+          manufactureLotNo: info.batchNo || undefined,
+          quantity: String(info.quantity || 1),
+          status: 'received',
+          createdById: createdBy,
+          // 将检测项和标准简要写入备注
+          remark: [
+            info.testItems.length > 0 ? `检测项目: ${[...new Set(info.testItems)].join(', ')}` : '',
+            info.testStandards.length > 0 ? `检测标准: ${[...new Set(info.testStandards)].join(', ')}` : '',
+          ].filter(Boolean).join('\n') || undefined,
+        }
+      })
+    }
+  } else {
+    // 兜底：如果 SampleTestItem 和 items 都没有 sampleName，用 items 创建
+    const itemSampleNames = [...new Set(
+      quotation.items.map(item => item.sampleName).filter(Boolean) as string[]
+    )]
+    for (const sampleName of itemSampleNames) {
+      const sampleNo = await generateNo(NumberPrefixes.SAMPLE, 4)
+      await prisma.sample.create({
+        data: {
+          sampleNo,
+          entrustmentId: entrustment.id,
+          name: sampleName,
+          quantity: '1',
+          status: 'received',
+          createdById: createdBy,
+        }
+      })
+    }
+  }
+
+  // 6. 复制检测项目到委托单 (v1 兼容字段)
   const projects = await Promise.all(
     quotation.items.map(item =>
       prisma.entrustmentProject.create({
@@ -167,15 +269,12 @@ export async function createEntrustmentFromQuotation(
     )
   )
 
-  // 6. 复制样品检测项 (v2 样品表)
-  const sampleTestItems = await prisma.sampleTestItem.findMany({
-    where: { bizType: 'quotation', bizId: quotation.id },
-    orderBy: { sortOrder: 'asc' }
-  })
+  // 7. 复制样品检测项到委托单 (v2 样品表，含 ⑥⑦ 所需的所有字段)
+  // 注意：quotationSampleTestItems 已在前面第5步预查过
 
-  if (sampleTestItems.length > 0) {
+  if (quotationSampleTestItems.length > 0) {
     await prisma.sampleTestItem.createMany({
-      data: sampleTestItems.map((item, index) => ({
+      data: quotationSampleTestItems.map((item, index) => ({
         bizType: 'entrustment',
         bizId: entrustment.id,
         sampleName: item.sampleName,
@@ -187,12 +286,35 @@ export async function createEntrustmentFromQuotation(
         testItemName: item.testItemName,
         testStandard: item.testStandard,
         judgmentStandard: item.judgmentStandard,
+        // ⑥⑦ 关键字段（之前缺失）
+        testCategory: item.testCategory || 'component', // 默认为零部件级
+        testMethod: item.testMethod,
+        samplingLocation: item.samplingLocation,
+        specimenCount: item.specimenCount,
+        testRemark: item.testRemark,
+        // 材料级独有字段
+        materialName: item.materialName,
+        materialCode: item.materialCode,
+        materialSupplier: item.materialSupplier,
+        materialSpec: item.materialSpec,
+        materialSampleStatus: item.materialSampleStatus,
         sortOrder: index,
       }))
     })
-  } else if (quotation.items.length > 0 && sampleTestItems.length === 0) {
-    // 如果没有 v2 数据但有 v1 items，尝试初始化 v2 数据（可选，视业务需求而定）
-    // 目前保持逻辑一致，主要复制已有 v2 数据
+  } else if (quotation.items.length > 0) {
+    // 如果没有 v2 数据但有 v1 items，从 items 初始化 v2 数据
+    await prisma.sampleTestItem.createMany({
+      data: quotation.items.map((item, index) => ({
+        bizType: 'entrustment',
+        bizId: entrustment.id,
+        sampleName: item.sampleName || '',
+        testItemName: item.serviceItem || '',
+        testStandard: item.methodStandard || '',
+        testCategory: 'component', // 默认为零部件级
+        quantity: 1,
+        sortOrder: index,
+      }))
+    })
   }
 
   return {

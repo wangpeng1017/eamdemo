@@ -28,6 +28,8 @@ import {
 // Mock generateClientReportNo to return predictable values
 jest.mock('@/lib/generate-no', () => ({
   generateClientReportNo: jest.fn(),
+  generateClientReportSubNo: (baseNo: string, subIndex: number) =>
+    `${baseNo}-${String(subIndex).padStart(3, '0')}`,
 }))
 
 import { generateClientReportNo } from '@/lib/generate-no'
@@ -38,12 +40,8 @@ const mockPrisma = prisma as jest.Mocked<typeof prisma>
 describe('generateClientReportsForEntrustment', () => {
   beforeEach(() => {
     jest.clearAllMocks()
-    // 默认 mock: 每次调用返回递增编号
-    let counter = 0
-    mockGenerateNo.mockImplementation(async () => {
-      counter++
-      return `CR-20260213-${String(counter).padStart(3, '0')}`
-    })
+    // 默认 mock: 返回固定基础编号
+    mockGenerateNo.mockResolvedValue('BG202602130001')
     // Mock prisma.clientReport.create 返回传入的数据
     ;(mockPrisma.clientReport.create as jest.Mock).mockImplementation(
       async ({ data }: any) => ({ id: `mock-id-${Date.now()}`, ...data })
@@ -70,7 +68,7 @@ describe('generateClientReportsForEntrustment', () => {
       const result = await generateClientReportsForEntrustment(baseParams)
 
       expect(result).toHaveLength(3)
-      expect(mockGenerateNo).toHaveBeenCalledTimes(3)
+      expect(mockGenerateNo).toHaveBeenCalledTimes(1)
     })
 
     it('每条记录的 sampleId 应指向对应样品', async () => {
@@ -160,7 +158,7 @@ describe('generateClientReportsForEntrustment', () => {
       const result = await generateClientReportsForEntrustment(baseParams)
 
       expect(result).toHaveLength(2)
-      expect(mockGenerateNo).toHaveBeenCalledTimes(2)
+      expect(mockGenerateNo).toHaveBeenCalledTimes(1)
     })
 
     it('每条记录的 entrustmentProjectId 应指向对应项目', async () => {
@@ -389,7 +387,7 @@ describe('generateClientReportsForEntrustment', () => {
 
       expect(mockPrisma.clientReport.create).toHaveBeenCalledWith({
         data: expect.objectContaining({
-          reportNo: expect.stringMatching(/^CR-\d{8}-\d{3}$/),
+          reportNo: expect.stringMatching(/^BG\d{12}-\d{3}$/),
           entrustmentId: 'ent-011',
           clientName: '测试客户',
           status: 'draft',

@@ -4,7 +4,7 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { showSuccess, showError } from '@/lib/confirm'
-import { Table, Button, Space, Modal, Select, Tag, message, Popconfirm } from 'antd'
+import { Table, Button, Space, Modal, Select, Tag, message, Popconfirm, Input } from 'antd'
 import { PlusOutlined, EditOutlined, DeleteOutlined, EyeOutlined } from '@ant-design/icons'
 import type { ColumnsType } from 'antd/es/table'
 import dayjs from 'dayjs'
@@ -47,13 +47,15 @@ export default function TestTemplatesPage() {
   const [editingId, setEditingId] = useState<string | null>(null)
   const [editingRecord, setEditingRecord] = useState<TestTemplate | null>(null)
   const [selectedCategory, setSelectedCategory] = useState<string>()
+  const [keyword, setKeyword] = useState('')
   const router = useRouter()
 
   const fetchData = async (p = page) => {
     setLoading(true)
     try {
       const categoryParam = selectedCategory ? `&category=${selectedCategory}` : ''
-      const res = await fetch(`/api/test-template?page=${p}&pageSize=10${categoryParam}`)
+      const keywordParam = keyword ? `&keyword=${encodeURIComponent(keyword)}` : ''
+      const res = await fetch(`/api/test-template?page=${p}&pageSize=10${categoryParam}${keywordParam}`)
       const json = await res.json()
       if (json.success && json.data) {
         setData(json.data.list || [])
@@ -68,7 +70,7 @@ export default function TestTemplatesPage() {
     setLoading(false)
   }
 
-  useEffect(() => { fetchData() }, [page, selectedCategory])
+  useEffect(() => { fetchData() }, [page, selectedCategory, keyword])
 
   const handleAdd = () => {
     setEditingId(null)
@@ -221,6 +223,13 @@ export default function TestTemplatesPage() {
       <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'space-between' }}>
         <h2 style={{ margin: 0 }}>检测项目管理</h2>
         <Space style={{ whiteSpace: 'nowrap' }}>
+          <Input.Search
+            placeholder="项目名称 / 项目编号"
+            allowClear
+            style={{ width: 220 }}
+            onSearch={(v) => { setPage(1); setKeyword(v) }}
+            enterButton
+          />
           <Select
             placeholder="分类筛选"
             allowClear

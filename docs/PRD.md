@@ -1,8 +1,8 @@
 # LIMS 实验室信息管理系统 - 产品需求文档 (PRD)
 
-> **版本**: 2.5
-> **最后更新**: 2026-02-01
-> **本次更新**: 咨询评估系统优化（统一到 v2 系统），移除"发起评估"按钮，修复评估人待办查询
+> **版本**: 2.6
+> **最后更新**: 2026-02-13
+> **本次更新**: 委托单自动生成客户报告编号 + 检测项目 AutoComplete 自定义输入
 > **文档类型**: 详细需求规格说明书
 > **技术栈变更**: 已迁移至 Next.js 全栈方案
 > **审批流系统**: 统一可配置审批流系统 v1.1
@@ -205,21 +205,23 @@ LIMS（Laboratory Information Management System）是一套面向检测实验室
 | F017 | 系统管理 | 审批流程配置 | 🟢 | P0 | `src/app/(dashboard)/system/approval-flow/page.tsx` |
 | F018 | 设备管理 | 设备档案 | 🟢 | P1 | `src/app/(dashboard)/device/page.tsx` |
 | F019 | 外协管理 | 外协订单 | 🟢 | P1 | `src/app/(dashboard)/outsource/order/page.tsx` |
+| F020 | 报告管理 | 客户报告自动生成 | 🟢 | P0 | `src/lib/generate-client-reports.ts` |
+| F021 | 委托管理 | 检测项目自定义输入 | 🟢 | P1 | `src/components/SampleTestItemTable.tsx` |
 
 ### 功能统计
 
 | 模块 | 功能数 | 状态 |
 |------|--------|------|
 | 用户管理 | 1 | 🟢 |
-| 委托管理 | 5 | 🟢 |
+| 委托管理 | 6 | 🟢 |
 | 样品管理 | 2 | 🟢 |
 | 任务管理 | 2 | 🟢 |
-| 报告管理 | 2 | 🟢 |
+| 报告管理 | 3 | 🟢 |
 | 财务管理 | 2 | 🟢 |
 | 系统管理 | 3 | 🟢 |
 | 设备管理 | 1 | 🟢 |
 | 外协管理 | 1 | 🟢 |
-| **总计** | **19** | **🟢 全部完成** |
+| **总计** | **21** | **🟢 全部完成** |
 
 ---
 
@@ -557,7 +559,7 @@ LIMS（Laboratory Information Management System）是一套面向检测实验室
 
 | 字段名 | 字段标识 | 类型 | 必填 | 说明 |
 |--------|----------|------|------|------|
-| 样品编号 | sampleNo | string | 是 | 自动生成，格式：S+年月日+序号 |
+| 样品编号 | sampleNo | string | 是 | 自动生成，格式：YP+年月日+序号 |
 | 委托单号 | entrustmentId | string | 是 | 关联委托单 |
 | 样品名称 | name | string | 是 | 样品名称 |
 | 规格型号 | spec | string | 是 | 规格型号 |
@@ -740,7 +742,7 @@ LIMS（Laboratory Information Management System）是一套面向检测实验室
 
 | 字段名 | 字段标识 | 类型 | 说明 |
 |--------|----------|------|------|
-| 报告编号 | reportNo | string | 格式：RPT-YYYYMMDD-XXX |
+| 报告编号 | reportNo | string | 格式：RWBG+YYYYMMDD+NNNN |
 | 任务编号 | taskNo | string | 关联任务 |
 | 样品名称 | sampleName | string | 样品名称 |
 | 检测结论 | overallConclusion | string | 合格/不合格 |
@@ -799,7 +801,7 @@ LIMS（Laboratory Information Management System）是一套面向检测实验室
 
 | 字段名 | 字段标识 | 类型 | 说明 |
 |--------|----------|------|------|
-| 应收编号 | receivableNo | string | 格式：AR-YYYYMMDD-XXX |
+| 应收编号 | receivableNo | string | 格式：AR+YYYYMMDD+NNNN |
 | 委托单号 | entrustmentId | string | 关联委托单 |
 | 客户单位 | clientName | string | 客户名称 |
 | 应收总额 | totalAmount | number | 应收金额 |
@@ -1415,17 +1417,26 @@ LIMS（Laboratory Information Management System）是一套面向检测实验室
 
 ### 5.3 编号规则
 
-| 单据类型 | 格式 | 示例 |
-|----------|------|------|
-| 咨询单 | ZX + 年月日 + 序号 | ZX20231201001 |
-| 报价单 | BJ + 年月日 + 序号 | BJ20231201001 |
-| 合同 | HT + 年月日 + 序号 | HT20231201001 |
-| 委托单 | WT + 年月日 + 序号 | WT20231101001 |
-| 样品 | S + 年月日 + 序号 | S20231101001 |
-| 任务 | T + 年月日 + 序号 | T20231101001 |
-| 报告 | RPT-YYYYMMDD-XXX | RPT-20231125-001 |
-| 应收 | AR-YYYYMMDD-XXX | AR-20231125-001 |
-| 发票 | INV-YYYYMMDD-XXX | INV-20231115-001 |
+> 统一格式：前缀 + YYYYMMDD + 4位序号（每日每类重置）
+
+| 单据类型 | 前缀 | 格式 | 示例 |
+|----------|------|------|------|
+| 咨询单 | ZX | ZX + YYYYMMDD + NNNN | ZX202602130001 |
+| 报价单 | BJ | BJ + YYYYMMDD + NNNN | BJ202602130001 |
+| 合同 | HT | HT + YYYYMMDD + NNNN | HT202602130001 |
+| 委托单 | WT | WT + YYYYMMDD + NNNN | WT202602130001 |
+| 样品 | YP | YP + YYYYMMDD + NNNN | YP202602130001 |
+| 任务 | RW | RW + YYYYMMDD + NNNN | RW202602130001 |
+| 任务报告（内部） | RWBG | RWBG + YYYYMMDD + NNNN | RWBG202602130001 |
+| 客户报告 | BG | BG + YYYYMMDD + NNNN + -NNN | BG202602130001-001 |
+| 应收 | AR | AR + YYYYMMDD + NNNN | AR202602130001 |
+| 发票 | INV | INV + YYYYMMDD + NNNN | INV202602130001 |
+| 维修 | WX | WX + YYYYMMDD + NNNN | WX202602130001 |
+| 入库 | RK | RK + YYYYMMDD + NNNN | RK202602130001 |
+| 出库 | CK | CK + YYYYMMDD + NNNN | CK202602130001 |
+| 委外订单 | WW | WW + YYYYMMDD + NNNN | WW202602130001 |
+
+**客户报告子编号**：同一委托单下多个报告共享基础编号，通过 `-NNN` 后缀区分（如 BG202602130001-001、BG202602130001-002）。
 
 ---
 
@@ -1499,6 +1510,52 @@ client/src/
 ---
 
 ## 七、变更历史
+
+### v2.6 - 2026-02-13
+
+**F020: 委托单自动生成客户报告编号**：
+- ✅ **报告编号自动生成**：
+  - 委托单选择报告出具方式（by_sample/by_project/merged）后，自动生成客户报告编号（BG+YYYYMMDD+NNNN-NNN）
+  - 按样品出具：为每个样品生成子编号（如 BG202602130001-001、-002）
+  - 按项目出具：为每个检测项目生成子编号
+  - 合并出具：所有样品和项目合并为 1 份报告编号
+- ✅ **数据模型扩展**：
+  - `ClientReport` 模型新增 `sampleId`、`entrustmentProjectId`、`groupingType`、`reportCopies` 字段
+  - 数据库迁移脚本 `update-db-schema.js` 同步更新
+- ✅ **委托单联动**：
+  - 创建委托单（POST）时自动触发报告编号生成
+  - 编辑委托单（PUT）时同步更新报告编号（删除旧草稿 → 生成新编号）
+  - 表单 UI 显示报告编号预览提示
+- ✅ **TDD 测试覆盖**：28 个测试用例全部通过
+- 修改文件：
+  - `src/lib/generate-client-reports.ts` - 核心生成逻辑
+  - `src/lib/__tests__/generate-client-reports.test.ts` - 28 个测试用例
+  - `src/app/api/entrustment/route.ts` - POST 创建时触发
+  - `src/app/api/entrustment/[id]/route.ts` - PUT 更新时同步
+  - `src/components/business/EntrustmentForm.tsx` - 报告出具方式 UI
+  - `prisma/schema.prisma` - ClientReport 模型扩展
+  - `update-db-schema.js` - 数据库迁移
+
+**F021: 检测项目 AutoComplete 自定义输入**：
+- ✅ **组件升级**：
+  - `SampleTestItemTable` 检测项目列从 `Select` 改为 `AutoComplete`
+  - 支持从 TestTemplate 库搜索选择（自动填充 testTemplateId 和 testStandard）
+  - 支持手动自定义输入检测项目名称（testTemplateId 为空）
+- ✅ **纯函数设计**：
+  - 提取 `resolveTestItemChange` 纯函数，处理选择/自定义输入的逻辑
+  - 方便单独测试，不依赖 React 渲染
+- ✅ **TDD 测试覆盖**：10 个测试用例全部通过
+  - 7 个 `resolveTestItemChange` 纯逻辑测试
+  - 3 个组件渲染测试
+- 修改文件：
+  - `src/components/SampleTestItemTable.tsx` - AutoComplete 实现
+  - `src/components/__tests__/SampleTestItemTable.test.tsx` - 10 个测试用例
+
+**技术改进**：
+- 两层报告模型清晰分离：TestReport（RPT, 内部检测报告）vs ClientReport（CR, 客户交付报告）
+- 纯函数模式提升可测试性，业务逻辑与 UI 解耦
+
+---
 
 ### v2.5 - 2026-02-01
 

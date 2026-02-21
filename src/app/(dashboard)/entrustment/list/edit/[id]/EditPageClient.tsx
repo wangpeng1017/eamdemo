@@ -43,6 +43,8 @@ export default function EditEntrustmentPageClient({ id }: EditPageClientProps) {
 
             setInitialValues({
                 ...data,
+                // 客户名称：从关联的 client 或 quotation 带入
+                clientName: data.clientName || data.client?.name || data.quotation?.client?.name || '',
                 sampleDate: data.sampleDate ? dayjs(data.sampleDate) : undefined,
                 sampleTestItems,
             })

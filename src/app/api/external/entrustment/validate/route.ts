@@ -40,30 +40,24 @@ export const GET = withErrorHandler(async (request: NextRequest) => {
     badRequest('无效的 token 格式')
   }
 
-  // 使用索引字段查询（如果有）或优化查询
-  // 由于 token 存储在 JSON 中，需要遍历查找
-  // 优化：只查询必要字段，限制结果数量
-  const entrustments = await prisma.entrustment.findMany({
-    where: {
-      remark: {
-        contains: token!,
-      },
-    },
-    select: {
-      id: true,
-      entrustmentNo: true,
-      sampleName: true,
-      sampleModel: true,
-      sampleMaterial: true,
-      sampleQuantity: true,
-      remark: true,
-      clientId: true,
-    },
-    take: 10, // 限制结果数量
-  })
+  // 查询包含此 token 的委托单
+  // 注意：remark 是 @db.Text 类型，使用 raw query 避免 Prisma contains 兼容性问题
+  let entrustments: any[] = []
+  try {
+    entrustments = await prisma.$queryRawUnsafe(
+      `SELECT id, entrustmentNo, sampleName, sampleModel, sampleMaterial, sampleQuantity, remark, clientId
+       FROM biz_entrustment
+       WHERE remark LIKE CONCAT('%', ?, '%')
+       LIMIT 10`,
+      token!
+    )
+  } catch (dbErr) {
+    console.error('查询外部链接 token 失败:', dbErr)
+    return Response.json({ success: false, message: '查询失败' }, { status: 500 })
+  }
 
   // 精确匹配 token
-  const matched = entrustments.find((e) => {
+  const matched = entrustments.find((e: any) => {
     if (!e.remark) return false
     try {
       const data = JSON.parse(e.remark as string)

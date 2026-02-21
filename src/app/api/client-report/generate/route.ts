@@ -1,16 +1,7 @@
 import { prisma } from '@/lib/prisma'
 import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@/lib/auth'
-
-// 生成客户报告编号
-function generateReportNo() {
-    const date = new Date()
-    const y = date.getFullYear()
-    const m = String(date.getMonth() + 1).padStart(2, '0')
-    const d = String(date.getDate()).padStart(2, '0')
-    const random = Math.floor(Math.random() * 1000).toString().padStart(3, '0')
-    return `CR${y}${m}${d}${random}`
-}
+import { generateClientReportNo } from '@/lib/generate-no'
 
 // 生成客户报告（整合多个任务报告）
 export async function POST(request: NextRequest) {
@@ -89,7 +80,7 @@ export async function POST(request: NextRequest) {
     // 创建客户报告
     const report = await prisma.clientReport.create({
         data: {
-            reportNo: generateReportNo(),
+            reportNo: await generateClientReportNo(),
             entrustmentId,
             projectName,
             clientName,

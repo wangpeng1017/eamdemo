@@ -9,10 +9,18 @@ export const GET = withAuth(async (request: NextRequest, user) => {
   const pageSize = parseInt(searchParams.get('pageSize') || '10')
   const category = searchParams.get('category')
   const status = searchParams.get('status')
+  const keyword = searchParams.get('keyword')
 
   const where: Record<string, unknown> = {}
   if (category) where.category = category
   if (status) where.status = status
+  // 按项目名称或项目编号模糊搜索
+  if (keyword) {
+    where.OR = [
+      { name: { contains: keyword } },
+      { code: { contains: keyword } },
+    ]
+  }
 
   const [list, total] = await Promise.all([
     prisma.testTemplate.findMany({

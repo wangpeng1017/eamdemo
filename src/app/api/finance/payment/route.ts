@@ -107,6 +107,7 @@ export const POST = withAuth(async (request: NextRequest, user) => {
         handlerName: data.handlerName,
         bankName: data.bankName,
         transactionNo: data.transactionNo,
+        attachments: data.attachments ? JSON.stringify(data.attachments) : null,
         remark: data.remark,
       },
       include: {

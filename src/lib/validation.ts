@@ -117,12 +117,12 @@ export const createConsumableSchema = z.object({
 export const createConsumableTransactionSchema = z.object({
   type: z.enum(['in', 'out']),
   consumableId: z.string().min(1, '易耗品ID不能为空'),
-  quantity: z.coerce.number().int().min(1, '数量必须大于0'),
+  quantity: z.coerce.number().min(0.01, '数量必须大于0'),
   reason: z.string().min(1, '原因不能为空').max(500),
   operator: z.string().min(1, '操作人不能为空').max(50),
   unitPrice: z.coerce.number().min(0).optional(),
   relatedOrder: z.string().max(100).optional().nullable(),
-  transactionDate: z.string().datetime().optional(),
+  transactionDate: z.string().optional(),
   remark: z.string().max(1000).optional().nullable(),
 })
 

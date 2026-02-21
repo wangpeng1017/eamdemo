@@ -54,13 +54,20 @@ export const GET = withErrorHandler(async (request: NextRequest) => {
   const monthlyTrend = await getMonthlyTrend()
 
   // 客户委托排行 Top 10
-  const topClients = await prisma.entrustment.groupBy({
+  const topClientsRaw = await prisma.entrustment.groupBy({
     by: ['clientId'],
     _count: { id: true },
     orderBy: { _count: { id: 'desc' } },
     take: 10,
     where: { clientId: { not: null } },
   })
+
+  // 反查客户名称
+  const clientIds = topClientsRaw.map((c: any) => c.clientId).filter(Boolean)
+  const clients = clientIds.length > 0
+    ? await prisma.client.findMany({ where: { id: { in: clientIds } }, select: { id: true, name: true } })
+    : []
+  const clientMap = new Map(clients.map((c: any) => [c.id, c.name]))
 
   // 样品状态分布
   const sampleStatusDist = await prisma.sample.groupBy({
@@ -75,13 +82,20 @@ export const GET = withErrorHandler(async (request: NextRequest) => {
   })
 
   // 人员任务量统计 Top 10
-  const assigneeStats = await prisma.testTask.groupBy({
+  const assigneeStatsRaw = await prisma.testTask.groupBy({
     by: ['assignedToId'],
     _count: { id: true },
     where: { assignedToId: { not: null } },
     orderBy: { _count: { id: 'desc' } },
     take: 10,
   })
+
+  // 反查人员名称
+  const userIds = assigneeStatsRaw.map((a: any) => a.assignedToId).filter(Boolean)
+  const users = userIds.length > 0
+    ? await prisma.user.findMany({ where: { id: { in: userIds } }, select: { id: true, name: true } })
+    : []
+  const userMap = new Map(users.map((u: any) => [u.id, u.name]))
 
   // 财务统计
   const financeStats = await getFinanceStats()
@@ -95,8 +109,8 @@ export const GET = withErrorHandler(async (request: NextRequest) => {
   return success({
     ...overview,
     monthlyTrend,
-    topClients: topClients.map((c: any) => ({
-      clientName: c.clientName || '未知',
+    topClients: topClientsRaw.map((c: any) => ({
+      clientName: clientMap.get(c.clientId) || '未知客户',
       count: c._count.id,
     })),
     sampleStatusDist: sampleStatusDist.map((s: any) => ({
@@ -107,8 +121,8 @@ export const GET = withErrorHandler(async (request: NextRequest) => {
       status: t.status,
       count: t._count.id,
     })),
-    assigneeStats: assigneeStats.map((a: any) => ({
-      assignee: a.assignedToId || '未分配',
+    assigneeStats: assigneeStatsRaw.map((a: any) => ({
+      assignee: userMap.get(a.assignedToId) || '未分配',
       count: a._count.id,
     })),
     financeStats,

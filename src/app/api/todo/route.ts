@@ -1,11 +1,10 @@
 import { prisma } from '@/lib/prisma'
 import { NextRequest } from 'next/server'
-import { withErrorHandler, success } from '@/lib/api-handler'
+import { withAuth, success } from '@/lib/api-handler'
 
-// 获取待办事项列表
-export const GET = withErrorHandler(async (request: NextRequest) => {
+// 获取待办事项列表 - 需要登录
+export const GET = withAuth(async (request: NextRequest, user) => {
     const { searchParams } = new URL(request.url)
-    const status = searchParams.get('status') || 'pending'
     const pageSize = parseInt(searchParams.get('pageSize') || '10')
 
     const todos: any[] = []
@@ -59,6 +58,45 @@ export const GET = withErrorHandler(async (request: NextRequest) => {
             description: r.sampleName || '未知样品',
             priority: 'high',
             link: '/report/approval',
+        })
+    })
+
+    // 4. 应收款到期提醒（7天内到期 + 已逾期，筛选当前用户跟进的委托单）
+    const reminderDate = new Date()
+    reminderDate.setDate(reminderDate.getDate() + 7)
+
+    const nearDueReceivables = await prisma.financeReceivable.findMany({
+        where: {
+            status: { in: ['pending', 'partial'] },
+            dueDate: { lte: reminderDate },
+            entrustment: { followerId: user.id },
+        },
+        include: {
+            entrustment: { select: { entrustmentNo: true, followerUser: { select: { name: true } } } },
+        },
+        take: 5,
+        orderBy: { dueDate: 'asc' },
+    })
+
+    const today = new Date()
+    today.setHours(0, 0, 0, 0)
+
+    nearDueReceivables.forEach(r => {
+        const isOverdue = r.dueDate && new Date(r.dueDate) < today
+        const remaining = Number(r.amount) - Number(r.receivedAmount)
+        const dueDateStr = r.dueDate
+            ? new Date(r.dueDate).toLocaleDateString('zh-CN')
+            : '未设置'
+
+        todos.push({
+            id: `receivable-${r.id}`,
+            type: 'finance',
+            title: isOverdue
+                ? `应收款 ${r.receivableNo} 已逾期`
+                : `应收款 ${r.receivableNo} 即将到期`,
+            description: `${r.clientName || '未知客户'} | 待收 ¥${remaining.toFixed(2)} | 到期日 ${dueDateStr}`,
+            priority: isOverdue ? 'high' : 'medium',
+            link: '/finance/receivable',
         })
     })
 

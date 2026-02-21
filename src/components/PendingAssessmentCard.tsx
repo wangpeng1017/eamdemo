@@ -92,9 +92,9 @@ export default function PendingAssessmentCard({ onViewAll }: PendingAssessmentCa
         }
         extra={
           onViewAll && (
-            <Button type="link" onClick={onViewAll}>
+            <a onClick={onViewAll} style={{ color: '#1890ff', cursor: 'pointer' }}>
               查看全部
-            </Button>
+            </a>
           )
         }
         loading={loading}

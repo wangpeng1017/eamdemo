@@ -40,20 +40,32 @@ export const PUT = withAuth(async (
     notFound('易耗品不存在')
   }
 
+  // 只提取 schema 中存在的字段，忽略前端多余字段（如 unitPrice, maxStock, supplier, expiryDate）
+  const updateData: Record<string, unknown> = {}
+  if (data.code !== undefined) updateData.code = data.code
+  if (data.name !== undefined) updateData.name = data.name
+  if (data.categoryId !== undefined) updateData.categoryId = data.categoryId || null
+  if (data.specification !== undefined) updateData.specification = data.specification || null
+  if (data.unit !== undefined) updateData.unit = data.unit
+  // 兼容前端可能传 currentStock 或 stockQuantity
+  if (data.stockQuantity !== undefined) updateData.stockQuantity = data.stockQuantity
+  else if (data.currentStock !== undefined) updateData.stockQuantity = data.currentStock
+  if (data.minStock !== undefined) updateData.minStock = data.minStock
+  if (data.location !== undefined) updateData.location = data.location || null
+  if (data.remark !== undefined) updateData.remark = data.remark || null
+  // status 兼容字符串和数字：字符串值映射为 Int，数字直接使用
+  if (data.status !== undefined) {
+    if (typeof data.status === 'string') {
+      const statusMap: Record<string, number> = { normal: 1, low: 1, out: 0, expired: 0 }
+      updateData.status = statusMap[data.status] ?? (parseInt(data.status) || 1)
+    } else {
+      updateData.status = parseInt(data.status)
+    }
+  }
+
   const consumable = await prisma.consumable.update({
     where: { id },
-    data: {
-      code: data.code,
-      name: data.name,
-      categoryId: data.categoryId,
-      specification: data.specification,
-      unit: data.unit,
-      stockQuantity: data.stockQuantity !== undefined ? data.stockQuantity : undefined,
-      minStock: data.minStock !== undefined ? data.minStock : undefined,
-      location: data.location,
-      status: data.status !== undefined ? parseInt(data.status) : undefined,
-      remark: data.remark,
-    },
+    data: updateData,
     include: { category: true },
   })
 

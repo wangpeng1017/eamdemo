@@ -19,6 +19,7 @@ import { useSession } from 'next-auth/react'
 import Link from 'next/link'
 import dayjs from "dayjs"
 import PendingAssessmentCard from '@/components/PendingAssessmentCard'
+import ReceivableReminderCard from '@/components/ReceivableReminderCard'
 
 const { Text } = Typography
 
@@ -244,7 +245,7 @@ export default function DashboardPage() {
 
       <Row gutter={[16, 16]} style={{ marginTop: 24 }}>
         {/* 待审批 */}
-        <Col xs={24} lg={8}>
+        <Col xs={24} lg={12}>
           <Card
             title={
               <Space>
@@ -255,7 +256,7 @@ export default function DashboardPage() {
                 )}
               </Space>
             }
-            extra={<Link href="/approval">查看全部</Link>}
+            extra={<Link href="/approval" style={{ color: '#1890ff' }}>查看全部</Link>}
           >
             {approvals.length === 0 ? (
               <div style={{ textAlign: 'center', padding: 40, color: '#999' }}>
@@ -369,12 +370,14 @@ export default function DashboardPage() {
         </Col>
 
         {/* 待我评估 */}
-        <Col xs={24} lg={8}>
+        <Col xs={24} lg={12}>
           <PendingAssessmentCard onViewAll={() => router.push('/assessment')} />
         </Col>
+      </Row>
 
+      <Row gutter={[16, 16]} style={{ marginTop: 16 }}>
         {/* 我的任务 */}
-        <Col xs={24} lg={8}>
+        <Col xs={24} lg={12}>
           <Card
             title={
               <Space>
@@ -385,7 +388,7 @@ export default function DashboardPage() {
                 )}
               </Space>
             }
-            extra={<Link href="/task/my">查看全部</Link>}
+            extra={<Link href="/task/my" style={{ color: '#1890ff' }}>查看全部</Link>}
           >
             {tasks.length === 0 ? (
               <div style={{ textAlign: 'center', padding: 40, color: '#999' }}>
@@ -432,6 +435,11 @@ export default function DashboardPage() {
               />
             )}
           </Card>
+        </Col>
+
+        {/* 应收提醒 */}
+        <Col xs={24} lg={12}>
+          <ReceivableReminderCard />
         </Col>
       </Row>
 

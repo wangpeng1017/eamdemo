@@ -35,8 +35,14 @@ export const PUT = withErrorHandler(async (request: NextRequest, context?: { par
   const data = await request.json()
   const session = await auth() // Ensure we have session for createdById if needed
 
-  // 分离检测项目和样品数据
-  const { projects, samples, ...entrustmentData } = data
+  // 分离检测项目和样品数据（排除所有非 Entrustment 模型字段）
+  const {
+    projects, samples,
+    sampleTestItems, componentTests, materialTests,  // 前端子表数据
+    client, contract, quotation,                      // 关联对象
+    clientName, id: _id, createdAt, updatedAt,        // 只读字段
+    ...entrustmentData
+  } = data
 
   // 更新委托单基本信息
   await prisma.entrustment.update({
@@ -44,6 +50,7 @@ export const PUT = withErrorHandler(async (request: NextRequest, context?: { par
     data: {
       ...entrustmentData,
       sampleDate: entrustmentData.sampleDate ? new Date(entrustmentData.sampleDate) : undefined,
+      clientReportDeadline: entrustmentData.clientReportDeadline ? new Date(entrustmentData.clientReportDeadline) : undefined,
     }
   })
 

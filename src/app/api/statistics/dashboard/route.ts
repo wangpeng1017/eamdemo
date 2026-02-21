@@ -8,25 +8,85 @@ export const GET = withErrorHandler(async (request: NextRequest) => {
     const session = await auth()
     const userId = session?.user?.id
     const userRoles = session?.user?.roles || []
+    const userName = session?.user?.name || ''
+    const isAdmin = userRoles.includes('admin') || userRoles.includes('lab_director')
 
-    // 基础统计
+    // 1. 待处理委托：admin 全局，普通用户按跟单人过滤
+    const entrustmentWhere: any = { status: 'pending' }
+    if (!isAdmin && userId) {
+        entrustmentWhere.followerId = userId
+    }
+
+    // 2. 检测中样品：admin 全局，普通用户按自己负责任务的样品过滤
+    let testingSamplesCount: number
+    if (isAdmin) {
+        testingSamplesCount = await prisma.sample.count({ where: { status: 'testing' } })
+    } else if (userId) {
+        // 找到当前用户负责的任务关联的样品
+        const myTaskSampleIds = await prisma.testTask.findMany({
+            where: { assignedToId: userId, status: { in: ['pending', 'in_progress'] } },
+            select: { sampleId: true },
+            distinct: ['sampleId'],
+        })
+        const sampleIds = myTaskSampleIds.map(t => t.sampleId).filter(Boolean) as string[]
+        testingSamplesCount = sampleIds.length > 0
+            ? await prisma.sample.count({ where: { id: { in: sampleIds }, status: 'testing' } })
+            : 0
+    } else {
+        testingSamplesCount = 0
+    }
+
+    // 3. 待审核报告：admin 全局，普通用户按审核人或任务负责人过滤
+    let pendingReportsWhere: any = { status: { in: ['draft', 'reviewing'] } }
+    if (!isAdmin && userId) {
+        // 查找当前用户负责任务关联的报告，或审核人为当前用户的报告
+        const myTaskIds = await prisma.testTask.findMany({
+            where: { assignedToId: userId },
+            select: { id: true },
+        })
+        const taskIds = myTaskIds.map(t => t.id)
+        pendingReportsWhere = {
+            status: { in: ['draft', 'reviewing'] },
+            OR: [
+                { taskId: { in: taskIds } },
+                { reviewer: userName },
+                { tester: userName },
+            ],
+        }
+    }
+
+    // 4. 本月完成：admin 全局，普通用户按自己的任务过滤
+    const monthStart = new Date(new Date().getFullYear(), new Date().getMonth(), 1)
+    let completedWhere: any = {
+        status: 'issued',
+        issuedDate: { gte: monthStart },
+    }
+    if (!isAdmin && userId) {
+        const myTaskIds = await prisma.testTask.findMany({
+            where: { assignedToId: userId },
+            select: { id: true },
+        })
+        const taskIds = myTaskIds.map(t => t.id)
+        completedWhere = {
+            status: 'issued',
+            issuedDate: { gte: monthStart },
+            OR: [
+                { taskId: { in: taskIds } },
+                { reviewer: userName },
+                { tester: userName },
+            ],
+        }
+    }
+
+    // 并行查询
     const [
         pendingEntrustments,
-        testingSamples,
         pendingReports,
         completedThisMonth,
     ] = await Promise.all([
-        prisma.entrustment.count({ where: { status: 'pending' } }),
-        prisma.sample.count({ where: { status: 'testing' } }),
-        prisma.testReport.count({ where: { status: { in: ['draft', 'reviewing'] } } }),
-        prisma.testReport.count({
-            where: {
-                status: 'issued',
-                issuedDate: {
-                    gte: new Date(new Date().getFullYear(), new Date().getMonth(), 1),
-                },
-            },
-        }),
+        prisma.entrustment.count({ where: entrustmentWhere }),
+        prisma.testReport.count({ where: pendingReportsWhere }),
+        prisma.testReport.count({ where: completedWhere }),
     ])
 
     // 待审批统计(根据用户角色)
@@ -50,7 +110,7 @@ export const GET = withErrorHandler(async (request: NextRequest) => {
     let myTasks = 0
     if (userId) {
         const taskWhere: any = { status: { in: ['pending', 'in_progress'] } }
-        if (!userRoles.includes('admin') && !userRoles.includes('lab_director')) {
+        if (!isAdmin) {
             taskWhere.assignedToId = userId
         }
         myTasks = await prisma.testTask.count({ where: taskWhere })
@@ -58,11 +118,10 @@ export const GET = withErrorHandler(async (request: NextRequest) => {
 
     return success({
         pendingEntrustments,
-        testingSamples,
+        testingSamples: testingSamplesCount,
         pendingReports,
         completedThisMonth,
         pendingApprovals,
         myTasks,
     })
 })
-

@@ -1,20 +1,39 @@
 import { prisma } from '@/lib/prisma'
 import { NextRequest } from 'next/server'
 import { withAuth, success } from '@/lib/api-handler'
+import { generateReceivableNo } from '@/lib/generate-no'
 
 // 获取应收账款列表 - 需要登录
 export const GET = withAuth(async (request: NextRequest, user) => {
   const { searchParams } = new URL(request.url)
   const page = parseInt(searchParams.get('page') || '1')
   const pageSize = parseInt(searchParams.get('pageSize') || '10')
+  const keyword = searchParams.get('keyword')
+  const status = searchParams.get('status')
+
+  const where: Record<string, unknown> = {}
+  if (keyword) {
+    where.OR = [
+      { receivableNo: { contains: keyword } },
+      { clientName: { contains: keyword } },
+    ]
+  }
+  if (status) {
+    where.status = status
+  }
 
   const [list, total] = await Promise.all([
     prisma.financeReceivable.findMany({
+      where,
+      include: {
+        invoices: { select: { invoiceNo: true, totalAmount: true, status: true } },
+        entrustment: { select: { entrustmentNo: true, followerId: true } },
+      },
       orderBy: { createdAt: 'desc' },
       skip: (page - 1) * pageSize,
       take: pageSize,
     }),
-    prisma.financeReceivable.count(),
+    prisma.financeReceivable.count({ where }),
   ])
 
   return success({ list, total, page, pageSize })
@@ -23,6 +42,21 @@ export const GET = withAuth(async (request: NextRequest, user) => {
 // 创建应收账款 - 需要登录
 export const POST = withAuth(async (request: NextRequest, user) => {
   const data = await request.json()
-  const receivable = await prisma.financeReceivable.create({ data })
+
+  // 自动生成编号
+  const receivableNo = data.receivableNo || await generateReceivableNo()
+
+  const receivable = await prisma.financeReceivable.create({
+    data: {
+      receivableNo,
+      entrustmentId: data.entrustmentId || null,
+      clientName: data.clientName || '',
+      amount: data.amount || 0,
+      receivedAmount: data.receivedAmount || 0,
+      status: data.status || 'pending',
+      dueDate: data.dueDate ? new Date(data.dueDate) : null,
+      remark: data.remark || null,
+    }
+  })
   return success(receivable)
 })

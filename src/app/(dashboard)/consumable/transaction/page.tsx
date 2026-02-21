@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import { showSuccess, showError } from '@/lib/confirm'
-import { Card, Table, Button, Modal, Form, Input, InputNumber, Select, message, Space, Tag, Row, Col, Statistic } from 'antd'
+import { Card, Table, Button, Modal, Form, Input, InputNumber, Select, message, Space, Tag, Row, Col, Statistic, DatePicker } from 'antd'
 import { ImportOutlined, ExportOutlined, ReloadOutlined } from '@ant-design/icons'
 import type { ColumnsType, TablePaginationConfig } from 'antd/es/table'
 import dayjs from 'dayjs'
@@ -13,6 +13,12 @@ interface Consumable {
   name: string
   unit: string
   unitPrice: number
+}
+
+interface Entrustment {
+  id: string
+  entrustmentNo: string
+  client?: { name: string } | null
 }
 
 interface StockTransaction {
@@ -51,12 +57,14 @@ const reasonOptions = {
 export default function StockTransactionPage() {
   const [transactions, setTransactions] = useState<StockTransaction[]>([])
   const [consumables, setConsumables] = useState<Consumable[]>([])
+  const [entrustments, setEntrustments] = useState<Entrustment[]>([])
   const [loading, setLoading] = useState(false)
   const [modalOpen, setModalOpen] = useState(false)
   const [submitting, setSubmitting] = useState(false)
   const [transactionType, setTransactionType] = useState<'in' | 'out'>('in')
   const [typeFilter, setTypeFilter] = useState<string | null>(null)
   const [keyword, setKeyword] = useState('')
+  const [dateRange, setDateRange] = useState<[any, any] | null>(null)
   const [pagination, setPagination] = useState({ current: 1, pageSize: 10, total: 0 })
   const [stats, setStats] = useState({ inTotal: 0, outTotal: 0 })
   const [form] = Form.useForm()
@@ -74,6 +82,19 @@ export default function StockTransactionPage() {
     }
   }, [])
 
+  // 加载委托单列表（出库关联用）
+  const loadEntrustments = useCallback(async () => {
+    try {
+      const res = await fetch('/api/entrustment?pageSize=200')
+      const data = await res.json()
+      if (data.success) {
+        setEntrustments(data.data.list || [])
+      }
+    } catch {
+      // 加载失败不影响主功能
+    }
+  }, [])
+
   // 加载出入库记录
   const loadData = useCallback(async () => {
     setLoading(true)
@@ -84,6 +105,10 @@ export default function StockTransactionPage() {
       })
       if (typeFilter) params.append('type', typeFilter)
       if (keyword) params.append('keyword', keyword)
+      if (dateRange && dateRange[0] && dateRange[1]) {
+        params.append('startDate', dateRange[0].format('YYYY-MM-DD'))
+        params.append('endDate', dateRange[1].format('YYYY-MM-DD'))
+      }
 
       const res = await fetch(`/api/consumable-transaction?${params}`)
       const data = await res.json()
@@ -99,11 +124,12 @@ export default function StockTransactionPage() {
     } finally {
       setLoading(false)
     }
-  }, [pagination.current, pagination.pageSize, typeFilter, keyword])
+  }, [pagination.current, pagination.pageSize, typeFilter, keyword, dateRange])
 
   useEffect(() => {
     loadConsumables()
-  }, [loadConsumables])
+    loadEntrustments()
+  }, [loadConsumables, loadEntrustments])
 
   useEffect(() => {
     loadData()
@@ -253,7 +279,7 @@ export default function StockTransactionPage() {
       </Row>
 
       <Card>
-        <Space style={{ marginBottom: 16 }}>
+        <Space style={{ marginBottom: 16, whiteSpace: 'nowrap' }}>
           <Input.Search
             placeholder="搜索单据编号/名称"
             value={keyword}
@@ -271,6 +297,11 @@ export default function StockTransactionPage() {
               { value: 'out', label: '出库' },
             ]}
             style={{ width: 100 }}
+          />
+          <DatePicker.RangePicker
+            value={dateRange}
+            onChange={(dates) => { setDateRange(dates); setPagination(p => ({ ...p, current: 1 })) }}
+            style={{ width: 240 }}
           />
         </Space>
 
@@ -322,9 +353,18 @@ export default function StockTransactionPage() {
           <Form.Item name="transactionDate" label="日期" rules={[{ required: true }]}>
             <Input type="date" />
           </Form.Item>
-          {transactionType === 'in' && (
-            <Form.Item name="relatedOrder" label="关联采购单">
-              <Input placeholder="如: PO202601050001" />
+          {transactionType === 'out' && (
+            <Form.Item name="relatedOrder" label="关联委托单">
+              <Select
+                showSearch
+                allowClear
+                placeholder="选择委托单（可选）"
+                optionFilterProp="label"
+                options={entrustments.map(e => ({
+                  value: e.entrustmentNo,
+                  label: `${e.entrustmentNo}${e.client?.name ? ' - ' + e.client.name : ''}`,
+                }))}
+              />
             </Form.Item>
           )}
           <Form.Item name="remark" label="备注">

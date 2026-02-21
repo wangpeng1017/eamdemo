@@ -98,6 +98,16 @@ const allMenuItems: MenuItem[] = [
     ],
   },
   {
+    key: '/consumable',
+    icon: <ExperimentOutlined />,
+    label: '耗材管理',
+    permissionCode: 'menu:consumable',
+    children: [
+      { key: '/consumable/info', label: '耗材信息', permissionCode: 'menu:consumable:info' },
+      { key: '/consumable/transaction', label: '出入库管理', permissionCode: 'menu:consumable:transaction' },
+    ],
+  },
+  {
     key: '/outsource',
     icon: <BankOutlined />,
     label: '外包管理',
@@ -122,6 +132,19 @@ const allMenuItems: MenuItem[] = [
     icon: <BarChartOutlined />,
     label: '统计报表',
     permissionCode: 'menu:statistics',
+    children: [
+      { key: '/statistics', label: '业务概览', permissionCode: 'menu:statistics' },
+      { key: '/statistics/entrustment', label: '委托统计', permissionCode: 'menu:statistics' },
+      { key: '/statistics/sample', label: '样品统计', permissionCode: 'menu:statistics' },
+      { key: '/statistics/task', label: '任务统计', permissionCode: 'menu:statistics' },
+      { key: '/statistics/finance', label: '财务统计', permissionCode: 'menu:statistics' },
+    ],
+  },
+  {
+    key: '/system-document',
+    icon: <FileTextOutlined />,
+    label: '体系文件',
+    permissionCode: 'menu:system-document',
   },
   {
     key: '/basic-data',
@@ -131,7 +154,6 @@ const allMenuItems: MenuItem[] = [
     children: [
       { key: '/basic-data/inspection-standards', label: '检测标准', permissionCode: 'menu:basic-data:inspection-standards' },
       { key: '/basic-data/test-templates', label: '检测项目', permissionCode: 'menu:basic-data:test-templates' },
-      { key: '/basic-data/report-categories', label: '报告分类', permissionCode: 'menu:basic-data:report-categories' },
       { key: '/basic-data/personnel-capability', label: '人员资质', permissionCode: 'menu:basic-data:personnel-capability' },
       { key: '/basic-data/capability-review', label: '能力评审', permissionCode: 'menu:basic-data:capability-review' },
     ],

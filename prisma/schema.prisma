@@ -1004,6 +1004,7 @@ model FinanceInvoice {
   status        String    @default("pending") // pending/issued
   issuedDate    DateTime? // 开票日期
   paymentDate   DateTime? // 回款日期
+  attachments   String?   @db.Text // JSON 附件列表
   remark        String?   @db.Text
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
@@ -1372,6 +1373,8 @@ model TestTemplate {
   unit       String?  @db.VarChar(20)          // 默认单位
   version    String   @default("1.0") @db.VarChar(20)
   schema     String   @db.LongText             // JSON 表单结构
+  originalRecordTemplateUrl String? @db.VarChar(500) // 原始记录 docx 模板路径
+  clientReportTemplateUrl   String? @db.VarChar(500) // 客户报告 docx 模板路径
   status     String   @default("active")       // active/archived
   author     String?  @db.VarChar(50)
   createdAt  DateTime @default(now())

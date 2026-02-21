@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react'
 import { showSuccess, showError } from '@/lib/confirm'
 import { Table, Button, Space, Tag, Modal, Select, Card, Statistic, Row, Col, Form, Input, Divider, Drawer, Descriptions, Tabs, Timeline, Popconfirm } from 'antd'
-import { PlusOutlined, EyeOutlined, EditOutlined, PrinterOutlined, SendOutlined, DeleteOutlined, FileTextOutlined } from '@ant-design/icons'
+import { PlusOutlined, EyeOutlined, EditOutlined, PrinterOutlined, SendOutlined, DeleteOutlined, FileTextOutlined, DownloadOutlined } from '@ant-design/icons'
 import type { ColumnsType } from 'antd/es/table'
 import dayjs from 'dayjs'
 import { useRouter } from 'next/navigation'
@@ -221,6 +221,46 @@ export default function ClientReportGeneratePage() {
         window.open(`/report/client/${record.id}`, '_blank')
     }
 
+    // 导出 Word
+    const handleExportWord = async (record: ClientReport) => {
+        try {
+            const res = await fetch(`/api/report/client/${record.id}/export/docx`)
+            if (!res.ok) {
+                showError('导出 Word 失败')
+                return
+            }
+            const blob = await res.blob()
+            const url = URL.createObjectURL(blob)
+            const a = document.createElement('a')
+            a.href = url
+            a.download = `${record.reportNo}.docx`
+            a.click()
+            URL.revokeObjectURL(url)
+        } catch {
+            showError('导出 Word 失败')
+        }
+    }
+
+    // 导出 PDF
+    const handleExportPdf = async (record: ClientReport) => {
+        try {
+            const res = await fetch(`/api/report/client/${record.id}/export/pdf`)
+            if (!res.ok) {
+                showError('导出 PDF 失败')
+                return
+            }
+            const blob = await res.blob()
+            const url = URL.createObjectURL(blob)
+            const a = document.createElement('a')
+            a.href = url
+            a.download = `${record.reportNo}.pdf`
+            a.click()
+            URL.revokeObjectURL(url)
+        } catch {
+            showError('导出 PDF 失败')
+        }
+    }
+
     // 提交审批（直接更新状态，不弹窗）
     const handleSubmitApproval = async (record: ClientReport) => {
         setSubmitting(true)
@@ -308,6 +348,12 @@ export default function ClientReportGeneratePage() {
                             提交
                         </Button>
                     )}
+                    <Button size="small" icon={<DownloadOutlined />} onClick={() => handleExportWord(record)}>
+                        Word
+                    </Button>
+                    <Button size="small" icon={<DownloadOutlined />} onClick={() => handleExportPdf(record)}>
+                        PDF
+                    </Button>
                     <Button size="small" icon={<PrinterOutlined />} onClick={() => handlePrint(record)}>
                         打印
                     </Button>

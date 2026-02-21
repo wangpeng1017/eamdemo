@@ -73,6 +73,10 @@ sshpass -p "$SERVER_PASS" ssh -o StrictHostKeyChecking=no -o ServerAliveInterval
  cp standalone/server.js . && \
  cp standalone/package.json . 2>/dev/null || true && \
  cp .env standalone/ 2>/dev/null || true && \
+ echo '🔧 修复 outputFileTracingRoot 路径...' && \
+ sed -i 's|/Users/wangpeng/Downloads/limsnext|$REMOTE_DIR|g' server.js && \
+ sed -i 's|/Users/wangpeng/Downloads/limsnext|$REMOTE_DIR|g' .next/required-server-files.json && \
+ echo '✅ 路径已替换为 $REMOTE_DIR' && \
  rm -rf standalone static standalone.tar.gz public.tar.gz && \
  npx prisma generate && \
  node update-db-schema.js && \

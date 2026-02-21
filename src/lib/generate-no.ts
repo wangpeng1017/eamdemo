@@ -2,22 +2,25 @@ import { prisma } from './prisma'
 
 /**
  * 编号前缀配置
+ * 统一使用中文拼音首字母缩写
+ * 格式: 前缀 + YYYYMMDD + 0001（4位递增序号）
  */
 export const NumberPrefixes = {
   CONSULTATION: 'ZX',    // 咨询单
   QUOTATION: 'BJ',       // 报价单
   CONTRACT: 'HT',        // 合同
   ENTRUSTMENT: 'WT',     // 委托单
-  SAMPLE: 'S',           // 样品
-  TASK: 'T',             // 任务
-  REPORT: 'RPT',         // 报告
-  CLIENT_REPORT: 'CR',   // 客户报告
+  SAMPLE: 'YP',          // 样品
+  TASK: 'RW',            // 任务
+  REPORT: 'RWBG',        // 任务报告（内部）
+  CLIENT_REPORT: 'BG',   // 客户报告
   RECEIVABLE: 'AR',      // 应收
   INVOICE: 'INV',        // 发票
   REPAIR: 'WX',          // 维修
   PAYMENT: 'PM',         // 收款
   STOCK_IN: 'RK',        // 入库
   STOCK_OUT: 'CK',       // 出库
+  OUTSOURCE: 'WW',       // 委外订单
 } as const
 
 export type NumberPrefix = typeof NumberPrefixes[keyof typeof NumberPrefixes]
@@ -67,19 +70,20 @@ async function getNextCounter(prefix: string, date: string): Promise<number> {
 
 /**
  * 生成业务编号
- * 格式: 前缀 + 日期(YYYYMMDD) + 序号(3-4位)
+ * 统一格式: 前缀 + 日期(YYYYMMDD) + 序号(4位)
  *
  * @param prefix 编号前缀
- * @param padLength 序号位数，默认3位
+ * @param padLength 序号位数，默认4位
  * @returns 生成的编号
  *
  * @example
- * generateNo('ZX') => 'ZX20260105001'
- * generateNo('WT', 4) => 'WT202601050001'
+ * generateNo('ZX') => 'ZX202602130001'
+ * generateNo('WT') => 'WT202602130001'
+ * generateNo('YP') => 'YP202602130001'
  */
 export async function generateNo(
   prefix: NumberPrefix,
-  padLength: number = 3
+  padLength: number = 4
 ): Promise<string> {
   const today = getTodayString()
 
@@ -129,22 +133,22 @@ async function generateNoFallback(
         where: { entrustmentNo: { startsWith: searchPattern } }
       })
       break
-    case 'S':
+    case 'YP':
       count = await prisma.sample.count({
         where: { sampleNo: { startsWith: searchPattern } }
       })
       break
-    case 'T':
+    case 'RW':
       count = await prisma.testTask.count({
         where: { taskNo: { startsWith: searchPattern } }
       })
       break
-    case 'RPT':
+    case 'RWBG':
       count = await prisma.testReport.count({
         where: { reportNo: { startsWith: searchPattern } }
       })
       break
-    case 'CR':
+    case 'BG':
       count = await prisma.clientReport.count({
         where: { reportNo: { startsWith: searchPattern } }
       })
@@ -168,6 +172,11 @@ async function generateNoFallback(
       // FinancePayment 没有单独的编号字段，使用记录数
       count = await prisma.financePayment.count()
       break
+    case 'WW':
+      count = await prisma.outsourceOrder.count({
+        where: { orderNo: { startsWith: searchPattern } }
+      })
+      break
     default:
       count = 0
   }
@@ -176,77 +185,60 @@ async function generateNoFallback(
 }
 
 /**
- * 生成报告编号
- * 格式: RPT-YYYYMMDD-XXX
+ * 生成任务报告编号（内部报告）
+ * 格式: RWBG + YYYYMMDD + NNNN
+ *
+ * @example 'RWBG202602130001'
  */
 export async function generateReportNo(): Promise<string> {
-  const today = getTodayString()
-  const searchPattern = `RPT-${today}`
-
-  try {
-    const counter = await getNextCounter('RPT', today)
-    return `RPT-${today}-${String(counter).padStart(3, '0')}`
-  } catch {
-    const count = await prisma.testReport.count({
-      where: { reportNo: { startsWith: searchPattern } }
-    })
-    return `RPT-${today}-${String(count + 1).padStart(3, '0')}`
-  }
+  return generateNo(NumberPrefixes.REPORT)
 }
 
 /**
  * 生成客户报告编号
- * 格式: CR-YYYYMMDD-XXX
+ * 格式: BG + YYYYMMDD + NNNN
+ *
+ * @example 'BG202602130001'
  */
 export async function generateClientReportNo(): Promise<string> {
-  const today = getTodayString()
-  const searchPattern = `CR-${today}`
+  return generateNo(NumberPrefixes.CLIENT_REPORT)
+}
 
-  try {
-    const counter = await getNextCounter('CR', today)
-    return `CR-${today}-${String(counter).padStart(3, '0')}`
-  } catch {
-    const count = await prisma.clientReport.count({
-      where: { reportNo: { startsWith: searchPattern } }
-    })
-    return `CR-${today}-${String(count + 1).padStart(3, '0')}`
-  }
+/**
+ * 生成客户报告子编号
+ * 用于同一委托单下多个客户报告的编号
+ *
+ * @param baseNo 基础报告编号（如 BG202602130001）
+ * @param subIndex 子序号（从1开始）
+ * @returns 带子编号的报告编号（如 BG202602130001-001）
+ *
+ * @example
+ * generateClientReportSubNo('BG202602130001', 1) => 'BG202602130001-001'
+ * generateClientReportSubNo('BG202602130001', 2) => 'BG202602130001-002'
+ */
+export function generateClientReportSubNo(
+  baseNo: string,
+  subIndex: number
+): string {
+  return `${baseNo}-${String(subIndex).padStart(3, '0')}`
 }
 
 /**
  * 生成应收编号
- * 格式: AR-YYYYMMDD-XXX
+ * 格式: AR + YYYYMMDD + NNNN
+ *
+ * @example 'AR202602130001'
  */
 export async function generateReceivableNo(): Promise<string> {
-  const today = getTodayString()
-  const searchPattern = `AR-${today}`
-
-  try {
-    const counter = await getNextCounter('AR', today)
-    return `AR-${today}-${String(counter).padStart(3, '0')}`
-  } catch {
-    const count = await prisma.financeReceivable.count({
-      where: { receivableNo: { startsWith: searchPattern } }
-    })
-    return `AR-${today}-${String(count + 1).padStart(3, '0')}`
-  }
+  return generateNo(NumberPrefixes.RECEIVABLE)
 }
 
 /**
  * 生成发票编号
- * 格式: INV-YYYYMMDD-XXX
+ * 格式: INV + YYYYMMDD + NNNN
+ *
+ * @example 'INV202602130001'
  */
 export async function generateInvoiceNo(): Promise<string> {
-  const today = getTodayString()
-  const searchPattern = `INV-${today}`
-
-  try {
-    const counter = await getNextCounter('INV', today)
-    return `INV-${today}-${String(counter).padStart(3, '0')}`
-  } catch {
-    const count = await prisma.financeInvoice.count({
-      where: { invoiceNo: { startsWith: searchPattern } }
-    })
-    return `INV-${today}-${String(count + 1).padStart(3, '0')}`
-  }
+  return generateNo(NumberPrefixes.INVOICE)
 }

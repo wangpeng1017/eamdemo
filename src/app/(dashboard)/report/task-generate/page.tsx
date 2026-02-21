@@ -1,12 +1,14 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import React, { useState, useEffect } from 'react'
 import { showSuccess, showError } from '@/lib/confirm'
 import { Table, Button, Space, Tag, Modal, Select, Card, Statistic, Row, Col, Drawer, Descriptions, Tabs, Timeline, Form, Input, Popconfirm } from 'antd'
 import { PlusOutlined, EyeOutlined, EditOutlined, PrinterOutlined, SendOutlined, FileTextOutlined, DeleteOutlined } from '@ant-design/icons'
 import type { ColumnsType } from 'antd/es/table'
 import dayjs from 'dayjs'
 import { useRouter } from 'next/navigation'
+import TestReportPrint from '@/components/business/TestReportPrint'
+import type { ReportPrintData } from '@/components/business/TestReportPrint'
 
 interface TestReport {
   id: string
@@ -77,6 +79,11 @@ export default function TestReportPage() {
 
   // 提交审批状态
   const [submitting, setSubmitting] = useState(false)
+
+  // 打印相关状态
+  const [printData, setPrintData] = useState<ReportPrintData | null>(null)
+  const [showPrint, setShowPrint] = useState(false)
+  const printRef = React.useRef<HTMLDivElement>(null)
 
   const fetchData = async (p = page) => {
     setLoading(true)
@@ -188,14 +195,49 @@ export default function TestReportPage() {
     router.push(`/report/task/${record.id}`)
   }
 
-  // 打印（新窗口打开打印视图）
-  const handlePrint = (record: TestReport) => {
-    // 打开打印视图后自动触发打印
-    const printWindow = window.open(`/report/task/${record.id}`, '_blank')
-    if (printWindow) {
-      printWindow.addEventListener('load', () => {
-        setTimeout(() => printWindow.print(), 500)
-      })
+  // 打印（使用专用打印组件，参考委托单打印模式）
+  const handlePrint = async (record: TestReport) => {
+    try {
+      // 解析检测数据
+      let testResults: any[] = []
+      if (record.testResults) {
+        try {
+          const parsed = typeof record.testResults === 'string'
+            ? JSON.parse(record.testResults)
+            : record.testResults
+          testResults = Array.isArray(parsed) ? parsed : []
+        } catch (e) {
+          testResults = []
+        }
+      }
+
+      const pd: ReportPrintData = {
+        reportNo: record.reportNo,
+        clientName: record.clientName || '',
+        sampleName: record.sampleName || '',
+        sampleNo: record.sampleNo || '',
+        specification: record.specification || '',
+        sampleQuantity: record.sampleQuantity || '',
+        receivedDate: record.receivedDate || '',
+        tester: record.tester || '',
+        reviewer: record.reviewer || '',
+        overallConclusion: record.overallConclusion || '',
+        createdAt: record.createdAt,
+        issuedDate: record.issuedDate || '',
+        taskNo: record.task?.taskNo || '',
+        testResults,
+      }
+
+      setPrintData(pd)
+      setShowPrint(true)
+
+      // 延迟后触发打印
+      setTimeout(() => {
+        window.print()
+      }, 500)
+    } catch (e) {
+      console.error('打印准备失败:', e)
+      showError('准备打印数据失败')
     }
   }
 
@@ -495,6 +537,12 @@ export default function TestReportPage() {
         </div>
       </Modal>
 
+      {/* 打印区域（隐藏，仅打印时可见） */}
+      {showPrint && printData && (
+        <div id="report-print-wrapper" style={{ position: 'fixed', top: '-9999px', left: '-9999px' }}>
+          <TestReportPrint ref={printRef} data={printData} />
+        </div>
+      )}
 
     </div>
   )

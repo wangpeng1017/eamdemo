@@ -12,7 +12,7 @@
 | api.ts | 工具 | API 请求封装 |
 | api-handler.ts | 工具 | API 路由处理器封装 |
 | constants.ts | 配置 | 系统常量定义 |
-| generate-no.ts | 工具 | 单据编号生成器 |
-| numberGenerator.ts | 工具 | 数字序列生成器 |
+| generate-no.ts | 工具 | 统一编号生成器（原子计数器） |
+| generate-client-reports.ts | 工具 | 委托单自动生成客户报告 |
 | statusFlow.ts | 工具 | 状态流转逻辑 |
 | utils/ | 目录 | 工具函数集合 |

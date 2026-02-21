@@ -74,6 +74,15 @@ const MENU_TREE = [
         ],
     },
     {
+        key: '/consumable',
+        label: '耗材管理',
+        code: 'menu:consumable',
+        children: [
+            { key: '/consumable/info', label: '耗材信息', code: 'menu:consumable:info' },
+            { key: '/consumable/transaction', label: '出入库管理', code: 'menu:consumable:transaction' },
+        ],
+    },
+    {
         key: '/outsource',
         label: '外包管理',
         code: 'menu:outsource',
@@ -95,6 +104,11 @@ const MENU_TREE = [
         key: '/statistics',
         label: '统计报表',
         code: 'menu:statistics',
+    },
+    {
+        key: '/system-document',
+        label: '体系文件',
+        code: 'menu:system-document',
     },
     {
         key: '/basic-data',
@@ -201,8 +215,34 @@ async function syncPermissions() {
     console.log(`  总计: ${upsertCount} 条`)
     console.log(`  新增: ${createdCount} 条`)
     console.log(`  更新: ${updatedCount} 条`)
-    console.log(`  ⚠️ 已有的 RolePermission 关联完整保留`)
     console.log('='.repeat(50))
+
+    // 自动给所有角色分配全部菜单权限（确保管理员和秦兴国等用户不会缺失新菜单）
+    console.log('\n🔑 开始自动授权全部角色...')
+    const allPerms = await prisma.permission.findMany({ where: { status: 1 } })
+    const allRoles = await prisma.role.findMany()
+    let grantCount = 0
+
+    for (const role of allRoles) {
+        const existingPerms = await prisma.rolePermission.findMany({
+            where: { roleId: role.id },
+            select: { permissionId: true }
+        })
+        const existingSet = new Set(existingPerms.map(rp => rp.permissionId))
+
+        const missing = allPerms.filter(p => !existingSet.has(p.id))
+        if (missing.length > 0) {
+            await prisma.rolePermission.createMany({
+                data: missing.map(p => ({ roleId: role.id, permissionId: p.id })),
+                skipDuplicates: true,
+            })
+            grantCount += missing.length
+            console.log(`  ✅ ${role.name}: 新增 ${missing.length} 条权限`)
+        }
+    }
+
+    console.log(`\n🔑 授权完成，共新增 ${grantCount} 条角色权限关联`)
+    console.log('  ⚠️ 已有的 RolePermission 关联完整保留')
 
     await prisma.$disconnect()
 }

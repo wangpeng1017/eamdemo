@@ -92,7 +92,7 @@ export const POST = withAuth(async (request: NextRequest, user) => {
 
   validateRequired(data, ['supplierId'])
 
-  const orderNo = await generateNo(NumberPrefixes.ENTRUSTMENT, 4)
+  const orderNo = await generateNo(NumberPrefixes.OUTSOURCE)
 
   const order = await prisma.outsourceOrder.create({
     data: {

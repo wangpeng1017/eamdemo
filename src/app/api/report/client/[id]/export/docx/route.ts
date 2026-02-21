@@ -1,12 +1,12 @@
-
 import { prisma } from '@/lib/prisma'
 import { NextRequest } from 'next/server'
-import { withErrorHandler, success, notFound } from '@/lib/api-handler'
-import { Document, Packer, Paragraph, TextRun, AlignmentType, HeadingLevel, ImageRun, BorderStyle } from 'docx'
-import { saveAs } from 'file-saver'
+import { withErrorHandler, notFound } from '@/lib/api-handler'
+import { renderDocx, prepareClientReportData } from '@/lib/docx-renderer'
 
 /**
- * 导出客户报告为 Word
+ * 导出客户报告为 Word（使用 docxtemplater 模板渲染）
+ * 优先使用 ReportTemplate.fileUrl 中配置的模板，
+ * 回退默认使用 public/templates/qct-client-report.docx
  */
 export const GET = withErrorHandler(async (
   request: NextRequest,
@@ -14,7 +14,7 @@ export const GET = withErrorHandler(async (
 ) => {
   const { id } = await context!.params
 
-  // 获取报告数据
+  // 获取报告数据及关联信息
   const report = await prisma.clientReport.findUnique({
     where: { id },
     include: {
@@ -22,6 +22,23 @@ export const GET = withErrorHandler(async (
         select: {
           name: true,
           fileUrl: true,
+        }
+      },
+      // 获取关联的任务报告及其任务数据
+      tasks: {
+        include: {
+          task: {
+            include: {
+              sample: true,
+              assignedTo: { select: { name: true } },
+              testData: true,
+              entrustmentProject: {
+                select: {
+                  entrustmentId: true,
+                }
+              }
+            }
+          }
         }
       }
     }
@@ -31,131 +48,63 @@ export const GET = withErrorHandler(async (
     notFound('客户报告不存在')
   }
 
-  // 解析 JSON 字段
-  const coverData = report.coverData ? JSON.parse(report.coverData) : null
-  const backCoverData = report.backCoverData ? JSON.parse(report.backCoverData) : null
+  // 加载委托单信息
+  let entrustment = null
+  if (report.entrustmentId) {
+    entrustment = await prisma.entrustment.findUnique({
+      where: { id: report.entrustmentId },
+      include: { client: true },
+    })
+  }
 
-  // 创建 Word 文档
-  const doc = new Document({
-    sections: [{
-      properties: {},
-      children: [
-        // 封面
-        new Paragraph({
-          text: '检测报告',
-          heading: HeadingLevel.HEADING_1,
-          alignment: AlignmentType.CENTER,
-          spacing: {
-            after: 400,
-          }
-        }),
+  // 获取第一个关联任务（用于数据准备）
+  const firstTaskReport = report.tasks?.[0]
+  const task = firstTaskReport?.task || null
+  const sample = task?.sample || null
 
-        // 封面文字
-        ...(coverData?.text ? [
-          new Paragraph({
-            children: [
-              new TextRun({
-                text: coverData.text,
-                size: 24,
-              })
-            ],
-            alignment: AlignmentType.CENTER,
-            spacing: {
-              after: 400,
-            }
-          })
-        ] : []),
+  // 使用 docx-renderer 准备数据
+  const data = prepareClientReportData(task, entrustment, sample, report)
 
-        // 分页
-        new Paragraph({
-          children: [],
-          pageBreakBefore: true,
-        }),
+  // 用 ClientReport 自身字段覆盖/补充（比 task 级别更准确）
+  data.reportNo = report.reportNo
+  data.clientName = report.clientName
+  data.clientAddress = report.clientAddress || data.clientAddress || ''
+  data.sampleName = report.sampleName
+  data.sampleNo = report.sampleNo || data.sampleNo || ''
+  data.specification = report.specification || data.specification || ''
+  data.sampleQuantity = report.sampleQuantity || data.sampleQuantity || ''
+  data.preparer = report.preparer || data.preparer || ''
+  data.reviewer = report.reviewer || ''
+  data.approver = report.approver || ''
+  data.overallConclusion = report.overallConclusion || ''
+  data.projectName = report.projectName || ''
 
-        // 基本信息
-        new Paragraph({
-          text: '基本信息',
-          heading: HeadingLevel.HEADING_2,
-          spacing: {
-            before: 200,
-            after: 200,
-          }
-        }),
+  // 检测项目和依据
+  if (report.testItems) {
+    try {
+      data.testItems = JSON.parse(report.testItems).join('、')
+    } catch { /* 忽略解析错误 */ }
+  }
+  if (report.testStandards) {
+    try {
+      data.testStandards = JSON.parse(report.testStandards).join('、')
+    } catch { /* 忽略解析错误 */ }
+  }
 
-        createInfoRow('报告编号：', report.reportNo),
-        createInfoRow('客户名称：', report.clientName),
-        createInfoRow('客户地址：', report.clientAddress || '-'),
-        createInfoRow('样品名称：', report.sampleName),
-        createInfoRow('样品编号：', report.sampleNo || '-'),
-        createInfoRow('规格型号：', report.specification || '-'),
-        createInfoRow('样品数量：', report.sampleQuantity || '-'),
-        createInfoRow('检测项目：', report.projectName || '-'),
+  // 日期字段
+  data.receivedDate = report.receivedDate
+    ? new Date(report.receivedDate).toLocaleDateString('zh-CN')
+    : data.receivedDate || ''
+  data.issuedDate = report.issuedDate
+    ? new Date(report.issuedDate).toLocaleDateString('zh-CN')
+    : ''
+  data.reportDate = new Date(report.createdAt).toLocaleDateString('zh-CN')
 
-        // 检测结论
-        ...(report.overallConclusion ? [
-          new Paragraph({
-            text: '检测结论',
-            heading: HeadingLevel.HEADING_2,
-            spacing: {
-              before: 200,
-              after: 200,
-            }
-          }),
-          new Paragraph({
-            children: [
-              new TextRun({
-                text: report.overallConclusion,
-                size: 24,
-              })
-            ],
-            spacing: {
-              after: 200,
-            }
-          })
-        ] : []),
+  // 确定模板文件路径（优先使用 ReportTemplate 配置，回退默认模板）
+  const templateFile = report.template?.fileUrl || 'qct-client-report.docx'
 
-        // 编制信息
-        new Paragraph({
-          text: '编制信息',
-          heading: HeadingLevel.HEADING_2,
-          spacing: {
-            before: 200,
-            after: 200,
-          }
-        }),
-
-        createInfoRow('编制人：', report.preparer || '-'),
-        createInfoRow('审核人：', report.reviewer || '-'),
-        createInfoRow('批准人：', report.approver || '-'),
-
-        // 分页（封底）
-        new Paragraph({
-          children: [],
-          pageBreakBefore: true,
-        }),
-
-        // 封底文字
-        ...(backCoverData?.text ? [
-          new Paragraph({
-            children: [
-              new TextRun({
-                text: backCoverData.text,
-                size: 24,
-              })
-            ],
-            alignment: AlignmentType.CENTER,
-          })
-        ] : []),
-      ]
-    }]
-  })
-
-  // 生成 Word 缓冲区
-  const buffer = await Packer.toBuffer(doc)
-
-  // 保存 Word 文件（可选：上传到 OSS）
-  // const fileUrl = await uploadToOSS(buffer, `${report.reportNo}.docx`)
-  const fileUrl = null
+  // 渲染 docx
+  const buffer = renderDocx(templateFile, data)
 
   // 创建生成历史记录
   const latestHistory = await prisma.clientReportHistory.findFirst({
@@ -172,35 +121,16 @@ export const GET = withErrorHandler(async (
       generatedBy: 'system', // TODO: 从 session 获取用户信息
       snapshotData: JSON.stringify(report),
       exportFormat: 'word',
-      fileUrl: fileUrl,
+      fileUrl: null,
     }
   })
 
   // 返回 Word 文件
-  return new Response(buffer as any, {
+  const filename = encodeURIComponent(`${report.reportNo}.docx`)
+  return new Response(new Uint8Array(buffer), {
     headers: {
       'Content-Type': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-      'Content-Disposition': `attachment; filename="${encodeURIComponent(report.reportNo)}.docx"`,
+      'Content-Disposition': `attachment; filename="${filename}"; filename*=UTF-8''${filename}`,
     },
   })
 })
-
-// 辅助函数：创建信息行
-function createInfoRow(label: string, value: string) {
-  return new Paragraph({
-    children: [
-      new TextRun({
-        text: label,
-        bold: true,
-        size: 24,
-      }),
-      new TextRun({
-        text: value,
-        size: 24,
-      })
-    ],
-    spacing: {
-      after: 150,
-    }
-  })
-}

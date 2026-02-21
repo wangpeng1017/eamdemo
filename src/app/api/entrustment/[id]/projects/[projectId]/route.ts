@@ -134,7 +134,7 @@ export const PUT = withErrorHandler(async (request: NextRequest, context?: { par
       })
 
       // 使用统一的编号生成函数，避免重复
-      const taskNo = existingTask?.taskNo || await generateNo(NumberPrefixes.TASK, 3)
+      const taskNo = existingTask?.taskNo || await generateNo(NumberPrefixes.TASK)
 
       // 生成初始 sheetData（如果关联了模版）
       const sheetData = await generateSheetDataFromTemplate(data.testTemplateId || updatedProject.testTemplateId)
@@ -207,7 +207,7 @@ export const PUT = withErrorHandler(async (request: NextRequest, context?: { par
       })
 
       // 使用统一的编号生成函数，避免重复
-      const taskNo = existingTask?.taskNo || await generateNo(NumberPrefixes.TASK, 3)
+      const taskNo = existingTask?.taskNo || await generateNo(NumberPrefixes.TASK)
 
       // 生成初始 sheetData（如果关联了模版）
       const sheetData = await generateSheetDataFromTemplate(data.testTemplateId || updatedProject.testTemplateId)

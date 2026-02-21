@@ -90,6 +90,10 @@ export default function InspectionStandardsPage() {
   const [uploadedFileName, setUploadedFileName] = useState<string>('')
   const [uploading, setUploading] = useState(false)
 
+  // === 筛选 ===
+  const [filterName, setFilterName] = useState('')
+  const [filterStandard, setFilterStandard] = useState('')
+
   // === PDF 预览 ===
   const [pdfPreviewOpen, setPdfPreviewOpen] = useState(false)
   const [pdfPreviewUrl, setPdfPreviewUrl] = useState<string>('')
@@ -527,6 +531,14 @@ export default function InspectionStandardsPage() {
     return []
   }
 
+  // ==================== 筛选逻辑 ====================
+
+  const filteredItems = items.filter(item => {
+    const nameMatch = !filterName || (item.name || '').toLowerCase().includes(filterName.toLowerCase())
+    const stdMatch = !filterStandard || (item.executionStandard || '').toLowerCase().includes(filterStandard.toLowerCase())
+    return nameMatch && stdMatch
+  })
+
   // ==================== 表格列 ====================
 
   const columns: ColumnsType<InspectionItem> = [
@@ -545,24 +557,6 @@ export default function InspectionStandardsPage() {
     {
       title: '样本容量', dataIndex: 'sampleQuantity', width: 80, align: 'center',
       render: (v) => v || '-',
-    },
-    {
-      title: '检验材料', dataIndex: 'materialFile', width: 100, align: 'center',
-      render: (fileUrl: string | null, record: InspectionItem) => {
-        if (!fileUrl) return <Text type="secondary">-</Text>
-        return (
-          <Tooltip title="点击查看 PDF">
-            <Button
-              type="link"
-              size="small"
-              icon={<FilePdfOutlined style={{ color: '#e74c3c' }} />}
-              onClick={() => openPdfPreview(fileUrl, record.name)}
-            >
-              <span style={{ color: '#e74c3c' }}>查看</span>
-            </Button>
-          </Tooltip>
-        )
-      },
     },
     {
       title: '状态', dataIndex: 'approvalStatus', width: 110, align: 'center',
@@ -585,7 +579,6 @@ export default function InspectionStandardsPage() {
 
         return (
           <Space size="small">
-            {/* 草稿→提交审批 */}
             {isDraft && (
               <Tooltip title="提交审批">
                 <Button
@@ -598,17 +591,14 @@ export default function InspectionStandardsPage() {
                 />
               </Tooltip>
             )}
-            {/* 查看 */}
             <Tooltip title="查看">
               <Button size="small" icon={<EyeOutlined />} onClick={() => { setViewingItem(record); setViewDrawerOpen(true) }} />
             </Tooltip>
-            {/* 只有草稿和现行有效可编辑（现行有效编辑后变为草稿） */}
             {(isDraft || isEffective) && (
               <Tooltip title={isEffective ? '编辑（将变为草稿）' : '编辑'}>
                 <Button size="small" icon={<EditOutlined />} onClick={() => handleEditItem(record)} />
               </Tooltip>
             )}
-            {/* 草稿直接删除，现行有效需审批删除 */}
             {isDraft && (
               <Popconfirm
                 title="确认删除?"
@@ -633,7 +623,6 @@ export default function InspectionStandardsPage() {
                 </Tooltip>
               </Popconfirm>
             )}
-            {/* 审批中显示状态 */}
             {(isPending || isPendingDelete) && (
               <Tooltip title={isPendingDelete ? '删除审批中' : '审批中'}>
                 <CheckCircleOutlined style={{ color: '#1890ff', fontSize: 16 }} spin />
@@ -720,16 +709,35 @@ export default function InspectionStandardsPage() {
             }
           >
             {selectedKey ? (
-              <Table
-                rowKey="id"
-                columns={columns}
-                dataSource={items}
-                loading={loadingItems}
-                size="small"
-                pagination={false}
-                scroll={{ y: 'calc(100vh - 280px)' }}
-                locale={{ emptyText: '暂无检测项目' }}
-              />
+              <>
+                {/* 筛选栏 */}
+                <div style={{ display: 'flex', gap: 12, marginBottom: 12 }}>
+                  <Input
+                    placeholder="搜索检测项目"
+                    allowClear
+                    value={filterName}
+                    onChange={e => setFilterName(e.target.value)}
+                    style={{ width: 200 }}
+                  />
+                  <Input
+                    placeholder="搜索执行标准"
+                    allowClear
+                    value={filterStandard}
+                    onChange={e => setFilterStandard(e.target.value)}
+                    style={{ width: 200 }}
+                  />
+                </div>
+                <Table
+                  rowKey="id"
+                  columns={columns}
+                  dataSource={filteredItems}
+                  loading={loadingItems}
+                  size="small"
+                  pagination={false}
+                  scroll={{ y: 'calc(100vh - 330px)' }}
+                  locale={{ emptyText: '暂无检测项目' }}
+                />
+              </>
             ) : (
               <div style={{ textAlign: 'center', padding: 80, color: '#999' }}>
                 ← 请先选择左侧分类

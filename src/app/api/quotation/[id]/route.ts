@@ -46,7 +46,8 @@ export const GET = withAuth(async (
       approvals: {
         orderBy: { timestamp: 'desc' },
       },
-      client: true,  // 添加客户关联查询
+      client: true,
+      followerUser: { select: { id: true, name: true } },
     },
   })
 

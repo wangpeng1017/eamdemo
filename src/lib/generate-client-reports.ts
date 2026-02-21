@@ -7,7 +7,7 @@
  */
 
 import { prisma } from '@/lib/prisma'
-import { generateClientReportNo } from '@/lib/generate-no'
+import { generateClientReportNo, generateClientReportSubNo } from '@/lib/generate-no'
 
 export type GenerateClientReportsParams = {
   entrustmentId: string
@@ -49,13 +49,20 @@ export async function generateClientReportsForEntrustment(
     return []
   }
 
+  // 提前检查是否有数据需要生成，避免浪费编号
+  if (reportGrouping === 'by_sample' && samples.length === 0) return []
+  if (reportGrouping === 'by_project' && projects.length === 0) return []
+
   const results: CreatedReport[] = []
 
-  if (reportGrouping === 'by_sample') {
-    if (samples.length === 0) return []
+  // 生成一个基础编号，同一委托单下的所有报告共享基础编号
+  const baseNo = await generateClientReportNo()
+  let subIndex = 0
 
+  if (reportGrouping === 'by_sample') {
     for (const sample of samples) {
-      const reportNo = await generateClientReportNo()
+      subIndex++
+      const reportNo = generateClientReportSubNo(baseNo, subIndex)
       const record = await prisma.clientReport.create({
         data: {
           reportNo,
@@ -72,10 +79,9 @@ export async function generateClientReportsForEntrustment(
       results.push(record as unknown as CreatedReport)
     }
   } else if (reportGrouping === 'by_project') {
-    if (projects.length === 0) return []
-
     for (const project of projects) {
-      const reportNo = await generateClientReportNo()
+      subIndex++
+      const reportNo = generateClientReportSubNo(baseNo, subIndex)
       const record = await prisma.clientReport.create({
         data: {
           reportNo,
@@ -93,7 +99,7 @@ export async function generateClientReportsForEntrustment(
       results.push(record as unknown as CreatedReport)
     }
   } else if (reportGrouping === 'merged') {
-    const reportNo = await generateClientReportNo()
+    const reportNo = generateClientReportSubNo(baseNo, 1)
     const record = await prisma.clientReport.create({
       data: {
         reportNo,
