@@ -164,7 +164,6 @@ export default function SampleProcessingPage() {
         { title: '加工商', dataIndex: 'processorName', width: 150, ellipsis: true },
         {
             title: '加工类型', dataIndex: 'processType', width: 90,
-            render: (t: string) => processTypeMap[t] || t
         },
         {
             title: '送出日期', dataIndex: 'sentDate', width: 110,
@@ -290,7 +289,7 @@ export default function SampleProcessingPage() {
                         <Descriptions.Item label="样品名称">{currentRecord.sample?.name}</Descriptions.Item>
                         <Descriptions.Item label="样品编号">{currentRecord.sample?.sampleNo}</Descriptions.Item>
                         <Descriptions.Item label="加工商">{currentRecord.processorName}</Descriptions.Item>
-                        <Descriptions.Item label="加工类型">{processTypeMap[currentRecord.processType] || currentRecord.processType}</Descriptions.Item>
+                        <Descriptions.Item label="加工类型">{currentRecord.processType}</Descriptions.Item>
                         <Descriptions.Item label="加工描述" span={2}>{currentRecord.description || '-'}</Descriptions.Item>
                         <Descriptions.Item label="送出日期">{dayjs(currentRecord.sentDate).format('YYYY-MM-DD')}</Descriptions.Item>
                         <Descriptions.Item label="预计回样">{currentRecord.expectedReturnDate ? dayjs(currentRecord.expectedReturnDate).format('YYYY-MM-DD') : '-'}</Descriptions.Item>

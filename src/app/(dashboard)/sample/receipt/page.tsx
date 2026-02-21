@@ -460,14 +460,8 @@ export default function SampleReceiptPage() {
               </Form.Item>
             </Col>
             <Col span={12}>
-              <Form.Item name="processType" label="加工类型" rules={[{ required: true, message: '请选择加工类型' }]}>
-                <Select placeholder="选择加工类型" options={[
-                  { value: 'cutting', label: '切割' },
-                  { value: 'grinding', label: '研磨' },
-                  { value: 'mounting', label: '镶嵌' },
-                  { value: 'polishing', label: '抛光' },
-                  { value: 'other', label: '其他' },
-                ]} />
+              <Form.Item name="processType" label="加工类型" rules={[{ required: true, message: '请输入加工类型' }]}>
+                <Input placeholder="如：切割、研磨、镶嵌等" />
               </Form.Item>
             </Col>
           </Row>
