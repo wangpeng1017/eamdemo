@@ -354,7 +354,7 @@ export default function EntrustmentForm({ initialValues, mode, onSubmit, loading
                         </Form.Item>
                     </Col>
                     <Col span={8}>
-                        <Form.Item name="reportGrouping" label="报告出具方式">
+                        <Form.Item name="reportGrouping" label="报告出具方式" rules={[{ required: true, message: '请选择报告出具方式' }]}>
                             <Select placeholder="选择出具方式" allowClear onChange={(val) => setReportGroupingValue(val)} options={[
                                 { value: 'by_sample', label: '按样品出具' },
                                 { value: 'by_project', label: '按项目出具' },
