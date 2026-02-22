@@ -87,16 +87,6 @@ export default function MaterialTestTable({ value = [], onChange, readonly = fal
             render: (_: any, __: any, index: number) => index + 1,
         },
         {
-            title: '样品序号',
-            dataIndex: 'sampleIndex',
-            width: 70,
-            render: (text: string, record: MaterialTestData) =>
-                readonly ? text : (
-                    <Input size="small" value={text} placeholder="序号"
-                        onChange={e => updateItem(record.key, 'sampleIndex', e.target.value)} />
-                ),
-        },
-        {
             title: '材料名称 *',
             dataIndex: 'materialName',
             width: 120,

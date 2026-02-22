@@ -219,16 +219,6 @@ export default function ComponentTestTable({ value = [], onChange, readonly = fa
             render: (_: any, __: any, index: number) => index + 1,
         },
         {
-            title: '样品序号',
-            dataIndex: 'sampleIndex',
-            width: 70,
-            render: (text: string, record: ComponentTestData) =>
-                readonly ? text : (
-                    <Input size="small" value={text} placeholder="对应样品"
-                        onChange={e => updateItem(record.key, 'sampleIndex', e.target.value)} />
-                ),
-        },
-        {
             title: '样品名称 *',
             dataIndex: 'sampleName',
             width: 120,

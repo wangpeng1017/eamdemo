@@ -364,8 +364,7 @@ const EntrustmentPrint = forwardRef<HTMLDivElement, { data: PrintData }>(({ data
                     <thead>
                         <tr>
                             {[
-                                { label: 'Sample No.\n样品序号', w: '5%' },
-                                { label: '●样品名称\nSample Name', w: '12%' },
+                                { label: '●样品名称\nSample Name', w: '14%' },
                                 { label: '●测试项目\nTest Item', w: '12%' },
                                 { label: '●测试标准\nTest Standard', w: '12%' },
                                 { label: '●测试方法、条件\nTest Method', w: '12%' },
@@ -381,7 +380,6 @@ const EntrustmentPrint = forwardRef<HTMLDivElement, { data: PrintData }>(({ data
                     <tbody>
                         {paddedComponent.map((t, idx) => (
                             <tr key={idx}>
-                                <td style={{ ...cell, textAlign: 'center' }}>{t ? (t.sampleIndex || idx + 1) : idx + 1}</td>
                                 <td style={cell}>{t?.sampleName || ''}</td>
                                 <td style={cell}>{t?.testItemName || ''}</td>
                                 <td style={cell}>{t?.testStandard || ''}</td>
@@ -401,8 +399,7 @@ const EntrustmentPrint = forwardRef<HTMLDivElement, { data: PrintData }>(({ data
                     <thead>
                         <tr>
                             {[
-                                { label: 'Sample No.\n样品序号', w: '4%' },
-                                { label: '●材料名称(材质)\nMaterial', w: '10%' },
+                                { label: '●材料名称(材质)\nMaterial', w: '12%' },
                                 { label: '●材料牌号\nCode', w: '8%' },
                                 { label: '●测试项目\nTest Item', w: '10%' },
                                 { label: '●测试标准\nStandard', w: '10%' },
@@ -421,7 +418,6 @@ const EntrustmentPrint = forwardRef<HTMLDivElement, { data: PrintData }>(({ data
                     <tbody>
                         {paddedMaterial.map((t, idx) => (
                             <tr key={idx}>
-                                <td style={{ ...cell, textAlign: 'center' }}>{t ? (t.sampleIndex || idx + 1) : idx + 1}</td>
                                 <td style={cell}>{t?.materialName || ''}</td>
                                 <td style={cell}>{t?.materialCode || ''}</td>
                                 <td style={cell}>{t?.testItemName || ''}</td>
