@@ -805,7 +805,7 @@ export default function QuotationPage() {
       {/* 打印隐藏区域 */}
       <style jsx global>{`
         @media print {
-          @page { size: A4; margin: 10mm; }
+          @page { size: A4; margin: 0; }
           body * { visibility: hidden !important; }
           #quotation-print-area, #quotation-print-area * { visibility: visible !important; }
           #quotation-print-area { position: absolute; left: 0; top: 0; width: 100%; display: block !important; }
