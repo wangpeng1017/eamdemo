@@ -292,17 +292,12 @@ const EntrustmentPrint = forwardRef<HTMLDivElement, { data: PrintData }>(({ data
                     <thead>
                         <tr>
                             {[
-                                { label: 'No.\n序号', w: '3%' },
-                                { label: '●样品名称\nSample Name', w: '12%' },
-                                { label: '●零件号\nPart No.', w: '9%' },
-                                { label: '供应商\nSupplier', w: '10%' },
-                                { label: '●车型\nVehicle Model', w: '8%' },
-                                { label: '●生产日期\nMfg Date', w: '8%' },
-                                { label: '●生产批号\nLot No.', w: '8%' },
-                                { label: '●包装日期\nPacking Date', w: '8%' },
-                                { label: '●项目节点\nDeadline', w: '8%' },
-                                { label: '数量\nQty', w: '4%' },
-                                { label: '备注\nRemark', w: '12%' },
+                                { label: 'No.\n序号', w: '5%' },
+                                { label: '●样品名称\nSample Name', w: '25%' },
+                                { label: '零件号\nPart No.', w: '20%' },
+                                { label: '数量\nQty', w: '10%' },
+                                { label: '样品状态\nCondition', w: '15%' },
+                                { label: '备注\nRemark', w: '25%' },
                             ].map((h, i) => (
                                 <th key={i} style={{ ...thCell, width: h.w }}>{h.label}</th>
                             ))}
@@ -314,13 +309,8 @@ const EntrustmentPrint = forwardRef<HTMLDivElement, { data: PrintData }>(({ data
                                 <td style={{ ...cell, textAlign: 'center' }}>{idx + 1}</td>
                                 <td style={cell}>{s?.name || ''}</td>
                                 <td style={cell}>{s?.partNo || ''}</td>
-                                <td style={cell}>{s?.supplier || ''}</td>
-                                <td style={cell}>{s?.vehicleModel || ''}</td>
-                                <td style={cell}>{s?.manufactureDate || ''}</td>
-                                <td style={cell}>{s?.manufactureLotNo || ''}</td>
-                                <td style={cell}>{s?.packingDate || ''}</td>
-                                <td style={cell}>{s?.projectDeadline || ''}</td>
                                 <td style={{ ...cell, textAlign: 'center' }}>{s?.quantity || ''}</td>
+                                <td style={cell}>{s?.sampleCondition || ''}</td>
                                 <td style={cell}>{s?.remark || ''}</td>
                             </tr>
                         ))}
