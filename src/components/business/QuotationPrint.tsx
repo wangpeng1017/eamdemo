@@ -42,12 +42,12 @@ export default function QuotationPrint({ data }: QuotationPrintProps) {
     const sampleNames = [...new Set(items.map((item: any) => item.sampleName).filter(Boolean))].join('、')
 
     return (
-        <div style={{ padding: '20px 40px', fontFamily: 'SimSun, serif', fontSize: 12, color: '#000', background: '#fff' }}>
+        <div style={{ padding: '20px 40px', fontFamily: 'SimSun, serif', fontSize: '11pt', color: '#000', background: '#fff' }}>
             {/* 标题 */}
             <div style={{ textAlign: 'center', marginBottom: 16 }}>
                 <h2 style={{ margin: 0, fontSize: 20, letterSpacing: 4 }}>报  价  单</h2>
-                <p style={{ margin: '4px 0 0', fontSize: 14, color: '#666' }}>Quotation</p>
-                <p style={{ margin: '4px 0 0', fontSize: 11, color: '#999' }}>报价单号：{data.quotationNo}</p>
+                <p style={{ margin: '4px 0 0', fontSize: '14pt', color: '#666' }}>Quotation</p>
+                <p style={{ margin: '4px 0 0', fontSize: '9pt', color: '#999' }}>报价单号：{data.quotationNo}</p>
             </div>
 
             {/* 双栏头部 */}
@@ -115,11 +115,11 @@ export default function QuotationPrint({ data }: QuotationPrintProps) {
                 <thead>
                     <tr style={{ background: '#f0f0f0' }}>
                         <th style={{ ...cellStyle, width: '5%', fontWeight: 'bold' }}>序号</th>
-                        <th style={{ ...cellStyle, width: '22%', fontWeight: 'bold' }}>检测项目<br /><span style={{ fontSize: 10 }}>Service Item</span></th>
-                        <th style={{ ...cellStyle, width: '18%', fontWeight: 'bold' }}>检测标准<br /><span style={{ fontSize: 10 }}>Method Standard</span></th>
-                        <th style={{ ...cellStyle, width: '8%', fontWeight: 'bold' }}>数量<br /><span style={{ fontSize: 10 }}>Quantity</span></th>
-                        <th style={{ ...cellStyle, width: '9%', fontWeight: 'bold' }}>单价<br /><span style={{ fontSize: 10 }}>Price</span></th>
-                        <th style={{ ...cellStyle, width: '10%', fontWeight: 'bold' }}>总价<br /><span style={{ fontSize: 10 }}>Total Cost</span></th>
+                        <th style={{ ...cellStyle, width: '22%', fontWeight: 'bold' }}>检测项目<br /><span style={{ fontSize: '9pt' }}>Service Item</span></th>
+                        <th style={{ ...cellStyle, width: '18%', fontWeight: 'bold' }}>检测标准<br /><span style={{ fontSize: '9pt' }}>Method Standard</span></th>
+                        <th style={{ ...cellStyle, width: '8%', fontWeight: 'bold' }}>数量<br /><span style={{ fontSize: '9pt' }}>Quantity</span></th>
+                        <th style={{ ...cellStyle, width: '9%', fontWeight: 'bold' }}>单价<br /><span style={{ fontSize: '9pt' }}>Price</span></th>
+                        <th style={{ ...cellStyle, width: '10%', fontWeight: 'bold' }}>总价<br /><span style={{ fontSize: '9pt' }}>Total Cost</span></th>
                         <th style={{ ...cellStyle, width: '18%', fontWeight: 'bold' }}>备注</th>
                     </tr>
                 </thead>
@@ -218,13 +218,13 @@ export default function QuotationPrint({ data }: QuotationPrintProps) {
             {/* 附加说明 */}
             <div style={{ marginBottom: 16 }}>
                 <p style={{ fontWeight: 'bold', marginBottom: 4 }}>★Additional Information 附加说明：</p>
-                <p style={{ fontSize: 11, marginBottom: 8, color: '#666' }}>
+                <p style={{ fontSize: '11pt', marginBottom: 8, color: '#666' }}>
                     收到此报价单后，请按以下流程操作（Upon receiving this quotation, please proceed according to the following steps:）：
                 </p>
                 {(terms as any[]).map((term: any, idx: number) => (
                     <div key={idx} style={{ marginBottom: 6, lineHeight: 1.6 }}>
-                        <div style={{ fontSize: 11 }}>{term.zh}</div>
-                        <div style={{ color: '#666', fontSize: 10 }}>{term.en}</div>
+                        <div style={{ fontSize: '11pt' }}>{term.zh}</div>
+                        <div style={{ color: '#666', fontSize: '9pt' }}>{term.en}</div>
                     </div>
                 ))}
             </div>
@@ -236,6 +236,6 @@ export default function QuotationPrint({ data }: QuotationPrintProps) {
 const cellStyle: React.CSSProperties = {
     border: '1px solid #333',
     padding: '4px 6px',
-    fontSize: 11,
+    fontSize: '11pt',
     lineHeight: 1.4,
 }
