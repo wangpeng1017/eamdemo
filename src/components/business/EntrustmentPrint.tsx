@@ -292,12 +292,16 @@ const EntrustmentPrint = forwardRef<HTMLDivElement, { data: PrintData }>(({ data
                     <thead>
                         <tr>
                             {[
-                                { label: 'No.\n序号', w: '5%' },
-                                { label: '●样品名称\nSample Name', w: '25%' },
-                                { label: '零件号\nPart No.', w: '20%' },
-                                { label: '数量\nQty', w: '10%' },
-                                { label: '样品状态\nCondition', w: '15%' },
-                                { label: '备注\nRemark', w: '25%' },
+                                { label: 'No.\n样品序号', w: '4%' },
+                                { label: 'Sample Name\n●样品名称', w: '14%' },
+                                { label: 'Part No.\n●零件号', w: '10%' },
+                                { label: 'Supplier & Address\n●生产商(全称)及地址', w: '16%' },
+                                { label: 'Vehicle Model\n●车型', w: '8%' },
+                                { label: 'Manufacture Date\n●生产日期', w: '9%' },
+                                { label: 'Manufacture Lot No\n●生产批号', w: '9%' },
+                                { label: 'Packing Date\n●包装日期', w: '9%' },
+                                { label: 'Date required\n●项目节点日期', w: '9%' },
+                                { label: 'Remark\n备注', w: '12%' },
                             ].map((h, i) => (
                                 <th key={i} style={{ ...thCell, width: h.w }}>{h.label}</th>
                             ))}
@@ -309,8 +313,12 @@ const EntrustmentPrint = forwardRef<HTMLDivElement, { data: PrintData }>(({ data
                                 <td style={{ ...cell, textAlign: 'center' }}>{idx + 1}</td>
                                 <td style={cell}>{s?.name || ''}</td>
                                 <td style={cell}>{s?.partNo || ''}</td>
-                                <td style={{ ...cell, textAlign: 'center' }}>{s?.quantity || ''}</td>
-                                <td style={cell}>{s?.sampleCondition || ''}</td>
+                                <td style={cell}>{s?.supplier || ''}</td>
+                                <td style={cell}>{s?.vehicleModel || ''}</td>
+                                <td style={cell}>{s?.manufactureDate || ''}</td>
+                                <td style={cell}>{s?.manufactureLotNo || ''}</td>
+                                <td style={cell}>{s?.packingDate || ''}</td>
+                                <td style={cell}>{s?.projectDeadline || ''}</td>
                                 <td style={cell}>{s?.remark || ''}</td>
                             </tr>
                         ))}

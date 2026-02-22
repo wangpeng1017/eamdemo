@@ -82,7 +82,7 @@ export default function SampleInfoTable({ value = [], onChange, readonly = false
                 ),
         },
         {
-            title: '零件号',
+            title: '零件号 *',
             dataIndex: 'partNo',
             width: 110,
             render: (text: string, record: SampleInfoData) =>
@@ -92,23 +92,66 @@ export default function SampleInfoTable({ value = [], onChange, readonly = false
                 ),
         },
         {
-            title: '数量',
-            dataIndex: 'quantity',
-            width: 70,
-            render: (val: number, record: SampleInfoData) =>
-                readonly ? val : (
-                    <InputNumber size="small" min={1} value={val} style={{ width: '100%' }}
-                        onChange={v => updateItem(record.key, 'quantity', v || 1)} />
+            title: '生产商(全称)及地址 *',
+            dataIndex: 'supplier',
+            width: 160,
+            render: (text: string, record: SampleInfoData) =>
+                readonly ? text : (
+                    <Input size="small" value={text} placeholder="生产商全称及地址"
+                        onChange={e => updateItem(record.key, 'supplier', e.target.value)} />
                 ),
         },
         {
-            title: '样品状态',
-            dataIndex: 'sampleCondition',
+            title: '车型',
+            dataIndex: 'vehicleModel',
             width: 100,
             render: (text: string, record: SampleInfoData) =>
                 readonly ? text : (
-                    <Input size="small" value={text} placeholder="到样状态"
-                        onChange={e => updateItem(record.key, 'sampleCondition', e.target.value)} />
+                    <Input size="small" value={text} placeholder="车型"
+                        onChange={e => updateItem(record.key, 'vehicleModel', e.target.value)} />
+                ),
+        },
+        {
+            title: '生产日期',
+            dataIndex: 'manufactureDate',
+            width: 130,
+            render: (text: string, record: SampleInfoData) =>
+                readonly ? (text ? dayjs(text).format('YYYY-MM-DD') : '') : (
+                    <DatePicker size="small" style={{ width: '100%' }}
+                        value={text ? dayjs(text) : null}
+                        onChange={(d) => updateItem(record.key, 'manufactureDate', d ? d.toISOString() : '')} />
+                ),
+        },
+        {
+            title: '生产批号',
+            dataIndex: 'manufactureLotNo',
+            width: 110,
+            render: (text: string, record: SampleInfoData) =>
+                readonly ? text : (
+                    <Input size="small" value={text} placeholder="批号"
+                        onChange={e => updateItem(record.key, 'manufactureLotNo', e.target.value)} />
+                ),
+        },
+        {
+            title: '包装日期',
+            dataIndex: 'packingDate',
+            width: 130,
+            render: (text: string, record: SampleInfoData) =>
+                readonly ? (text ? dayjs(text).format('YYYY-MM-DD') : '') : (
+                    <DatePicker size="small" style={{ width: '100%' }}
+                        value={text ? dayjs(text) : null}
+                        onChange={(d) => updateItem(record.key, 'packingDate', d ? d.toISOString() : '')} />
+                ),
+        },
+        {
+            title: '项目节点',
+            dataIndex: 'projectDeadline',
+            width: 130,
+            render: (text: string, record: SampleInfoData) =>
+                readonly ? (text ? dayjs(text).format('YYYY-MM-DD') : '') : (
+                    <DatePicker size="small" style={{ width: '100%' }}
+                        value={text ? dayjs(text) : null}
+                        onChange={(d) => updateItem(record.key, 'projectDeadline', d ? d.toISOString() : '')} />
                 ),
         },
         {
