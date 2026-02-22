@@ -194,27 +194,6 @@ export default function SampleItemAssessmentDetailsTab({
         )
       },
     },
-    {
-      title: '操作',
-      key: 'action',
-      width: 150,
-      fixed: 'right',
-      render: (_, record) => (
-        <Space>
-          {record.assessmentHistory.length > 0 && (
-            <Button size="small" icon={<EyeOutlined />} onClick={() => handleViewHistory(record)}>
-              查看历史
-            </Button>
-          )}
-          {/* 如果当前用户是评估人且状态是 assessing，显示立即评估按钮 */}
-          {record.assessmentStatus === 'assessing' && record.currentAssessor === currentUserName && (
-            <Button type="primary" size="small">
-              立即评估
-            </Button>
-          )}
-        </Space>
-      ),
-    },
   ]
 
   if (!data) {
