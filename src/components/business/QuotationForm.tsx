@@ -397,8 +397,8 @@ export default function QuotationForm({
                         </Form.Item>
                     </Col>
                     <Col span={12}>
-                        <Form.Item name="serviceContact" label="安排人 From" rules={[{ required: true, message: '请选择安排人' }]}>
-                            <UserSelect placeholder="选择安排人" />
+                        <Form.Item name="serviceContact" label="业务人员 From" rules={[{ required: true, message: '请选择业务人员' }]}>
+                            <UserSelect placeholder="选择业务人员" />
                         </Form.Item>
                     </Col>
                 </Row>

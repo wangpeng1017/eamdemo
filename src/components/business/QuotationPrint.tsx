@@ -62,7 +62,7 @@ export default function QuotationPrint({ data }: QuotationPrintProps) {
                     <tr>
                         <td style={{ ...cellStyle, fontWeight: 'bold' }}>发件人 From</td>
                         <td style={cellStyle}>{data.clientContactPerson || ''}</td>
-                        <td style={{ ...cellStyle, fontWeight: 'bold' }}>发件人 From</td>
+                        <td style={{ ...cellStyle, fontWeight: 'bold' }}>业务人员 From</td>
                         <td style={cellStyle}>{data.serviceContact || ''}</td>
                     </tr>
                     <tr>
