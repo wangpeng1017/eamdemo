@@ -792,7 +792,7 @@ export default function EntrustmentListPage() {
               <Button size="small" icon={<EditOutlined />} onClick={() => handleEdit(record)} />
             )}
             <Button size="small" icon={<PrinterOutlined />} onClick={() => handlePrint(record)} title="打印" />
-            {canModify(record, permCtx) && (
+            {record.status === 'pending' && canModify(record, permCtx) && (
               <Popconfirm title="确认删除？" onConfirm={() => handleDelete(record.id)} okText="确定" cancelText="取消">
                 <Button size="small" danger icon={<DeleteOutlined />} />
               </Popconfirm>
