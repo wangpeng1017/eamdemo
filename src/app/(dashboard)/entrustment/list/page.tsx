@@ -1016,7 +1016,7 @@ export default function EntrustmentListPage() {
               showSearch
               placeholder="选择外包供应商"
               optionFilterProp="label"
-              options={suppliers.map(s => ({ value: s.name, label: `${s.code} - ${s.name}` }))}
+              options={suppliers.map(s => ({ value: s.name, label: s.code ? `${s.code} - ${s.name}` : s.name }))}
             />
           </Form.Item>
           <Form.Item name="subcontractAssignee" label="检测人员" rules={[{ required: true, message: '请选择检测人员' }]}>
