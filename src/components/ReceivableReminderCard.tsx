@@ -8,6 +8,7 @@
 import { useState, useEffect } from 'react'
 import { Card, List, Tag, Space, Typography, Badge, Empty } from 'antd'
 import { DollarOutlined, WarningOutlined, ClockCircleOutlined } from '@ant-design/icons'
+import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import dayjs from 'dayjs'
 
@@ -34,6 +35,7 @@ interface ReminderData {
 }
 
 export default function ReceivableReminderCard() {
+    const router = useRouter()
     const [loading, setLoading] = useState(false)
     const [data, setData] = useState<ReminderData>({
         overdue: [], dueSoon: [],
@@ -86,7 +88,10 @@ export default function ReceivableReminderCard() {
                     renderItem={(item) => {
                         const isOverdue = item.daysOverdue > 0
                         return (
-                            <List.Item>
+                            <List.Item
+                                style={{ cursor: 'pointer' }}
+                                onClick={() => router.push('/finance/receivable')}
+                            >
                                 <List.Item.Meta
                                     title={
                                         <Space>

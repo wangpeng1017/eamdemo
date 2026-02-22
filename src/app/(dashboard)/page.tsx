@@ -283,6 +283,8 @@ export default function DashboardPage() {
 
                   return (
                     <List.Item
+                      style={{ cursor: detailPath ? 'pointer' : 'default' }}
+                      onClick={() => detailPath && router.push(detailPath)}
                       actions={[
                         <Button
                           key="approve"
