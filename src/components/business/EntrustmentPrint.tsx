@@ -80,7 +80,7 @@ const printStyles = `
 @media print {
   body * { visibility: hidden; }
   #entrustment-print-wrapper {
-    position: fixed !important;
+    position: absolute !important;
     top: 0 !important;
     left: 0 !important;
     width: 100% !important;
@@ -90,7 +90,7 @@ const printStyles = `
   }
   #entrustment-print, #entrustment-print * { visibility: visible; }
   #entrustment-print {
-    position: relative !important;
+    position: absolute !important;
     left: 0;
     top: 0;
     width: 100%;
