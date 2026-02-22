@@ -1,5 +1,7 @@
 'use client'
 
+import { canModify, canOperate, type RecordPermissionContext } from '@/lib/record-permission'
+
 import { useState, useEffect } from 'react'
 import { showSuccess, showError } from '@/lib/confirm'
 import { Table, Button, Space, Tag, Modal, Select, Card, Statistic, Row, Col, Form, Input, Divider, Drawer, Descriptions, Tabs, Timeline, Popconfirm } from 'antd'
@@ -22,6 +24,7 @@ interface ClientReport {
     approver: string | null
     approvalFlow: ApprovalRecord[]
     createdAt: string
+    createdById?: string | null
 }
 
 interface ApprovalRecord {
@@ -73,6 +76,7 @@ export default function ClientReportGeneratePage() {
     const [loading, setLoading] = useState(false)
     const [total, setTotal] = useState(0)
     const [page, setPage] = useState(1)
+    const [currentUser, setCurrentUser] = useState<any>(null)
 
     // 生成报告弹窗
     const [generateModalOpen, setGenerateModalOpen] = useState(false)
@@ -138,6 +142,7 @@ export default function ClientReportGeneratePage() {
     useEffect(() => {
         fetchData()
         fetchTemplates()
+        fetch('/api/auth/me').then(r => r.json()).then(j => { if (j.success) setCurrentUser(j.data) }).catch(() => { })
     }, [page])
 
     // 生成报告
@@ -341,33 +346,36 @@ export default function ClientReportGeneratePage() {
             fixed: 'right',
             width: 280,
             onHeaderCell: () => ({ style: { whiteSpace: 'nowrap' as const } }),
-            render: (_, record) => (
-                <Space size="small" style={{ whiteSpace: 'nowrap' }}>
-                    {record.status === 'draft' && (
-                        <Button size="small" type="primary" ghost icon={<SendOutlined />} onClick={() => handleSubmitApproval(record)}>
-                            提交
+            render: (_, record) => {
+                const permCtx: RecordPermissionContext = { userId: currentUser?.id || '', dataScope: currentUser?.dataScope || 'self' }
+                return (
+                    <Space size="small" style={{ whiteSpace: 'nowrap' }}>
+                        {record.status === 'draft' && canOperate(record, permCtx) && (
+                            <Button size="small" type="primary" ghost icon={<SendOutlined />} onClick={() => handleSubmitApproval(record)}>
+                                提交
+                            </Button>
+                        )}
+                        <Button size="small" icon={<DownloadOutlined />} onClick={() => handleExportWord(record)}>
+                            Word
                         </Button>
-                    )}
-                    <Button size="small" icon={<DownloadOutlined />} onClick={() => handleExportWord(record)}>
-                        Word
-                    </Button>
-                    <Button size="small" icon={<DownloadOutlined />} onClick={() => handleExportPdf(record)}>
-                        PDF
-                    </Button>
-                    <Button size="small" icon={<PrinterOutlined />} onClick={() => handlePrint(record)}>
-                        打印
-                    </Button>
-                    <Button size="small" icon={<EyeOutlined />} onClick={() => handleView(record)} />
-                    {record.status === 'draft' && (
-                        <Button size="small" icon={<EditOutlined />} onClick={() => handleEdit(record)} />
-                    )}
-                    {record.status === 'draft' && (
-                        <Popconfirm title="确认删除？" onConfirm={() => handleDelete(record.id)} okText="确定" cancelText="取消">
-                            <Button size="small" danger icon={<DeleteOutlined />} />
-                        </Popconfirm>
-                    )}
-                </Space>
-            )
+                        <Button size="small" icon={<DownloadOutlined />} onClick={() => handleExportPdf(record)}>
+                            PDF
+                        </Button>
+                        <Button size="small" icon={<PrinterOutlined />} onClick={() => handlePrint(record)}>
+                            打印
+                        </Button>
+                        <Button size="small" icon={<EyeOutlined />} onClick={() => handleView(record)} />
+                        {record.status === 'draft' && canModify(record, permCtx) && (
+                            <Button size="small" icon={<EditOutlined />} onClick={() => handleEdit(record)} />
+                        )}
+                        {record.status === 'draft' && canModify(record, permCtx) && (
+                            <Popconfirm title="确认删除？" onConfirm={() => handleDelete(record.id)} okText="确定" cancelText="取消">
+                                <Button size="small" danger icon={<DeleteOutlined />} />
+                            </Popconfirm>
+                        )}
+                    </Space>
+                )
+            }
         }
     ]
 

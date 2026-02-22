@@ -1,5 +1,7 @@
 'use client'
 
+import { canModify, canOperate, type RecordPermissionContext } from '@/lib/record-permission'
+
 import { useState, useEffect } from 'react'
 import { showSuccess, showError } from '@/lib/confirm'
 import {
@@ -34,6 +36,7 @@ interface Receivable {
   createdAt: string
   invoices?: { invoiceNo: string; totalAmount: number; status: string }[]
   entrustment?: { entrustmentNo: string } | null
+  createdById?: string | null
 }
 
 interface EntrustmentOption {
@@ -54,6 +57,7 @@ export default function ReceivablePage() {
   const [total, setTotal] = useState(0)
   const [page, setPage] = useState(1)
   const [modalOpen, setModalOpen] = useState(false)
+  const [currentUser, setCurrentUser] = useState<any>(null)
   const [keyword, setKeyword] = useState('')
   const [statusFilter, setStatusFilter] = useState<string | null>(null)
   const [editingId, setEditingId] = useState<string | null>(null)
@@ -84,7 +88,10 @@ export default function ReceivablePage() {
     setLoading(false)
   }
 
-  useEffect(() => { fetchData() }, [page, statusFilter])
+  useEffect(() => {
+    fetchData()
+    fetch('/api/auth/me').then(r => r.json()).then(j => { if (j.success) setCurrentUser(j.data) }).catch(() => { })
+  }, [page, statusFilter])
 
   useEffect(() => {
     // 加载委托单列表
@@ -236,27 +243,34 @@ export default function ReceivablePage() {
     },
     {
       title: '操作', fixed: 'right', width: 200,
-      render: (_, record) => (
-        <Space style={{ whiteSpace: 'nowrap' }}>
-          {record.status !== 'completed' && (
-            <Tooltip title="上传到账凭证">
-              <Button
-                size="small"
-                type="primary"
-                ghost
-                icon={<DollarOutlined />}
-                onClick={() => handleOpenPayment(record)}
-              >
-                上传凭证
-              </Button>
-            </Tooltip>
-          )}
-          <Button size="small" icon={<EditOutlined />} onClick={() => handleEdit(record)} />
-          <Popconfirm title="确认删除？" onConfirm={() => handleDelete(record.id)} okText="确定" cancelText="取消" okButtonProps={{ danger: true }}>
-            <Button size="small" danger icon={<DeleteOutlined />} />
-          </Popconfirm>
-        </Space>
-      )
+      render: (_, record) => {
+        const permCtx: RecordPermissionContext = { userId: currentUser?.id || '', dataScope: currentUser?.dataScope || 'self' }
+        return (
+          <Space style={{ whiteSpace: 'nowrap' }}>
+            {record.status !== 'completed' && canOperate(record, permCtx) && (
+              <Tooltip title="上传到账凭证">
+                <Button
+                  size="small"
+                  type="primary"
+                  ghost
+                  icon={<DollarOutlined />}
+                  onClick={() => handleOpenPayment(record)}
+                >
+                  上传凭证
+                </Button>
+              </Tooltip>
+            )}
+            {canModify(record, permCtx) && (
+              <Button size="small" icon={<EditOutlined />} onClick={() => handleEdit(record)} />
+            )}
+            {canModify(record, permCtx) && (
+              <Popconfirm title="确认删除？" onConfirm={() => handleDelete(record.id)} okText="确定" cancelText="取消" okButtonProps={{ danger: true }}>
+                <Button size="small" danger icon={<DeleteOutlined />} />
+              </Popconfirm>
+            )}
+          </Space>
+        )
+      }
     }
   ]
 

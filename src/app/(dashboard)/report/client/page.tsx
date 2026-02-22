@@ -1,5 +1,7 @@
 'use client'
 
+import { canModify, canOperate, type RecordPermissionContext } from '@/lib/record-permission'
+
 import { useState, useEffect } from 'react'
 import { showSuccess, showError } from '@/lib/confirm'
 import {
@@ -35,6 +37,7 @@ interface ClientReport {
   approvalFlow: ApprovalRecord[]
   issuedDate: string | null
   createdAt: string
+  createdById?: string | null
 }
 
 interface ApprovalRecord {
@@ -70,6 +73,7 @@ export default function ClientReportPage() {
   const [loading, setLoading] = useState(false)
   const [total, setTotal] = useState(0)
   const [page, setPage] = useState(1)
+  const [currentUser, setCurrentUser] = useState<any>(null)
   const [stats, setStats] = useState<Stats>({})
   const [statusFilter, setStatusFilter] = useState<string | null>(null)
   const [keyword, setKeyword] = useState('')
@@ -102,7 +106,10 @@ export default function ClientReportPage() {
     setLoading(false)
   }
 
-  useEffect(() => { fetchData() }, [page, statusFilter])
+  useEffect(() => {
+    fetchData()
+    fetch('/api/auth/me').then(r => r.json()).then(j => { if (j.success) setCurrentUser(j.data) }).catch(() => { })
+  }, [page, statusFilter])
 
   const handleSearch = () => {
     setPage(1)
@@ -175,6 +182,7 @@ export default function ClientReportPage() {
   }
 
   const getActions = (record: ClientReport) => {
+    const permCtx: RecordPermissionContext = { userId: currentUser?.id || '', dataScope: currentUser?.dataScope || 'self' }
     const actions = []
 
     // 查看
@@ -182,15 +190,15 @@ export default function ClientReportPage() {
       <Button key="view" size="small" icon={<EyeOutlined />} onClick={() => handleView(record)} />
     )
 
-    // 编辑（草稿可编辑）
-    if (record.status === 'draft') {
+    // 编辑（草稿可编辑 + 权限判断）
+    if (record.status === 'draft' && canModify(record, permCtx)) {
       actions.push(
         <Button key="edit" size="small" icon={<EditOutlined />} onClick={() => handleEdit(record)} />
       )
     }
 
-    // 提交审批（草稿可提交）
-    if (record.status === 'draft') {
+    // 提交审批（草稿可提交 + 权限判断）
+    if (record.status === 'draft' && canOperate(record, permCtx)) {
       actions.push(
         <Button
           key="submit"
@@ -212,8 +220,8 @@ export default function ClientReportPage() {
       </Button>
     )
 
-    // 删除（草稿可删除）
-    if (record.status === 'draft') {
+    // 删除（草稿可删除 + 权限判断）
+    if (record.status === 'draft' && canModify(record, permCtx)) {
       actions.push(
         <Popconfirm key="delete" title="确认删除？" onConfirm={() => handleDelete(record.id)} okText="确定" cancelText="取消">
           <Button size="small" danger icon={<DeleteOutlined />} />

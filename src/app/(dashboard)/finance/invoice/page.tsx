@@ -1,6 +1,8 @@
 
 'use client'
 
+import { canModify, type RecordPermissionContext } from '@/lib/record-permission'
+
 import { useState, useEffect } from 'react'
 import { showSuccess, showError } from '@/lib/confirm'
 import { Table, Button, Space, Tag, Modal, Form, Input, InputNumber, DatePicker, Select, message, Popconfirm, Upload, Card } from 'antd'
@@ -49,6 +51,7 @@ interface Invoice {
   taxAmount?: number
   totalAmount?: number
   attachments?: string | null
+  createdById?: string | null
 }
 
 interface AvailableEntrustment {
@@ -85,6 +88,7 @@ export default function InvoicePage() {
   const [page, setPage] = useState(1)
   const [modalOpen, setModalOpen] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
+  const [currentUser, setCurrentUser] = useState<any>(null)
   const [submitting, setSubmitting] = useState(false)
   const [keyword, setKeyword] = useState('')
   const [statusFilter, setStatusFilter] = useState<string | null>(null)
@@ -158,7 +162,10 @@ export default function InvoicePage() {
     setLoadingEntrustments(false)
   }
 
-  useEffect(() => { fetchData() }, [page, statusFilter])
+  useEffect(() => {
+    fetchData()
+    fetch('/api/auth/me').then(r => r.json()).then(j => { if (j.success) setCurrentUser(j.data) }).catch(() => { })
+  }, [page, statusFilter])
 
   const handleAdd = () => {
     setEditingId(null)
@@ -314,14 +321,21 @@ export default function InvoicePage() {
     },
     {
       title: '操作', fixed: 'right', width: 150,
-      render: (_, record) => (
-        <Space style={{ whiteSpace: 'nowrap' }}>
-          <Button size="small" icon={<EditOutlined />} onClick={() => handleEdit(record)}>编辑</Button>
-          <Popconfirm title="确认删除？" onConfirm={() => handleDelete(record.id)} okText="确定" cancelText="取消" okButtonProps={{ danger: true }}>
-            <Button size="small" danger icon={<DeleteOutlined />} />
-          </Popconfirm>
-        </Space>
-      )
+      render: (_, record) => {
+        const permCtx: RecordPermissionContext = { userId: currentUser?.id || '', dataScope: currentUser?.dataScope || 'self' }
+        return (
+          <Space style={{ whiteSpace: 'nowrap' }}>
+            {canModify(record, permCtx) && (
+              <Button size="small" icon={<EditOutlined />} onClick={() => handleEdit(record)}>编辑</Button>
+            )}
+            {canModify(record, permCtx) && (
+              <Popconfirm title="确认删除？" onConfirm={() => handleDelete(record.id)} okText="确定" cancelText="取消" okButtonProps={{ danger: true }}>
+                <Button size="small" danger icon={<DeleteOutlined />} />
+              </Popconfirm>
+            )}
+          </Space>
+        )
+      }
     }
   ]
 

@@ -1,5 +1,7 @@
 'use client'
 
+import { canModify, type RecordPermissionContext } from '@/lib/record-permission'
+
 import { useState, useEffect } from 'react'
 import { showSuccess, showError } from '@/lib/confirm'
 import {
@@ -28,6 +30,7 @@ interface Payment {
     receivedAmount: number
     status: string
   }
+  createdById?: string | null
 }
 
 interface Receivable {
@@ -52,6 +55,7 @@ export default function PaymentPage() {
   const [total, setTotal] = useState(0)
   const [totalAmount, setTotalAmount] = useState(0)
   const [page, setPage] = useState(1)
+  const [currentUser, setCurrentUser] = useState<any>(null)
 
   const [modalOpen, setModalOpen] = useState(false)
   const [detailOpen, setDetailOpen] = useState(false)
@@ -90,6 +94,7 @@ export default function PaymentPage() {
 
   useEffect(() => {
     fetchData()
+    fetch('/api/auth/me').then(r => r.json()).then(j => { if (j.success) setCurrentUser(j.data) }).catch(() => { })
   }, [page])
 
   const handleAdd = async () => {
@@ -161,14 +166,19 @@ export default function PaymentPage() {
     { title: '交易流水号', dataIndex: 'transactionNo', width: 150, ellipsis: true },
     {
       title: '操作', fixed: 'right',
-      render: (_, record) => (
-        <Space style={{ whiteSpace: 'nowrap' }}>
-          <Button size="small" icon={<EyeOutlined />} onClick={() => handleView(record)} />
-          <Popconfirm title="删除后将回滚应收账款，确认删除?" onConfirm={() => handleDelete(record.id)} okText="确定" cancelText="取消">
-            <Button size="small" danger icon={<DeleteOutlined />} />
-          </Popconfirm>
-        </Space>
-      ),
+      render: (_, record) => {
+        const permCtx: RecordPermissionContext = { userId: currentUser?.id || '', dataScope: currentUser?.dataScope || 'self' }
+        return (
+          <Space style={{ whiteSpace: 'nowrap' }}>
+            <Button size="small" icon={<EyeOutlined />} onClick={() => handleView(record)} />
+            {canModify(record, permCtx) && (
+              <Popconfirm title="删除后将回滚应收账款，确认删除?" onConfirm={() => handleDelete(record.id)} okText="确定" cancelText="取消">
+                <Button size="small" danger icon={<DeleteOutlined />} />
+              </Popconfirm>
+            )}
+          </Space>
+        )
+      },
     },
   ]
 
