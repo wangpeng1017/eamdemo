@@ -216,6 +216,17 @@ export async function checkConsultationAccess(consultationId: string, userId: st
             return true
         }
 
+        // 检查是否是该咨询单的评估人
+        const assessorItem = await prisma.sampleTestItem.findFirst({
+            where: {
+                bizType: 'consultation',
+                bizId: consultationId,
+                currentAssessorId: userId,
+            },
+            select: { id: true }
+        })
+        if (assessorItem) return true
+
         // 检查角色数据权限
         const userWithRoles = await prisma.user.findUnique({
             where: { id: userId },
