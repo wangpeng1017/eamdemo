@@ -42,12 +42,16 @@ export async function POST(
   } catch (error: any) {
     console.error('从报价单创建委托单失败:', error)
 
+    // 业务校验错误统一返回 400，只有系统异常返回 500
+    const msg = error.message || '创建失败'
+    const isBusinessError = error instanceof Error && (
+      msg.includes('已生成') || msg.includes('无法') || msg.includes('未') ||
+      msg.includes('不可') || msg.includes('不存在')
+    )
+
     return NextResponse.json(
-      {
-        success: false,
-        error: error.message || '创建失败'
-      },
-      { status: error.message.includes('无法') || error.message.includes('未') ? 400 : 500 }
+      { success: false, error: msg },
+      { status: isBusinessError ? 400 : 500 }
     )
   }
 }
