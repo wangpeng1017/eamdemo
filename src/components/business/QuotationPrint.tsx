@@ -98,35 +98,25 @@ export default function QuotationPrint({ data }: QuotationPrintProps) {
                 </table>
             )}
 
-            {/* 样品名称行 */}
-            {sampleNames && (
-                <table style={{ width: '100%', borderCollapse: 'collapse', marginBottom: 0 }}>
-                    <tbody>
-                        <tr>
-                            <td style={{ ...cellStyle, fontWeight: 'bold', width: '15%', borderBottom: 'none' }}>样品名称</td>
-                            <td style={{ ...cellStyle, borderBottom: 'none' }}>{sampleNames}</td>
-                        </tr>
-                    </tbody>
-                </table>
-            )}
-
             {/* 报价明细表 */}
             <table style={{ width: '100%', borderCollapse: 'collapse', marginBottom: 8 }}>
                 <thead>
                     <tr style={{ background: '#f0f0f0' }}>
                         <th style={{ ...cellStyle, width: '5%', fontWeight: 'bold' }}>序号</th>
-                        <th style={{ ...cellStyle, width: '22%', fontWeight: 'bold' }}>检测项目<br /><span style={{ fontSize: '9pt' }}>Service Item</span></th>
+                        <th style={{ ...cellStyle, width: '12%', fontWeight: 'bold' }}>样品名称<br /><span style={{ fontSize: '9pt' }}>Sample</span></th>
+                        <th style={{ ...cellStyle, width: '18%', fontWeight: 'bold' }}>检测项目<br /><span style={{ fontSize: '9pt' }}>Service Item</span></th>
                         <th style={{ ...cellStyle, width: '18%', fontWeight: 'bold' }}>检测标准<br /><span style={{ fontSize: '9pt' }}>Method Standard</span></th>
-                        <th style={{ ...cellStyle, width: '8%', fontWeight: 'bold' }}>数量<br /><span style={{ fontSize: '9pt' }}>Quantity</span></th>
+                        <th style={{ ...cellStyle, width: '7%', fontWeight: 'bold' }}>数量<br /><span style={{ fontSize: '9pt' }}>Quantity</span></th>
                         <th style={{ ...cellStyle, width: '9%', fontWeight: 'bold' }}>单价<br /><span style={{ fontSize: '9pt' }}>Price</span></th>
-                        <th style={{ ...cellStyle, width: '10%', fontWeight: 'bold' }}>总价<br /><span style={{ fontSize: '9pt' }}>Total Cost</span></th>
-                        <th style={{ ...cellStyle, width: '18%', fontWeight: 'bold' }}>备注</th>
+                        <th style={{ ...cellStyle, width: '9%', fontWeight: 'bold' }}>总价<br /><span style={{ fontSize: '9pt' }}>Total Cost</span></th>
+                        <th style={{ ...cellStyle, width: '12%', fontWeight: 'bold' }}>备注</th>
                     </tr>
                 </thead>
                 <tbody>
                     {items.map((item: any, index: number) => (
                         <tr key={index}>
                             <td style={{ ...cellStyle, textAlign: 'center' }}>{index + 1}</td>
+                            <td style={cellStyle}>{item.sampleName || ''}</td>
                             <td style={cellStyle}>{item.serviceItem || ''}</td>
                             <td style={cellStyle}>{item.methodStandard || ''}</td>
                             <td style={{ ...cellStyle, textAlign: 'center' }}>{item.quantity || '1'}</td>
