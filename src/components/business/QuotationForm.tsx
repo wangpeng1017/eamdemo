@@ -139,7 +139,7 @@ export default function QuotationForm({
         try {
             const res = await fetch('/api/test-template?pageSize=1000')
             const json = await res.json()
-            setTestTemplates(json.list || [])
+            setTestTemplates(json.data?.list || json.list || [])
         } catch (error) {
             console.error('获取检测项目失败:', error)
         }
