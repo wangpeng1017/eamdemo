@@ -90,12 +90,13 @@ const printStyles = `
   }
   #entrustment-print, #entrustment-print * { visibility: visible; }
   #entrustment-print {
-    position: absolute !important;
-    left: 0;
-    top: 0;
-    width: 100%;
+    position: static !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    margin: 0 auto !important;
+    padding: 0 !important;
   }
-  @page { size: A4 landscape; margin: 8mm; }
+  @page { size: A4 landscape; margin: 10mm; }
 }
 `
 
