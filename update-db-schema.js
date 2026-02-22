@@ -726,6 +726,19 @@ async function main() {
             }
         }
     }
+
+    // ==================== 2026-02-22 委托单打印声明条款字段 ====================
+    try {
+        console.log('Adding printTerms column to biz_entrustment...')
+        await prisma.$executeRawUnsafe(`ALTER TABLE biz_entrustment ADD COLUMN printTerms TEXT;`)
+        console.log('✅ printTerms column added to biz_entrustment.')
+    } catch (e) {
+        if (e.message.includes('Duplicate column name')) {
+            console.log('ℹ️ printTerms already exists in biz_entrustment.')
+        } else {
+            console.error('❌ Error adding printTerms:', e.message)
+        }
+    }
 }
 
 main()
