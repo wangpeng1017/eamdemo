@@ -94,9 +94,11 @@ const printStyles = `
     width: 100% !important;
     max-width: 100% !important;
     margin: 0 auto !important;
-    padding: 0 !important;
+    padding: 10mm !important;
+    box-sizing: border-box !important;
   }
-  @page { size: A4 landscape; margin: 10mm; }
+  /* margin:0 消除浏览器默认页眉页脚 */
+  @page { size: A4 landscape; margin: 0; }
 }
 `
 
