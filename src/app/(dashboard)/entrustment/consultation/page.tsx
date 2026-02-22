@@ -6,6 +6,8 @@
 
 'use client'
 
+import { canModify, canOperate, type RecordPermissionContext } from '@/lib/record-permission'
+
 import React, { useState, useEffect } from 'react'
 import { Table, Button, Space, Modal, Form, Input, Select, DatePicker, Drawer, Row, Col, InputNumber, Divider, Tabs, Upload, Image, Tag, Alert, Descriptions, Popconfirm, Tooltip } from 'antd'
 import { PlusOutlined, EditOutlined, DeleteOutlined, EyeOutlined, FileTextOutlined, CloseCircleOutlined, TeamOutlined, SyncOutlined, PaperClipOutlined } from '@ant-design/icons'
@@ -70,6 +72,7 @@ interface Consultation {
   quotationId?: string | null
   status: string
   createdAt: string
+  createdById?: string | null
 }
 
 const FEASIBILITY_OPTIONS = [
@@ -448,83 +451,90 @@ export default function ConsultationPage() {
       fixed: 'right',
       onCell: () => ({ style: { whiteSpace: 'nowrap' as const } }),
       onHeaderCell: () => ({ style: { whiteSpace: 'nowrap' as const } }),
-      render: (_, record) => (
-        <Space size="small" style={{ whiteSpace: 'nowrap' }}>
-          {record.status === 'assessment_failed' && (
-            <>
-              <Button
-                size="small"
-                icon={<SyncOutlined />}
-                onClick={() => handleReassessment(record)}
-              >
-                重新评估
-              </Button>
-              <Button
-                size="small"
-                danger
-                icon={<CloseCircleOutlined />}
-                onClick={() => handleCloseConsultation(record)}
-              >
-                关闭
-              </Button>
-            </>
-          )}
-          <Tooltip title={
-            record.status === 'quoted' ? `已生成报价单${record.quotationNo ? '（' + record.quotationNo + '）' : ''}` :
-              record.status === 'closed' ? '咨询已关闭' : ''
-          }>
-            <Button
-              size="small"
-              type={record.status === 'quoted' || record.status === 'closed' ? 'default' : 'primary'}
-              ghost={record.status !== 'quoted' && record.status !== 'closed'}
-              icon={<FileTextOutlined />}
-              disabled={false}
-              style={record.status === 'quoted' || record.status === 'closed' ? { opacity: 0.5 } : {}}
-              onClick={(e) => {
-                e.stopPropagation()
-                handleOpenGenerateQuoteForRecord(record)
-              }}
-            >
-              生成报价单
-            </Button>
-          </Tooltip>
-          <Button size="small" icon={<EyeOutlined />} onClick={() => handleView(record)} />
-          <Button size="small" icon={<EditOutlined />} onClick={() => handleEdit(record)} />
-          {record.status === 'quoted' ? (
-            <Tooltip title="已生成报价，无法删除">
-              <Button
-                size="small"
-                danger
-                icon={<DeleteOutlined />}
-                style={{ opacity: 0.5 }}
-                onClick={(e) => {
-                  e.stopPropagation()
-                  modal.warning({
-                    title: '无法删除',
-                    content: `该咨询单已生成报价单${record.quotationNo ? '（' + record.quotationNo + '）' : ''}，请先处理相关报价单后再尝试删除，或将状态更改为"已关闭"。`,
-                    okText: '知道了',
-                  })
-                }}
-              />
-            </Tooltip>
-          ) : (
-            <Popconfirm
-              title={record.status === 'closed' ? '彻底删除咨询单' : '确认删除咨询单'}
-              description={record.status === 'closed' ? '该咨询单已关闭，确定要彻底删除吗？删除后无法恢复' : '确定要删除这条咨询记录吗？'}
-              onConfirm={() => handleDelete(record)}
-              okText="确定"
-              cancelText="取消"
-              okButtonProps={{ danger: true }}
-            >
-              <Button
-                size="small"
-                danger
-                icon={<DeleteOutlined />}
-              />
-            </Popconfirm>
-          )}
-        </Space>
-      )
+      render: (_: unknown, record: Consultation) => {
+        const permCtx: RecordPermissionContext = { userId: currentUser?.id || '', dataScope: currentUser?.dataScope || 'self' }
+        return (
+          <Space size="small" style={{ whiteSpace: 'nowrap' }}>
+            {record.status === 'assessment_failed' && (
+              <>
+                <Button
+                  size="small"
+                  icon={<SyncOutlined />}
+                  onClick={() => handleReassessment(record)}
+                >
+                  重新评估
+                </Button>
+                <Button
+                  size="small"
+                  danger
+                  icon={<CloseCircleOutlined />}
+                  onClick={() => handleCloseConsultation(record)}
+                >
+                  关闭
+                </Button>
+              </>
+            )}
+            {canOperate(record, permCtx) && (
+              <Tooltip title={record.status === 'quoted' || record.status === 'closed' ? '该咨询单状态不允许生成报价' : '生成报价单'}>
+                <Button
+                  size="small"
+                  type="link"
+                  icon={<FileTextOutlined />}
+                  disabled={false}
+                  style={record.status === 'quoted' || record.status === 'closed' ? { opacity: 0.5 } : {}}
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    handleOpenGenerateQuoteForRecord(record)
+                  }}
+                >
+                  生成报价单
+                </Button>
+              </Tooltip>
+            )}
+            <Button size="small" icon={<EyeOutlined />} onClick={() => handleView(record)} />
+            {canModify(record, permCtx) && (
+              <Button size="small" icon={<EditOutlined />} onClick={() => handleEdit(record)} />
+            )}
+            {canModify(record, permCtx) && (
+              <>
+                {record.status === 'quoted' ? (
+                  <Tooltip title="已生成报价，无法删除">
+                    <Button
+                      size="small"
+                      danger
+                      icon={<DeleteOutlined />}
+                      style={{ opacity: 0.5 }}
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        modal.warning({
+                          title: '无法删除',
+                          content: `该咨询单已生成报价单${record.quotationNo ? '（' + record.quotationNo + '）' : ''}，请先处理相关报价单后再尝试删除，或将状态更改为"已关闭"。`,
+                          okText: '知道了',
+                        })
+                      }}
+                    />
+                  </Tooltip>
+                ) : (
+                  <Popconfirm
+                    title={record.status === 'closed' ? '彻底删除咨询单' : '确认删除咨询单'}
+                    description={record.status === 'closed' ? '该咨询单已关闭，确定要彻底删除吗？删除后无法恢复' : '确定要删除这条咨询记录吗？'}
+                    onConfirm={() => handleDelete(record)}
+                    okText="确定"
+                    cancelText="取消"
+                    okButtonProps={{ danger: true }}
+                  >
+                    <Button
+                      size="small"
+                      danger
+                      icon={<DeleteOutlined />}
+                    />
+                  </Popconfirm>
+                )}
+              </>
+            )}
+          </Space>
+        )
+      }
     }
   ]
 

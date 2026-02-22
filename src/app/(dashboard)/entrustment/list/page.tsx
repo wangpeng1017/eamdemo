@@ -6,6 +6,8 @@
 
 'use client'
 
+import { canModify, canOperate, type RecordPermissionContext } from '@/lib/record-permission'
+
 import React, { useState, useEffect, useRef, useCallback } from 'react'
 import { showSuccess, showError } from '@/lib/confirm'
 import { Table, Button, Space, Modal, Form, Input, InputNumber, DatePicker, Select, message, Row, Col, Divider, Popconfirm, Tag, Radio, Drawer, Tabs, Descriptions } from 'antd'
@@ -65,6 +67,7 @@ interface Entrustment {
   sourceType: string | null
   status: string
   createdAt: string
+  createdById?: string | null
   projects: EntrustmentProject[]
   samples: Sample[]
   client?: {
@@ -161,6 +164,7 @@ export default function EntrustmentListPage() {
   const [total, setTotal] = useState(0)
   const [page, setPage] = useState(1)
   const [generatingLink, setGeneratingLink] = useState<string | null>(null)
+  const [currentUser, setCurrentUser] = useState<any>(null)
   const [printData, setPrintData] = useState<PrintData | null>(null)
   const [showPrint, setShowPrint] = useState(false)
   const printRef = React.useRef<HTMLDivElement>(null)
@@ -291,6 +295,8 @@ export default function EntrustmentListPage() {
   useEffect(() => {
     fetchData()
     fetchOptions()
+    // 获取当前用户信息（用于操作按钮权限判断）
+    fetch('/api/auth/me').then(r => r.json()).then(j => { if (j.success) setCurrentUser(j.data) }).catch(() => { })
   }, [page])
 
   useEffect(() => {
@@ -724,28 +730,35 @@ export default function EntrustmentListPage() {
       fixed: 'right',
       onCell: () => ({ style: { whiteSpace: 'nowrap' as const } }),
       onHeaderCell: () => ({ style: { whiteSpace: 'nowrap' as const } }),
-      render: (_: any, record: Entrustment) => (
-        <Space size="small" style={{ whiteSpace: 'nowrap' }}>
-          {/* 业务按钮（带文字） */}
-          {record.status === 'pending' && (
-            <Button
-              size="small"
-              icon={<ShareAltOutlined />}
-              onClick={() => handleGenerateExternalLink(record)}
-              loading={generatingLink === record.id}
-            >
-              生成外部链接
-            </Button>
-          )}
-          {/* 通用按钮（仅图标） */}
-          <Button size="small" icon={<EyeOutlined />} onClick={() => handleView(record)} />
-          <Button size="small" icon={<EditOutlined />} onClick={() => handleEdit(record)} />
-          <Button size="small" icon={<PrinterOutlined />} onClick={() => handlePrint(record)} title="打印" />
-          <Popconfirm title="确认删除？" onConfirm={() => handleDelete(record.id)} okText="确定" cancelText="取消">
-            <Button size="small" danger icon={<DeleteOutlined />} />
-          </Popconfirm>
-        </Space>
-      )
+      render: (_: any, record: Entrustment) => {
+        const permCtx: RecordPermissionContext = { userId: currentUser?.id || '', dataScope: currentUser?.dataScope || 'self' }
+        return (
+          <Space size="small" style={{ whiteSpace: 'nowrap' }}>
+            {/* 业务按钮（带文字） */}
+            {record.status === 'pending' && canOperate(record, permCtx) && (
+              <Button
+                size="small"
+                icon={<ShareAltOutlined />}
+                onClick={() => handleGenerateExternalLink(record)}
+                loading={generatingLink === record.id}
+              >
+                生成外部链接
+              </Button>
+            )}
+            {/* 通用按钮（仅图标） */}
+            <Button size="small" icon={<EyeOutlined />} onClick={() => handleView(record)} />
+            {canModify(record, permCtx) && (
+              <Button size="small" icon={<EditOutlined />} onClick={() => handleEdit(record)} />
+            )}
+            <Button size="small" icon={<PrinterOutlined />} onClick={() => handlePrint(record)} title="打印" />
+            {canModify(record, permCtx) && (
+              <Popconfirm title="确认删除？" onConfirm={() => handleDelete(record.id)} okText="确定" cancelText="取消">
+                <Button size="small" danger icon={<DeleteOutlined />} />
+              </Popconfirm>
+            )}
+          </Space>
+        )
+      }
     }
   ]
 

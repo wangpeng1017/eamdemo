@@ -49,6 +49,16 @@ export async function GET() {
         // 去重权限
         const uniquePermissions = Array.from(new Set(permissions))
 
+        // 计算最高数据权限级别
+        const scopePriority: Record<string, number> = { all: 3, dept: 2, self: 1 }
+        let maxDataScope = 'self'
+        for (const ur of user.roles) {
+            const scope = (ur.role as any).dataScope || 'self'
+            if ((scopePriority[scope] || 0) > (scopePriority[maxDataScope] || 0)) {
+                maxDataScope = scope
+            }
+        }
+
         return NextResponse.json({
             success: true,
             data: {
@@ -63,7 +73,8 @@ export async function GET() {
                 permissions: uniquePermissions,
                 department: user.department,
                 position: user.position,
-                status: user.status
+                status: user.status,
+                dataScope: maxDataScope,
             }
         })
     } catch (error) {

@@ -6,6 +6,8 @@
 
 'use client'
 
+import { canModify, canOperate, type RecordPermissionContext } from '@/lib/record-permission'
+
 import { useState, useEffect } from 'react'
 import { showSuccess, showError, showWarningMessage } from '@/lib/confirm'
 import { Table, Button, Space, Modal, Form, Input, Select, DatePicker, Drawer, Row, Col, Divider, Popconfirm, Radio, Upload, Descriptions, Tabs, Tooltip } from 'antd'
@@ -84,6 +86,7 @@ interface Quotation {
   createdAt: string
   items?: QuotationItem[]
   approvals?: QuotationApproval[]
+  createdById?: string | null
 }
 
 const STATUS_OPTIONS = [
@@ -132,6 +135,7 @@ export default function QuotationPage() {
 
   // 打印相关
   const [printData, setPrintData] = useState<any>(null)
+  const [currentUser, setCurrentUser] = useState<any>(null)
 
   const fetchData = async (p = page, f = filters) => {
     setLoading(true)
@@ -159,6 +163,7 @@ export default function QuotationPage() {
 
   useEffect(() => {
     fetchData()
+    fetch('/api/auth/me').then(r => r.json()).then(j => { if (j.success) setCurrentUser(j.data) }).catch(() => { })
   }, [page])
 
   const handleAdd = () => {
@@ -514,6 +519,7 @@ export default function QuotationPage() {
       onCell: () => ({ style: { whiteSpace: 'nowrap' as const } }),
       onHeaderCell: () => ({ style: { whiteSpace: 'nowrap' as const } }),
       render: (_, record) => {
+        const permCtx: RecordPermissionContext = { userId: currentUser?.id || session?.user?.id || '', dataScope: currentUser?.dataScope || 'self' }
         const canAudit = (
           (record.status === 'pending_sales' && session?.user?.roles?.includes('sales_manager')) ||
           (record.status === 'pending_finance' && session?.user?.roles?.includes('finance')) ||
@@ -526,48 +532,54 @@ export default function QuotationPage() {
         return (
           <Space size="small" style={{ whiteSpace: 'nowrap' }}>
             {/* 业务按钮（带文字） */}
-            {record.status === 'draft' && (
+            {record.status === 'draft' && canOperate(record, permCtx) && (
               <Button size="small" icon={<SendOutlined />} onClick={() => handleSubmitApprovalForRecord(record)}>提交审批</Button>
             )}
 
             {/* 生成委托单按钮（只对approved状态） */}
-            <Tooltip title={record.status !== 'approved' ? '需审批通过后才能生成委托单' : ''}>
-              <CreateEntrustmentButton
-                quotationId={record.id}
-                quotationStatus={record.status as any}
-                onSuccess={() => {
-                  showSuccess('委托单创建成功')
-                  fetchData()
-                }}
-                buttonText="生成委托单"
-                icon={<FileTextOutlined />}
-                size="small"
-                type="default"
-              />
-            </Tooltip>
+            {canOperate(record, permCtx) && (
+              <Tooltip title={record.status !== 'approved' ? '需审批通过后才能生成委托单' : ''}>
+                <CreateEntrustmentButton
+                  quotationId={record.id}
+                  quotationStatus={record.status as any}
+                  onSuccess={() => {
+                    showSuccess('委托单创建成功')
+                    fetchData()
+                  }}
+                  buttonText="生成委托单"
+                  icon={<FileTextOutlined />}
+                  size="small"
+                  type="default"
+                />
+              </Tooltip>
+            )}
 
 
             {/* 审批操作已移至"工作台-审批中心"统一处理 */}
 
-            {record.status === 'approved' && (
+            {record.status === 'approved' && canOperate(record, permCtx) && (
               <Button size="small" icon={<FolderOutlined />} onClick={() => handleOpenContractForRecord(record)}>生成合同</Button>
             )}
 
             {/* 通用按钮（仅图标） */}
             <Button size="small" icon={<EyeOutlined />} onClick={() => handleView(record)} />
             <Button size="small" icon={<PrinterOutlined />} onClick={() => handlePrint(record)} title="打印" />
-            <Tooltip title={record.status !== 'draft' ? '仅草稿状态可编辑' : '编辑'}>
-              <span>
-                <Button size="small" icon={<EditOutlined />} onClick={() => handleEdit(record)} disabled={record.status !== 'draft'} />
-              </span>
-            </Tooltip>
-            <Tooltip title={record.status !== 'draft' ? '仅草稿状态可删除' : '删除'}>
-              <span>
-                <Popconfirm title="确认删除？" onConfirm={() => handleDelete(record.id)} disabled={record.status !== 'draft'}>
-                  <Button size="small" danger icon={<DeleteOutlined />} disabled={record.status !== 'draft'} />
-                </Popconfirm>
-              </span>
-            </Tooltip>
+            {canModify(record, permCtx) && (
+              <>
+                <Tooltip title={record.status !== 'draft' ? '仅草稿状态可编辑' : '编辑'}>
+                  <span>
+                    <Button size="small" icon={<EditOutlined />} onClick={() => handleEdit(record)} disabled={record.status !== 'draft'} />
+                  </span>
+                </Tooltip>
+                <Tooltip title={record.status !== 'draft' ? '仅草稿状态可删除' : '删除'}>
+                  <span>
+                    <Popconfirm title="确认删除？" onConfirm={() => handleDelete(record.id)} disabled={record.status !== 'draft'}>
+                      <Button size="small" danger icon={<DeleteOutlined />} disabled={record.status !== 'draft'} />
+                    </Popconfirm>
+                  </span>
+                </Tooltip>
+              </>
+            )}
           </Space>
         )
       },

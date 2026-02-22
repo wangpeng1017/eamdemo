@@ -1,5 +1,7 @@
 'use client'
 
+import { canModify, type RecordPermissionContext } from '@/lib/record-permission'
+
 import { useState, useEffect } from 'react'
 import { showSuccess, showError } from '@/lib/confirm'
 import { Table, Button, Space, Tag, Modal, Form, Input, Select, DatePicker, Drawer, Descriptions, Popconfirm } from 'antd'
@@ -21,6 +23,7 @@ interface Sample {
   receivedDate: string | null
   remark: string | null
   createdAt: string
+  createdById?: string | null
 }
 
 const statusMap: Record<string, { text: string; color: string }> = {
@@ -37,6 +40,7 @@ export default function SampleListPage() {
   const [total, setTotal] = useState(0)
   const [page, setPage] = useState(1)
   const [modalOpen, setModalOpen] = useState(false)
+  const [currentUser, setCurrentUser] = useState<any>(null)
 
   // 查看抽屉状态
   const [viewDrawerOpen, setViewDrawerOpen] = useState(false)
@@ -58,7 +62,10 @@ export default function SampleListPage() {
     setLoading(false)
   }
 
-  useEffect(() => { fetchData() }, [page])
+  useEffect(() => {
+    fetchData()
+    fetch('/api/auth/me').then(r => r.json()).then(j => { if (j.success) setCurrentUser(j.data) }).catch(() => { })
+  }, [page])
 
   const handleAdd = () => {
     router.push('/sample/list/create')
@@ -121,15 +128,22 @@ export default function SampleListPage() {
     },
     {
       title: '操作', fixed: 'right',
-      render: (_, record) => (
-        <Space style={{ whiteSpace: 'nowrap' }}>
-          <Button size="small" icon={<EyeOutlined />} onClick={() => handleView(record)} />
-          <Button size="small" icon={<EditOutlined />} onClick={() => handleEdit(record)} />
-          <Popconfirm title="确认删除？" onConfirm={() => handleDelete(record.id)} okText="确定" cancelText="取消" okButtonProps={{ danger: true }}>
-            <Button size="small" danger icon={<DeleteOutlined />} />
-          </Popconfirm>
-        </Space>
-      )
+      render: (_: unknown, record: Sample) => {
+        const permCtx: RecordPermissionContext = { userId: currentUser?.id || '', dataScope: currentUser?.dataScope || 'self' }
+        return (
+          <Space style={{ whiteSpace: 'nowrap' }}>
+            <Button size="small" icon={<EyeOutlined />} onClick={() => handleView(record)} />
+            {canModify(record, permCtx) && (
+              <Button size="small" icon={<EditOutlined />} onClick={() => handleEdit(record)} />
+            )}
+            {canModify(record, permCtx) && (
+              <Popconfirm title="确认删除？" onConfirm={() => handleDelete(record.id)} okText="确定" cancelText="取消" okButtonProps={{ danger: true }}>
+                <Button size="small" danger icon={<DeleteOutlined />} />
+              </Popconfirm>
+            )}
+          </Space>
+        )
+      }
     }
   ]
 

@@ -6,6 +6,8 @@
 
 'use client'
 
+import { canModify, canOperate, type RecordPermissionContext } from '@/lib/record-permission'
+
 import { useState, useEffect } from 'react'
 import { showSuccess, showError, showWarningMessage } from '@/lib/confirm'
 import { Table, Button, Space, Form, Input, Select, Drawer, Tag, Popconfirm, Tabs, Descriptions, Divider } from 'antd'
@@ -43,6 +45,8 @@ interface Contract {
   remark?: string | null
   status: string
   createdAt: string
+  createdById?: string | null
+  followerId?: string | null
   items?: ContractItem[]
   client?: {
     id: string
@@ -87,6 +91,7 @@ export default function ContractPage() {
   const [loading, setLoading] = useState(false)
   const [total, setTotal] = useState(0)
   const [page, setPage] = useState(1)
+  const [currentUser, setCurrentUser] = useState<any>(null)
   // State
   const [viewDrawerOpen, setViewDrawerOpen] = useState(false)
   const [currentContract, setCurrentContract] = useState<Contract | null>(null)
@@ -117,7 +122,10 @@ export default function ContractPage() {
     setLoading(false)
   }
 
-  useEffect(() => { fetchData() }, [page])
+  useEffect(() => {
+    fetchData()
+    fetch('/api/auth/me').then(r => r.json()).then(j => { if (j.success) setCurrentUser(j.data) }).catch(() => { })
+  }, [page])
   const handleAdd = () => {
     router.push('/entrustment/contract/create')
   }
@@ -302,39 +310,48 @@ export default function ContractPage() {
       fixed: 'right',
       onCell: () => ({ style: { whiteSpace: 'nowrap' as const } }),
       onHeaderCell: () => ({ style: { whiteSpace: 'nowrap' as const } }),
-      render: (_, record) => (
-        <Space size="small" style={{ whiteSpace: 'nowrap' }}>
-          {/* 业务按钮（带文字） */}
-          <Button size="small" icon={<FilePdfOutlined />} onClick={() => {
-            window.open(`/api/contract/${record.id}/pdf`, '_blank')
-          }}>生成PDF</Button>
-          <Button size="small" icon={<FileAddOutlined />} onClick={() => {
-            // 生成委托单逻辑
-            const params = new URLSearchParams({
-              contractId: record.id, // 添加合同ID用于复制样品检测项
-              contractNo: record.contractNo,
-              clientName: record.partyACompany || record.client?.name || record.clientName || '',
-              contactPerson: record.clientContact || '',
-              contactPhone: record.clientPhone || '',
-              clientAddress: record.clientAddress || '',
-            })
-            // 传递报告时间和跟单人
-            if ((record as any).clientReportDeadline) {
-              params.set('clientReportDeadline', (record as any).clientReportDeadline)
-            }
-            if ((record as any).followerId) {
-              params.set('followerId', (record as any).followerId)
-            }
-            router.push(`/entrustment/list/create?${params.toString()}`)
-          }}>生成委托单</Button>
-          {/* 通用按钮（仅图标） */}
-          <Button size="small" icon={<EyeOutlined />} onClick={() => handleView(record)} />
-          <Button size="small" icon={<EditOutlined />} onClick={() => handleEdit(record)} />
-          <Popconfirm title="确认删除？" onConfirm={() => handleDelete(record.id)} okText="确定" cancelText="取消">
-            <Button size="small" danger icon={<DeleteOutlined />} />
-          </Popconfirm>
-        </Space>
-      ),
+      render: (_: unknown, record: Contract) => {
+        const permCtx: RecordPermissionContext = { userId: currentUser?.id || '', dataScope: currentUser?.dataScope || 'self' }
+        return (
+          <Space size="small" style={{ whiteSpace: 'nowrap' }}>
+            {/* 业务按钮（带文字） */}
+            {canOperate(record, permCtx) && (
+              <>
+                <Button size="small" icon={<FilePdfOutlined />} onClick={() => {
+                  window.open(`/api/contract/${record.id}/pdf`, '_blank')
+                }}>生成PDF</Button>
+                <Button size="small" icon={<FileAddOutlined />} onClick={() => {
+                  const params = new URLSearchParams({
+                    contractId: record.id,
+                    contractNo: record.contractNo,
+                    clientName: record.partyACompany || record.client?.name || record.clientName || '',
+                    contactPerson: record.clientContact || '',
+                    contactPhone: record.clientPhone || '',
+                    clientAddress: record.clientAddress || '',
+                  })
+                  if ((record as any).clientReportDeadline) {
+                    params.set('clientReportDeadline', (record as any).clientReportDeadline)
+                  }
+                  if (record.followerId) {
+                    params.set('followerId', record.followerId)
+                  }
+                  router.push(`/entrustment/list/create?${params.toString()}`)
+                }}>生成委托单</Button>
+              </>
+            )}
+            {/* 通用按钮（仅图标） */}
+            <Button size="small" icon={<EyeOutlined />} onClick={() => handleView(record)} />
+            {canModify(record, permCtx) && (
+              <Button size="small" icon={<EditOutlined />} onClick={() => handleEdit(record)} />
+            )}
+            {canModify(record, permCtx) && (
+              <Popconfirm title="确认删除？" onConfirm={() => handleDelete(record.id)} okText="确定" cancelText="取消">
+                <Button size="small" danger icon={<DeleteOutlined />} />
+              </Popconfirm>
+            )}
+          </Space>
+        )
+      }
     },
   ]
 
