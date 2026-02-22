@@ -551,7 +551,7 @@ export default function InspectionStandardsPage() {
       render: (v) => <Text strong>{v}</Text>,
     },
     {
-      title: '执行标准', dataIndex: 'executionStandard', width: 200,
+      title: '检测标准', dataIndex: 'executionStandard', width: 200,
       render: (v) => v || '-',
     },
     {
@@ -720,7 +720,7 @@ export default function InspectionStandardsPage() {
                     style={{ width: 200 }}
                   />
                   <Input
-                    placeholder="搜索执行标准"
+                    placeholder="搜索检测标准"
                     allowClear
                     value={filterStandard}
                     onChange={e => setFilterStandard(e.target.value)}
@@ -802,7 +802,7 @@ export default function InspectionStandardsPage() {
           <Form.Item name="name" label="检测项目" rules={[{ required: true, message: '请输入检测项目名称' }]}>
             <Input placeholder="如：拉伸强度、弯曲强度" />
           </Form.Item>
-          <Form.Item name="executionStandard" label="执行标准">
+          <Form.Item name="executionStandard" label="检测标准">
             <Input placeholder="如：GB/T 1040.2-2022" />
           </Form.Item>
           <Row gutter={16}>
@@ -914,7 +914,7 @@ export default function InspectionStandardsPage() {
               <Descriptions.Item label="检测项目">
                 <Text strong>{viewingItem.name}</Text>
               </Descriptions.Item>
-              <Descriptions.Item label="执行标准">
+              <Descriptions.Item label="检测标准">
                 {viewingItem.executionStandard || '-'}
               </Descriptions.Item>
               <Descriptions.Item label="样本容量">

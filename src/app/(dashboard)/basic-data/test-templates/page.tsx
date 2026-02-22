@@ -165,7 +165,7 @@ export default function TestTemplatesPage() {
 
   const columns: ColumnsType<TestTemplate> = [
     { title: '项目编号', dataIndex: 'code', width: 140 },
-    { title: '项目名称', dataIndex: 'name', width: 200 },
+    { title: '检测项目', dataIndex: 'name', width: 200 },
     {
       title: '分类', dataIndex: 'category', width: 100,
       render: (cat) => <Tag>{cat}</Tag>

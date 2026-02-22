@@ -104,7 +104,7 @@ export default function TestTaskPage() {
     { title: '任务编号', dataIndex: 'taskNo', width: 150 },
     { title: '样品', dataIndex: ['sample', 'name'], render: (_, r) => r.sample?.name || '-' },
     { title: '检测项目', dataIndex: 'testItem' },
-    { title: '检测方法', dataIndex: 'testMethod', width: 150 },
+    { title: '检测标准', dataIndex: 'testMethod', width: 150 },
     { title: '设备', dataIndex: ['device', 'name'], render: (_, r) => r.device?.name || '-' },
     {
       title: '状态', dataIndex: 'status', width: 100,
@@ -151,7 +151,7 @@ export default function TestTaskPage() {
           <Form.Item name="testItem" label="检测项目" rules={[{ required: true, message: '请输入检测项目' }]}>
             <Input />
           </Form.Item>
-          <Form.Item name="testMethod" label="检测方法">
+          <Form.Item name="testMethod" label="检测标准">
             <Input />
           </Form.Item>
           <Form.Item name="plannedDate" label="计划日期">

@@ -529,23 +529,8 @@ export default function EntrustmentListPage() {
 
   // 检测项目子表格列
   const projectColumns: ColumnsType<EntrustmentProject> = [
-    { title: '项目名称', dataIndex: 'name', width: 150 },
-    {
-      title: '检测项目',
-      dataIndex: 'testItems',
-      width: 200,
-      render: (items: string | string[] | null) => {
-        if (!items) return '-'
-        try {
-          const arr = typeof items === 'string' ? JSON.parse(items) : items
-          return Array.isArray(arr) ? arr.join(', ') : '-'
-        } catch {
-          return typeof items === 'string' ? items : '-'
-        }
-      }
-    },
-    { title: '检测方法', dataIndex: 'method', width: 150 },
-    { title: '判定标准', dataIndex: 'standard', width: 150 },
+    { title: '检测项目', dataIndex: 'name', width: 150 },
+    { title: '检测标准', dataIndex: 'method', width: 250 },
     {
       title: '状态',
       dataIndex: 'status',

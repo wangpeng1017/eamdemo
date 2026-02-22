@@ -487,7 +487,7 @@ export default function ContractPage() {
                     size="small"
                     columns={[
                       { title: '检测项目', dataIndex: 'serviceItem' },
-                      { title: '方法/标准', dataIndex: 'methodStandard' },
+                      { title: '检测标准', dataIndex: 'methodStandard' },
                       { title: '数量', dataIndex: 'quantity', width: 80 },
                       { title: '单价', dataIndex: 'unitPrice', width: 100, render: v => `¥${Number(v).toFixed(2)}` },
                       { title: '总价', dataIndex: 'totalPrice', width: 100, render: v => `¥${Number(v).toFixed(2)}` },

@@ -697,7 +697,7 @@ export default function QuotationPage() {
                       columns={[
                         { title: '样品名称', dataIndex: 'sampleName' },
                         { title: '检测项目', dataIndex: 'serviceItem' },
-                        { title: '方法/标准', dataIndex: 'methodStandard' },
+                        { title: '检测标准', dataIndex: 'methodStandard' },
                         { title: '数量', dataIndex: 'quantity' },
                         { title: '单价', dataIndex: 'unitPrice', render: (v: number) => `¥${v}` },
                         { title: '小计', dataIndex: 'totalPrice', render: (v: number) => `¥${Number(v || 0).toFixed(2)}` },

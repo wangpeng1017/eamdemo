@@ -214,7 +214,7 @@ export default function ContractForm({ initialValues, mode, onSubmit, loading }:
                             )
                         },
                         {
-                            title: '方法/标准',
+                            title: '检测标准',
                             dataIndex: 'methodStandard',
                             render: (text, record, index) => (
                                 <Input value={text} onChange={e => updateItem(index, 'methodStandard', e.target.value)} />
