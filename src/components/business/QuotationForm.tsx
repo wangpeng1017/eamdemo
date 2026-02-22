@@ -163,13 +163,27 @@ export default function QuotationForm({
     }
 
     const updateItem = (index: number, field: string, value: any) => {
-        const newItems = [...items]
-        const item = { ...newItems[index], [field]: value }
-        // 重新计算小计
-        const qty = parseFloat(item.quantity) || 1
-        item.totalPrice = qty * (item.unitPrice || 0)
-        newItems[index] = item
-        setItems(newItems)
+        setItems(prev => {
+            const newItems = [...prev]
+            const item = { ...newItems[index], [field]: value }
+            // 重新计算小计
+            const qty = parseFloat(item.quantity) || 1
+            item.totalPrice = qty * (item.unitPrice || 0)
+            newItems[index] = item
+            return newItems
+        })
+    }
+
+    // 批量更新明细行多个字段（避免连续调用 updateItem 的闭包竞态）
+    const updateItemMulti = (index: number, updates: Record<string, any>) => {
+        setItems(prev => {
+            const newItems = [...prev]
+            const item = { ...newItems[index], ...updates }
+            const qty = parseFloat(item.quantity) || 1
+            item.totalPrice = qty * (item.unitPrice || 0)
+            newItems[index] = item
+            return newItems
+        })
     }
 
     const removeItem = (index: number) => {
@@ -241,11 +255,12 @@ export default function QuotationForm({
                     options={testTemplates.map(t => ({ value: t.name, label: t.name, method: t.method || '' }))}
                     value={value || undefined}
                     onChange={(val, option) => {
-                        updateItem(index, 'serviceItem', val || '')
+                        const updates: Record<string, any> = { serviceItem: val || '' }
                         const method = (option as any)?.method || ''
                         if (method) {
-                            updateItem(index, 'methodStandard', method)
+                            updates.methodStandard = method
                         }
+                        updateItemMulti(index, updates)
                     }}
                     style={{ width: '100%' }}
                     placeholder="检测项目"
