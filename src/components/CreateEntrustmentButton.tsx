@@ -19,9 +19,9 @@
 'use client'
 
 import { useState } from 'react'
-import { showWarning, showWarningMessage } from '@/lib/confirm'
-import { Button, message, Modal, Descriptions } from 'antd'
-import { FileTextOutlined } from '@ant-design/icons'
+import { showWarningMessage } from '@/lib/confirm'
+import { Button, Modal, Descriptions } from 'antd'
+import { FileTextOutlined, ExclamationCircleFilled } from '@ant-design/icons'
 import { useRouter } from 'next/navigation'
 
 type QuotationStatus = 'draft' | 'pending_sales' | 'pending_finance' | 'pending_lab' | 'approved' | 'rejected' | 'archived'
@@ -68,6 +68,7 @@ export function CreateEntrustmentButton({
     message: string
   } | null>(null)
   const router = useRouter()
+  const [modal, contextHolder] = Modal.useModal()
 
   // 检查是否可以生成委托单
   const canCreate = quotationStatus === 'approved'
@@ -119,11 +120,21 @@ export function CreateEntrustmentButton({
         // 调用成功回调
         onSuccess?.(result.data.entrustmentId, result.data.entrustmentNo)
       } else {
-        showWarning('操作提示', result.error || '生成委托单失败')
+        modal.warning({
+          title: '操作提示',
+          content: result.error || '生成委托单失败',
+          okText: '知道了',
+          centered: true,
+        })
       }
     } catch (error) {
       console.error('生成委托单失败:', error)
-      showWarning('操作提示', '生成委托单失败，请重试')
+      modal.warning({
+        title: '操作提示',
+        content: '生成委托单失败，请重试',
+        okText: '知道了',
+        centered: true,
+      })
     } finally {
       setLoading(false)
     }
@@ -139,6 +150,7 @@ export function CreateEntrustmentButton({
 
   return (
     <>
+      {contextHolder}
       <Button
         type={type}
         icon={icon}
