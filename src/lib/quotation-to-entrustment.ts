@@ -324,7 +324,7 @@ export async function createEntrustmentFromQuotation(
       testItemName: item.serviceItem || '',
       testStandard: item.methodStandard || '',
       testCategory: 'component',
-      quantity: item.quantity || 1,
+      quantity: parseInt(String(item.quantity)) || 1,
       sortOrder: allSampleTestItemData.length,
     })
   }
