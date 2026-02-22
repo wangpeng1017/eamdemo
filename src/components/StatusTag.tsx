@@ -10,7 +10,7 @@ interface StatusTagProps {
   status?: string | null
   text?: string
   color?: string
-  type?: 'consultation' | 'quotation' | 'quotation_client' | 'contract' | 'entrustment' | 'sample' | 'task' | 'report' | 'device' | 'feasibility' | 'project' | 'receivable' | 'invoice' | 'boolean' | 'calibration_plan' | 'client' | 'outsource' | 'sample_processing' | 'client_report' | 'approval'
+  type?: 'consultation' | 'quotation' | 'quotation_client' | 'contract' | 'entrustment' | 'entrustment_report' | 'sample' | 'task' | 'report' | 'device' | 'feasibility' | 'project' | 'receivable' | 'invoice' | 'boolean' | 'calibration_plan' | 'client' | 'outsource' | 'sample_processing' | 'client_report' | 'approval'
   className?: string
 }
 
@@ -51,15 +51,13 @@ const STATUS_TEXT_MAP: Record<string, Record<string, string>> = {
   },
   entrustment: {
     pending: '待受理',
-    accepted: '已受理',
     processing: '进行中',
-    '待分配': '待分配',
-    assigned: '已分配',
-    testing: '检测中',
-    in_progress: '进行中',
     completed: '已完成',
-    cancelled: '已取消',
-    rejected: '已拒绝',
+  },
+  entrustment_report: {
+    none: '未生成',
+    generated: '已生成',
+    issued: '已发布',
   },
   sample: {
     '待收样': '待收样',
@@ -74,6 +72,7 @@ const STATUS_TEXT_MAP: Record<string, Record<string, string>> = {
     pending: '待开始',
     in_progress: '进行中',
     '进行中': '进行中',
+    pending_review: '待审核',
     completed: '已完成',
     '已完成': '已完成',
     transferred: '已转交',
@@ -187,6 +186,7 @@ const GLOBAL_STATUS_TEXT_MAP: Record<string, string> = {
   requisitioned: '已领用',
   received: '已收样',
   entrusted: '已委托',
+  pending_review: '待审核',
 }
 
 /**
@@ -226,15 +226,13 @@ const STATUS_COLOR_MAP: Record<string, Record<string, string>> = {
   },
   entrustment: {
     pending: 'default',
-    accepted: 'processing',
     processing: 'processing',
-    '待分配': 'default',
-    assigned: 'processing',
-    testing: 'processing',
-    in_progress: 'processing',
     completed: 'success',
-    cancelled: 'default',
-    rejected: 'error',
+  },
+  entrustment_report: {
+    none: 'default',
+    generated: 'processing',
+    issued: 'success',
   },
   sample: {
     '待收样': 'default',
@@ -249,6 +247,7 @@ const STATUS_COLOR_MAP: Record<string, Record<string, string>> = {
     pending: 'default',
     in_progress: 'processing',
     '进行中': 'processing',
+    pending_review: 'warning',
     completed: 'success',
     '已完成': 'success',
     transferred: 'warning',

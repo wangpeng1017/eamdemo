@@ -702,6 +702,12 @@ export default function EntrustmentListPage() {
       render: (s: string) => <StatusTag type="entrustment" status={s} />
     },
     {
+      title: '报告状态',
+      dataIndex: 'reportStatus',
+      width: 90,
+      render: (s: string) => <StatusTag type="entrustment_report" status={s || 'none'} />
+    },
+    {
       title: '跟单人',
       dataIndex: 'followerId',
       width: 80,

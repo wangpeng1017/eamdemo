@@ -557,9 +557,10 @@ model Entrustment {
   specialRequirements String?   @db.Text
   printTerms          String?   @db.Text // 打印声明条款（JSON格式，周期说明/分包声明/费用声明/Notes等）
 
-  sourceType String? @db.VarChar(20) // contract/quotation/direct
-  status     String  @default("pending") // pending/accepted/testing/completed
-  remark     String? @db.Text // 备注，可用于存储外部链接 token 等 JSON 数据
+  sourceType    String? @db.VarChar(20) // contract/quotation/direct
+  status        String  @default("pending") // pending/processing/completed
+  reportStatus  String  @default("none") // none/generated/issued - 报告生成状态
+  remark        String? @db.Text // 备注，可用于存储外部链接 token 等 JSON 数据
 
   createdById String?
   createdBy   User?    @relation("CreatedBy", fields: [createdById], references: [id])

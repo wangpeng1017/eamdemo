@@ -1,7 +1,7 @@
 # docs 文档目录索引
 
 > LIMS 系统文档中心
-> 最后更新: 2026-01-09
+> 最后更新: 2026-02-22
 
 ## 文件清单
 
@@ -9,6 +9,7 @@
 |------|------|
 | [PRD.md](./PRD.md) | 产品需求文档，详细功能规格说明 |
 | [DEVELOPMENT_PLAN.md](./DEVELOPMENT_PLAN.md) | 开发计划，分阶段开发任务清单 |
+| [STATUS_FLOW_ANALYSIS.md](./STATUS_FLOW_ANALYSIS.md) | 单据状态流转分析，全系统状态机梳理 |
 | [DEPLOY.md](./DEPLOY.md) | 部署文档（旧），环境配置和部署命令 |
 | [部署文档-阿里云.md](./部署文档-阿里云.md) | 阿里云服务器部署指南，支持 Claude Code 自动化 |
 | [部署文档-Windows.md](./部署文档-Windows.md) | Windows Server 2019 部署指南 |

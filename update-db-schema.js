@@ -739,6 +739,19 @@ async function main() {
             console.error('❌ Error adding printTerms:', e.message)
         }
     }
+
+    // ==================== 2026-02-22 委托单报告状态字段 ====================
+    try {
+        console.log('Adding reportStatus column to biz_entrustment...')
+        await prisma.$executeRawUnsafe(`ALTER TABLE biz_entrustment ADD COLUMN reportStatus VARCHAR(20) NOT NULL DEFAULT 'none';`)
+        console.log('✅ reportStatus column added to biz_entrustment.')
+    } catch (e) {
+        if (e.message.includes('Duplicate column name')) {
+            console.log('ℹ️ reportStatus already exists in biz_entrustment.')
+        } else {
+            console.error('❌ Error adding reportStatus:', e.message)
+        }
+    }
 }
 
 main()

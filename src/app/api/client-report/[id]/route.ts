@@ -65,6 +65,29 @@ export async function PUT(
         data: body
     })
 
+    // 当报告状态变为 issued/approved 时，回写委托单报告状态
+    if (body.status === 'issued' && report.entrustmentId) {
+        await prisma.entrustment.update({
+            where: { id: report.entrustmentId },
+            data: { reportStatus: 'issued' }
+        })
+    } else if (body.status === 'voided' && report.entrustmentId) {
+        // 报告作废时，检查该委托单是否还有其他有效报告
+        const otherReports = await prisma.clientReport.count({
+            where: {
+                entrustmentId: report.entrustmentId,
+                id: { not: id },
+                status: { not: 'voided' }
+            }
+        })
+        if (otherReports === 0) {
+            await prisma.entrustment.update({
+                where: { id: report.entrustmentId },
+                data: { reportStatus: 'none' }
+            })
+        }
+    }
+
     return NextResponse.json({
         success: true,
         data: report

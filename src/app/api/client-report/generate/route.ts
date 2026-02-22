@@ -109,6 +109,12 @@ export async function POST(request: NextRequest) {
         }
     })
 
+    // 回写委托单报告状态
+    await prisma.entrustment.update({
+        where: { id: entrustmentId },
+        data: { reportStatus: 'generated' }
+    })
+
     return NextResponse.json({
         success: true,
         data: report,
