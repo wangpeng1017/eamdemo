@@ -113,7 +113,22 @@ export const DELETE = withErrorHandler(async (
     badRequest('只有草稿状态的报告可以删除')
   }
 
+  const entrustmentId = existing.entrustmentId
+
   await prisma.clientReport.delete({ where: { id } })
+
+  // 回退委托单 reportStatus：若无其他报告则重置为 none
+  if (entrustmentId) {
+    const remaining = await prisma.clientReport.count({
+      where: { entrustmentId, id: { not: id } }
+    })
+    if (remaining === 0) {
+      await prisma.entrustment.update({
+        where: { id: entrustmentId },
+        data: { reportStatus: 'none' }
+      })
+    }
+  }
 
   return success({ success: true })
 })
