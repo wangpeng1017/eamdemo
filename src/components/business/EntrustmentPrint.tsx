@@ -200,7 +200,7 @@ const EntrustmentPrint = forwardRef<HTMLDivElement, { data: PrintData }>(({ data
                 <table style={{ width: '100%', borderCollapse: 'collapse', marginBottom: '0' }}>
                     <tbody>
                         <tr>
-                            <td rowSpan={5} style={{ ...labelCell, width: '5%', textAlign: 'center', fontSize: FONT_SIZE, writingMode: 'vertical-rl', letterSpacing: '2px' }}>●申<br />请<br />方<br />信<br />息</td>
+                            <td rowSpan={5} style={{ ...labelCell, width: '5%', textAlign: 'center', fontSize: FONT_SIZE }}>●申请方信息</td>
                             <td style={{ ...labelCell, width: '13%' }}>●委托单位<br /><span style={{ fontWeight: 'normal', fontSize: FONT_SIZE_SMALL }}>Applicant Name</span></td>
                             <td style={{ ...cell, width: '32%' }}>{data.clientName || ''}</td>
                             <td style={{ ...labelCell, width: '13%' }}>●联系人<br /><span style={{ fontWeight: 'normal', fontSize: FONT_SIZE_SMALL }}>Contact Person</span></td>
@@ -229,7 +229,7 @@ const EntrustmentPrint = forwardRef<HTMLDivElement, { data: PrintData }>(({ data
                 <table style={{ width: '100%', borderCollapse: 'collapse', marginBottom: '0' }}>
                     <tbody>
                         <tr>
-                            <td rowSpan={2} style={{ ...labelCell, width: '5%', textAlign: 'center', writingMode: 'vertical-rl', letterSpacing: '2px' }}>●<br />报<br />告<br />要<br />求</td>
+                            <td rowSpan={2} style={{ ...labelCell, width: '5%', textAlign: 'center' }}>●报告要求</td>
                             <td style={{ ...labelCell, width: '13%' }}>●报告语种<br /><span style={{ fontWeight: 'normal', fontSize: FONT_SIZE_SMALL }}>Report Language</span></td>
                             <td style={{ ...cell, width: '32%' }}>
                                 <Chk checked={data.reportLanguage === 'cn'} /> 中文 &nbsp;
@@ -260,7 +260,7 @@ const EntrustmentPrint = forwardRef<HTMLDivElement, { data: PrintData }>(({ data
                 <table style={{ width: '100%', borderCollapse: 'collapse', marginBottom: '0' }}>
                     <tbody>
                         <tr>
-                            <td rowSpan={2} style={{ ...labelCell, width: '5%', textAlign: 'center', writingMode: 'vertical-rl', letterSpacing: '2px' }}>●<br />寄<br />送<br />要<br />求</td>
+                            <td rowSpan={2} style={{ ...labelCell, width: '5%', textAlign: 'center' }}>●寄送要求</td>
                             <td style={{ ...labelCell, width: '13%' }}>●报告送递<br /><span style={{ fontWeight: 'normal', fontSize: FONT_SIZE_SMALL }}>Report Delivery</span></td>
                             <td style={{ ...cell, width: '32%' }}>
                                 <Chk checked={data.reportDelivery === 'fax'} /> 传真 &nbsp;
