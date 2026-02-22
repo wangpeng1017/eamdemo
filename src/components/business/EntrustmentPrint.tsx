@@ -162,9 +162,9 @@ const EntrustmentPrint = forwardRef<HTMLDivElement, { data: PrintData }>(({ data
         return result
     }
 
-    const paddedSamples = padRows(samples, 4)
-    const paddedComponent = padRows(componentTests, 6)
-    const paddedMaterial = padRows(materialTests, 5)
+    const paddedSamples = padRows(samples, Math.max(samples.length, 1))
+    const paddedComponent = padRows(componentTests, Math.max(componentTests.length, 1))
+    const paddedMaterial = padRows(materialTests, Math.max(materialTests.length, 1))
 
     return (
         <>
