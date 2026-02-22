@@ -67,7 +67,9 @@ export function ApprovalRecords({
   let nodes: Array<{ step: number; name: string; role: string }> = []
   try {
     if (approvalFlow?.nodes) {
-      const parsedNodes = JSON.parse(approvalFlow.nodes)
+      const parsedNodes = typeof approvalFlow.nodes === 'string'
+        ? JSON.parse(approvalFlow.nodes)
+        : approvalFlow.nodes
       nodes = formatApprovalNodes(parsedNodes)
     }
   } catch (e) {
@@ -96,7 +98,7 @@ export function ApprovalRecords({
   // 获取状态
   const status = approvalInstance.status === 'approved' ? 'approved'
     : approvalInstance.status === 'rejected' ? 'rejected'
-    : 'pending'
+      : 'pending'
 
   return (
     <ApprovalTimeline
