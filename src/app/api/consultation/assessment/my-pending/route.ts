@@ -77,6 +77,9 @@ export const GET = withAuth(async (
         testItemName: item.testItemName,
         testStandard: item.testStandard,
         assessmentStatus: item.assessmentStatus,
+        quantity: item.quantity,
+        material: item.material,
+        currentAssessor: item.currentAssessorName,
       })),
     }
   })
