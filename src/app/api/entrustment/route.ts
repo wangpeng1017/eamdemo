@@ -70,6 +70,9 @@ export const GET = withAuth(async (request: NextRequest, user) => {
             phone: true,
           },
         },
+        followerUser: {
+          select: { id: true, name: true },
+        },
         contract: {
           select: {
             id: true,
@@ -89,6 +92,7 @@ export const GET = withAuth(async (request: NextRequest, user) => {
             quotationNo: true,
             clientReportDeadline: true,
             followerId: true,
+            followerUser: { select: { id: true, name: true } },
             items: {
               select: {
                 sampleName: true,

@@ -385,6 +385,7 @@ export default function EntrustmentListPage() {
         })),
         componentTests: testItems.filter((t: any) => t.testCategory !== 'material'),
         materialTests: testItems.filter((t: any) => t.testCategory === 'material'),
+        printTerms: ent.printTerms,
       }
 
       setPrintData(pd)
@@ -700,7 +701,23 @@ export default function EntrustmentListPage() {
       width: 90,
       render: (s: string) => <StatusTag type="entrustment" status={s} />
     },
-    { title: '跟单人', dataIndex: ['followerUser', 'name'], width: 80 },
+    {
+      title: '跟单人',
+      dataIndex: 'followerId',
+      width: 80,
+      render: (_: any, record: Entrustment) => {
+        // 优先用 followerUser 关系
+        if (record.followerUser?.name) return record.followerUser.name
+        // 回退：从 quotation 继承
+        if ((record.quotation as any)?.followerUser?.name) return (record.quotation as any).followerUser.name
+        // 再回退：从 users 列表查
+        if (record.followerId) {
+          const u = users.find((u: any) => u.id === record.followerId)
+          if (u) return (u as any).name
+        }
+        return '-'
+      }
+    },
     {
       title: '关联合同',
       dataIndex: 'contractNo',
@@ -821,7 +838,7 @@ export default function EntrustmentListPage() {
                     <Descriptions title="委托信息" column={2} bordered size="small">
                       <Descriptions.Item label="委托编号">{currentEntrustment.entrustmentNo}</Descriptions.Item>
                       <Descriptions.Item label="合同编号">{currentEntrustment.contractNo || '-'}</Descriptions.Item>
-                      <Descriptions.Item label="报价单号">{(currentEntrustment as any).quotationNo || '-'}</Descriptions.Item>
+                      <Descriptions.Item label="报价单号">{currentEntrustment.quotation?.quotationNo || '-'}</Descriptions.Item>
                       <Descriptions.Item label="委托单位">
                         {currentEntrustment.client?.name || currentEntrustment.clientName || '-'}
                       </Descriptions.Item>
@@ -829,7 +846,15 @@ export default function EntrustmentListPage() {
                       <Descriptions.Item label="联系电话">{(currentEntrustment as any).contactPhone || currentEntrustment.client?.phone || '-'}</Descriptions.Item>
                       <Descriptions.Item label="联系邮箱">{(currentEntrustment as any).contactEmail || '-'}</Descriptions.Item>
                       <Descriptions.Item label="客户地址">{(currentEntrustment as any).clientAddress || '-'}</Descriptions.Item>
-                      <Descriptions.Item label="跟单人">{currentEntrustment.followerUser?.name || '-'}</Descriptions.Item>
+                      <Descriptions.Item label="跟单人">
+                        {currentEntrustment.followerUser?.name || (() => {
+                          if (currentEntrustment.followerId) {
+                            const u = users.find((u: any) => u.id === currentEntrustment.followerId)
+                            return (u as any)?.name || '-'
+                          }
+                          return '-'
+                        })()}
+                      </Descriptions.Item>
                       <Descriptions.Item label="报告截止日期">
                         {(currentEntrustment as any).clientReportDeadline ? dayjs((currentEntrustment as any).clientReportDeadline).format('YYYY-MM-DD') : '-'}
                       </Descriptions.Item>
@@ -840,6 +865,14 @@ export default function EntrustmentListPage() {
                       <Descriptions.Item label="创建时间">
                         {dayjs(currentEntrustment.createdAt).format('YYYY-MM-DD HH:mm:ss')}
                       </Descriptions.Item>
+                    </Descriptions>
+
+                    <Divider />
+
+                    <Descriptions title="开票信息" column={2} bordered size="small">
+                      <Descriptions.Item label="开票抬头">{(currentEntrustment as any).invoiceTitle || '-'}</Descriptions.Item>
+                      <Descriptions.Item label="税号">{(currentEntrustment as any).taxId || '-'}</Descriptions.Item>
+                      <Descriptions.Item label="开票地址" span={2}>{(currentEntrustment as any).invoiceAddress || '-'}</Descriptions.Item>
                     </Descriptions>
 
                     <Divider />
@@ -869,6 +902,15 @@ export default function EntrustmentListPage() {
                           pickup: '自取',
                         }[(currentEntrustment as any).reportDelivery as string] || (currentEntrustment as any).reportDelivery || '-'}
                       </Descriptions.Item>
+                      <Descriptions.Item label="报告交付地址">{(currentEntrustment as any).reportDeliveryAddress || '-'}</Descriptions.Item>
+                      <Descriptions.Item label="报告组织方式">
+                        {{
+                          per_sample: '按样品',
+                          per_project: '按项目',
+                          combined: '合并',
+                        }[(currentEntrustment as any).reportGrouping as string] || (currentEntrustment as any).reportGrouping || '-'}
+                      </Descriptions.Item>
+                      <Descriptions.Item label="报告格式">{(currentEntrustment as any).reportFormat || '-'}</Descriptions.Item>
                       <Descriptions.Item label="接受分包">{(currentEntrustment as any).acceptSubcontract !== false ? '是' : '否'}</Descriptions.Item>
                     </Descriptions>
 
@@ -917,6 +959,16 @@ export default function EntrustmentListPage() {
                         <Divider />
                         <Descriptions title="特殊要求" column={1} bordered size="small">
                           <Descriptions.Item label="特殊要求">{(currentEntrustment as any).specialRequirements}</Descriptions.Item>
+                        </Descriptions>
+                      </>
+                    )}
+
+                    {(currentEntrustment as any).oemFactory && (
+                      <>
+                        <Divider />
+                        <Descriptions title="其他信息" column={2} bordered size="small">
+                          <Descriptions.Item label="OEM 工厂">{(currentEntrustment as any).oemFactory}</Descriptions.Item>
+                          <Descriptions.Item label="备注">{(currentEntrustment as any).remark || '-'}</Descriptions.Item>
                         </Descriptions>
                       </>
                     )}
