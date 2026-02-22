@@ -942,7 +942,7 @@ export default function EntrustmentListPage() {
               showSearch
               placeholder="选择检测人员"
               optionFilterProp="label"
-              options={users.map(u => ({ value: u.name, label: u.name }))}
+              options={users.map((u: any) => ({ value: u.name, label: `${u.name}${u.dept ? ` (${u.dept.name})` : ''}` }))}
             />
           </Form.Item>
           <Form.Item name="deadline" label="截止日期">
@@ -973,7 +973,7 @@ export default function EntrustmentListPage() {
               showSearch
               placeholder="选择检测人员"
               optionFilterProp="label"
-              options={users.map(u => ({ value: u.name, label: u.name }))}
+              options={users.map((u: any) => ({ value: u.name, label: `${u.name}${u.dept ? ` (${u.dept.name})` : ''}` }))}
             />
           </Form.Item>
           <Form.Item name="deadline" label="截止日期">

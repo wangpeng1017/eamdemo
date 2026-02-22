@@ -196,7 +196,7 @@ export default function PersonnelCapabilityPage() {
           <Form.Item name="userId" label="员工" rules={[{ required: true, message: '请输入员工' }]}>
             <Select
               placeholder="选择员工"
-              options={users.map((u: any) => ({ value: u.id, label: u.name }))}
+              options={users.map((u: any) => ({ value: u.id, label: `${u.name}${u.dept ? ` (${u.dept.name})` : ''}` }))}
               showSearch
               filterOption={(input, option) =>
                 (option?.label ?? '').toLowerCase().includes(input.toLowerCase())

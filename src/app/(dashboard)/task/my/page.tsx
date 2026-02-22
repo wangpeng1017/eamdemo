@@ -24,6 +24,7 @@ interface Task {
 interface User {
   id: string
   name: string
+  dept?: { name: string }
 }
 
 const statusMap: Record<string, { text: string; color: string }> = {
@@ -338,7 +339,7 @@ export default function MyTasksPage() {
               showSearch
               placeholder="选择接收人"
               optionFilterProp="label"
-              options={users.map(u => ({ value: u.id, label: u.name }))}
+              options={users.map(u => ({ value: u.id, label: `${u.name}${u.dept ? ` (${u.dept.name})` : ''}` }))}
             />
           </Form.Item>
           <Form.Item name="reason" label="转交原因">
