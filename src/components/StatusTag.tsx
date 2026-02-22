@@ -10,7 +10,7 @@ interface StatusTagProps {
   status?: string | null
   text?: string
   color?: string
-  type?: 'consultation' | 'quotation' | 'quotation_client' | 'contract' | 'entrustment' | 'sample' | 'task' | 'report' | 'device' | 'feasibility' | 'project' | 'receivable' | 'invoice' | 'boolean' | 'calibration_plan' | 'client'
+  type?: 'consultation' | 'quotation' | 'quotation_client' | 'contract' | 'entrustment' | 'sample' | 'task' | 'report' | 'device' | 'feasibility' | 'project' | 'receivable' | 'invoice' | 'boolean' | 'calibration_plan' | 'client' | 'outsource' | 'sample_processing' | 'client_report' | 'approval'
   className?: string
 }
 
@@ -51,6 +51,7 @@ const STATUS_TEXT_MAP: Record<string, Record<string, string>> = {
   entrustment: {
     pending: '待受理',
     accepted: '已受理',
+    processing: '进行中',
     '待分配': '待分配',
     assigned: '已分配',
     testing: '检测中',
@@ -70,8 +71,11 @@ const STATUS_TEXT_MAP: Record<string, Record<string, string>> = {
   },
   task: {
     pending: '待开始',
+    in_progress: '进行中',
     '进行中': '进行中',
+    completed: '已完成',
     '已完成': '已完成',
+    transferred: '已转交',
     '已转交': '已转交',
   },
   project: {
@@ -121,6 +125,66 @@ const STATUS_TEXT_MAP: Record<string, Record<string, string>> = {
     completed: '已完成',
     overdue: '已逾期',
   },
+  outsource: {
+    pending: '待处理',
+    processing: '处理中',
+    completed: '已完成',
+  },
+  sample_processing: {
+    pending: '待制样',
+    processing: '制样中',
+    completed: '已完成',
+  },
+  client_report: {
+    draft: '草稿',
+    pending_review: '待审核',
+    pending_approve: '待审批',
+    approved: '已批准',
+    issued: '已发布',
+    voided: '已作废',
+  },
+  approval: {
+    pending: '审批中',
+    approved: '已通过',
+    rejected: '已驳回',
+    cancelled: '已撤回',
+  },
+}
+
+/**
+ * 全局兜底状态文本映射
+ * 当特定类型的映射中找不到时，使用此映射确保常见英文状态能显示中文
+ */
+const GLOBAL_STATUS_TEXT_MAP: Record<string, string> = {
+  pending: '待处理',
+  processing: '进行中',
+  in_progress: '进行中',
+  completed: '已完成',
+  cancelled: '已取消',
+  rejected: '已拒绝',
+  approved: '已批准',
+  draft: '草稿',
+  active: '启用',
+  inactive: '停用',
+  archived: '已归档',
+  assigned: '已分配',
+  accepted: '已受理',
+  testing: '检测中',
+  reviewing: '审核中',
+  issued: '已发布',
+  signed: '已签订',
+  executing: '执行中',
+  terminated: '已终止',
+  transferred: '已转交',
+  subcontracted: '已外包',
+  submitted: '已提交',
+  partial: '部分完成',
+  overdue: '已逾期',
+  voided: '已作废',
+  returned: '已归还',
+  scrapped: '已报废',
+  requisitioned: '已领用',
+  received: '已收样',
 }
 
 /**
@@ -160,6 +224,7 @@ const STATUS_COLOR_MAP: Record<string, Record<string, string>> = {
   entrustment: {
     pending: 'default',
     accepted: 'processing',
+    processing: 'processing',
     '待分配': 'default',
     assigned: 'processing',
     testing: 'processing',
@@ -179,8 +244,11 @@ const STATUS_COLOR_MAP: Record<string, Record<string, string>> = {
   },
   task: {
     pending: 'default',
+    in_progress: 'processing',
     '进行中': 'processing',
+    completed: 'success',
     '已完成': 'success',
+    transferred: 'warning',
     '已转交': 'warning',
   },
   project: {
@@ -230,6 +298,30 @@ const STATUS_COLOR_MAP: Record<string, Record<string, string>> = {
     completed: 'success',
     overdue: 'error',
   },
+  outsource: {
+    pending: 'default',
+    processing: 'processing',
+    completed: 'success',
+  },
+  sample_processing: {
+    pending: 'default',
+    processing: 'processing',
+    completed: 'success',
+  },
+  client_report: {
+    draft: 'default',
+    pending_review: 'processing',
+    pending_approve: 'processing',
+    approved: 'success',
+    issued: 'cyan',
+    voided: 'error',
+  },
+  approval: {
+    pending: 'processing',
+    approved: 'success',
+    rejected: 'error',
+    cancelled: 'default',
+  },
 }
 
 /**
@@ -252,7 +344,7 @@ export const StatusTag = forwardRef<any, StatusTagProps>(
     // 获取映射的文本
     let displayText = text
     if (!displayText && type && status) {
-      displayText = STATUS_TEXT_MAP[type]?.[status] || status
+      displayText = STATUS_TEXT_MAP[type]?.[status] || GLOBAL_STATUS_TEXT_MAP[status] || status
     }
 
     // 获取映射的颜色
