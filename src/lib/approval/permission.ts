@@ -29,6 +29,7 @@ interface ApprovalInstance {
   currentStep: number
   status: string
   submittedAt: string
+  submitterId?: string
 }
 
 /**
@@ -84,8 +85,23 @@ export function canViewApproval(
     return hasPermission
   }
 
-  // 已完成/已驳回/已撤回的审批，参与过的人可以看到
-  //（这里简化处理：提交人可以看到）
+  // 已完成/已驳回/已撤回的审批
+  // 1. 提交人可以看到自己提交的审批
+  if ((instance as any).submitterId === user.id) {
+    console.log(`[DEBUG] ${user.username} 是提交人，允许查看已完成审批`)
+    return true
+  }
+
+  // 2. 审批流中任一节点的角色匹配当前用户，说明用户是潜在审批人
+  if (flowNodes && flowNodes.length > 0) {
+    const isApprover = flowNodes.some(node => hasApprovalPermission(node, user))
+    if (isApprover) {
+      console.log(`[DEBUG] ${user.username} 匹配审批流节点角色，允许查看已完成审批`)
+      return true
+    }
+  }
+
+  console.log(`[DEBUG] ${user.username} 无权查看已完成审批 ${instance.id}`)
   return false
 }
 
