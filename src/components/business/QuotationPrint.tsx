@@ -132,19 +132,16 @@ export default function QuotationPrint({ data }: QuotationPrintProps) {
             <table style={{ width: '100%', borderCollapse: 'collapse', marginBottom: 8 }}>
                 <tbody>
                     <tr>
-                        <td colSpan={5} style={{ ...cellStyle, borderRight: 'none' }}></td>
-                        <td style={{ ...cellStyle, textAlign: 'center', fontWeight: 'bold', borderLeft: 'none', borderRight: 'none' }}>报价合计</td>
+                        <td rowSpan={3} colSpan={5} style={{ ...cellStyle, textAlign: 'center', verticalAlign: 'middle', fontWeight: 'bold' }}>以上测试费用为人民币含税报价</td>
+                        <td style={{ ...cellStyle, textAlign: 'center', fontWeight: 'bold', whiteSpace: 'nowrap' }}>报价合计</td>
                         <td style={{ ...cellStyle, textAlign: 'center' }}>{subtotal.toFixed(2)}</td>
                     </tr>
                     <tr>
-                        <td colSpan={3} style={{ ...cellStyle, borderRight: 'none' }}>以上测试费用为人民币含税报价</td>
-                        <td colSpan={2} style={{ ...cellStyle, borderLeft: 'none', borderRight: 'none' }}></td>
-                        <td style={{ ...cellStyle, textAlign: 'center', fontWeight: 'bold', borderLeft: 'none', borderRight: 'none', whiteSpace: 'nowrap' }}>含税合计（含税{(TAX_RATE * 100).toFixed(0)}%）</td>
+                        <td style={{ ...cellStyle, textAlign: 'center', fontWeight: 'bold', whiteSpace: 'nowrap' }}>含税合计（含税{(TAX_RATE * 100).toFixed(0)}%）</td>
                         <td style={{ ...cellStyle, textAlign: 'center' }}>{taxTotal.toFixed(2)}</td>
                     </tr>
                     <tr>
-                        <td colSpan={5} style={{ ...cellStyle, borderRight: 'none' }}></td>
-                        <td style={{ ...cellStyle, textAlign: 'center', fontWeight: 'bold', borderLeft: 'none', borderRight: 'none', whiteSpace: 'nowrap' }}>优惠后合计<br />（含税{(TAX_RATE * 100).toFixed(0)}%）</td>
+                        <td style={{ ...cellStyle, textAlign: 'center', fontWeight: 'bold', whiteSpace: 'nowrap' }}>优惠后合计<br />（含税{(TAX_RATE * 100).toFixed(0)}%）</td>
                         <td style={{ ...cellStyle, textAlign: 'center', fontWeight: 'bold' }}>{discountTotal.toFixed(2)}</td>
                     </tr>
                 </tbody>
