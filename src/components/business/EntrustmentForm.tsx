@@ -1,13 +1,13 @@
 'use client'
 
 /**
- * @file 委托单表单 - 7 段式布局
- * @desc 对齐 Excel 模板「测试申请表-通用.xls」
+ * @file 委托单表单 - Card 分块布局
+ * @desc 对齐 Excel 模板「测试申请表-通用.xls」的区块结构
  * @input 依赖: SampleInfoTable, ComponentTestTable, MaterialTestTable
  */
 
 import { useState, useEffect, useCallback } from 'react'
-import { Form, Input, InputNumber, DatePicker, Select, Button, Row, Col, Divider, Radio, Card, Checkbox, Typography } from 'antd'
+import { Form, Input, InputNumber, DatePicker, Select, Button, Row, Col, Divider, Radio, Card, Checkbox, Typography, Space } from 'antd'
 import { showSuccess, showError } from '@/lib/confirm'
 import SampleInfoTable, { SampleInfoData } from '@/components/business/SampleInfoTable'
 import ComponentTestTable, { ComponentTestData } from '@/components/business/ComponentTestTable'
@@ -23,6 +23,19 @@ interface EntrustmentFormProps {
     onSubmit: (values: any) => Promise<void>
     loading?: boolean
 }
+
+// 区块标题样式
+const sectionTitle = (num: string, cn: string, en: string) => (
+    <Space>
+        <span style={{
+            display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+            width: 24, height: 24, borderRadius: '50%',
+            background: '#1890ff', color: '#fff', fontSize: 13, fontWeight: 600,
+        }}>{num}</span>
+        <span style={{ fontWeight: 600, fontSize: 15 }}>{cn}</span>
+        <span style={{ color: '#999', fontSize: 12 }}>{en}</span>
+    </Space>
+)
 
 export default function EntrustmentForm({ initialValues, mode, onSubmit, loading }: EntrustmentFormProps) {
     const [form] = Form.useForm()
@@ -195,12 +208,16 @@ export default function EntrustmentForm({ initialValues, mode, onSubmit, loading
         await onSubmit(submitData)
     }
 
-    return (
-        <Card bordered={false}>
-            <Form form={form} layout="vertical" onFinish={handleFinish}>
+    // 公共卡片样式
+    const cardStyle = { marginBottom: 16 }
+    const cardBodyStyle = { paddingBottom: 4 }
 
-                {/* ========== 第①段：基本信息 ========== */}
-                <Divider orientation="left" orientationMargin="0">① 基本信息</Divider>
+    return (
+        <Form form={form} layout="vertical" onFinish={handleFinish}>
+            <Form.Item name="clientId" hidden><Input /></Form.Item>
+
+            {/* ========== ① 申请方信息（含开票） ========== */}
+            <Card title={sectionTitle('1', '申请方信息', 'Applicant Information')} style={cardStyle} styles={{ body: cardBodyStyle }}>
                 <Row gutter={16}>
                     <Col span={8}>
                         <Form.Item name="entrustmentNo" label="委托编号 No.">
@@ -222,7 +239,7 @@ export default function EntrustmentForm({ initialValues, mode, onSubmit, loading
                         </Form.Item>
                     </Col>
                     <Col span={8}>
-                        <Form.Item name="clientName" label="委托单位" rules={[{ required: true, message: '请选择委托单位' }]}>
+                        <Form.Item name="clientName" label="●委托单位 Applicant" rules={[{ required: true, message: '请选择委托单位' }]}>
                             <Select
                                 showSearch allowClear
                                 placeholder="选择或输入客户"
@@ -233,57 +250,59 @@ export default function EntrustmentForm({ initialValues, mode, onSubmit, loading
                         </Form.Item>
                     </Col>
                 </Row>
-                <Form.Item name="clientId" hidden><Input /></Form.Item>
 
                 <Row gutter={16}>
                     <Col span={6}>
-                        <Form.Item name="contactPerson" label="联系人">
+                        <Form.Item name="contactPerson" label="●联系人 Contact">
                             <Input placeholder="联系人" />
                         </Form.Item>
                     </Col>
                     <Col span={6}>
-                        <Form.Item name="contactPhone" label="电话">
+                        <Form.Item name="contactPhone" label="●电话 Telephone">
                             <Input placeholder="电话" />
                         </Form.Item>
                     </Col>
                     <Col span={6}>
-                        <Form.Item name="contactFax" label="传真">
+                        <Form.Item name="contactFax" label="传真 Fax">
                             <Input placeholder="传真" />
                         </Form.Item>
                     </Col>
                     <Col span={6}>
-                        <Form.Item name="contactEmail" label="电子邮箱" rules={[{ type: 'email', message: '请输入正确的邮箱格式' }]}>
+                        <Form.Item name="contactEmail" label="●邮箱 Email" rules={[{ type: 'email', message: '请输入正确的邮箱格式' }]}>
                             <Input placeholder="邮箱" />
                         </Form.Item>
                     </Col>
                 </Row>
 
-                <Form.Item name="clientAddress" label="地址">
+                <Form.Item name="clientAddress" label="●地址 Address">
                     <Input placeholder="地址" />
                 </Form.Item>
 
-                {/* ========== 第②段：开票信息 ========== */}
-                <Divider orientation="left" orientationMargin="0">② 开票信息 Invoice Info</Divider>
+                <Divider style={{ margin: '8px 0 16px' }} dashed />
+
                 <Row gutter={16}>
-                    <Col span={12}>
-                        <Form.Item name="invoiceTitle" label="开票抬头">
+                    <Col span={8}>
+                        <Form.Item name="invoiceTitle" label="●发票抬头 Invoice Title">
                             <Input placeholder="开票抬头（自动从客户信息带出）" />
                         </Form.Item>
                     </Col>
-                    <Col span={12}>
-                        <Form.Item name="taxId" label="税号">
+                    <Col span={8}>
+                        <Form.Item name="taxId" label="●税号 Tax ID">
                             <Input placeholder="统一社会信用代码/税号" />
                         </Form.Item>
                     </Col>
-                </Row>
-                <Form.Item name="invoiceAddress" label="发票地址">
-                    <Input placeholder="发票地址" />
-                </Form.Item>
-
-                {/* ========== 第③段：服务项目 ========== */}
-                <Divider orientation="left" orientationMargin="0">③ 服务项目 Service Application</Divider>
-                <Row gutter={16}>
                     <Col span={8}>
+                        <Form.Item name="invoiceAddress" label="发票地址">
+                            <Input placeholder="发票地址" />
+                        </Form.Item>
+                    </Col>
+                </Row>
+            </Card>
+
+            {/* ========== ② 报告要求 ========== */}
+            <Card title={sectionTitle('2', '报告要求', 'Report Requirements')} style={cardStyle} styles={{ body: cardBodyStyle }}>
+                <Row gutter={16}>
+                    <Col span={6}>
                         <Form.Item name="serviceScope" label="认证标记">
                             <Checkbox.Group>
                                 <Checkbox value="CMA">CMA</Checkbox>
@@ -291,8 +310,8 @@ export default function EntrustmentForm({ initialValues, mode, onSubmit, loading
                             </Checkbox.Group>
                         </Form.Item>
                     </Col>
-                    <Col span={8}>
-                        <Form.Item name="reportLanguage" label="报告语言 Report Language" initialValue="cn">
+                    <Col span={6}>
+                        <Form.Item name="reportLanguage" label="●报告语种 Report Language" initialValue="cn">
                             <Radio.Group>
                                 <Radio value="cn">中文</Radio>
                                 <Radio value="en">English</Radio>
@@ -300,10 +319,19 @@ export default function EntrustmentForm({ initialValues, mode, onSubmit, loading
                             </Radio.Group>
                         </Form.Item>
                     </Col>
-                    <Col span={8}>
-                        <Form.Item name="urgencyLevel" label="服务类型 Service Type" initialValue="normal">
+                    <Col span={6}>
+                        <Form.Item name="reportFormat" label="●报告类型 Report Type">
+                            <Select placeholder="选择报告类型" allowClear options={[
+                                { value: 'soft', label: '电子版 Soft Copy' },
+                                { value: 'hard', label: '纸质版 Hard Copy (¥100/份)' },
+                                { value: 'both', label: '电子版+纸质版' },
+                            ]} />
+                        </Form.Item>
+                    </Col>
+                    <Col span={6}>
+                        <Form.Item name="urgencyLevel" label="●服务类型 Service Type" initialValue="normal">
                             <Select options={[
-                                { value: 'normal', label: '常规 Normal' },
+                                { value: 'normal', label: '常规 Regular' },
                                 { value: 'express', label: '加急 (+50%) Express' },
                                 { value: 'double', label: '双倍加急 (+100%)' },
                                 { value: 'urgent', label: '特急 (+150%)' },
@@ -318,12 +346,44 @@ export default function EntrustmentForm({ initialValues, mode, onSubmit, loading
                         </Form.Item>
                     </Col>
                     <Col span={6}>
-                        <Form.Item name="reportDelivery" label="报告领取方式">
-                            <Select placeholder="选择" options={[
-                                { value: 'courier', label: '快递' },
-                                { value: 'electronic', label: '电子版' },
-                                { value: 'pickup', label: '自取' },
+                        <Form.Item name="reportGrouping" label="●报告出具方式" rules={[{ required: true, message: '请选择报告出具方式' }]}>
+                            <Select placeholder="选择出具方式" allowClear onChange={(val) => setReportGroupingValue(val)} options={[
+                                { value: 'by_sample', label: '按样品出具' },
+                                { value: 'by_project', label: '按项目出具' },
+                                { value: 'merged', label: '合并出具' },
                             ]} />
+                        </Form.Item>
+                    </Col>
+                    <Col span={12}>
+                        {reportGroupingValue && (
+                            <div style={{ marginTop: 30, padding: '6px 12px', background: '#f6ffed', border: '1px solid #b7eb8f', borderRadius: 6 }}>
+                                <Text type="success" style={{ fontSize: 13 }}>
+                                    {reportGroupingValue === 'by_sample' && `按样品出具：将为每个样品生成独立报告编号（当前 ${samples.filter(s => s.name).length} 个样品）`}
+                                    {reportGroupingValue === 'by_project' && '按项目出具：将为每个检测项目生成独立报告编号'}
+                                    {reportGroupingValue === 'merged' && '合并出具：所有样品和检测项目合并为 1 份报告'}
+                                </Text>
+                            </div>
+                        )}
+                    </Col>
+                </Row>
+            </Card>
+
+            {/* ========== ③ 寄送要求 ========== */}
+            <Card title={sectionTitle('3', '寄送要求', 'Delivery Requirements')} style={cardStyle} styles={{ body: cardBodyStyle }}>
+                <Row gutter={16}>
+                    <Col span={6}>
+                        <Form.Item name="reportDelivery" label="●报告送递方式">
+                            <Select placeholder="选择" options={[
+                                { value: 'email', label: '电邮 Email' },
+                                { value: 'fax', label: '传真 Fax' },
+                                { value: 'pickup', label: '自取 Self Pick-up' },
+                                { value: 'courier', label: '快递到付 Express' },
+                            ]} />
+                        </Form.Item>
+                    </Col>
+                    <Col span={6}>
+                        <Form.Item name="reportDeliveryAddress" label="●报告寄送地址">
+                            <Input placeholder="报告寄送地址" />
                         </Form.Item>
                     </Col>
                     <Col span={6}>
@@ -335,60 +395,26 @@ export default function EntrustmentForm({ initialValues, mode, onSubmit, loading
                         </Form.Item>
                     </Col>
                     <Col span={6}>
-                        <Form.Item name="isSampleReturn" label="是否退样" initialValue={false}>
+                        <Form.Item name="isSampleReturn" label="●退回样品 Return Sample" initialValue={false}>
                             <Radio.Group>
-                                <Radio value={true}>是</Radio>
+                                <Radio value={true}>是（邮费自付）</Radio>
                                 <Radio value={false}>否</Radio>
                             </Radio.Group>
                         </Form.Item>
                     </Col>
                 </Row>
-                <Row gutter={16}>
-                    <Col span={8}>
-                        <Form.Item name="reportFormat" label="报告类型">
-                            <Select placeholder="选择报告类型" allowClear options={[
-                                { value: 'original', label: '正本' },
-                                { value: 'copy', label: '副本' },
-                                { value: 'electronic', label: '电子版' },
-                            ]} />
-                        </Form.Item>
-                    </Col>
-                    <Col span={8}>
-                        <Form.Item name="reportGrouping" label="报告出具方式" rules={[{ required: true, message: '请选择报告出具方式' }]}>
-                            <Select placeholder="选择出具方式" allowClear onChange={(val) => setReportGroupingValue(val)} options={[
-                                { value: 'by_sample', label: '按样品出具' },
-                                { value: 'by_project', label: '按项目出具' },
-                                { value: 'merged', label: '合并出具' },
-                            ]} />
-                        </Form.Item>
-                    </Col>
-                    <Col span={8}>
-                        <Form.Item name="reportDeliveryAddress" label="报告寄送地址">
-                            <Input placeholder="报告寄送地址" />
-                        </Form.Item>
-                    </Col>
-                </Row>
+            </Card>
 
-                {/* 报告编号预览提示 */}
-                {reportGroupingValue && (
-                    <div style={{ marginBottom: 16, padding: '8px 12px', background: '#f6ffed', border: '1px solid #b7eb8f', borderRadius: 6 }}>
-                        <Text type="success" style={{ fontSize: 13 }}>
-                            {reportGroupingValue === 'by_sample' && `按样品出具：将为每个样品生成独立报告编号（当前 ${samples.filter(s => s.name).length} 个样品）`}
-                            {reportGroupingValue === 'by_project' && '按项目出具：将为每个检测项目生成独立报告编号'}
-                            {reportGroupingValue === 'merged' && '合并出具：所有样品和检测项目合并为 1 份报告'}
-                        </Text>
-                    </div>
-                )}
-
-                {/* ========== 第④段：样品信息 ========== */}
-                <Divider orientation="left" orientationMargin="0">④ 样品信息 Sample Information</Divider>
+            {/* ========== ④ 样品信息 ========== */}
+            <Card title={sectionTitle('4', '样品信息', 'Sample Information')} style={cardStyle} styles={{ body: { padding: '12px 16px' } }}>
                 <SampleInfoTable value={samples} onChange={setSamples} />
+            </Card>
 
-                {/* ========== 第⑤段：试验信息 & 特殊要求 ========== */}
-                <Divider orientation="left" orientationMargin="0">⑤ 试验信息 & 特殊要求</Divider>
+            {/* ========== ⑤ 试验信息 & 特殊要求 ========== */}
+            <Card title={sectionTitle('5', '试验信息 & 特殊要求', 'Test Info & Special Requirements')} style={cardStyle} styles={{ body: cardBodyStyle }}>
                 <Row gutter={16}>
-                    <Col span={8}>
-                        <Form.Item name="testType" label="试验类型">
+                    <Col span={6}>
+                        <Form.Item name="testType" label="●试验类型">
                             <Select placeholder="选择试验类型" allowClear options={[
                                 { value: 'DV', label: 'DV' },
                                 { value: 'PV', label: 'PV' },
@@ -398,13 +424,13 @@ export default function EntrustmentForm({ initialValues, mode, onSubmit, loading
                             ]} />
                         </Form.Item>
                     </Col>
-                    <Col span={8}>
-                        <Form.Item name="oemFactory" label="主机厂">
+                    <Col span={6}>
+                        <Form.Item name="oemFactory" label="●主机厂">
                             <Input placeholder="主机厂名称" />
                         </Form.Item>
                     </Col>
-                    <Col span={8}>
-                        <Form.Item name="sampleDeliveryMethod" label="送样方式">
+                    <Col span={6}>
+                        <Form.Item name="sampleDeliveryMethod" label="●送样方式">
                             <Select placeholder="选择送样方式" allowClear options={[
                                 { value: 'customer', label: '客户送样' },
                                 { value: 'logistics', label: '物流/快递' },
@@ -413,15 +439,15 @@ export default function EntrustmentForm({ initialValues, mode, onSubmit, loading
                             ]} />
                         </Form.Item>
                     </Col>
-                </Row>
-                <Row gutter={16}>
-                    <Col span={12}>
-                        <Form.Item name="sampleDate" label="送样时间" rules={[{ required: true, message: '请选择送样时间' }]}>
+                    <Col span={6}>
+                        <Form.Item name="sampleDate" label="●送样时间" rules={[{ required: true, message: '请选择送样时间' }]}>
                             <DatePicker style={{ width: '100%' }} />
                         </Form.Item>
                     </Col>
+                </Row>
+                <Row gutter={16}>
                     <Col span={12}>
-                        <Form.Item name="followerId" label="跟单人" rules={[{ required: true, message: '请选择跟单人' }]}>
+                        <Form.Item name="followerId" label="●跟单人" rules={[{ required: true, message: '请选择跟单人' }]}>
                             <UserSelect placeholder="选择跟单人" />
                         </Form.Item>
                     </Col>
@@ -429,24 +455,26 @@ export default function EntrustmentForm({ initialValues, mode, onSubmit, loading
                 <Form.Item name="specialRequirements" label="特殊要求">
                     <Input.TextArea rows={3} placeholder="如有特殊检测要求，请在此说明（如样品保存时间、测试温度等）" />
                 </Form.Item>
+            </Card>
 
-                {/* ========== 第⑥段：零部件级测试要求 ========== */}
-                <Divider orientation="left" orientationMargin="0">⑥ 零部件级测试要求 Component Test Requirement</Divider>
+            {/* ========== ⑥ 零部件级测试要求 ========== */}
+            <Card title={sectionTitle('6', '零部件级测试要求', 'Component Test Requirement')} style={cardStyle} styles={{ body: { padding: '12px 16px' } }}>
                 <ComponentTestTable value={componentTests} onChange={setComponentTests} sampleNames={samples.map(s => s.name).filter(Boolean)} />
+            </Card>
 
-                {/* ========== 第⑦段：材料级测试要求 ========== */}
-                <Divider orientation="left" orientationMargin="0">⑦ 材料级测试要求 Material Test Requirement</Divider>
+            {/* ========== ⑦ 材料级测试要求 ========== */}
+            <Card title={sectionTitle('7', '材料级测试要求', 'Material Test Requirement')} style={cardStyle} styles={{ body: { padding: '12px 16px' } }}>
                 <MaterialTestTable value={materialTests} onChange={setMaterialTests} sampleNames={samples.map(s => s.name).filter(Boolean)} />
+            </Card>
 
-                {/* 提交按钮 */}
-                <div style={{ marginTop: 24 }}>
-                    <Form.Item>
-                        <Button type="primary" htmlType="submit" loading={loading} block size="large">
-                            {mode === 'create' ? '提交委托单' : '保存修改'}
-                        </Button>
-                    </Form.Item>
-                </div>
-            </Form>
-        </Card>
+            {/* 提交按钮 */}
+            <div style={{ marginTop: 8 }}>
+                <Form.Item>
+                    <Button type="primary" htmlType="submit" loading={loading} block size="large">
+                        {mode === 'create' ? '提交委托单' : '保存修改'}
+                    </Button>
+                </Form.Item>
+            </div>
+        </Form>
     )
 }
