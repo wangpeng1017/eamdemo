@@ -280,11 +280,13 @@ export async function createEntrustmentFromQuotation(
   )
 
   // 7. 复制样品检测项到委托单 (v2 样品表，含 ⑥⑦ 所需的所有字段)
-  // 注意：quotationSampleTestItems 已在前面第5步预查过
+  // 合并策略: 先复制 v2 SampleTestItem，再补充 v1 QuotationItem 中不在 v2 中的项目
+  const allSampleTestItemData: any[] = []
 
+  // 7a. 从 v2 SampleTestItem 复制
   if (quotationSampleTestItems.length > 0) {
-    await prisma.sampleTestItem.createMany({
-      data: quotationSampleTestItems.map((item, index) => ({
+    for (const item of quotationSampleTestItems) {
+      allSampleTestItemData.push({
         bizType: 'entrustment',
         bizId: entrustment.id,
         sampleName: item.sampleName,
@@ -296,35 +298,39 @@ export async function createEntrustmentFromQuotation(
         testItemName: item.testItemName,
         testStandard: item.testStandard,
         judgmentStandard: item.judgmentStandard,
-        // ⑥⑦ 关键字段（之前缺失）
-        testCategory: item.testCategory || 'component', // 默认为零部件级
+        testCategory: item.testCategory || 'component',
         testMethod: item.testMethod,
         samplingLocation: item.samplingLocation,
         specimenCount: item.specimenCount,
         testRemark: item.testRemark,
-        // 材料级独有字段
         materialName: item.materialName,
         materialCode: item.materialCode,
         materialSupplier: item.materialSupplier,
         materialSpec: item.materialSpec,
         materialSampleStatus: item.materialSampleStatus,
-        sortOrder: index,
-      }))
+        sortOrder: allSampleTestItemData.length,
+      })
+    }
+  }
+
+  // 7b. 补充 v1 QuotationItem 中不在 v2 样品名集合里的项目
+  const v2SampleNames = new Set(quotationSampleTestItems.map(i => i.sampleName).filter(Boolean))
+  for (const item of quotation.items) {
+    if (!item.sampleName || v2SampleNames.has(item.sampleName)) continue
+    allSampleTestItemData.push({
+      bizType: 'entrustment',
+      bizId: entrustment.id,
+      sampleName: item.sampleName,
+      testItemName: item.serviceItem || '',
+      testStandard: item.methodStandard || '',
+      testCategory: 'component',
+      quantity: item.quantity || 1,
+      sortOrder: allSampleTestItemData.length,
     })
-  } else if (quotation.items.length > 0) {
-    // 如果没有 v2 数据但有 v1 items，从 items 初始化 v2 数据
-    await prisma.sampleTestItem.createMany({
-      data: quotation.items.map((item, index) => ({
-        bizType: 'entrustment',
-        bizId: entrustment.id,
-        sampleName: item.sampleName || '',
-        testItemName: item.serviceItem || '',
-        testStandard: item.methodStandard || '',
-        testCategory: 'component', // 默认为零部件级
-        quantity: 1,
-        sortOrder: index,
-      }))
-    })
+  }
+
+  if (allSampleTestItemData.length > 0) {
+    await prisma.sampleTestItem.createMany({ data: allSampleTestItemData })
   }
 
   return {

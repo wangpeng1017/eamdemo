@@ -5,7 +5,7 @@
  * @desc 对齐 Excel 委托单模板的样品信息区域
  */
 
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useEffect } from 'react'
 import { Table, Input, InputNumber, Button, Space, Popconfirm, DatePicker } from 'antd'
 import { PlusOutlined, DeleteOutlined } from '@ant-design/icons'
 import dayjs from 'dayjs'
@@ -37,6 +37,11 @@ interface SampleInfoTableProps {
 
 export default function SampleInfoTable({ value = [], onChange, readonly = false }: SampleInfoTableProps) {
     const [items, setItems] = useState<SampleInfoData[]>(value)
+
+    // 同步外部 value prop 到内部 state
+    useEffect(() => {
+        setItems(value)
+    }, [value])
 
     const updateItems = useCallback((newItems: SampleInfoData[]) => {
         setItems(newItems)

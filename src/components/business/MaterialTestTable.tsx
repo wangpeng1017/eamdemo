@@ -35,6 +35,11 @@ interface MaterialTestTableProps {
 export default function MaterialTestTable({ value = [], onChange, readonly = false, sampleNames = [] }: MaterialTestTableProps) {
     const [items, setItems] = useState<MaterialTestData[]>(value)
 
+    // 同步外部 value prop 到内部 state
+    useEffect(() => {
+        setItems(value)
+    }, [value])
+
     const updateItems = useCallback((newItems: MaterialTestData[]) => {
         setItems(newItems)
         onChange?.(newItems)

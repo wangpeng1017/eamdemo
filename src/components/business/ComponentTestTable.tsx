@@ -140,6 +140,11 @@ interface ComponentTestTableProps {
 export default function ComponentTestTable({ value = [], onChange, readonly = false, sampleNames = [] }: ComponentTestTableProps) {
     const [items, setItems] = useState<ComponentTestData[]>(value)
 
+    // 同步外部 value prop 到内部 state
+    useEffect(() => {
+        setItems(value)
+    }, [value])
+
     const updateItems = useCallback((newItems: ComponentTestData[]) => {
         setItems(newItems)
         onChange?.(newItems)
