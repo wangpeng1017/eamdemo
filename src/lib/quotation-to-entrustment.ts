@@ -267,16 +267,19 @@ export async function createEntrustmentFromQuotation(
 
   // 6. 复制检测项目到委托单 (v1 兼容字段)
   const projects = await Promise.all(
-    quotation.items.map(item =>
-      prisma.entrustmentProject.create({
+    quotation.items.map(item => {
+      // 从检测方法标准中提取检测参数列表
+      const standards = (item.methodStandard || '').split(/[\r\n,;，；]+/).filter(Boolean).map(s => s.trim())
+      return prisma.entrustmentProject.create({
         data: {
           entrustmentId: entrustment.id,
-          name: item.sampleName || item.serviceItem,
-          testItems: '[]',
-          method: item.methodStandard
+          name: item.serviceItem || item.sampleName || '', // 项目名称 = 检测服务项
+          testItems: JSON.stringify(standards),              // 检测参数列表
+          method: item.methodStandard,
+          standard: item.methodStandard,                     // 判定标准
         }
       })
-    )
+    })
   )
 
   // 7. 复制样品检测项到委托单 (v2 样品表，含 ⑥⑦ 所需的所有字段)
