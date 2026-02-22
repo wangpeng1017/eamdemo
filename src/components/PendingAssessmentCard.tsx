@@ -11,6 +11,7 @@ import { useState, useEffect } from 'react'
 import { showError } from '@/lib/confirm'
 import { Card, List, Tag, Button, Space, Empty, Badge, message } from 'antd'
 import { FileTextOutlined, ClockCircleOutlined, RightOutlined } from '@ant-design/icons'
+import { useRouter } from 'next/navigation'
 import dayjs from 'dayjs'
 import SampleItemAssessmentModal from './SampleItemAssessmentModal'
 
@@ -39,6 +40,7 @@ interface PendingAssessmentCardProps {
 }
 
 export default function PendingAssessmentCard({ onViewAll }: PendingAssessmentCardProps) {
+  const router = useRouter()
   const [loading, setLoading] = useState(false)
   const [assessmentGroups, setAssessmentGroups] = useState<PendingAssessmentGroup[]>([])
   const [assessmentModalOpen, setAssessmentModalOpen] = useState(false)
@@ -124,7 +126,12 @@ export default function PendingAssessmentCard({ onViewAll }: PendingAssessmentCa
                 <List.Item.Meta
                   title={
                     <Space>
-                      <span>{group.consultationNo}</span>
+                      <a
+                        style={{ color: '#1890ff', cursor: 'pointer' }}
+                        onClick={() => router.push(`/entrustment/consultation?keyword=${encodeURIComponent(group.consultationNo)}`)}
+                      >
+                        {group.consultationNo}
+                      </a>
                       <Tag color="blue">{group.sampleTestItems.length} 项待评估</Tag>
                     </Space>
                   }

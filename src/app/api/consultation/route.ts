@@ -1,7 +1,7 @@
 import { prisma } from '@/lib/prisma'
 import { NextRequest } from 'next/server'
 import { withAuth, success } from '@/lib/api-handler'
-import { getDataFilter } from '@/lib/data-permission'
+import { getDataFilterWithParticipants } from '@/lib/data-permission'
 import fs from 'fs-extra'
 import path from 'path'
 
@@ -35,8 +35,19 @@ export const GET = withAuth(async (request: NextRequest, user) => {
     if (endDate) (where.createdAt as Record<string, Date>).lte = new Date(endDate)
   }
 
-  // 注入数据权限过滤（与其他模块一致）
-  const permissionFilter = await getDataFilter()
+  // 注入数据权限过滤：创建人 OR 跟单人 OR 评估人均可见
+  // 查询当前用户作为评估人的咨询单 ID
+  const session = await (await import('@/lib/auth')).auth()
+  let assessorConsultationIds: string[] = []
+  if (session?.user?.id) {
+    const assessorItems = await prisma.sampleTestItem.findMany({
+      where: { currentAssessorId: session.user.id, bizType: 'consultation' },
+      select: { bizId: true },
+      distinct: ['bizId'],
+    })
+    assessorConsultationIds = assessorItems.map(item => item.bizId)
+  }
+  const permissionFilter = await getDataFilterWithParticipants(['followerId'], assessorConsultationIds)
   Object.assign(where, permissionFilter)
 
   const [list, total] = await Promise.all([

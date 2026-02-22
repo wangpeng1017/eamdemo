@@ -2,7 +2,7 @@ import { prisma } from '@/lib/prisma'
 import { NextRequest } from 'next/server'
 import { withAuth, success, badRequest } from '@/lib/api-handler'
 import { auth } from '@/lib/auth'
-import { getDataFilter } from '@/lib/data-permission'
+import { getDataFilterWithParticipants } from '@/lib/data-permission'
 import { addCurrentApproverInfo } from '@/lib/approval/utils'
 import { logger } from '@/lib/logger'
 
@@ -32,8 +32,8 @@ export const GET = withAuth(async (request: NextRequest, user) => {
     if (endDate) where.createdAt.lte = new Date(endDate)
   }
 
-  // 注入数据权限过滤
-  const permissionFilter = await getDataFilter()
+  // 注入数据权限过滤：创建人 OR 跟单人均可见
+  const permissionFilter = await getDataFilterWithParticipants(['followerId'])
   Object.assign(where, permissionFilter)
 
   const [list, total] = await Promise.all([

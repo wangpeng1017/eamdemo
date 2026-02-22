@@ -101,6 +101,101 @@ export async function getDataFilter(userId?: string) {
 }
 
 /**
+ * 扩展版数据过滤：支持「参与者可见」
+ * 除了创建人，指定的参与者字段（如 followerId）匹配当前用户时也可见
+ * 还支持传入额外的 ID 列表（如通过关联表查到的评估人关联数据）
+ *
+ * @param participantFields - 直接字段名数组，如 ['followerId']
+ * @param extraIds - 额外可见的记录 ID 数组（通过关联表查询得到）
+ */
+export async function getDataFilterWithParticipants(
+    participantFields: string[] = [],
+    extraIds: string[] = []
+): Promise<Record<string, unknown>> {
+    try {
+        const session = await auth()
+
+        if (!session?.user?.id) {
+            logger.warn('getDataFilterWithParticipants: 未登录用户尝试访问数据')
+            return { id: 'never-match-unknown-user' }
+        }
+
+        const user = session.user
+        const { prisma } = await import('@/lib/prisma')
+
+        const userWithRoles = await prisma.user.findUnique({
+            where: { id: user.id },
+            select: {
+                deptId: true,
+                roles: {
+                    select: {
+                        role: {
+                            select: { dataScope: true }
+                        }
+                    }
+                }
+            }
+        })
+
+        if (!userWithRoles) {
+            return { id: 'never-match-user-not-found' }
+        }
+
+        let hasAll = false
+        let hasDept = false
+        userWithRoles.roles.forEach((ur: { role: { dataScope: string } }) => {
+            if (ur.role.dataScope === 'all') hasAll = true
+            if (ur.role.dataScope === 'dept') hasDept = true
+        })
+
+        // 全部数据权限：不过滤
+        if (hasAll) return {}
+
+        // 构建 OR 条件
+        const buildOrConditions = (userIds: string | string[]) => {
+            const conditions: Record<string, unknown>[] = []
+
+            // 创建人条件
+            conditions.push({ createdById: userIds })
+
+            // 参与者字段条件（如 followerId）
+            for (const field of participantFields) {
+                if (typeof userIds === 'string') {
+                    conditions.push({ [field]: userIds })
+                } else {
+                    conditions.push({ [field]: { in: userIds } })
+                }
+            }
+
+            // 额外的 ID 列表（如评估人关联的咨询单 ID）
+            if (extraIds.length > 0) {
+                conditions.push({ id: { in: extraIds } })
+            }
+
+            return { OR: conditions }
+        }
+
+        // 部门数据权限
+        if (hasDept && userWithRoles.deptId) {
+            const deptUserIds = await prisma.user.findMany({
+                where: { deptId: userWithRoles.deptId },
+                select: { id: true }
+            }).then(users => users.map(u => u.id))
+
+            return buildOrConditions(deptUserIds)
+        }
+
+        // 仅本人数据权限（默认）
+        return buildOrConditions(user.id)
+    } catch (error) {
+        logger.error('getDataFilterWithParticipants: 查询数据权限时发生错误', {
+            error: error instanceof Error ? error.message : String(error)
+        })
+        return { id: 'never-match-error' }
+    }
+}
+
+/**
  * 校验用户是否有权限访问指定咨询单
  * 允许条件：全部数据权限 / 部门数据权限（同部门）/ 创建人 / 跟单人
  */

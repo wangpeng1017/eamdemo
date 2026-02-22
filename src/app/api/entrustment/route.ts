@@ -6,7 +6,7 @@ import {
   validateRequired,
 } from '@/lib/api-handler'
 // auth 不再需要手动调用，withAuth 已包含认证
-import { getDataFilter } from '@/lib/data-permission'
+import { getDataFilterWithParticipants } from '@/lib/data-permission'
 import { generateNo, NumberPrefixes } from '@/lib/generate-no'
 import { logger } from '@/lib/logger'
 
@@ -51,8 +51,8 @@ export const GET = withAuth(async (request: NextRequest, user) => {
     if (endDate && endDate.trim()) (where.createdAt as Record<string, Date>).lte = new Date(endDate)
   }
 
-  // 注入数据权限过滤
-  const permissionFilter = await getDataFilter()
+  // 注入数据权限过滤：创建人 OR 跟单人均可见
+  const permissionFilter = await getDataFilterWithParticipants(['followerId'])
   Object.assign(where, permissionFilter)
 
   const [list, total] = await Promise.all([
