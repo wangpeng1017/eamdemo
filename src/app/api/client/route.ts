@@ -2,7 +2,6 @@ import { prisma } from '@/lib/prisma'
 import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@/lib/auth'
 import { ApprovalEngine } from '@/lib/approval/engine'
-import { getDataFilter } from '@/lib/data-permission'
 
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url)
@@ -12,10 +11,6 @@ export async function GET(request: NextRequest) {
 
   const where: any = {}
   if (status) where.status = status
-
-  // 注入数据权限过滤
-  const permissionFilter = await getDataFilter()
-  Object.assign(where, permissionFilter)
 
   const [list, total] = await Promise.all([
     prisma.client.findMany({
