@@ -7,12 +7,13 @@
  */
 
 import { useState, useEffect, useCallback } from 'react'
-import { Form, Input, InputNumber, DatePicker, Select, Button, Row, Col, Divider, Radio, Card, Checkbox, Typography, Space } from 'antd'
+import { Form, Input, InputNumber, DatePicker, Select, Button, Row, Col, Divider, Radio, Card, Checkbox, Typography, Space, Collapse } from 'antd'
 import { showSuccess, showError } from '@/lib/confirm'
 import SampleInfoTable, { SampleInfoData } from '@/components/business/SampleInfoTable'
 import ComponentTestTable, { ComponentTestData } from '@/components/business/ComponentTestTable'
 import MaterialTestTable, { MaterialTestData } from '@/components/business/MaterialTestTable'
 import UserSelect from '@/components/UserSelect'
+import { getDefaultPrintTerms } from '@/lib/entrustment-defaults'
 import dayjs from 'dayjs'
 
 const { Text } = Typography
@@ -46,6 +47,7 @@ export default function EntrustmentForm({ initialValues, mode, onSubmit, loading
     const [componentTests, setComponentTests] = useState<ComponentTestData[]>([])
     const [materialTests, setMaterialTests] = useState<MaterialTestData[]>([])
     const [reportGroupingValue, setReportGroupingValue] = useState<string | undefined>()
+    const [printTerms, setPrintTerms] = useState<any>(getDefaultPrintTerms())
 
     useEffect(() => {
         fetchOptions()
@@ -127,6 +129,14 @@ export default function EntrustmentForm({ initialValues, mode, onSubmit, loading
                 setComponentTests(compItems)
                 setMaterialTests(matItems)
             }
+
+            // 打印声明条款
+            if (initialValues.printTerms) {
+                const pt = typeof initialValues.printTerms === 'string'
+                    ? JSON.parse(initialValues.printTerms)
+                    : initialValues.printTerms
+                setPrintTerms({ ...getDefaultPrintTerms(), ...pt })
+            }
         }
     }, [initialValues, form])
 
@@ -200,9 +210,10 @@ export default function EntrustmentForm({ initialValues, mode, onSubmit, loading
         // 组装完整数据
         const submitData = {
             ...values,
-            samples: samples.filter(s => s.name), // 过滤空行
-            componentTests: componentTests.filter(t => t.testItemName), // 零部件测试
-            materialTests: materialTests.filter(t => t.testItemName), // 材料测试
+            samples: samples.filter(s => s.name),
+            componentTests: componentTests.filter(t => t.testItemName),
+            materialTests: materialTests.filter(t => t.testItemName),
+            printTerms: JSON.stringify(printTerms),
         }
 
         await onSubmit(submitData)
@@ -465,6 +476,95 @@ export default function EntrustmentForm({ initialValues, mode, onSubmit, loading
             {/* ========== ⑦ 材料级测试要求 ========== */}
             <Card title={sectionTitle('7', '材料级测试要求', 'Material Test Requirement')} style={cardStyle} styles={{ body: { padding: '12px 16px' } }}>
                 <MaterialTestTable value={materialTests} onChange={setMaterialTests} sampleNames={samples.map(s => s.name).filter(Boolean)} />
+            </Card>
+
+            {/* ========== ⑧ 声明条款（打印时显示） ========== */}
+            <Card title={sectionTitle('8', '声明条款（打印时显示）', 'Declarations & Notes')} style={cardStyle} styles={{ body: cardBodyStyle }}>
+                <div style={{ marginBottom: 8, color: '#999', fontSize: 13 }}>以下内容将显示在打印输出中，已自动填充默认值，可根据需要修改</div>
+
+                <div style={{ marginBottom: 16 }}>
+                    <div style={{ fontWeight: 600, marginBottom: 6 }}>样品管理规定</div>
+                    <Input.TextArea
+                        rows={2}
+                        value={printTerms.sampleRule}
+                        onChange={e => setPrintTerms({ ...printTerms, sampleRule: e.target.value })}
+                    />
+                </div>
+
+                <div style={{ marginBottom: 16 }}>
+                    <div style={{ fontWeight: 600, marginBottom: 6 }}>周期说明</div>
+                    <Input.TextArea
+                        rows={5}
+                        value={printTerms.cycleDesc}
+                        onChange={e => setPrintTerms({ ...printTerms, cycleDesc: e.target.value })}
+                    />
+                </div>
+
+                <div style={{ marginBottom: 16 }}>
+                    <div style={{ fontWeight: 600, marginBottom: 6 }}>附件说明</div>
+                    <Input.TextArea
+                        rows={2}
+                        value={printTerms.attachmentNote}
+                        onChange={e => setPrintTerms({ ...printTerms, attachmentNote: e.target.value })}
+                    />
+                </div>
+
+                <div style={{ marginBottom: 16 }}>
+                    <div style={{ fontWeight: 600, marginBottom: 6 }}>分包声明</div>
+                    <Input.TextArea
+                        rows={3}
+                        value={printTerms.subcontractStatement}
+                        onChange={e => setPrintTerms({ ...printTerms, subcontractStatement: e.target.value })}
+                    />
+                </div>
+
+                <div style={{ marginBottom: 16 }}>
+                    <div style={{ fontWeight: 600, marginBottom: 6 }}>费用声明</div>
+                    <Input.TextArea
+                        rows={2}
+                        value={printTerms.feeStatement}
+                        onChange={e => setPrintTerms({ ...printTerms, feeStatement: e.target.value })}
+                    />
+                </div>
+
+                <Collapse
+                    ghost
+                    items={[{
+                        key: 'notes',
+                        label: <span style={{ fontWeight: 600 }}>底部注释 Notes（共 {printTerms.notes?.length || 0} 条）</span>,
+                        children: (
+                            <div>
+                                {(printTerms.notes || []).map((note: any, idx: number) => (
+                                    <div key={idx} style={{ marginBottom: 12, padding: '8px 12px', background: '#fafafa', borderRadius: 4 }}>
+                                        <div style={{ marginBottom: 4, fontSize: 12, color: '#999' }}>第 {idx + 1} 条</div>
+                                        <Input.TextArea
+                                            rows={2}
+                                            value={note.zh}
+                                            onChange={e => {
+                                                const newNotes = [...printTerms.notes]
+                                                newNotes[idx] = { ...newNotes[idx], zh: e.target.value }
+                                                setPrintTerms({ ...printTerms, notes: newNotes })
+                                            }}
+                                            placeholder="中文"
+                                            style={{ marginBottom: 4 }}
+                                        />
+                                        <Input.TextArea
+                                            rows={2}
+                                            value={note.en}
+                                            onChange={e => {
+                                                const newNotes = [...printTerms.notes]
+                                                newNotes[idx] = { ...newNotes[idx], en: e.target.value }
+                                                setPrintTerms({ ...printTerms, notes: newNotes })
+                                            }}
+                                            placeholder="English"
+                                            style={{ fontSize: 12 }}
+                                        />
+                                    </div>
+                                ))}
+                            </div>
+                        ),
+                    }]}
+                />
             </Card>
 
             {/* 提交按钮 */}

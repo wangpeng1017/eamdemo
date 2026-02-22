@@ -8,6 +8,7 @@
  */
 
 import React, { forwardRef } from 'react'
+import { getDefaultPrintTerms } from '@/lib/entrustment-defaults'
 
 interface SampleItem {
     name: string
@@ -71,6 +72,7 @@ export interface PrintData {
     samples: SampleItem[]
     componentTests: TestItem[]
     materialTests: TestItem[]
+    printTerms?: string | any
 }
 
 // 打印样式
@@ -141,6 +143,14 @@ const EntrustmentPrint = forwardRef<HTMLDivElement, { data: PrintData }>(({ data
     const materialTests = data.materialTests || []
     const samples = data.samples || []
     const scopeArr = data.serviceScope?.split(',') || []
+
+    // 解析打印声明条款
+    const defaultTerms = getDefaultPrintTerms()
+    let terms = defaultTerms
+    if (data.printTerms) {
+        const pt = typeof data.printTerms === 'string' ? JSON.parse(data.printTerms) : data.printTerms
+        terms = { ...defaultTerms, ...pt }
+    }
 
     // 填充空行保证最少行数
     const padRows = (arr: any[], min: number) => {
@@ -342,7 +352,7 @@ const EntrustmentPrint = forwardRef<HTMLDivElement, { data: PrintData }>(({ data
                         </tr>
                         <tr>
                             <td style={labelCell}>样品管理规定</td>
-                            <td colSpan={5} style={cell}>样品保存时间原则上不少于3个月，如对试验样品封样周期有特殊要求的，以正式版DVP或技术协议规定为准。</td>
+                            <td colSpan={5} style={cell}>{terms.sampleRule}</td>
                         </tr>
                     </tbody>
                 </table>
@@ -429,7 +439,7 @@ const EntrustmentPrint = forwardRef<HTMLDivElement, { data: PrintData }>(({ data
 
                 {/* ========== 8. 附件说明 ========== */}
                 <div style={{ fontSize: FONT_SIZE, marginBottom: '3px', lineHeight: '1.4' }}>
-                    注：如果委托单位置不够，可以附件形式提供，并签字盖章确认。成品样品做材料类测试请指定取样/测试位置（可附示意图），如未指定，默认由实验室任选位置取样/测试。
+                    {terms.attachmentNote}
                 </div>
 
                 {/* ========== 9. 周期说明 ========== */}
@@ -437,13 +447,7 @@ const EntrustmentPrint = forwardRef<HTMLDivElement, { data: PrintData }>(({ data
                     <tbody>
                         <tr>
                             <td style={{ ...labelCell, width: '10%', verticalAlign: 'top', textAlign: 'center' }}>●<br />周期说明</td>
-                            <td style={{ ...cell, lineHeight: '1.5' }}>
-                                材料测试服务周期要求：<br />
-                                常规服务：非老化项目5~7工作日，长期老化项目按老化箱排期+老化时间+3~5工作日；粒料需注塑制样按上述周期+3~4工作日；<br />
-                                加急服务：非老化项目3~4工作日，50%加急费；（请联系实验室确认是否接受加急）<br />
-                                双倍加急服务：非老化项目2~3工作日，100%加急费；（请联系实验室确认是否接受加急）<br />
-                                特急服务：非老化项目1工作日，150%加急费（请联系实验室确认是否接受加急）
-                            </td>
+                            <td style={{ ...cell, lineHeight: '1.5', whiteSpace: 'pre-line' }}>{terms.cycleDesc}</td>
                         </tr>
                     </tbody>
                 </table>
@@ -451,15 +455,12 @@ const EntrustmentPrint = forwardRef<HTMLDivElement, { data: PrintData }>(({ data
                 {/* ========== 10. 分包声明 ========== */}
                 <div style={{ border: '1px solid #000', padding: '3px 6px', fontSize: FONT_SIZE, marginBottom: '0', lineHeight: '1.5' }}>
                     <Chk checked={data.acceptSubcontract === false} />
-                    We do not accept subcontracting certain tests to other qualified subcontractor of ALTC. (Deemed to be accepted if not selected.)
-                    本公司不同意由江苏国轻检测技术有限公司将某些测试项目安排在其他合格的分包实验室进行。（如未选择，视为接受。）
-                    注：对于本实验室无奇瑞认可资质的项目，仅提供代送服务，不予整合报告。
+                    {terms.subcontractStatement}
                 </div>
 
                 {/* ========== 11. 费用声明 ========== */}
                 <div style={{ border: '1px solid #000', borderTop: 'none', padding: '3px 6px', fontSize: FONT_SIZE, marginBottom: '6px', lineHeight: '1.5' }}>
-                    ●We request for the above test and agree that all testing will be carried out subject to ALTC scale of charges as set forth in their price list of which we have seen a copy.
-                    我们要求进行以上测试，并将依照ALTC所执行的价目表来付费。
+                    ●{terms.feeStatement}
                 </div>
 
                 {/* ========== 12. 签章区 ========== */}
@@ -485,11 +486,9 @@ const EntrustmentPrint = forwardRef<HTMLDivElement, { data: PrintData }>(({ data
                 {/* ========== 13. 底部注释 ========== */}
                 <div style={{ fontSize: FONT_SIZE_NOTES, lineHeight: '1.6', color: '#333' }}>
                     <div style={{ fontWeight: 'bold' }}>Notes:</div>
-                    <div>1. Unless it is specified, ALTC has the full discretion in carrying out the test, which including selection and using the latest edition of the testing method(s). 除非特别指定，江苏国轻检测技术有限公司对测试完全有判断权，其中包括测试方法的选择，以及使用最新版本的测试方法来完成测试。</div>
-                    <div>2. Test sample will be disposed after three months upon test report issued without sample returning at application. 测试样品在实验室最长保存3个月（液体样品保存十五天），之后实验室将按规定处理。</div>
-                    <div>3. ALTC assure the Applicant the validity of the procedure, and the accuracy of the test results, of all test items in the test reports. For any direct economic losses to the Applicant caused by our fault or negligence, we will compensate the Applicant at an amount of up to thrice of the test fee. 江苏国轻检测技术有限公司保证所有项目均以合法的程序进行测试，并保证测试数据的准确性。如因本公司过错造成委托方损失的，本公司根据委托方的直接损失情况，承担不高于该项目检测费用3倍的损失。</div>
-                    <div>4. Please sign and chop on the form, and sent back to us for arrangement test, with many thanks. 请将本申请表及附页的相关信息填写完整并回签，以便安排测试，本公司将竭诚地为您服务。</div>
-                    <div>5. This application form is applicable to ALTC and its subsidiaries. 此申请表适用江苏国轻检测技术有限公司及其子公司。</div>
+                    {(terms.notes || []).map((note: any, idx: number) => (
+                        <div key={idx}>{note.en} {note.zh}</div>
+                    ))}
                 </div>
 
             </div>

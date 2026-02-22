@@ -367,6 +367,7 @@ export const POST = withAuth(async (request: NextRequest, user) => {
     sampleDeliveryMethod: data.sampleDeliveryMethod || null,
     // 特殊要求
     specialRequirements: data.specialRequirements || null,
+    printTerms: data.printTerms || null,
     sourceType: data.sourceType || null,
     status: data.status || 'pending',
     remark: data.remark || null,

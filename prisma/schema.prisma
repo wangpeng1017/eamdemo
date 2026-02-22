@@ -555,6 +555,7 @@ model Entrustment {
 
   // 特殊要求
   specialRequirements String?   @db.Text
+  printTerms          String?   @db.Text // 打印声明条款（JSON格式，周期说明/分包声明/费用声明/Notes等）
 
   sourceType String? @db.VarChar(20) // contract/quotation/direct
   status     String  @default("pending") // pending/accepted/testing/completed
