@@ -392,9 +392,41 @@ export default function EntrustmentListPage() {
       setPrintData(pd)
       setShowPrint(true)
 
-      // 延迟后触发打印
+      // 延迟后用 iframe 方式打印（避免浏览器页眉页脚显示 URL 和标题）
       setTimeout(() => {
-        window.print()
+        const printEl = document.getElementById('entrustment-print')
+        if (!printEl) return
+
+        const iframe = document.createElement('iframe')
+        iframe.style.position = 'fixed'
+        iframe.style.top = '-10000px'
+        iframe.style.left = '-10000px'
+        iframe.style.width = '0'
+        iframe.style.height = '0'
+        iframe.style.border = 'none'
+        document.body.appendChild(iframe)
+
+        const doc = iframe.contentDocument || iframe.contentWindow?.document
+        if (!doc) return
+
+        doc.open()
+        doc.write(`<!DOCTYPE html><html><head>
+          <title>\u00A0</title>
+          <style>
+            @page { size: A4 landscape; margin: 0; }
+            body { margin: 0; padding: 10mm; font-family: SimSun, "宋体", serif; }
+            * { box-sizing: border-box; }
+          </style>
+        </head><body>${printEl.outerHTML}</body></html>`)
+        doc.close()
+
+        iframe.onload = () => {
+          setTimeout(() => {
+            iframe.contentWindow?.print()
+            // 打印完成后移除 iframe
+            setTimeout(() => document.body.removeChild(iframe), 1000)
+          }, 300)
+        }
       }, 500)
     } catch (e) {
       console.error('打印准备失败:', e)
