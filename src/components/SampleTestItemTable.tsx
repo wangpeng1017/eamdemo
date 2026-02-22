@@ -353,10 +353,13 @@ export default function SampleTestItemTable({
             value={record.testItemName || undefined}
             placeholder="选择或输入"
             style={{ width: '100%' }}
-            options={testTemplates.map((t) => ({
-              value: t.name,
-              label: t.name,
-            }))}
+            options={
+              // 按名称去重（数据库可能存在同名模板）
+              [...new Map(testTemplates.map((t) => [t.name, t])).values()].map((t) => ({
+                value: t.name,
+                label: t.name,
+              }))
+            }
             filterOption={(inputValue, option) =>
               (option?.label as string)?.toLowerCase().includes(inputValue.toLowerCase()) ?? false
             }
