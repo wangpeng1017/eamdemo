@@ -35,6 +35,7 @@ const STATUS_TEXT_MAP: Record<string, Record<string, string>> = {
     approved: '已批准',
     rejected: '已拒绝',
     archived: '已归档',
+    entrusted: '已委托',
   },
   quotation_client: {
     pending: '待反馈',
@@ -185,6 +186,7 @@ const GLOBAL_STATUS_TEXT_MAP: Record<string, string> = {
   scrapped: '已报废',
   requisitioned: '已领用',
   received: '已收样',
+  entrusted: '已委托',
 }
 
 /**
@@ -208,6 +210,7 @@ const STATUS_COLOR_MAP: Record<string, Record<string, string>> = {
     approved: 'success',
     rejected: 'error',
     archived: 'cyan',
+    entrusted: 'purple',
   },
   quotation_client: {
     pending: 'default',
