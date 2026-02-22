@@ -706,6 +706,26 @@ async function main() {
             }
         }
     }
+
+    // ==================== 2026-02-22 报价单打印配置字段 ====================
+    const quotationPrintColumns = [
+        ['sampleDeliveryInfo', 'TEXT'],
+        ['payeeInfo', 'TEXT'],
+        ['terms', 'TEXT'],
+    ]
+    console.log('Adding print config columns to biz_quotation...')
+    for (const [col, type] of quotationPrintColumns) {
+        try {
+            await prisma.$executeRawUnsafe(`ALTER TABLE biz_quotation ADD COLUMN ${col} ${type};`)
+            console.log(`✅ ${col} column added to biz_quotation.`)
+        } catch (e) {
+            if (e.message.includes('Duplicate column name')) {
+                console.log(`ℹ️ ${col} already exists in biz_quotation.`)
+            } else {
+                console.error(`❌ Error adding ${col}:`, e.message)
+            }
+        }
+    }
 }
 
 main()
