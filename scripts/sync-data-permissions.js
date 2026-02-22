@@ -19,6 +19,7 @@ const prisma = new PrismaClient()
 // self = 只能看到自己的数据
 const ROLE_DATA_SCOPE = {
     'ADMIN': 'all',           // 系统管理员：全部数据权限
+    'admin': 'all',           // 系统管理员（兼容小写 code）
     'TEST_DIRECTOR': 'all',   // 检测部主任（秦兴国）：全部数据权限
     // 以下角色默认 self，可按需调整
     // 'BUSINESS_MANAGER': 'dept',  // 业务经理：本部门数据（如需开启取消注释）
