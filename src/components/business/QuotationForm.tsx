@@ -15,8 +15,10 @@ import {
     Card,
     Table,
     Alert,
+    Collapse,
 } from 'antd'
-import { PlusOutlined, DeleteOutlined } from '@ant-design/icons'
+import { PlusOutlined, DeleteOutlined, SettingOutlined } from '@ant-design/icons'
+import { DEFAULT_SAMPLE_DELIVERY, DEFAULT_PAYEE, DEFAULT_TERMS } from '@/lib/quotation-defaults'
 import dayjs from 'dayjs'
 import UserSelect from '@/components/UserSelect'
 import { showError } from '@/lib/confirm'
@@ -57,6 +59,11 @@ export default function QuotationForm({
     const [testTemplates, setTestTemplates] = useState<any[]>([])
     const [items, setItems] = useState<QuotationItem[]>([])
 
+    // 打印配置
+    const [sampleDelivery, setSampleDelivery] = useState({ ...DEFAULT_SAMPLE_DELIVERY })
+    const [payeeInfo, setPayeeInfo] = useState({ ...DEFAULT_PAYEE })
+    const [terms, setTerms] = useState([...DEFAULT_TERMS])
+
     useEffect(() => {
         fetchClients()
         fetchTestTemplates()
@@ -84,6 +91,22 @@ export default function QuotationForm({
                 serviceTel: initialValues.serviceTel || '',
                 serviceEmail: initialValues.serviceEmail || '',
             })
+
+            // 加载打印配置
+            try {
+                if (initialValues.sampleDeliveryInfo) {
+                    const sd = typeof initialValues.sampleDeliveryInfo === 'string' ? JSON.parse(initialValues.sampleDeliveryInfo) : initialValues.sampleDeliveryInfo
+                    setSampleDelivery({ ...DEFAULT_SAMPLE_DELIVERY, ...sd })
+                }
+                if (initialValues.payeeInfo) {
+                    const pi = typeof initialValues.payeeInfo === 'string' ? JSON.parse(initialValues.payeeInfo) : initialValues.payeeInfo
+                    setPayeeInfo({ ...DEFAULT_PAYEE, ...pi })
+                }
+                if (initialValues.terms) {
+                    const t = typeof initialValues.terms === 'string' ? JSON.parse(initialValues.terms) : initialValues.terms
+                    if (Array.isArray(t) && t.length > 0) setTerms(t)
+                }
+            } catch (e) { /* 解析失败使用默认值 */ }
         } else {
             form.setFieldsValue({
                 quotationDate: dayjs(),
@@ -176,6 +199,10 @@ export default function QuotationForm({
                 quotationDate: values.quotationDate?.toISOString(),
                 clientReportDeadline: values.clientReportDeadline?.toISOString(),
                 clientRemark: values.clientRemark,
+                // 打印配置
+                sampleDeliveryInfo: JSON.stringify(sampleDelivery),
+                payeeInfo: JSON.stringify(payeeInfo),
+                terms: JSON.stringify(terms),
             }
             await onFinish(submitData)
         } catch (error) {
@@ -446,8 +473,98 @@ export default function QuotationForm({
                     </div>
                 </div>
 
-                {/* ========== ⑥ 其他信息 ========== */}
-                <Divider orientation="left" orientationMargin="0">⑥ 其他信息</Divider>
+                {/* ========== ⑥ 打印配置（可折叠） ========== */}
+                <Divider orientation="left" orientationMargin="0">⑥ 打印配置</Divider>
+                <Collapse
+                    ghost
+                    items={[
+                        {
+                            key: 'print-config',
+                            label: <span><SettingOutlined style={{ marginRight: 8 }} />送样信息 / 收款信息 / 附加条款（点击展开编辑）</span>,
+                            children: (
+                                <div>
+                                    {/* 送样信息 */}
+                                    <h4 style={{ marginBottom: 12 }}>送样信息</h4>
+                                    <Row gutter={16}>
+                                        <Col span={12}>
+                                            <Form.Item label="地址">
+                                                <Input value={sampleDelivery.address} onChange={e => setSampleDelivery({ ...sampleDelivery, address: e.target.value })} />
+                                            </Form.Item>
+                                        </Col>
+                                        <Col span={6}>
+                                            <Form.Item label="电话">
+                                                <Input value={sampleDelivery.tel} onChange={e => setSampleDelivery({ ...sampleDelivery, tel: e.target.value })} />
+                                            </Form.Item>
+                                        </Col>
+                                        <Col span={6}>
+                                            <Form.Item label="收件人">
+                                                <Input value={sampleDelivery.contact} onChange={e => setSampleDelivery({ ...sampleDelivery, contact: e.target.value })} />
+                                            </Form.Item>
+                                        </Col>
+                                    </Row>
+
+                                    {/* 收款方信息 */}
+                                    <h4 style={{ marginBottom: 12, marginTop: 8 }}>收款方信息</h4>
+                                    <Row gutter={16}>
+                                        <Col span={6}>
+                                            <Form.Item label="户名">
+                                                <Input value={payeeInfo.name} onChange={e => setPayeeInfo({ ...payeeInfo, name: e.target.value })} />
+                                            </Form.Item>
+                                        </Col>
+                                        <Col span={6}>
+                                            <Form.Item label="开户行">
+                                                <Input value={payeeInfo.bank} onChange={e => setPayeeInfo({ ...payeeInfo, bank: e.target.value })} />
+                                            </Form.Item>
+                                        </Col>
+                                        <Col span={6}>
+                                            <Form.Item label="行号">
+                                                <Input value={payeeInfo.bankNo} onChange={e => setPayeeInfo({ ...payeeInfo, bankNo: e.target.value })} />
+                                            </Form.Item>
+                                        </Col>
+                                        <Col span={6}>
+                                            <Form.Item label="账号">
+                                                <Input value={payeeInfo.account} onChange={e => setPayeeInfo({ ...payeeInfo, account: e.target.value })} />
+                                            </Form.Item>
+                                        </Col>
+                                    </Row>
+
+                                    {/* 附加条款 */}
+                                    <h4 style={{ marginBottom: 12, marginTop: 8 }}>附加条款</h4>
+                                    {terms.map((term, idx) => (
+                                        <div key={idx} style={{ marginBottom: 12, padding: '8px 12px', background: '#fafafa', borderRadius: 4 }}>
+                                            <div style={{ marginBottom: 4, fontSize: 12, color: '#999' }}>第 {idx + 1} 条</div>
+                                            <Input.TextArea
+                                                rows={2}
+                                                value={term.zh}
+                                                onChange={e => {
+                                                    const newTerms = [...terms]
+                                                    newTerms[idx] = { ...newTerms[idx], zh: e.target.value }
+                                                    setTerms(newTerms)
+                                                }}
+                                                placeholder="中文条款"
+                                                style={{ marginBottom: 4 }}
+                                            />
+                                            <Input.TextArea
+                                                rows={2}
+                                                value={term.en}
+                                                onChange={e => {
+                                                    const newTerms = [...terms]
+                                                    newTerms[idx] = { ...newTerms[idx], en: e.target.value }
+                                                    setTerms(newTerms)
+                                                }}
+                                                placeholder="English terms"
+                                                style={{ fontSize: 11 }}
+                                            />
+                                        </div>
+                                    ))}
+                                </div>
+                            ),
+                        },
+                    ]}
+                />
+
+                {/* ========== ⑦ 其他信息 ========== */}
+                <Divider orientation="left" orientationMargin="0">⑦ 其他信息</Divider>
                 <Row gutter={16}>
                     <Col span={6}>
                         <Form.Item name="quotationDate" label="报价日期" rules={[{ required: true, message: '请选择日期' }]}>

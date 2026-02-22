@@ -354,6 +354,11 @@ model Quotation {
   lastRejectReason String?   @db.Text
   lastRejectBy     String?   @db.VarChar(50)
   lastRejectAt     DateTime?
+
+  // 打印配置（报价单级别可配置，JSON格式）
+  sampleDeliveryInfo String?  @db.Text  // JSON: { address, tel, contact }
+  payeeInfo          String?  @db.Text  // JSON: { name, bank, bankNo, account }
+  terms              String?  @db.Text  // JSON: [{ zh, en }, ...]
   
   createdById    String?
   createdBy      User?    @relation("CreatedQuotation", fields: [createdById], references: [id])

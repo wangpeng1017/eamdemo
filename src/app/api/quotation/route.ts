@@ -182,6 +182,12 @@ export const POST = withAuth(async (request: NextRequest, user) => {
     clientStatus: data.clientResponse || 'pending',
     clientReportDeadline: data.clientReportDeadline ? new Date(data.clientReportDeadline) : (inheritedDeadline || null),
     createdBy: user?.id ? { connect: { id: user.id } } : undefined,
+
+    // 打印配置（JSON 存储）
+    sampleDeliveryInfo: data.sampleDeliveryInfo ? (typeof data.sampleDeliveryInfo === 'string' ? data.sampleDeliveryInfo : JSON.stringify(data.sampleDeliveryInfo)) : undefined,
+    payeeInfo: data.payeeInfo ? (typeof data.payeeInfo === 'string' ? data.payeeInfo : JSON.stringify(data.payeeInfo)) : undefined,
+    terms: data.terms ? (typeof data.terms === 'string' ? data.terms : JSON.stringify(data.terms)) : undefined,
+
     items: {
       create: items.map((item: any, idx: number) => ({
         sampleName: item.sampleName || '',

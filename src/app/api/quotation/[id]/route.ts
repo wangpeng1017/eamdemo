@@ -180,6 +180,10 @@ export const PUT = withAuth(async (
   if (data.clientReportDeadline !== undefined) {
     updateData.clientReportDeadline = data.clientReportDeadline ? new Date(data.clientReportDeadline) : null
   }
+  // 打印配置
+  if (data.sampleDeliveryInfo !== undefined) updateData.sampleDeliveryInfo = typeof data.sampleDeliveryInfo === 'string' ? data.sampleDeliveryInfo : JSON.stringify(data.sampleDeliveryInfo)
+  if (data.payeeInfo !== undefined) updateData.payeeInfo = typeof data.payeeInfo === 'string' ? data.payeeInfo : JSON.stringify(data.payeeInfo)
+  if (data.terms !== undefined) updateData.terms = typeof data.terms === 'string' ? data.terms : JSON.stringify(data.terms)
   // 归档操作允许修改 status
   if (isArchiveOnly && data.status === 'archived') updateData.status = 'archived'
 
