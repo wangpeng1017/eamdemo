@@ -1,10 +1,9 @@
 'use client'
 
 import { useRouter } from 'next/navigation'
-import { Button, Spin, Result, Tabs } from 'antd'
+import { Button, Spin, Result } from 'antd'
 import { ArrowLeftOutlined } from '@ant-design/icons'
 import QuotationForm from '@/components/business/QuotationForm'
-import { ApprovalTimeline } from '@/components/ApprovalTimeline'
 import { showSuccess, showError } from '@/lib/confirm'
 import { useState, useEffect } from 'react'
 
@@ -25,7 +24,6 @@ export default function EditQuotationPage({ id }: { id: string }) {
     const fetchDetail = async (quotationId: string) => {
         setFetching(true)
         try {
-            // 获取基本信息
             const res = await fetch(`/api/quotation/${quotationId}`)
             const json = await res.json()
 
@@ -119,50 +117,6 @@ export default function EditQuotationPage({ id }: { id: string }) {
         return <Result status="error" title="加载失败" subTitle={error} extra={<Button onClick={() => router.back()}>返回列表</Button>} />
     }
 
-    const formatRecords = (approvals: any[]) => {
-        if (!approvals) return []
-        return approvals.map((a: any) => ({
-            id: a.id,
-            step: a.level,
-            action: a.action,
-            approverId: 'unknown',
-            approverName: a.approver || 'Unknown',
-            comment: a.comment,
-            createdAt: a.createAt || a.timestamp // 兼容旧字段 timestamp
-        }))
-    }
-
-    const tabItems = [
-        {
-            key: '1',
-            label: '报价详情',
-            children: (
-                <QuotationForm
-                    initialValues={initialValues}
-                    onFinish={handleFinish}
-                    onCancel={handleCancel}
-                    loading={loading}
-                    bizId={id}
-                />
-            )
-        },
-        {
-            key: '2',
-            label: '审批记录',
-            children: (
-                <div style={{ padding: 24, background: '#fff' }}>
-                    <ApprovalTimeline
-                        currentStep={initialValues?.approvalStep || 0}
-                        status={initialValues?.approvalStatus || initialValues?.status || 'pending'}
-                        records={formatRecords(initialValues?.approvals)}
-                        submitterName={initialValues?.followerUser?.name || initialValues?.createdBy?.name} // 跟单人或创建人名称
-                        submittedAt={initialValues?.createdAt}
-                    />
-                </div>
-            )
-        }
-    ]
-
     return (
         <div style={{ padding: '0 24px 24px', minHeight: '100vh', background: '#f0f2f5' }}>
             <div style={{ marginBottom: 16, paddingTop: 16 }}>
@@ -177,7 +131,13 @@ export default function EditQuotationPage({ id }: { id: string }) {
                 <span style={{ fontSize: 20, fontWeight: 500, marginLeft: 8 }}>编辑报价单</span>
             </div>
 
-            <Tabs defaultActiveKey="1" items={tabItems} />
+            <QuotationForm
+                initialValues={initialValues}
+                onFinish={handleFinish}
+                onCancel={handleCancel}
+                loading={loading}
+                bizId={id}
+            />
         </div>
     )
 }
