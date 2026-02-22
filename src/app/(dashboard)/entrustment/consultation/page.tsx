@@ -608,16 +608,20 @@ export default function ConsultationPage() {
                     <Divider style={{ margin: '16px 0' }} />
 
                     <Descriptions title="其他信息" bordered size="small" column={2}>
-                      <Descriptions.Item label="预估数量">{currentConsultation.estimatedQuantity || '-'}</Descriptions.Item>
-                      <Descriptions.Item label="检测项目">{currentConsultation.testItems?.join('、') || '-'}</Descriptions.Item>
-                      <Descriptions.Item label="报告时间">
-                        {(currentConsultation.clientReportDeadline || currentConsultation.expectedDeadline) ? dayjs(currentConsultation.clientReportDeadline || currentConsultation.expectedDeadline).format('YYYY-MM-DD') : '-'}
-                      </Descriptions.Item>
-                      <Descriptions.Item label="预算范围">{currentConsultation.budgetRange || '-'}</Descriptions.Item>
-                      <Descriptions.Item label="可行性评估">
-                        <StatusTag type="feasibility" status={currentConsultation.feasibility} />
-                      </Descriptions.Item>
-                      <Descriptions.Item label="可行性说明">{currentConsultation.feasibilityNote || '-'}</Descriptions.Item>
+                      {currentConsultation.estimatedQuantity ? <Descriptions.Item label="预估数量">{currentConsultation.estimatedQuantity}</Descriptions.Item> : null}
+                      {currentConsultation.testItems && currentConsultation.testItems.length > 0 ? <Descriptions.Item label="检测项目">{currentConsultation.testItems.join('、')}</Descriptions.Item> : null}
+                      {(currentConsultation.clientReportDeadline || currentConsultation.expectedDeadline) ? (
+                        <Descriptions.Item label="报告时间">
+                          {dayjs(currentConsultation.clientReportDeadline || currentConsultation.expectedDeadline).format('YYYY-MM-DD')}
+                        </Descriptions.Item>
+                      ) : null}
+                      {currentConsultation.budgetRange ? <Descriptions.Item label="预算范围">{currentConsultation.budgetRange}</Descriptions.Item> : null}
+                      {currentConsultation.feasibility ? (
+                        <Descriptions.Item label="可行性评估">
+                          <StatusTag type="feasibility" status={currentConsultation.feasibility} />
+                        </Descriptions.Item>
+                      ) : null}
+                      {currentConsultation.feasibilityNote ? <Descriptions.Item label="可行性说明">{currentConsultation.feasibilityNote}</Descriptions.Item> : null}
                       <Descriptions.Item label="跟单人">{currentConsultation.followerUser?.name || '-'}</Descriptions.Item>
                       <Descriptions.Item label="提交人">{(currentConsultation as any).createdBy?.name || '-'}</Descriptions.Item>
                       <Descriptions.Item label="状态">
