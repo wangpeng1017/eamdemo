@@ -939,45 +939,7 @@ export default function EntrustmentListPage() {
                       <Descriptions.Item label="接受分包">{(currentEntrustment as any).acceptSubcontract !== false ? '是' : '否'}</Descriptions.Item>
                     </Descriptions>
 
-                    <Divider />
 
-                    <Descriptions title="样品信息" column={2} bordered size="small">
-                      <Descriptions.Item label="样品名称">
-                        {getSampleName()}
-                      </Descriptions.Item>
-                      <Descriptions.Item label="样品型号">
-                        {getSampleModel()}
-                      </Descriptions.Item>
-                      <Descriptions.Item label="样品材质">
-                        {getSampleMaterial()}
-                      </Descriptions.Item>
-                      <Descriptions.Item label="样品数量">
-                        {getSampleQuantity()}
-                      </Descriptions.Item>
-                      <Descriptions.Item label="样品退回">
-                        {currentEntrustment.isSampleReturn ? '是' : '否'}
-                      </Descriptions.Item>
-                      <Descriptions.Item label="到样日期">
-                        {currentEntrustment.sampleDate ? dayjs(currentEntrustment.sampleDate).format('YYYY-MM-DD') : '-'}
-                      </Descriptions.Item>
-                      <Descriptions.Item label="送样方式">
-                        {{
-                          customer: '客户送样',
-                          logistics: '物流邮寄',
-                          agency: '代理取样',
-                          other: '其他',
-                        }[(currentEntrustment as any).sampleDeliveryMethod as string] || (currentEntrustment as any).sampleDeliveryMethod || '-'}
-                      </Descriptions.Item>
-                      <Descriptions.Item label="试验类型">
-                        {{
-                          DV: 'DV试验',
-                          PV: 'PV试验',
-                          DV_PV: 'DV+PV试验',
-                          pilot: '中试',
-                          annual: '年度检测',
-                        }[(currentEntrustment as any).testType as string] || (currentEntrustment as any).testType || '-'}
-                      </Descriptions.Item>
-                    </Descriptions>
 
                     {(currentEntrustment as any).specialRequirements && (
                       <>
