@@ -26,6 +26,7 @@ import type { User, Device, Supplier, Client, Contract } from '@prisma/client'
 interface EntrustmentProject {
   id: string
   // ... existing EntrustmentProject ...
+  sampleName?: string
   name: string
   testItems: string[] | null
   method: string | null
@@ -529,6 +530,7 @@ export default function EntrustmentListPage() {
 
   // 检测项目子表格列
   const projectColumns: ColumnsType<EntrustmentProject> = [
+    { title: '样品名称', dataIndex: 'sampleName', width: 120 },
     { title: '检测项目', dataIndex: 'name', width: 150 },
     { title: '检测标准', dataIndex: 'method', width: 250 },
     {

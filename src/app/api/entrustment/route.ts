@@ -190,32 +190,44 @@ export const GET = withAuth(async (request: NextRequest, user) => {
 
   // 将 sampleTestItems 按照 entrustmentId -> sampleName 分组
   const testItemsMap: Record<string, Record<string, string[]>> = {}
+  // 同时构建 entrustmentId -> testItemName -> sampleName[] 反查映射
+  const sampleNameMap: Record<string, Record<string, string[]>> = {}
   for (const item of sampleTestItems) {
     if (!testItemsMap[item.bizId]) {
       testItemsMap[item.bizId] = {}
+      sampleNameMap[item.bizId] = {}
     }
     if (!testItemsMap[item.bizId][item.sampleName]) {
       testItemsMap[item.bizId][item.sampleName] = []
     }
     testItemsMap[item.bizId][item.sampleName].push(item.testItemName)
+
+    // 反查：检测项目名 -> 样品名称列表
+    const key = item.testItemName || item.sampleName
+    if (!sampleNameMap[item.bizId][key]) {
+      sampleNameMap[item.bizId][key] = []
+    }
+    if (!sampleNameMap[item.bizId][key].includes(item.sampleName)) {
+      sampleNameMap[item.bizId][key].push(item.sampleName)
+    }
   }
 
-  // 遍历 processedList，如果 project 的 testItems 为空，则尝试从 map 中填充
+  // 遍历 processedList，补充 project 的 sampleName 和 testItems
   for (const entrustment of processedList) {
     if (entrustment.projects && Array.isArray(entrustment.projects)) {
       for (const project of entrustment.projects) {
+        // 补充 sampleName：通过检测项目名反查
+        const names = sampleNameMap[entrustment.id]?.[project.name]
+        if (names && names.length > 0) {
+          project.sampleName = names.join(', ')
+        }
+
         // 检查 testItems 是否看起来为空 (null, "", "[]")
         const isTestItemsEmpty = !project.testItems || project.testItems === '[]' || project.testItems === ''
 
         if (isTestItemsEmpty) {
           const items = testItemsMap[entrustment.id]?.[project.name]
           if (items && items.length > 0) {
-            // 填充回去，保持 string[] 格式或者 JSON string 格式，虽然前端代码里 projectColumns render 做了兼容，
-            // 但为了保险，我们可以直接给 string[]，因为前端 render: (items: string | string[] | null) 支持数组
-            // project.testItems 是 string 类型 (数据库字段 db.Text)，所以这里 update 需要注意类型
-            // 但这里我们是在修改返回给前端的 JSON 对象，不是数据库对象，所以可以直接赋值数组
-            // 注意：TypeScript 可能会为了类型安全报错，但在 JS 运行时 JSON 序列化没事。
-            // 我们的 processedList 是 `any` 类型 (line 144)，所以可以直接赋值。
             project.testItems = items
           }
         }
