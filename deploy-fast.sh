@@ -80,7 +80,8 @@ sshpass -p "$SERVER_PASS" ssh -o StrictHostKeyChecking=no -o ServerAliveInterval
  rm -rf standalone static standalone.tar.gz public.tar.gz && \
  npx prisma generate && \
  node update-db-schema.js && \
- node scripts/sync-permissions.js"
+ node scripts/sync-permissions.js && \
+ node scripts/sync-data-permissions.js"
 
 # 5. 验证 static 目录
 echo ""

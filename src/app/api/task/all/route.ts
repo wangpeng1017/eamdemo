@@ -1,8 +1,9 @@
 import { prisma } from '@/lib/prisma'
 import { NextRequest, NextResponse } from 'next/server'
 import { withAuth, AuthUser } from '@/lib/api-handler'
+import { getEntrustmentBasedFilter } from '@/lib/data-permission'
 
-// 获取全部任务（需要登录）
+// 获取全部任务（需要登录 + 数据权限过滤）
 export const GET = withAuth(async (request: NextRequest, user: AuthUser) => {
   const { searchParams } = new URL(request.url)
   const page = parseInt(searchParams.get('page') || '1')
@@ -11,7 +12,9 @@ export const GET = withAuth(async (request: NextRequest, user: AuthUser) => {
   const keyword = searchParams.get('keyword')
   const assignedTo = searchParams.get('assignedTo')
 
-  const where: any = {}
+  // 注入数据权限过滤
+  const permissionFilter = await getEntrustmentBasedFilter(user.id)
+  const where: any = { ...permissionFilter }
   if (status) where.status = status
   if (assignedTo) where.assignedToId = assignedTo
   if (keyword) {

@@ -1,15 +1,16 @@
 import { prisma } from '@/lib/prisma'
 import { NextRequest } from 'next/server'
 import {
-  withErrorHandler,
+  withAuth,
   success,
   validateRequired,
 } from '@/lib/api-handler'
 import { generateClientReportNo } from '@/lib/generate-no'
 import { addCurrentApproverInfo } from '@/lib/approval/utils'
+import { getEntrustmentBasedFilter } from '@/lib/data-permission'
 
-// 获取客户报告列表
-export const GET = withErrorHandler(async (request: NextRequest) => {
+// 获取客户报告列表 - 需要登录 + 数据权限过滤
+export const GET = withAuth(async (request: NextRequest, user) => {
   const { searchParams } = new URL(request.url)
   const page = parseInt(searchParams.get('page') || '1')
   const pageSize = parseInt(searchParams.get('pageSize') || '10')
@@ -19,7 +20,9 @@ export const GET = withErrorHandler(async (request: NextRequest) => {
   const endDate = searchParams.get('endDate')
 
   // 构建筛选条件
-  const where: Record<string, unknown> = {}
+  // 注入数据权限过滤
+  const permissionFilter = await getEntrustmentBasedFilter(user.id)
+  const where: Record<string, unknown> = { ...permissionFilter }
 
   if (status) {
     where.status = status
@@ -71,8 +74,8 @@ export const GET = withErrorHandler(async (request: NextRequest) => {
   })
 })
 
-// 创建客户报告
-export const POST = withErrorHandler(async (request: NextRequest) => {
+// 创建客户报告 - 需要登录
+export const POST = withAuth(async (request: NextRequest, user) => {
   const data = await request.json()
 
   // 验证必填字段

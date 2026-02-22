@@ -1,6 +1,7 @@
 import { prisma } from '@/lib/prisma'
 import { NextRequest } from 'next/server'
-import { withAuth, success, badRequest, notFound } from '@/lib/api-handler'
+import { withAuth, success, badRequest, notFound, forbidden } from '@/lib/api-handler'
+import { checkConsultationAccess } from '@/lib/data-permission'
 
 /**
  * POST /api/consultation/[id]/assessment
@@ -13,6 +14,12 @@ export const POST = withAuth(async (
 ) => {
   const { id } = await context!.params
   const data = await request.json()
+
+  // 数据归属权限校验
+  const hasAccess = await checkConsultationAccess(id, user!.id)
+  if (!hasAccess) {
+    forbidden('无权操作该咨询单')
+  }
 
   // 验证请求参数
   if (!data.assessors || !Array.isArray(data.assessors) || data.assessors.length === 0) {
@@ -89,6 +96,12 @@ export const GET = withAuth(async (
   context?: { params: Promise<Record<string, string>> }
 ) => {
   const { id } = await context!.params
+
+  // 数据归属权限校验
+  const hasAccess = await checkConsultationAccess(id, user!.id)
+  if (!hasAccess) {
+    forbidden('无权查看该咨询单的评估记录')
+  }
 
   // 查询咨询单
   const consultation = await prisma.consultation.findUnique({

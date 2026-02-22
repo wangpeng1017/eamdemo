@@ -2,8 +2,9 @@ import { prisma } from '@/lib/prisma'
 import { NextRequest } from 'next/server'
 import { withAuth, success, validateRequired } from '@/lib/api-handler'
 import { generateNo, NumberPrefixes } from '@/lib/generate-no'
+import { getEntrustmentBasedFilter } from '@/lib/data-permission'
 
-// 获取委外订单列表 - 需要登录
+// 获取委外订单列表 - 需要登录 + 数据权限过滤
 export const GET = withAuth(async (request: NextRequest, user) => {
   const { searchParams } = new URL(request.url)
   const page = parseInt(searchParams.get('page') || '1')
@@ -13,7 +14,13 @@ export const GET = withAuth(async (request: NextRequest, user) => {
   const keyword = searchParams.get('keyword')
   const filter = searchParams.get('filter')
 
+  // 注入数据权限过滤（通过 task 关联委托单链路）
+  const permissionFilter = await getEntrustmentBasedFilter(user.id)
   const where: Record<string, unknown> = {}
+  // 如果有权限过滤（非 all 权限），通过 task 关联过滤
+  if (Object.keys(permissionFilter).length > 0) {
+    where.task = permissionFilter
+  }
   if (status) where.status = status
   if (supplierId) where.supplierId = supplierId
   if (keyword) {

@@ -2,8 +2,9 @@ import { prisma } from '@/lib/prisma'
 import { NextRequest } from 'next/server'
 import { withAuth, success } from '@/lib/api-handler'
 import { generateReceivableNo } from '@/lib/generate-no'
+import { getEntrustmentBasedFilter } from '@/lib/data-permission'
 
-// 获取应收账款列表 - 需要登录
+// 获取应收账款列表 - 需要登录 + 数据权限过滤
 export const GET = withAuth(async (request: NextRequest, user) => {
   const { searchParams } = new URL(request.url)
   const page = parseInt(searchParams.get('page') || '1')
@@ -11,7 +12,9 @@ export const GET = withAuth(async (request: NextRequest, user) => {
   const keyword = searchParams.get('keyword')
   const status = searchParams.get('status')
 
-  const where: Record<string, unknown> = {}
+  // 注入数据权限过滤
+  const permissionFilter = await getEntrustmentBasedFilter(user.id)
+  const where: Record<string, unknown> = { ...permissionFilter }
   if (keyword) {
     where.OR = [
       { receivableNo: { contains: keyword } },

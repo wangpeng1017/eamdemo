@@ -7,8 +7,9 @@ import {
   badRequest,
 } from '@/lib/api-handler'
 import { Prisma } from '@prisma/client'
+import { getEntrustmentBasedFilter } from '@/lib/data-permission'
 
-// 获取收款记录列表 - 需要登录
+// 获取收款记录列表 - 需要登录 + 数据权限过滤
 export const GET = withAuth(async (request: NextRequest, user) => {
   const { searchParams } = new URL(request.url)
   const page = parseInt(searchParams.get('page') || '1')
@@ -18,7 +19,13 @@ export const GET = withAuth(async (request: NextRequest, user) => {
   const endDate = searchParams.get('endDate')
   const paymentMethod = searchParams.get('paymentMethod')
 
+  // 通过 receivable 关联委托单链路注入数据权限过滤
+  const permissionFilter = await getEntrustmentBasedFilter(user.id)
   const where: Record<string, unknown> = {}
+  // 如果有权限过滤（非 all 权限），通过 receivable 关联过滤
+  if (Object.keys(permissionFilter).length > 0) {
+    where.receivable = permissionFilter
+  }
 
   if (receivableId) {
     where.receivableId = receivableId

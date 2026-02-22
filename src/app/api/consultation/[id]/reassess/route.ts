@@ -1,10 +1,11 @@
 import { prisma } from '@/lib/prisma'
 import { NextRequest } from 'next/server'
-import { withAuth, success, badRequest, notFound } from '@/lib/api-handler'
+import { withAuth, success, badRequest, notFound, forbidden } from '@/lib/api-handler'
+import { checkConsultationAccess } from '@/lib/data-permission'
 
 /**
  * POST /api/consultation/[id]/reassess
- * 修改需求并重新评估
+ * 修改需求并重新评估 - 需要登录 + 数据归属验证
  */
 export const POST = withAuth(async (
   request: NextRequest,
@@ -13,6 +14,12 @@ export const POST = withAuth(async (
 ) => {
   const { id } = await context!.params
   const data = await request.json()
+
+  // 数据归属权限校验
+  const hasAccess = await checkConsultationAccess(id, user!.id)
+  if (!hasAccess) {
+    forbidden('无权操作该咨询单')
+  }
 
   // 提取样品检测项数据
   const sampleTestItems = data.sampleTestItems || []
