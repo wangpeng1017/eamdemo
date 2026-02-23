@@ -1,330 +1,384 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
-import { showError } from '@/lib/confirm'
-import { Card, Table, Button, Modal, Tag, Space, Descriptions, Timeline, Row, Col, Statistic, Progress, Input, Select, message } from 'antd'
-import { EyeOutlined, CheckCircleOutlined, ClockCircleOutlined, SyncOutlined, ReloadOutlined } from '@ant-design/icons'
-import type { ColumnsType, TablePaginationConfig } from 'antd/es/table'
+import { useState, useEffect } from "react"
+import { showSuccess, showError } from '@/lib/confirm'
+import { Table, Button, Space, Tag, Modal, Form, Select, Card, Statistic, DatePicker, Input, App } from "antd"
+import { PlayCircleOutlined, ClockCircleOutlined, SwapOutlined, EditOutlined, FileTextOutlined } from "@ant-design/icons"
+import type { ColumnsType } from "antd/es/table"
+import dayjs from "dayjs"
+import { useRouter } from "next/navigation"
 
-interface Supplier {
+interface Task {
+  id: string
+  taskNo: string
+  sampleName: string | null
+  entrustmentId: string | null
+  entrustmentNo: string | null
+  status: string
+  progress: number
+  dueDate: string | null
+  sample?: { sampleNo: string; name: string }
+  createdAt: string
+  entrustmentProject?: {
+    name: string
+    subcontractor?: string | null
+    subcontractAssignee?: string | null
+  }
+  assignedTo?: { id: string; name: string } | null
+}
+
+interface User {
   id: string
   name: string
+  dept?: { name: string }
 }
 
-interface OutsourceTask {
-  id: string
-  orderNo: string
-  entrustmentNo: string | null
-  clientName: string | null
-  sampleName: string
-  testItems: string
-  supplierId: string
-  supplier: Supplier
-  status: 'pending' | 'sent' | 'testing' | 'completed' | 'returned'
-  sendDate: string | null
-  expectedDate: string | null
-  actualDate: string | null
-  cost: number
-  progress: number
-  createdBy: string
-  createdAt: string
-  remark: string | null
-}
-
-const statusMap: Record<string, { text: string; color: string; icon: React.ReactNode }> = {
-  pending: { text: '待发送', color: 'default', icon: <ClockCircleOutlined /> },
-  sent: { text: '已发送', color: 'processing', icon: <SyncOutlined spin /> },
-  testing: { text: '检测中', color: 'blue', icon: <SyncOutlined spin /> },
-  completed: { text: '已完成', color: 'success', icon: <CheckCircleOutlined /> },
-  returned: { text: '已退回', color: 'orange', icon: <ClockCircleOutlined /> },
+const statusMap: Record<string, { text: string; color: string }> = {
+  pending: { text: "待开始", color: "default" },
+  in_progress: { text: "进行中", color: "processing" },
+  pending_review: { text: "待审核", color: "warning" },
+  completed: { text: "已完成", color: "success" },
 }
 
 export default function MyOutsourcePage() {
-  const [tasks, setTasks] = useState<OutsourceTask[]>([])
+  const router = useRouter()
+  const { modal } = App.useApp()
+  const [data, setData] = useState([])
   const [loading, setLoading] = useState(false)
-  const [detailOpen, setDetailOpen] = useState(false)
-  const [currentTask, setCurrentTask] = useState<OutsourceTask | null>(null)
-  const [statusFilter, setStatusFilter] = useState<string | null>(null)
-  const [keyword, setKeyword] = useState('')
-  const [pagination, setPagination] = useState({ current: 1, pageSize: 10, total: 0 })
+  const [total, setTotal] = useState(0)
+  const [page, setPage] = useState(1)
+  const [statusFilter, setStatusFilter] = useState<string | undefined>()
+  const [keyword, setKeyword] = useState("")
   const [stats, setStats] = useState<Record<string, number>>({})
+  const [users, setUsers] = useState<User[]>([])
+  const [generating, setGenerating] = useState(false)
 
-  // 加载委外任务列表
-  const loadData = useCallback(async () => {
+  // 转交模态框状态
+  const [transferModalOpen, setTransferModalOpen] = useState(false)
+  const [startModalOpen, setStartModalOpen] = useState(false)
+  const [currentTask, setCurrentTask] = useState<Task | null>(null)
+  const [transferForm] = Form.useForm()
+  const [startForm] = Form.useForm()
+
+  const fetchData = async (p = page) => {
     setLoading(true)
+    const params = new URLSearchParams({
+      page: String(p),
+      pageSize: "10",
+      ...(statusFilter && { status: statusFilter }),
+      ...(keyword && { keyword }),
+    })
     try {
-      const params = new URLSearchParams({
-        page: String(pagination.current),
-        pageSize: String(pagination.pageSize),
-        filter: 'my', // 只显示我负责的委外订单
-      })
-      if (statusFilter) params.append('status', statusFilter)
-      if (keyword) params.append('keyword', keyword)
-
-      const res = await fetch(`/api/outsource-order?${params}`)
-      const data = await res.json()
-      if (data.success) {
-        setTasks(data.data.list)
-        setPagination(prev => ({ ...prev, total: data.data.total }))
-        setStats(data.data.stats || {})
+      const res = await fetch(`/api/task/outsource/my?${params}`)
+      const json = await res.json()
+      if (json.success && json.data) {
+        setData(json.data.list || [])
+        setTotal(json.data.total || 0)
+        setStats(json.data.stats || {})
       } else {
-        showError(data.message || '加载失败')
+        setData(json.list || [])
+        setTotal(json.total || 0)
+        setStats(json.stats || {})
       }
     } catch {
-      showError('网络错误')
+      showError('获取任务列表失败')
     } finally {
       setLoading(false)
     }
-  }, [pagination.current, pagination.pageSize, statusFilter, keyword])
+  }
+
+  const fetchUsers = async () => {
+    try {
+      const res = await fetch('/api/user?pageSize=1000')
+      const json = await res.json()
+      setUsers(json.data?.list || json.list || [])
+    } catch {
+      // 用户列表加载失败不影响主功能
+    }
+  }
 
   useEffect(() => {
-    loadData()
-  }, [loadData])
-
-  const handleView = (record: OutsourceTask) => {
-    setCurrentTask(record)
-    setDetailOpen(true)
-  }
-
-  const handleTableChange = (pag: TablePaginationConfig) => {
-    setPagination(prev => ({
-      ...prev,
-      current: pag.current || 1,
-      pageSize: pag.pageSize || 10,
-    }))
-  }
+    fetchData()
+    fetchUsers()
+  }, [page, statusFilter])
 
   const handleSearch = () => {
-    setPagination(prev => ({ ...prev, current: 1 }))
+    setPage(1)
+    fetchData(1)
   }
 
-  // 统计数据
-  const totalCount = pagination.total
-  const pendingCount = stats.pending || 0
-  const testingCount = (stats.sent || 0) + (stats.testing || 0)
-  const completedCount = stats.completed || 0
-  const returnedCount = stats.returned || 0
-  const totalCost = stats.totalCost || 0
+  const openTransferModal = (task: Task) => {
+    setCurrentTask(task)
+    transferForm.resetFields()
+    setTransferModalOpen(true)
+  }
 
-  const columns: ColumnsType<OutsourceTask> = [
-    { title: '委外编号', dataIndex: 'orderNo', width: 150 },
-    { title: '委托单号', dataIndex: 'entrustmentNo', width: 150, render: (v) => v || '-' },
-    { title: '样品名称', dataIndex: 'sampleName', width: 120 },
+  const openStartModal = (task: Task) => {
+    setCurrentTask(task)
+    startForm.resetFields()
+    setStartModalOpen(true)
+  }
+
+  const handleStartSubmit = async () => {
+    if (!currentTask) return
+    try {
+      const values = await startForm.validateFields()
+      const res = await fetch(`/api/task/${currentTask.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'start',
+          plannedStartDate: values.plannedStartDate,
+          plannedEndDate: values.plannedEndDate,
+        })
+      })
+      if (res.ok) {
+        showSuccess("任务已开始")
+        setStartModalOpen(false)
+        fetchData()
+      } else {
+        const data = await res.json()
+        showError(data.error || "操作失败")
+      }
+    } catch {
+      // validation failed
+    }
+  }
+
+  const handleTransfer = async () => {
+    if (!currentTask) return
+    const values = await transferForm.validateFields()
+    const res = await fetch(`/api/task/${currentTask.id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        action: 'transfer',
+        assignedToId: values.assignedToId,
+        transferReason: values.reason || ''
+      })
+    })
+    if (res.ok) {
+      showSuccess("任务已转交")
+      setTransferModalOpen(false)
+      fetchData()
+    } else {
+      const data = await res.json()
+      showError(data.error || "转交失败")
+    }
+  }
+
+  const handleDataEntry = (task: Task) => {
+    router.push(`/task/data/${task.id}`)
+  }
+
+  const handleGenerateReport = async (task: Task) => {
+    setGenerating(true)
+    try {
+      const res = await fetch('/api/report/generate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ taskId: task.id }),
+      })
+      const json = await res.json()
+      if (res.ok && json.success) {
+        showSuccess('报告生成成功')
+        router.push('/report/task-generate')
+      } else {
+        modal.warning({
+          title: '操作提示',
+          content: json.error || '报告生成失败',
+          okText: '知道了',
+          centered: true,
+        })
+      }
+    } catch {
+      modal.warning({
+        title: '操作提示',
+        content: '报告生成失败，请稍后重试',
+        okText: '知道了',
+        centered: true,
+      })
+    } finally {
+      setGenerating(false)
+    }
+  }
+
+  const columns: ColumnsType<Task> = [
+    { title: "任务编号", dataIndex: "taskNo", width: 130 },
     {
-      title: '检测项目',
-      dataIndex: 'testItems',
-      width: 180,
-      render: (items: string) => items || '-',
+      title: "委托编号",
+      dataIndex: "entrustmentNo",
+      width: 140,
+      render: (v: string) => v || "-",
+    },
+    { title: "样品名称", render: (_: any, r: any) => r.sample?.name || r.sampleName || "-", width: 150 },
+    { title: "样品编号", render: (_: any, r: any) => r.sample?.sampleNo || "-", width: 120 },
+    { title: "检测项目", render: (_, r) => r.entrustmentProject?.name || "-", width: 150 },
+    {
+      title: "外包供应商",
+      render: (_, r) => r.entrustmentProject?.subcontractor || "-",
+      width: 130,
     },
     {
-      title: '供应商',
-      key: 'supplierName',
-      width: 150,
-      render: (_, record) => record.supplier?.name || '-',
-    },
-    {
-      title: '状态',
-      dataIndex: 'status',
+      title: "状态",
+      dataIndex: "status",
       width: 100,
-      render: (status: string) => (
-        <Tag icon={statusMap[status]?.icon} color={statusMap[status]?.color}>
-          {statusMap[status]?.text}
-        </Tag>
-      ),
+      render: (s: string) => <Tag color={statusMap[s]?.color}>{statusMap[s]?.text}</Tag>
     },
     {
-      title: '进度',
-      dataIndex: 'progress',
-      width: 120,
-      render: (progress: number) => <Progress percent={progress || 0} size="small" />,
+      title: "截止日期",
+      dataIndex: "dueDate",
+      width: 130,
+      render: (d) => d ? dayjs(d).format("YYYY-MM-DD") : "-",
     },
     {
-      title: '费用',
-      dataIndex: 'cost',
-      width: 100,
-      render: (cost: number) => `¥${(cost || 0).toLocaleString()}`,
-    },
-    {
-      title: '预计完成',
-      dataIndex: 'expectedDate',
-      width: 100,
-      render: (date: string | null) => date ? date.split('T')[0] : '-',
+      title: "创建时间",
+      dataIndex: "createdAt",
+      width: 130,
+      render: (d) => d ? dayjs(d).format("YYYY-MM-DD") : "-",
     },
     {
       title: '操作', fixed: 'right',
-      
       render: (_, record) => (
-        <Button size="small" icon={<EyeOutlined />} onClick={() => handleView(record)}>
-          详情
-        </Button>
+        <Space size="small" style={{ whiteSpace: 'nowrap' }}>
+          {record.status === "pending" && (
+            <Button type="primary" size="small" icon={<PlayCircleOutlined />} onClick={() => openStartModal(record)}>
+              开始
+            </Button>
+          )}
+          {record.status === "in_progress" && (
+            <Button type="primary" size="small" icon={<EditOutlined />} onClick={() => handleDataEntry(record)}>
+              录入数据
+            </Button>
+          )}
+          {record.status === "pending_review" && (
+            <Button size="small" icon={<EditOutlined />} onClick={() => handleDataEntry(record)}>
+              查看数据
+            </Button>
+          )}
+          {record.status === "completed" && (
+            <>
+              <Button size="small" icon={<EditOutlined />} onClick={() => handleDataEntry(record)}>
+                查看数据
+              </Button>
+              <Button size="small" type="primary" icon={<FileTextOutlined />} loading={generating} onClick={() => handleGenerateReport(record)}>
+                生成报告
+              </Button>
+            </>
+          )}
+          {record.status !== "completed" && record.status !== "pending_review" && (
+            <Button size="small" icon={<SwapOutlined />} onClick={() => openTransferModal(record)}>
+              转交
+            </Button>
+          )}
+        </Space>
       ),
     },
   ]
 
   return (
-    <div>
-      <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'space-between' }}>
-        <h2 style={{ margin: 0 }}>我的委外</h2>
-        <Button icon={<ReloadOutlined />} onClick={loadData}>刷新</Button>
+    <div className="p-4">
+      <div style={{ marginBottom: 16 }}>
+        <h2 style={{ margin: 0 }}>我的外包</h2>
       </div>
 
-      <Row gutter={16} style={{ marginBottom: 16 }}>
-        <Col span={4}>
-          <Card size="small">
-            <Statistic title="委外总数" value={totalCount} />
-          </Card>
-        </Col>
-        <Col span={4}>
-          <Card size="small">
-            <Statistic title="待发送" value={pendingCount} />
-          </Card>
-        </Col>
-        <Col span={4}>
-          <Card size="small">
-            <Statistic title="检测中" value={testingCount} valueStyle={{ color: '#1890ff' }} />
-          </Card>
-        </Col>
-        <Col span={4}>
-          <Card size="small">
-            <Statistic title="已完成" value={completedCount} valueStyle={{ color: 'green' }} />
-          </Card>
-        </Col>
-        <Col span={4}>
-          <Card size="small">
-            <Statistic title="已退回" value={returnedCount} valueStyle={{ color: 'orange' }} />
-          </Card>
-        </Col>
-        <Col span={4}>
-          <Card size="small">
-            <Statistic title="总费用" value={totalCost} prefix="¥" />
-          </Card>
-        </Col>
-      </Row>
+      <div className="grid grid-cols-4 gap-4 mb-4">
+        <Card>
+          <Statistic title="全部任务" value={(stats.pending || 0) + (stats.in_progress || 0) + (stats.pending_review || 0) + (stats.completed || 0)} prefix={<ClockCircleOutlined />} />
+        </Card>
+        <Card>
+          <Statistic title="待开始" value={stats.pending || 0} valueStyle={{ color: "#cf1322" }} />
+        </Card>
+        <Card>
+          <Statistic title="进行中" value={stats.in_progress || 0} valueStyle={{ color: "#1890ff" }} />
+        </Card>
+        <Card>
+          <Statistic title="已完成" value={stats.completed || 0} valueStyle={{ color: "#52c41a" }} />
+        </Card>
+      </div>
 
-      <Card>
-        <Space style={{ marginBottom: 16 }} style={{ whiteSpace: 'nowrap' }}>
-          <Input.Search
-            placeholder="搜索编号/样品/供应商"
-            value={keyword}
-            onChange={(e) => setKeyword(e.target.value)}
-            onSearch={handleSearch}
-            style={{ width: 200 }}
-          />
-          <Select
-            placeholder="状态筛选"
-            allowClear
-            value={statusFilter}
-            onChange={(v) => { setStatusFilter(v); setPagination(p => ({ ...p, current: 1 })) }}
-            options={[
-              { value: 'pending', label: '待发送' },
-              { value: 'sent', label: '已发送' },
-              { value: 'testing', label: '检测中' },
-              { value: 'completed', label: '已完成' },
-              { value: 'returned', label: '已退回' },
-            ]}
-            style={{ width: 120 }}
-          />
-        </Space>
-
-        <Table
-          rowKey="id"
-          columns={columns}
-          dataSource={tasks}
-          loading={loading}
-          pagination={{
-            ...pagination,
-            showSizeChanger: true,
-            showQuickJumper: true,
-            showTotal: (total) => `共 ${total} 条`,
-          }}
-          onChange={handleTableChange}
+      <div className="mb-4 flex gap-2">
+        <Input.Search
+          placeholder="搜索任务编号/样品名称"
+          value={keyword}
+          onChange={(e) => setKeyword(e.target.value)}
+          onSearch={handleSearch}
+          style={{ width: 240 }}
+          allowClear
         />
-      </Card>
+        <Select
+          placeholder="状态筛选"
+          allowClear
+          style={{ width: 120 }}
+          onChange={(v) => setStatusFilter(v)}
+          value={statusFilter}
+        >
+          <Select.Option value="pending">待开始</Select.Option>
+          <Select.Option value="in_progress">进行中</Select.Option>
+          <Select.Option value="pending_review">待审核</Select.Option>
+          <Select.Option value="completed">已完成</Select.Option>
+        </Select>
+      </div>
 
-      {/* 详情弹窗 */}
+      <Table
+        columns={columns}
+        dataSource={data}
+        rowKey="id"
+        loading={loading}
+        scroll={{ x: 1200 }}
+        pagination={{
+          current: page,
+          pageSize: 10,
+          total,
+          onChange: (p) => setPage(p),
+        }}
+      />
+
+      {/* 转交任务弹窗 */}
       <Modal
-        title="委外详情"
-        open={detailOpen}
-        onCancel={() => setDetailOpen(false)}
-        footer={null}
-        width={700}
+        title="转交任务"
+        open={transferModalOpen}
+        onOk={handleTransfer}
+        onCancel={() => setTransferModalOpen(false)}
+        width={400}
       >
-        {currentTask && (
-          <>
-            <Descriptions column={2} bordered size="small">
-              <Descriptions.Item label="委外编号">{currentTask.orderNo}</Descriptions.Item>
-              <Descriptions.Item label="委托单号">{currentTask.entrustmentNo || '-'}</Descriptions.Item>
-              <Descriptions.Item label="客户名称">{currentTask.clientName || '-'}</Descriptions.Item>
-              <Descriptions.Item label="样品名称">{currentTask.sampleName}</Descriptions.Item>
-              <Descriptions.Item label="检测项目" span={2}>
-                {currentTask.testItems ? currentTask.testItems.split(',').map(item => (
-                  <Tag key={item}>{item.trim()}</Tag>
-                )) : '-'}
-              </Descriptions.Item>
-              <Descriptions.Item label="供应商">{currentTask.supplier?.name || '-'}</Descriptions.Item>
-              <Descriptions.Item label="状态">
-                <Tag icon={statusMap[currentTask.status]?.icon} color={statusMap[currentTask.status]?.color}>
-                  {statusMap[currentTask.status]?.text}
-                </Tag>
-              </Descriptions.Item>
-              <Descriptions.Item label="费用">¥{(currentTask.cost || 0).toLocaleString()}</Descriptions.Item>
-              <Descriptions.Item label="进度">
-                <Progress percent={currentTask.progress || 0} size="small" style={{ width: 100 }} />
-              </Descriptions.Item>
-              <Descriptions.Item label="发送日期">
-                {currentTask.sendDate ? currentTask.sendDate.split('T')[0] : '-'}
-              </Descriptions.Item>
-              <Descriptions.Item label="预计完成">
-                {currentTask.expectedDate ? currentTask.expectedDate.split('T')[0] : '-'}
-              </Descriptions.Item>
-              <Descriptions.Item label="实际完成">
-                {currentTask.actualDate ? currentTask.actualDate.split('T')[0] : '-'}
-              </Descriptions.Item>
-              <Descriptions.Item label="创建人">{currentTask.createdBy}</Descriptions.Item>
-              {currentTask.remark && (
-                <Descriptions.Item label="备注" span={2}>{currentTask.remark}</Descriptions.Item>
-              )}
-            </Descriptions>
+        <Form form={transferForm} layout="vertical">
+          <Form.Item name="assignedToId" label="转交给" rules={[{ required: true, message: '请选择接收人' }]}>
+            <Select
+              showSearch
+              placeholder="选择接收人"
+              optionFilterProp="label"
+              options={users.map(u => ({ value: u.id, label: `${u.name}${u.dept ? ` (${u.dept.name})` : ''}` }))}
+            />
+          </Form.Item>
+          <Form.Item name="reason" label="转交原因">
+            <Select placeholder="选择或输入原因" allowClear>
+              <Select.Option value="工作调整">工作调整</Select.Option>
+              <Select.Option value="设备故障">设备故障</Select.Option>
+              <Select.Option value="技术支援">技术支援</Select.Option>
+              <Select.Option value="其他">其他</Select.Option>
+            </Select>
+          </Form.Item>
+        </Form>
+      </Modal>
 
-            <div style={{ marginTop: 24 }}>
-              <h4>处理记录</h4>
-              <Timeline
-                items={[
-                  {
-                    children: (
-                      <div>
-                        <strong>创建委外</strong>
-                        <span style={{ marginLeft: 8, color: '#999' }}>
-                          {currentTask.createdBy} - {currentTask.createdAt ? currentTask.createdAt.split('T')[0] : '-'}
-                        </span>
-                      </div>
-                    ),
-                  },
-                  ...(currentTask.sendDate ? [{
-                    children: (
-                      <div>
-                        <strong>发送样品</strong>
-                        <span style={{ marginLeft: 8, color: '#999' }}>
-                          {currentTask.sendDate.split('T')[0]}
-                        </span>
-                      </div>
-                    ),
-                  }] : []),
-                  ...(currentTask.actualDate ? [{
-                    children: (
-                      <div>
-                        <strong>检测完成</strong>
-                        <span style={{ marginLeft: 8, color: '#999' }}>
-                          {currentTask.actualDate.split('T')[0]}
-                        </span>
-                      </div>
-                    ),
-                  }] : []),
-                ]}
-              />
-            </div>
-          </>
-        )}
+      {/* 开始任务弹窗 */}
+      <Modal
+        title="开始检测任务"
+        open={startModalOpen}
+        onOk={handleStartSubmit}
+        onCancel={() => setStartModalOpen(false)}
+        width={400}
+      >
+        <Form form={startForm} layout="vertical">
+          <p className="mb-4 text-gray-500">确认开始任务并记录预计时间：</p>
+          <Form.Item name="plannedStartDate" label="预计开始时间" rules={[{ required: true, message: '请选择开始时间' }]}>
+            <DatePicker showTime style={{ width: '100%' }} />
+          </Form.Item>
+          <Form.Item name="plannedEndDate" label="预计完成时间" rules={[{ required: true, message: '请选择完成时间' }]}>
+            <DatePicker showTime style={{ width: '100%' }} />
+          </Form.Item>
+        </Form>
       </Modal>
     </div>
   )

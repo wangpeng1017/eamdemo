@@ -18,7 +18,7 @@ export const GET = withAuth(async (
   return success(supplier)
 })
 
-// 更新供应商 - 需要登录
+// 更新供应商 - 需要登录，字段白名单
 export const PUT = withAuth(async (
   request: NextRequest,
   user,
@@ -26,7 +26,22 @@ export const PUT = withAuth(async (
 ) => {
   const { id } = await context!.params
   const data = await request.json()
-  const supplier = await prisma.supplier.update({ where: { id }, data })
+
+  // 字段白名单过滤
+  const supplier = await prisma.supplier.update({
+    where: { id },
+    data: {
+      ...(data.name !== undefined && { name: data.name }),
+      ...(data.contact !== undefined && { contact: data.contact }),
+      ...(data.phone !== undefined && { phone: data.phone }),
+      ...(data.email !== undefined && { email: data.email }),
+      ...(data.address !== undefined && { address: data.address }),
+      ...(data.category !== undefined && { category: data.category }),
+      ...(data.qualification !== undefined && { qualification: data.qualification }),
+      ...(data.status !== undefined && { status: data.status }),
+      ...(data.remark !== undefined && { remark: data.remark }),
+    }
+  })
   return success(supplier)
 })
 

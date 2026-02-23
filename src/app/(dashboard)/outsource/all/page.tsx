@@ -1,8 +1,8 @@
 'use client'
 
 import { useState, useEffect } from "react"
-import { showSuccess, showError, showWarning } from '@/lib/confirm'
-import { Table, Button, Space, Tag, Modal, Form, Select, message, Card, Statistic, DatePicker, App } from "antd"
+import { showSuccess, showError } from '@/lib/confirm'
+import { Table, Button, Space, Tag, Modal, Form, Select, Card, Statistic, DatePicker, Input, App } from "antd"
 import { PlayCircleOutlined, CheckCircleOutlined, ClockCircleOutlined, SwapOutlined, EditOutlined, FileTextOutlined } from "@ant-design/icons"
 import type { ColumnsType } from "antd/es/table"
 import dayjs from "dayjs"
@@ -13,12 +13,18 @@ interface Task {
   taskNo: string
   sampleName: string | null
   entrustmentId: string | null
+  entrustmentNo: string | null
   status: string
   progress: number
   dueDate: string | null
   sample?: { sampleNo: string; name: string }
   createdAt: string
-  entrustmentProject?: { name: string }
+  entrustmentProject?: {
+    name: string
+    subcontractor?: string | null
+    subcontractAssignee?: string | null
+  }
+  assignedTo?: { id: string; name: string } | null
 }
 
 interface User {
@@ -34,7 +40,7 @@ const statusMap: Record<string, { text: string; color: string }> = {
   completed: { text: "已完成", color: "success" },
 }
 
-export default function MyTasksPage() {
+export default function OutsourceAllPage() {
   const router = useRouter()
   const { modal } = App.useApp()
   const [data, setData] = useState([])
@@ -42,17 +48,17 @@ export default function MyTasksPage() {
   const [total, setTotal] = useState(0)
   const [page, setPage] = useState(1)
   const [statusFilter, setStatusFilter] = useState<string | undefined>()
+  const [keyword, setKeyword] = useState("")
   const [stats, setStats] = useState<Record<string, number>>({})
   const [users, setUsers] = useState<User[]>([])
+  const [generating, setGenerating] = useState(false)
 
-  // 模态框状态
+  // 转交模态框状态
   const [transferModalOpen, setTransferModalOpen] = useState(false)
-  const [startModalOpen, setStartModalOpen] = useState(false) // 新增：开始任务模态框
-
+  const [startModalOpen, setStartModalOpen] = useState(false)
   const [currentTask, setCurrentTask] = useState<Task | null>(null)
   const [transferForm] = Form.useForm()
-  const [startForm] = Form.useForm() // 新增：开始任务表单
-  const [generating, setGenerating] = useState(false)
+  const [startForm] = Form.useForm()
 
   const fetchData = async (p = page) => {
     setLoading(true)
@@ -60,19 +66,21 @@ export default function MyTasksPage() {
       page: String(p),
       pageSize: "10",
       ...(statusFilter && { status: statusFilter }),
+      ...(keyword && { keyword }),
     })
     try {
-      const res = await fetch(`/api/task/my?${params}`)
+      const res = await fetch(`/api/task/outsource?${params}`)
       const json = await res.json()
       if (json.success && json.data) {
         setData(json.data.list || [])
         setTotal(json.data.total || 0)
+        setStats(json.data.stats || {})
       } else {
         setData(json.list || [])
         setTotal(json.total || 0)
+        setStats(json.stats || {})
       }
-      setStats(json.stats || {})
-    } catch (e) {
+    } catch {
       showError('获取任务列表失败')
     } finally {
       setLoading(false)
@@ -84,8 +92,8 @@ export default function MyTasksPage() {
       const res = await fetch('/api/user?pageSize=1000')
       const json = await res.json()
       setUsers(json.data?.list || json.list || [])
-    } catch (e) {
-      console.error('获取用户列表失败:', e)
+    } catch {
+      // 用户列表加载失败不影响主功能
     }
   }
 
@@ -93,6 +101,11 @@ export default function MyTasksPage() {
     fetchData()
     fetchUsers()
   }, [page, statusFilter])
+
+  const handleSearch = () => {
+    setPage(1)
+    fetchData(1)
+  }
 
   // 打开转交模态框
   const openTransferModal = (task: Task) => {
@@ -113,17 +126,15 @@ export default function MyTasksPage() {
     if (!currentTask) return
     try {
       const values = await startForm.validateFields()
-
       const res = await fetch(`/api/task/${currentTask.id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           action: 'start',
-          plannedStartDate: values.plannedStartDate, // 提交时间字段
+          plannedStartDate: values.plannedStartDate,
           plannedEndDate: values.plannedEndDate,
         })
       })
-
       if (res.ok) {
         showSuccess("任务已开始")
         setStartModalOpen(false)
@@ -132,23 +143,8 @@ export default function MyTasksPage() {
         const data = await res.json()
         showError(data.error || "操作失败")
       }
-    } catch (e) {
+    } catch {
       // validation failed
-    }
-  }
-
-  const handleComplete = async (id: string) => {
-    const res = await fetch(`/api/task/${id}`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action: 'complete' })
-    })
-    if (res.ok) {
-      showSuccess("任务已完成")
-      fetchData()
-    } else {
-      const data = await res.json()
-      showError(data.error || "操作失败")
     }
   }
 
@@ -174,6 +170,7 @@ export default function MyTasksPage() {
     }
   }
 
+  // 数据录入
   const handleDataEntry = (task: Task) => {
     router.push(`/task/data/${task.id}`)
   }
@@ -192,7 +189,6 @@ export default function MyTasksPage() {
         showSuccess('报告生成成功')
         router.push('/report/task-generate')
       } else {
-        // 使用上下文化的 modal 实例，确保弹窗正确渲染
         modal.warning({
           title: '操作提示',
           content: json.error || '报告生成失败',
@@ -200,7 +196,7 @@ export default function MyTasksPage() {
           centered: true,
         })
       }
-    } catch (error) {
+    } catch {
       modal.warning({
         title: '操作提示',
         content: '报告生成失败，请稍后重试',
@@ -214,28 +210,42 @@ export default function MyTasksPage() {
 
   const columns: ColumnsType<Task> = [
     { title: "任务编号", dataIndex: "taskNo", width: 130 },
-    { title: "委托编号", dataIndex: "entrustmentNo", width: 150, render: (v: string) => v || "-" },
+    {
+      title: "委托编号",
+      dataIndex: "entrustmentNo",
+      width: 140,
+      render: (v: string) => v || "-",
+    },
     { title: "样品名称", render: (_: any, r: any) => r.sample?.name || r.sampleName || "-", width: 150 },
-    { title: "样品编号", render: (_, r) => r.sample?.sampleNo || "-", width: 120 },
+    { title: "样品编号", render: (_: any, r: any) => r.sample?.sampleNo || "-", width: 120 },
     { title: "检测项目", render: (_, r) => r.entrustmentProject?.name || "-", width: 150 },
+    {
+      title: "外包供应商",
+      render: (_, r) => r.entrustmentProject?.subcontractor || "-",
+      width: 130,
+    },
+    {
+      title: "内部负责人",
+      render: (_, r) => r.entrustmentProject?.subcontractAssignee || "-",
+      width: 120,
+    },
     {
       title: "状态",
       dataIndex: "status",
       width: 100,
       render: (s: string) => <Tag color={statusMap[s]?.color}>{statusMap[s]?.text}</Tag>
     },
-    { title: "执行人", dataIndex: "assignedTo", render: (v: any) => v?.name || "-", width: 100 },
     {
       title: "截止日期",
       dataIndex: "dueDate",
-      width: 160,
-      render: (d) => d ? dayjs(d).format("YYYY-MM-DD HH:mm:ss") : "-",
+      width: 130,
+      render: (d) => d ? dayjs(d).format("YYYY-MM-DD") : "-",
     },
     {
-      title: "任务分配时间",
+      title: "创建时间",
       dataIndex: "createdAt",
-      width: 160,
-      render: (d) => d ? dayjs(d).format("YYYY-MM-DD HH:mm:ss") : "-",
+      width: 130,
+      render: (d) => d ? dayjs(d).format("YYYY-MM-DD") : "-",
     },
     {
       title: '操作', fixed: 'right',
@@ -283,6 +293,10 @@ export default function MyTasksPage() {
 
   return (
     <div className="p-4">
+      <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'space-between' }}>
+        <h2 style={{ margin: 0 }}>全部外包</h2>
+      </div>
+
       <div className="grid grid-cols-4 gap-4 mb-4">
         <Card>
           <Statistic title="全部任务" value={(stats.pending || 0) + (stats.in_progress || 0) + (stats.pending_review || 0) + (stats.completed || 0)} prefix={<ClockCircleOutlined />} />
@@ -298,7 +312,15 @@ export default function MyTasksPage() {
         </Card>
       </div>
 
-      <div className="mb-4">
+      <div className="mb-4 flex gap-2">
+        <Input.Search
+          placeholder="搜索任务编号/样品名称"
+          value={keyword}
+          onChange={(e) => setKeyword(e.target.value)}
+          onSearch={handleSearch}
+          style={{ width: 240 }}
+          allowClear
+        />
         <Select
           placeholder="状态筛选"
           allowClear
@@ -318,6 +340,7 @@ export default function MyTasksPage() {
         dataSource={data}
         rowKey="id"
         loading={loading}
+        scroll={{ x: 1300 }}
         pagination={{
           current: page,
           pageSize: 10,
@@ -354,7 +377,7 @@ export default function MyTasksPage() {
         </Form>
       </Modal>
 
-      {/* 需求6：开始任务弹窗 */}
+      {/* 开始任务弹窗 */}
       <Modal
         title="开始检测任务"
         open={startModalOpen}

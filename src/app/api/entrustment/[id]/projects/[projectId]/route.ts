@@ -139,22 +139,27 @@ export const PUT = withErrorHandler(async (request: NextRequest, context?: { par
       // 生成初始 sheetData（如果关联了模版）
       const sheetData = await generateSheetDataFromTemplate(data.testTemplateId || updatedProject.testTemplateId)
 
-      // 查找对应名称的样品，建立关联
-      const matchedSample = await prisma.sample.findFirst({
+      // 查找对应的样品，建立关联（先按名称匹配，匹配不到则取第一个）
+      let matchedSample = await prisma.sample.findFirst({
         where: {
           entrustmentId: entrustmentId,
           name: project.name
         }
       })
+      if (!matchedSample) {
+        matchedSample = await prisma.sample.findFirst({
+          where: { entrustmentId: entrustmentId }
+        })
+      }
 
-      console.log(`[Project Assign] Linking task to sample: project="${project.name}" -> sampleId=${matchedSample?.id || 'null'}`)
+      console.log(`[Project Assign] Linking task to sample: project="${project.name}" -> sampleId=${matchedSample?.id || 'null'}, sampleName=${matchedSample?.name || 'null'}`)
 
       const taskData = {
         taskNo,
         entrustmentId: entrustmentId,
         projectId: projectId,
         sampleId: matchedSample?.id || null, // 明确关联样品ID
-        sampleName: project.name, // 项目名称
+        sampleName: matchedSample?.name || project.name, // 优先用实际样品名
         parameters: project.testItems, // 检测参数
         testMethod: project.method, // 检测方法
         deviceId: data.deviceId || null,
@@ -212,22 +217,27 @@ export const PUT = withErrorHandler(async (request: NextRequest, context?: { par
       // 生成初始 sheetData（如果关联了模版）
       const sheetData = await generateSheetDataFromTemplate(data.testTemplateId || updatedProject.testTemplateId)
 
-      // 查找对应名称的样品，建立关联
-      const matchedSample = await prisma.sample.findFirst({
+      // 查找对应的样品，建立关联（先按名称匹配，匹配不到则取第一个）
+      let matchedSample = await prisma.sample.findFirst({
         where: {
           entrustmentId: entrustmentId,
           name: project.name
         }
       })
+      if (!matchedSample) {
+        matchedSample = await prisma.sample.findFirst({
+          where: { entrustmentId: entrustmentId }
+        })
+      }
 
-      console.log(`[Project Outsource] Linking task to sample: project="${project.name}" -> sampleId=${matchedSample?.id || 'null'}`)
+      console.log(`[Project Outsource] Linking task to sample: project="${project.name}" -> sampleId=${matchedSample?.id || 'null'}, sampleName=${matchedSample?.name || 'null'}`)
 
       const taskData = {
         taskNo,
         entrustmentId: entrustmentId,
         projectId: projectId,
         sampleId: matchedSample?.id || null, // 明确关联样品ID
-        sampleName: project.name,
+        sampleName: matchedSample?.name || project.name, // 优先用实际样品名
         parameters: project.testItems,
         testMethod: project.method,
         deviceId: data.deviceId || null,

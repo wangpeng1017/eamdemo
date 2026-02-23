@@ -184,16 +184,6 @@ function extractTestResults(task: any): Array<{
     standardReq: string
     conclusion: string
 }> {
-    // 默认 QCT 6项检测
-    const defaultItems = [
-        { testItem: 'Pb', standardReq: '≤0.1%' },
-        { testItem: 'Hg', standardReq: '≤0.1%' },
-        { testItem: 'Cd', standardReq: '≤0.01%' },
-        { testItem: 'Cr6+', standardReq: '≤0.1%' },
-        { testItem: 'PBBs', standardReq: '≤0.1%' },
-        { testItem: 'PBDEs', standardReq: '≤0.1%' },
-    ]
-
     try {
         const testResults = task?.testReports?.[0]?.testResults || task?.testResults
         if (testResults) {
@@ -203,11 +193,11 @@ function extractTestResults(task: any): Array<{
                     seq: String(i + 1),
                     sampleNo: task?.sample?.sampleNo || '',
                     sampleName: task?.sampleName || '',
-                    testItem: r.parameter || r.testItem || defaultItems[i]?.testItem || '',
-                    xrfResult: r.value || r.xrfResult || 'P',
+                    testItem: r.parameter || r.testItem || '',
+                    xrfResult: r.value || r.xrfResult || '',
                     chemResult: r.chemResult || '——',
-                    standardReq: r.standard || r.standardReq || defaultItems[i]?.standardReq || '',
-                    conclusion: r.result || r.conclusion || '合格',
+                    standardReq: r.standard || r.standardReq || '',
+                    conclusion: r.result || r.conclusion || '',
                 }))
             }
         }
@@ -215,17 +205,8 @@ function extractTestResults(task: any): Array<{
         console.error('[docx-renderer] 提取结构化结果失败:', e)
     }
 
-    // 返回默认空行
-    return defaultItems.map((item, i) => ({
-        seq: '1',
-        sampleNo: task?.sample?.sampleNo || '',
-        sampleName: task?.sampleName || '',
-        testItem: item.testItem,
-        xrfResult: 'P',
-        chemResult: '——',
-        standardReq: item.standardReq,
-        conclusion: '合格',
-    }))
+    // 无数据时返回空数组（不再返回硬编码的 QCT 默认数据）
+    return []
 }
 
 /**
@@ -242,15 +223,6 @@ function extractOriginalRecordResults(task: any): Array<{
     avgResult: string
     remark: string
 }> {
-    const defaultItems = [
-        { testItem: 'Pb' },
-        { testItem: 'Hg' },
-        { testItem: 'Cd' },
-        { testItem: 'Cr' },
-        { testItem: 'Br' },
-        { testItem: 'PBDEs' },
-    ]
-
     try {
         const testResults = task?.testReports?.[0]?.testResults || task?.testResults
         if (testResults) {
@@ -259,7 +231,7 @@ function extractOriginalRecordResults(task: any): Array<{
                 return parsed.map((r: any, i: number) => ({
                     seq: String(i + 1),
                     sampleNo: task?.sample?.sampleNo || '',
-                    testItem: r.parameter || r.testItem || defaultItems[i]?.testItem || '',
+                    testItem: r.parameter || r.testItem || '',
                     test1: r.test1 || r.value || '',
                     test2: r.test2 || '',
                     avgResult: r.avgResult || r.value || '',
@@ -291,14 +263,6 @@ function extractOriginalRecordResults(task: any): Array<{
         console.error('[docx-renderer] 提取原始记录结构化结果失败:', e)
     }
 
-    // 返回默认空行
-    return defaultItems.map((item) => ({
-        seq: '',
-        sampleNo: '',
-        testItem: item.testItem,
-        test1: '',
-        test2: '',
-        avgResult: '',
-        remark: '',
-    }))
+    // 无数据时返回空数组（不再返回硬编码的 QCT 默认数据）
+    return []
 }

@@ -10,7 +10,13 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ error: '未登录' }, { status: 401 })
     }
 
-    const body = await request.json()
+    let body: any
+    try {
+        body = await request.json()
+    } catch {
+        return NextResponse.json({ error: '请求参数格式错误' }, { status: 400 })
+    }
+
     const {
         entrustmentId,
         taskIds,
@@ -23,8 +29,8 @@ export async function POST(request: NextRequest) {
         overallConclusion
     } = body
 
-    if (!entrustmentId || !taskIds || taskIds.length === 0 || !clientName || !sampleName) {
-        return NextResponse.json({ error: '缺少必填字段' }, { status: 400 })
+    if (!entrustmentId || !Array.isArray(taskIds) || taskIds.length === 0 || !clientName || !sampleName) {
+        return NextResponse.json({ error: '缺少必填字段（entrustmentId, taskIds, clientName, sampleName）' }, { status: 400 })
     }
 
     // 获取相关任务和任务报告
@@ -35,7 +41,10 @@ export async function POST(request: NextRequest) {
             status: 'completed'
         },
         include: {
-            testData: true
+            testData: true,
+            entrustmentProject: {
+                select: { name: true, method: true }
+            }
         }
     })
 
@@ -55,19 +64,22 @@ export async function POST(request: NextRequest) {
         }
     })
 
-    // 整合检测项目和依据
+    // 整合检测项目和检测依据
     const testItems: string[] = []
     const testStandards: string[] = []
 
     tasks.forEach(task => {
+        // 检测项目从 testData 提取
         task.testData?.forEach((data: any) => {
             if (data.parameter && !testItems.includes(data.parameter)) {
                 testItems.push(data.parameter)
             }
-            if (data.standard && !testStandards.includes(data.standard)) {
-                testStandards.push(data.standard)
-            }
         })
+        // 检测标准/依据从 EntrustmentProject.method 获取（真正的标准名称）
+        const method = (task as any).entrustmentProject?.method
+        if (method && !testStandards.includes(method)) {
+            testStandards.push(method)
+        }
     })
 
     // 获取委托单和样品信息，自动带出字段

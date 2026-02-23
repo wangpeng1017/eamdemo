@@ -18,7 +18,7 @@ export const GET = withAuth(async (
   return success(device)
 })
 
-// 更新设备 - 需要登录
+// 更新设备 - 需要登录，字段白名单过滤
 export const PUT = withAuth(async (
   request: NextRequest,
   user,
@@ -26,7 +26,26 @@ export const PUT = withAuth(async (
 ) => {
   const { id } = await context!.params
   const data = await request.json()
-  const device = await prisma.device.update({ where: { id }, data })
+
+  // 字段白名单过滤，防止修改 deviceNo 等关键字段
+  const device = await prisma.device.update({
+    where: { id },
+    data: {
+      ...(data.name !== undefined && { name: data.name }),
+      ...(data.model !== undefined && { model: data.model }),
+      ...(data.manufacturer !== undefined && { manufacturer: data.manufacturer }),
+      ...(data.serialNo !== undefined && { serialNo: data.serialNo }),
+      ...(data.location !== undefined && { location: data.location }),
+      ...(data.status !== undefined && { status: data.status }),
+      ...(data.purchaseDate !== undefined && { purchaseDate: data.purchaseDate ? new Date(data.purchaseDate) : null }),
+      ...(data.warrantyExpiry !== undefined && { warrantyExpiry: data.warrantyExpiry ? new Date(data.warrantyExpiry) : null }),
+      ...(data.nextCalibrationDate !== undefined && { nextCalibrationDate: data.nextCalibrationDate ? new Date(data.nextCalibrationDate) : null }),
+      ...(data.lastCalibrationDate !== undefined && { lastCalibrationDate: data.lastCalibrationDate ? new Date(data.lastCalibrationDate) : null }),
+      ...(data.calibrationCycle !== undefined && { calibrationCycle: data.calibrationCycle }),
+      ...(data.operatingHours !== undefined && { operatingHours: data.operatingHours }),
+      ...(data.remark !== undefined && { remark: data.remark }),
+    }
+  })
   return success(device)
 })
 

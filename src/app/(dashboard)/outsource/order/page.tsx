@@ -216,8 +216,8 @@ export default function OutsourceOrderPage() {
 
   const columns: ColumnsType<Task> = [
     { title: "任务编号", dataIndex: "taskNo", width: 130 },
-    { title: "样品名称", render: (_, r) => r.sample?.name || "-", width: 150 },
-    { title: "样品编号", render: (_, r) => r.sample?.sampleNo || "-", width: 120 },
+    { title: "样品名称", render: (_: any, r: any) => r.sample?.name || r.sampleName || "-", width: 150 },
+    { title: "样品编号", render: (_: any, r: any) => r.sample?.sampleNo || "-", width: 120 },
     { title: "检测项目", render: (_, r) => r.entrustmentProject?.name || "-", width: 150 },
     {
       title: "外包供应商",

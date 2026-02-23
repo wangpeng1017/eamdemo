@@ -1,15 +1,16 @@
 import { prisma } from '@/lib/prisma'
 import { NextRequest } from 'next/server'
 import {
-  withErrorHandler,
+  withAuth,
   success,
   notFound,
 } from '@/lib/api-handler'
 import { Prisma } from '@prisma/client'
 
-// 获取收款记录详情
-export const GET = withErrorHandler(async (
+// 获取收款记录详情 - 需要登录
+export const GET = withAuth(async (
   request: NextRequest,
+  user,
   context?: { params: Promise<Record<string, string>> }
 ) => {
   const { params } = context!
@@ -44,9 +45,10 @@ export const GET = withErrorHandler(async (
   return success(payment)
 })
 
-// 删除收款记录（需要回滚应收账款）
-export const DELETE = withErrorHandler(async (
+// 删除收款记录（需要回滚应收账款）- 需要登录
+export const DELETE = withAuth(async (
   request: NextRequest,
+  user,
   context?: { params: Promise<Record<string, string>> }
 ) => {
   const { params } = context!

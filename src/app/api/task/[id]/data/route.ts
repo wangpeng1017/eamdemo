@@ -124,6 +124,35 @@ export async function POST(
     data: updateData,
   })
 
+  // 问题-1 修复：submit 完成后级联更新项目和委托单状态
+  if (action === 'submit' && task.projectId) {
+    try {
+      await prisma.entrustmentProject.update({
+        where: { id: task.projectId },
+        data: { status: 'completed' }
+      })
+
+      if (task.entrustmentId) {
+        const allProjects = await prisma.entrustmentProject.findMany({
+          where: { entrustmentId: task.entrustmentId },
+          select: { status: true }
+        })
+
+        const allCompleted = allProjects.every(p => p.status === 'completed')
+
+        if (allCompleted && allProjects.length > 0) {
+          await prisma.entrustment.update({
+            where: { id: task.entrustmentId },
+            data: { status: 'completed' }
+          })
+        }
+      }
+    } catch (cascadeError) {
+      console.error('级联更新委托单状态失败:', cascadeError)
+      // 不阻断主流程
+    }
+  }
+
   // 🔥 同步更新 TestData 表
   if (sheetData) {
     try {

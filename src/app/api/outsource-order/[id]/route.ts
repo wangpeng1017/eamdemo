@@ -1,10 +1,11 @@
 import { prisma } from '@/lib/prisma'
 import { NextRequest } from 'next/server'
-import { withErrorHandler, success, notFound, validateEnum } from '@/lib/api-handler'
+import { withAuth, success, notFound, validateEnum } from '@/lib/api-handler'
 
-// 获取单个委外订单
-export const GET = withErrorHandler(async (
+// 获取单个委外订单 - 需要登录
+export const GET = withAuth(async (
   request: NextRequest,
+  user,
   context?: { params: Promise<Record<string, string>> }
 ) => {
   const { id } = await context!.params
@@ -26,9 +27,10 @@ export const GET = withErrorHandler(async (
   })
 })
 
-// 更新委外订单
-export const PUT = withErrorHandler(async (
+// 更新委外订单 - 需要登录
+export const PUT = withAuth(async (
   request: NextRequest,
+  user,
   context?: { params: Promise<Record<string, string>> }
 ) => {
   const { id } = await context!.params
@@ -66,9 +68,10 @@ export const PUT = withErrorHandler(async (
   })
 })
 
-// 删除委外订单
-export const DELETE = withErrorHandler(async (
+// 删除委外订单 - 需要登录
+export const DELETE = withAuth(async (
   request: NextRequest,
+  user,
   context?: { params: Promise<Record<string, string>> }
 ) => {
   const { id } = await context!.params

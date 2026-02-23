@@ -402,7 +402,7 @@ export default function DashboardPage() {
                 renderItem={(item) => (
                   <List.Item
                     style={{ cursor: 'pointer' }}
-                    onClick={() => router.push(`/task/data/${item.id}`)}
+                    onClick={() => router.push('/task/my')}
                   >
                     <List.Item.Meta
                       title={

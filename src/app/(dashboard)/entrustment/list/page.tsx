@@ -35,8 +35,10 @@ interface EntrustmentProject {
   assignTo: string | null
   subcontractor: string | null
   subcontractAssignee: string | null
+  subcontractAssigneeName?: string | null
   deviceId: string | null
   deadline: string | null
+  assignDate: string | null
 }
 
 interface Sample {
@@ -586,16 +588,50 @@ export default function EntrustmentListPage() {
       title: '操作',
       key: 'action',
       fixed: 'right',
-      width: 200,
+      width: 280,
       render: (_, record) => {
         // 通过 testItemName 查找对应的 project 来执行分配/分包
         const entrustment = data.find(d => d.sampleTestItems?.some(s => s.id === record.id))
         if (!entrustment) return null
-        const project = entrustment.projects?.find(p => p.name === record.testItemName)
+
+        // 按顺序匹配：同名 project 按 sampleTestItems 中出现顺序一一对应
+        // 例如两条 sampleTestItem 都叫"禁限用物质分析"，分别对应 projects 中的第1个和第2个同名项目
+        const sameNameItems = entrustment.sampleTestItems?.filter(s => s.testItemName === record.testItemName) || []
+        const indexInSameName = sameNameItems.findIndex(s => s.id === record.id)
+        const sameNameProjects = entrustment.projects?.filter(p => p.name === record.testItemName) || []
+        const project = sameNameProjects[indexInSameName] || sameNameProjects[0]
         if (!project) return null
+
+        // 获取已分配人姓名
+        const getAssigneeName = () => {
+          if (project.assignTo) {
+            const u = users.find((u: any) => u.id === project.assignTo || u.name === project.assignTo || u.phone === project.assignTo)
+            return (u as any)?.name || project.assignTo
+          }
+          return null
+        }
+
+        // 获取分包人信息
+        const getSubcontractInfo = () => {
+          if (project.subcontractAssignee) {
+            const u = users.find((u: any) => u.id === project.subcontractAssignee || u.name === project.subcontractAssignee)
+            return (u as any)?.name || project.subcontractAssignee
+          }
+          return null
+        }
+
+        const assigneeName = getAssigneeName()
+        const subcontractName = getSubcontractInfo()
 
         return (
           <Space size="small" style={{ whiteSpace: 'nowrap' }}>
+            {/* 已分配时显示分配人姓名 */}
+            {project.status === 'assigned' && assigneeName && (
+              <Tag color="blue">{assigneeName}</Tag>
+            )}
+            {project.status === 'subcontracted' && subcontractName && (
+              <Tag color="orange">{subcontractName}</Tag>
+            )}
             <Button
               size="small"
               type="link"

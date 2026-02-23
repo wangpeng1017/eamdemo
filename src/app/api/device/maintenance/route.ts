@@ -1,8 +1,9 @@
 import { prisma } from '@/lib/prisma'
 import { NextRequest, NextResponse } from 'next/server'
+import { withAuth } from '@/lib/api-handler'
 
-// 获取设备维修记录
-export async function GET(request: NextRequest) {
+// 获取设备维修记录 - 需要登录
+export const GET = withAuth(async (request: NextRequest, user) => {
   const { searchParams } = new URL(request.url)
   const page = parseInt(searchParams.get('page') || '1')
   const pageSize = parseInt(searchParams.get('pageSize') || '10')
@@ -31,7 +32,7 @@ export async function GET(request: NextRequest) {
     prisma.deviceRepair.count({ where }),
   ])
 
-  // Format the response to match expected interface
+  // 格式化响应
   const formattedList = list.map((item: any) => ({
     id: item.id,
     device: item.device,
@@ -44,13 +45,13 @@ export async function GET(request: NextRequest) {
   }))
 
   return NextResponse.json({ list: formattedList, total, page, pageSize })
-}
+})
 
-// 创建维修记录
-export async function POST(request: NextRequest) {
+// 创建维修记录 - 需要登录
+export const POST = withAuth(async (request: NextRequest, user) => {
   const data = await request.json()
 
-  // Generate repair number
+  // 生成维修编号
   const today = new Date().toISOString().slice(0, 10).replace(/-/g, '')
   const count = await prisma.deviceRepair.count({
     where: { repairNo: { startsWith: 'RX' + today } }
@@ -72,4 +73,5 @@ export async function POST(request: NextRequest) {
   })
 
   return NextResponse.json(repair)
-}
+})
+

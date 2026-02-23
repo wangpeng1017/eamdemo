@@ -111,8 +111,10 @@ export const GET = withAuth(async (request: NextRequest, user) => {
             status: true,
             assignTo: true,
             subcontractor: true,
+            subcontractAssignee: true,
             deviceId: true,
             deadline: true,
+            assignDate: true,
           },
         },
         samples: {

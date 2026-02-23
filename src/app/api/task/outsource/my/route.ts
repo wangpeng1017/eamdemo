@@ -2,18 +2,28 @@ import { prisma } from '@/lib/prisma'
 import { NextRequest, NextResponse } from 'next/server'
 import { withAuth } from '@/lib/api-handler'
 
-// 获取当前用户的任务列表 - 需要登录
+// 获取「我的外包」- 当前用户作为内部负责人（subcontractAssignee）的外包任务
 export const GET = withAuth(async (request: NextRequest, user) => {
   const { searchParams } = new URL(request.url)
   const page = parseInt(searchParams.get('page') || '1')
   const pageSize = parseInt(searchParams.get('pageSize') || '10')
   const status = searchParams.get('status')
+  const keyword = searchParams.get('keyword')
 
-  const where: Record<string, unknown> = {
-    assignedToId: user.id,
-    isOutsourced: false,
+  const where: any = {
+    isOutsourced: true,
+    entrustmentProject: {
+      subcontractAssignee: user.id,
+    },
   }
+
   if (status) where.status = status
+  if (keyword) {
+    where.OR = [
+      { taskNo: { contains: keyword } },
+      { sampleName: { contains: keyword } },
+    ]
+  }
 
   const [list, total] = await Promise.all([
     prisma.testTask.findMany({
@@ -24,24 +34,26 @@ export const GET = withAuth(async (request: NextRequest, user) => {
             sampleNo: true,
             name: true,
             specification: true,
-          }
+          },
         },
         device: {
           select: {
             deviceNo: true,
             name: true,
-          }
+          },
         },
         entrustmentProject: {
           select: {
             name: true,
-          }
+            subcontractor: true,
+            subcontractAssignee: true,
+          },
         },
         assignedTo: {
           select: {
             id: true,
             name: true,
-          }
+          },
         },
       },
       orderBy: { createdAt: 'desc' },
@@ -51,7 +63,7 @@ export const GET = withAuth(async (request: NextRequest, user) => {
     prisma.testTask.count({ where }),
   ])
 
-  // 批量查询委托编号（entrustmentId 是纯字段，无 Prisma 关系）
+  // 批量查询委托编号
   const entrustmentIds = [...new Set(list.map((t: any) => t.entrustmentId).filter(Boolean))]
   let entrustmentMap: Record<string, string> = {}
   if (entrustmentIds.length > 0) {
@@ -65,7 +77,7 @@ export const GET = withAuth(async (request: NextRequest, user) => {
     }, {})
   }
 
-  // 批量回填样品数据：sampleId 为空时通过 entrustmentId + sampleName 匹配
+  // 批量回填样品数据
   const tasksNeedSample = list.filter((t: any) => !t.sampleId && t.entrustmentId)
   const needSampleEntrustmentIds = [...new Set(tasksNeedSample.map((t: any) => t.entrustmentId))]
   let samplesByEntrustment: Record<string, any[]> = {}
@@ -80,13 +92,11 @@ export const GET = withAuth(async (request: NextRequest, user) => {
     }
   }
 
-  // 将委托编号和样品数据挂回任务对象
   const enrichedList = list.map((task: any) => {
     const enriched = {
       ...task,
       entrustmentNo: task.entrustmentId ? entrustmentMap[task.entrustmentId] || null : null,
     }
-    // 回填样品：优先用已关联的 sample，否则从委托单样品中按名称匹配
     if (!enriched.sample && task.entrustmentId) {
       const candidates = samplesByEntrustment[task.entrustmentId] || []
       const matched = candidates.find((s: any) => s.name === task.sampleName) || candidates[0]
@@ -100,8 +110,8 @@ export const GET = withAuth(async (request: NextRequest, user) => {
   // 统计各状态数量
   const stats = await prisma.testTask.groupBy({
     by: ['status'],
-    where: { assignedToId: user.id },
-    _count: true
+    where: { isOutsourced: true, entrustmentProject: { subcontractAssignee: user.id } },
+    _count: true,
   })
 
   return NextResponse.json({
@@ -112,6 +122,6 @@ export const GET = withAuth(async (request: NextRequest, user) => {
     stats: stats.reduce((acc: Record<string, number>, item: { status: string; _count: number }) => {
       acc[item.status] = item._count
       return acc
-    }, {} as Record<string, number>)
+    }, {} as Record<string, number>),
   })
 })

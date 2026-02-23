@@ -52,10 +52,44 @@ function extractTestDataFromSheet(sheetData: string | null): any[] {
       return testData
     }
 
-    // 如果有 celldata 属性，也可以尝试解析
+    // 如果有 celldata 属性，解析 celldata 格式
     if (sheet.celldata && Array.isArray(sheet.celldata) && sheet.celldata.length > 0) {
-      // TODO: 如果需要支持 celldata 格式，可以在这里添加解析逻辑
-      console.warn('[报告生成] celldata 格式暂不支持')
+      const celldata = sheet.celldata
+      const testData: any[] = []
+
+      // 找出最大行号
+      let maxRow = 0
+      celldata.forEach((cell: any) => {
+        if (cell.r > maxRow) maxRow = cell.r
+      })
+
+      // 辅助函数：从 celldata 中获取指定行列的值
+      const getCellValue = (row: number, col: number): string => {
+        const cell = celldata.find((c: any) => c.r === row && c.c === col)
+        return cell?.v?.v?.toString() || cell?.v?.toString() || ''
+      }
+
+      // 从第 1 行开始（第 0 行是表头）
+      for (let r = 1; r <= maxRow; r++) {
+        const parameter = getCellValue(r, 0) // A列：检测项目
+        if (!parameter || parameter.trim() === '') continue
+
+        const standard = getCellValue(r, 1) || null   // B列：检测方法/技术要求
+        const value = getCellValue(r, 2) || null       // C列：实测值
+        const result = getCellValue(r, 3) || null      // D列：单项判定
+        const remark = getCellValue(r, 4) || null      // E列：备注
+
+        testData.push({
+          id: `test-${r}`,
+          parameter: parameter.trim(),
+          standard,
+          value,
+          result,
+          remark
+        })
+      }
+
+      return testData
     }
 
     return []
@@ -159,7 +193,7 @@ export const POST = withAuth(async (request: NextRequest, user) => {
 
   // 生成报告编号并创建报告（带重试机制防止竞态条件）
   const maxRetries = 3
-  let report: any
+  let report: any = null
 
   for (let attempt = 0; attempt < maxRetries; attempt++) {
     try {
@@ -189,9 +223,21 @@ export const POST = withAuth(async (request: NextRequest, user) => {
 
       // 确定最终数据：优先使用请求提供的，否则使用从 sheetData 提取的
       const finalConclusion = conclusion !== undefined ? conclusion : (task.conclusion || null)
+      // BUG-2 修复：task.testData 是 Prisma 关联的 TestData[] 对象数组，
+      // 需要提取纯数据字段（parameter, value, standard, result, remark），而非直接序列化整个 Prisma 对象
+      const testDataFallback = Array.isArray(task.testData) && task.testData.length > 0
+        ? task.testData.map((d: any) => ({
+          id: d.id,
+          parameter: d.parameter,
+          value: d.value,
+          standard: d.standard,
+          result: d.result,
+          remark: d.remark,
+        }))
+        : []
       const finalTestData = testData !== undefined
         ? JSON.stringify(testData)
-        : (extractedTestData.length > 0 ? JSON.stringify(extractedTestData) : JSON.stringify(task.testData || []))
+        : (extractedTestData.length > 0 ? JSON.stringify(extractedTestData) : JSON.stringify(testDataFallback))
 
       // 尝试创建报告记录
       report = await prisma.testReport.create({
@@ -243,6 +289,14 @@ export const POST = withAuth(async (request: NextRequest, user) => {
         error: '创建报告失败'
       }, { status: 500 })
     }
+  }
+
+  // BUG-3 修复：如果所有重试都失败但没有被 catch 分支 return，report 可能为 null
+  if (!report) {
+    return NextResponse.json({
+      success: false,
+      error: '报告创建失败，请重试'
+    }, { status: 500 })
   }
 
   return NextResponse.json({

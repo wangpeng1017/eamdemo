@@ -114,8 +114,9 @@ const allMenuItems: MenuItem[] = [
     label: '外包管理',
     permissionCode: 'menu:outsource',
     children: [
+      { key: '/outsource/all', label: '全部外包', permissionCode: 'menu:outsource:all' },
+      { key: '/outsource/my', label: '我的外包', permissionCode: 'menu:outsource:my' },
       { key: '/outsource/supplier', label: '供应商', permissionCode: 'menu:outsource:supplier' },
-      { key: '/outsource/order', label: '外包订单', permissionCode: 'menu:outsource:order' },
     ],
   },
   {
