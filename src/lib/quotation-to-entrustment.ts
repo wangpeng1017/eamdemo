@@ -258,6 +258,13 @@ export async function createEntrustmentFromQuotation(
   }
 
   // 创建 Sample 记录
+  // 优先使用委托单的检测项（bizType='entrustment'），回退到报价单检测项
+  const entrustmentTestItems = await prisma.sampleTestItem.findMany({
+    where: { bizType: 'entrustment', bizId: entrustment.id },
+    orderBy: { sortOrder: 'asc' },
+  })
+  const sourceTestItems = entrustmentTestItems.length > 0 ? entrustmentTestItems : quotationSampleTestItems
+
   const sampleNames = [...sampleInfoMap.keys()]
   if (sampleNames.length > 0) {
     for (const sampleName of sampleNames) {
@@ -278,7 +285,7 @@ export async function createEntrustmentFromQuotation(
       })
 
       // 同步检测项到 sample_receipt
-      const matchedItems = quotationSampleTestItems.filter(
+      const matchedItems = sourceTestItems.filter(
         item => item.sampleName === sampleName
       )
       if (matchedItems.length > 0) {
