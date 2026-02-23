@@ -156,7 +156,7 @@ export const PUT = withErrorHandler(async (request: NextRequest, context?: { par
         where: { id: sample.id },
         data: {
           name: sample.name,
-          specification: sample.model,
+          specification: sample.specification || sample.material || sample.model, // 优先用材质/牌号
           material: sample.material,
           partNo: sample.partNo || null,
           color: sample.color || null,
@@ -195,7 +195,7 @@ export const PUT = withErrorHandler(async (request: NextRequest, context?: { par
           sampleNo,
           entrustmentId: id,
           name: sample.name,
-          specification: sample.model,
+          specification: sample.specification || sample.material || sample.model, // 优先用材质/牌号
           material: sample.material,
           partNo: sample.partNo || null,
           color: sample.color || null,

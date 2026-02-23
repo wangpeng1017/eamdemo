@@ -62,6 +62,7 @@ export default function SampleReceiptPage() {
   const [page, setPage] = useState(1)
   const [modalOpen, setModalOpen] = useState(false)
   const [keyword, setKeyword] = useState("")
+  const [deletingId, setDeletingId] = useState<string | null>(null)
   const [form] = Form.useForm()
 
   // Entrustment data for selection
@@ -114,6 +115,7 @@ export default function SampleReceiptPage() {
 
   // 删除样品
   const handleDelete = async (id: string) => {
+    setDeletingId(id)
     try {
       const res = await fetcher(`/api/sample/${id}`, { method: 'DELETE' })
       const json = await res.json()
@@ -125,6 +127,8 @@ export default function SampleReceiptPage() {
       }
     } catch {
       showError('删除失败')
+    } finally {
+      setDeletingId(null)
     }
   }
 
@@ -220,11 +224,24 @@ export default function SampleReceiptPage() {
     })
     const json = await res.json()
 
+    if (!res.ok) {
+      // 显示后端返回的错误信息（如重复样品提示）
+      showError(json.error?.message || '登记失败')
+      return
+    }
+
     // 后端现在返回创建的样品数组
-    const createdSamples = Array.isArray(json) ? json : [json]
+    const resultData = json.data?.data || json.data || json
+    const createdSamples = Array.isArray(resultData) ? resultData : [resultData]
     const count = createdSamples.length
 
-    showSuccess(`成功登记 ${count} 个样品`)
+    // 检查是否有跳过的重复样品
+    const skipMessage = json.data?.message
+    if (skipMessage) {
+      showSuccess(`成功登记 ${count} 个样品。${skipMessage}`)
+    } else {
+      showSuccess(`成功登记 ${count} 个样品`)
+    }
     setModalOpen(false)
     fetchData()
   }
@@ -334,7 +351,7 @@ export default function SampleReceiptPage() {
       render: (v) => v || '-'
     },
     { title: "样品名称", dataIndex: "name", width: 150 },
-    { title: "规格型号", dataIndex: "specification", width: 120 },
+    { title: "材质/牌号", dataIndex: "specification", width: 120 },
     { title: "数量", dataIndex: "quantity", width: 80 },
     { title: "存放位置", dataIndex: "storageLocation", width: 120 },
     {
@@ -375,8 +392,8 @@ export default function SampleReceiptPage() {
               <Button size="small" icon={<EditOutlined />} onClick={() => handleEdit(record)} />
             )}
             {!hasTask && (
-              <Popconfirm title="确认删除该样品？" onConfirm={() => handleDelete(record.id)} okText="确定" cancelText="取消" okButtonProps={{ danger: true }}>
-                <Button size="small" danger icon={<DeleteOutlined />} />
+              <Popconfirm title="确认删除该样品？" onConfirm={() => handleDelete(record.id)} okText="确定" cancelText="取消" okButtonProps={{ danger: true, loading: deletingId === record.id }}>
+                <Button size="small" danger icon={<DeleteOutlined />} loading={deletingId === record.id} />
               </Popconfirm>
             )}
           </Space>
@@ -431,7 +448,7 @@ export default function SampleReceiptPage() {
                 <Descriptions column={2} bordered size="small">
                   <Descriptions.Item label="样品编号">{currentSample.sampleNo}</Descriptions.Item>
                   <Descriptions.Item label="样品名称">{currentSample.name}</Descriptions.Item>
-                  <Descriptions.Item label="规格型号">{currentSample.specification || '-'}</Descriptions.Item>
+                  <Descriptions.Item label="材质/牌号">{currentSample.specification || '-'}</Descriptions.Item>
                   <Descriptions.Item label="数量">{currentSample.quantity || '-'} {currentSample.unit || ''}</Descriptions.Item>
                   <Descriptions.Item label="存放位置">{currentSample.storageLocation || '-'}</Descriptions.Item>
                   <Descriptions.Item label="状态">

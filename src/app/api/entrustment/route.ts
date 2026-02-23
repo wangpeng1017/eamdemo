@@ -411,7 +411,7 @@ export const POST = withAuth(async (request: NextRequest, user) => {
           entrustmentId: entrustment.id,
           name: sample.name,
           type: sample.type || sample.model,
-          specification: sample.specification || sample.model,
+          specification: sample.specification || sample.material || sample.model, // 优先用材质/牌号
           material: sample.material,
           partNo: sample.partNo || null,
           color: sample.color || null,

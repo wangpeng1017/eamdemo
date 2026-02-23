@@ -79,7 +79,42 @@ function CreateEntrustmentContent() {
                 projects: [],
             }
 
-            // 清理前端临时字段
+            // 用 sampleTestItems（零部件/材料级测试）中的 material 和 quantity 增强 samples 数据
+            // 因为 SampleInfoTable 中的数据可能缺少这些字段
+            const stiComponentTests = values.componentTests || []
+            const stiMaterialTests = values.materialTests || []
+            const allItems = [...stiComponentTests, ...stiMaterialTests]
+
+            // 按样品名称聚合 material 和 quantity
+            const sampleEnhanceMap = new Map<string, { material?: string; quantity?: number }>()
+            for (const item of allItems) {
+                const name = item.sampleName || item.materialName || ''
+                if (!name) continue
+                const existing = sampleEnhanceMap.get(name) || {}
+                if (item.material && !existing.material) existing.material = item.material
+                if (item.quantity && (!existing.quantity || item.quantity > existing.quantity)) {
+                    existing.quantity = item.quantity
+                }
+                sampleEnhanceMap.set(name, existing)
+            }
+
+            // 将聚合数据合并到 samples
+            if (submitData.samples && Array.isArray(submitData.samples)) {
+                submitData.samples = submitData.samples.map((s: any) => {
+                    const enhance = sampleEnhanceMap.get(s.name)
+                    if (enhance) {
+                        return {
+                            ...s,
+                            material: s.material || enhance.material || '',
+                            specification: s.specification || enhance.material || '',
+                            quantity: enhance.quantity || s.quantity || 1,
+                        }
+                    }
+                    return s
+                })
+            }
+
+            // 清理前端临时字段（不传给后端主体 API，后面单独保存）
             delete submitData.componentTests
             delete submitData.materialTests
 

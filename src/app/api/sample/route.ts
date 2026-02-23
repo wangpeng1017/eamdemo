@@ -5,6 +5,8 @@ import {
   success,
   validateRequired,
   badRequest,
+  ApiError,
+  ErrorCodes,
 } from '@/lib/api-handler'
 import { generateNo, NumberPrefixes } from '@/lib/generate-no'
 import { getDataFilter } from '@/lib/data-permission'
@@ -144,10 +146,40 @@ export const POST = withAuth(async (request: NextRequest, user) => {
   }
 
   const createdSamples: any[] = []
+  const skippedNames: string[] = []
+
+  // 去重校验：检查该委托单下是否已有同名样品
+  let existingNames = new Set<string>()
+  if (otherFields.entrustmentId) {
+    const existingSamples = await prisma.sample.findMany({
+      where: { entrustmentId: otherFields.entrustmentId },
+      select: { name: true },
+    })
+    existingNames = new Set(existingSamples.map(s => s.name))
+  }
+
+  // 过滤掉已存在的样品
+  const filteredGroups: Record<string, any[]> = {}
+  for (const [name, items] of Object.entries(sampleGroups)) {
+    if (existingNames.has(name)) {
+      skippedNames.push(name)
+    } else {
+      filteredGroups[name] = items
+    }
+  }
+
+  // 如果全部重复，返回提示
+  if (Object.keys(filteredGroups).length === 0 && skippedNames.length > 0) {
+    throw new ApiError(
+      ErrorCodes.CONFLICT,
+      `该委托单下已存在样品：${skippedNames.join('、')}，无需重复登记`,
+      409
+    )
+  }
 
   // Use transaction to ensure all or nothing
   await prisma.$transaction(async (tx) => {
-    for (const [sampleName, items] of Object.entries(sampleGroups)) {
+    for (const [sampleName, items] of Object.entries(filteredGroups)) {
       // Calculate total quantity for this specific sample
       const totalQuantity = items.reduce((sum: number, item: any) => {
         return sum + (Number(item.quantity) || 0)
@@ -165,7 +197,8 @@ export const POST = withAuth(async (request: NextRequest, user) => {
           // Derived fields
           sampleNo,
           name: sampleName,
-          specification: firstItem.specification || null, // 规格型号
+          specification: firstItem.material || null, // 材质/牌号 → 映射到 specification 字段
+          material: firstItem.material || null, // 材质/牌号
           quantity: String(items[0].quantity || 1), // Usually item quantity implies sample quantity needed
           // Actually, if multiple items share the same sample, the sample quantity might be just 1 (one physical object tested for multiple things)
           // OR it might be the sum. The previous logic used 'totalQuantity'. 
@@ -175,7 +208,7 @@ export const POST = withAuth(async (request: NextRequest, user) => {
           // Let's use 1 as default for the Sample record itself if not specified, 
           // but the previous code tried to sum them. 
           // Let's keep previous logic: totalQuantity.
-          totalQuantity: String(totalQuantity),
+          totalQuantity: String(firstItem.quantity || 1), // 总量等于样品数量，而非检测项数量之和
 
           status: otherFields.status || 'pending', // 默认待收样，需手动确认收样
           createdById: user.id
@@ -241,5 +274,13 @@ export const POST = withAuth(async (request: NextRequest, user) => {
     }
   })
 
-  return success(createdSamples)
+  // 返回结果，包含跳过提示
+  const result: any = {
+    success: true,
+    data: createdSamples,
+    ...(skippedNames.length > 0 && {
+      message: `已跳过重复样品：${skippedNames.join('、')}`
+    }),
+  }
+  return success(result)
 })

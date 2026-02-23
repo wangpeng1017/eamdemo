@@ -189,6 +189,42 @@ export async function createEntrustmentFromQuotation(
     testStandards: string[]
   }>()
 
+  // 从咨询单获取 material（因为 quotation sampleTestItems 中 material 可能丢失）
+  // 获取所有样品名称用于匹配
+  const allSampleNames = new Set<string>()
+  for (const item of quotationSampleTestItems) {
+    if (item.sampleName) allSampleNames.add(item.sampleName)
+  }
+  for (const item of quotation.items) {
+    if (item.sampleName) allSampleNames.add(item.sampleName)
+  }
+
+  // 查找咨询单中对应样品名的 material
+  const consultationMaterialMap = new Map<string, string>()
+  if (allSampleNames.size > 0) {
+    const consultationItems = await prisma.sampleTestItem.findMany({
+      where: {
+        bizType: 'consultation',
+        sampleName: { in: [...allSampleNames] },
+        material: { not: null },
+      },
+      orderBy: { createdAt: 'desc' },
+    })
+    for (const ci of consultationItems) {
+      if (ci.sampleName && ci.material && !consultationMaterialMap.has(ci.sampleName)) {
+        consultationMaterialMap.set(ci.sampleName, ci.material)
+      }
+    }
+  }
+
+  // 补充 material 到 quotationSampleTestItems
+  for (const item of quotationSampleTestItems) {
+    if (!item.material && item.sampleName) {
+      const mat = consultationMaterialMap.get(item.sampleName)
+      if (mat) (item as any).material = mat
+    }
+  }
+
   for (const item of quotationSampleTestItems) {
     if (!item.sampleName) continue
     const existing = sampleInfoMap.get(item.sampleName) || {
@@ -214,7 +250,7 @@ export async function createEntrustmentFromQuotation(
     if (!item.sampleName) continue
     if (!sampleInfoMap.has(item.sampleName)) {
       sampleInfoMap.set(item.sampleName, {
-        quantity: 1,
+        quantity: parseInt(String(item.quantity)) || 1, // 从 QuotationItem.quantity 取实际值
         testItems: item.serviceItem ? [item.serviceItem] : [],
         testStandards: item.methodStandard ? [item.methodStandard] : [],
       })
@@ -232,10 +268,11 @@ export async function createEntrustmentFromQuotation(
           sampleNo,
           entrustmentId: entrustment.id,
           name: sampleName,
+          specification: info.material || undefined, // 材质/牌号 → 映射到规格型号
           material: info.material || undefined,
           manufactureLotNo: info.batchNo || undefined,
           quantity: String(info.quantity || 1),
-          status: params.sampleDate && new Date(params.sampleDate).getTime() > Date.now() + 86400000 ? 'pending' : 'received',
+          status: 'pending', // 始终待收样，由收样人员手动确认
           createdById: createdBy,
           // 将检测项和标准简要写入备注
           remark: [
@@ -251,14 +288,18 @@ export async function createEntrustmentFromQuotation(
       quotation.items.map(item => item.sampleName).filter(Boolean) as string[]
     )]
     for (const sampleName of itemSampleNames) {
+      const matchedItem = quotation.items.find(i => i.sampleName === sampleName)
+      const mat = consultationMaterialMap.get(sampleName)
       const sampleNo = await generateNo(NumberPrefixes.SAMPLE, 4)
       await prisma.sample.create({
         data: {
           sampleNo,
           entrustmentId: entrustment.id,
           name: sampleName,
-          quantity: '1',
-          status: 'received',
+          specification: mat || undefined, // 从咨询单获取材质/牌号
+          material: mat || undefined,
+          quantity: String(parseInt(String(matchedItem?.quantity)) || 1),
+          status: 'pending', // 始终待收样
           createdById: createdBy,
         }
       })

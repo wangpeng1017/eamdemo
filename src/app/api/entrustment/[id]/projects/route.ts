@@ -37,12 +37,34 @@ export const GET = withAuth(async (
 
   // 如果找到了新系统的检测项数据，直接返回
   if (sampleTestItems.length > 0) {
+    // 如果 material 为空，从咨询单回溯补充
+    const namesWithoutMaterial = [...new Set(
+      sampleTestItems.filter(i => !i.material && i.sampleName).map(i => i.sampleName!)
+    )]
+    let materialMap = new Map<string, string>()
+    if (namesWithoutMaterial.length > 0) {
+      const consultationItems = await prisma.sampleTestItem.findMany({
+        where: {
+          bizType: 'consultation',
+          sampleName: { in: namesWithoutMaterial },
+          material: { not: null },
+        },
+        select: { sampleName: true, material: true },
+        orderBy: { createdAt: 'desc' },
+      })
+      for (const ci of consultationItems) {
+        if (ci.sampleName && ci.material && !materialMap.has(ci.sampleName)) {
+          materialMap.set(ci.sampleName, ci.material)
+        }
+      }
+    }
+
     const formattedItems = sampleTestItems.map(item => ({
       key: item.id,
       id: item.id,
       sampleName: item.sampleName,
       batchNo: item.batchNo,
-      material: item.material,
+      material: item.material || (item.sampleName ? materialMap.get(item.sampleName) : null) || null,
       appearance: item.appearance,
       quantity: item.quantity,
       testTemplateId: item.testTemplateId,
