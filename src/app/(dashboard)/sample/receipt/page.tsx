@@ -448,7 +448,6 @@ export default function SampleReceiptPage() {
                 <Descriptions column={2} bordered size="small">
                   <Descriptions.Item label="样品编号">{currentSample.sampleNo}</Descriptions.Item>
                   <Descriptions.Item label="样品名称">{currentSample.name}</Descriptions.Item>
-                  <Descriptions.Item label="材质/牌号">{currentSample.specification || '-'}</Descriptions.Item>
                   <Descriptions.Item label="数量">{currentSample.quantity || '-'} {currentSample.unit || ''}</Descriptions.Item>
                   <Descriptions.Item label="存放位置">{currentSample.storageLocation || '-'}</Descriptions.Item>
                   <Descriptions.Item label="状态">
@@ -460,9 +459,6 @@ export default function SampleReceiptPage() {
                     {currentSample.receiptDate ? dayjs(currentSample.receiptDate).format('YYYY-MM-DD HH:mm') : '-'}
                   </Descriptions.Item>
                   <Descriptions.Item label="创建人">{currentSample.createdBy?.name || '-'}</Descriptions.Item>
-                  <Descriptions.Item label="总量">{currentSample.totalQuantity || '-'}</Descriptions.Item>
-                  <Descriptions.Item label="剩余量">{currentSample.remainingQuantity || '-'}</Descriptions.Item>
-                  <Descriptions.Item label="备注" span={2}>{currentSample.remark || '-'}</Descriptions.Item>
                 </Descriptions>
               ),
             },
