@@ -381,6 +381,7 @@ export default function EntrustmentListPage() {
           manufactureLotNo: s.manufactureLotNo || '',
           packingDate: s.packingDate || '',
           projectDeadline: s.projectDeadline || '',
+          quantity: s.quantity || 1,
           remark: s.remark || '',
         })),
         componentTests: testItems.filter((t: any) => t.testCategory !== 'material'),

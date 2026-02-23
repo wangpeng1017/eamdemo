@@ -433,12 +433,7 @@ export const POST = withAuth(async (request: NextRequest, user) => {
   }
 
   // 创建样品 Sample records
-  // 根据送样时间判断初始状态：未来日期 → pending（待收样），当天或过去 → received（已收样）
-  const sampleDate = data.sampleDate ? new Date(data.sampleDate) : new Date()
-  const today = new Date()
-  today.setHours(0, 0, 0, 0)
-  const isFutureSample = sampleDate.getTime() > today.getTime() + 86400000 // 明天0点之后算未来
-
+  // 所有样品初始状态为 pending（待收样），需要在收样登记页面手动确认收样
   if (data.samples && Array.isArray(data.samples) && data.samples.length > 0) {
     for (const sample of data.samples) {
       const sampleNo = await generateNo(NumberPrefixes.SAMPLE, 4)
@@ -462,7 +457,7 @@ export const POST = withAuth(async (request: NextRequest, user) => {
           packingDate: sample.packingDate ? new Date(sample.packingDate) : null,
           projectDeadline: sample.projectDeadline ? new Date(sample.projectDeadline) : null,
           quantity: String(sample.quantity || 1),
-          status: isFutureSample ? 'pending' : 'received',
+          status: 'pending',
           remark: sample.remark || null,
           createdById: user.id,
         }

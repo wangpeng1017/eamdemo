@@ -11,6 +11,7 @@ import { badRequest } from './api-handler'
  * 样品状态
  */
 export const SampleStatus = {
+  PENDING: 'pending',          // 待收样
   RECEIVED: 'received',      // 已接收
   REGISTERED: 'registered',  // 已登记
   TESTING: 'testing',        // 检测中
@@ -25,6 +26,7 @@ type SampleStatusType = typeof SampleStatus[keyof typeof SampleStatus]
  * 样品状态流转规则
  */
 const sampleStatusTransitions: Record<SampleStatusType, SampleStatusType[]> = {
+  [SampleStatus.PENDING]: [SampleStatus.RECEIVED],
   [SampleStatus.RECEIVED]: [SampleStatus.REGISTERED],
   [SampleStatus.REGISTERED]: [SampleStatus.TESTING],
   [SampleStatus.TESTING]: [SampleStatus.COMPLETED],
@@ -231,6 +233,7 @@ export function validateApprovalStatusTransition(currentStatus: string, newStatu
 
 export const StatusText = {
   sample: {
+    [SampleStatus.PENDING]: '待收样',
     [SampleStatus.RECEIVED]: '已接收',
     [SampleStatus.REGISTERED]: '已登记',
     [SampleStatus.TESTING]: '检测中',

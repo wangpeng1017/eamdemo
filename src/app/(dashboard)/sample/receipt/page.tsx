@@ -209,6 +209,28 @@ export default function SampleReceiptPage() {
     }
   }
 
+  // 确认收样
+  const handleReceive = async (record: Sample) => {
+    try {
+      const res = await fetcher(`/api/sample/${record.id}`, {
+        method: 'PUT',
+        body: JSON.stringify({
+          status: 'received',
+          receiptDate: new Date().toISOString(),
+        }),
+      })
+      const json = await res.json()
+      if (res.ok) {
+        showSuccess('收样成功')
+        fetchData()
+      } else {
+        showError(json.error?.message || '操作失败')
+      }
+    } catch (e) {
+      showError('操作失败')
+    }
+  }
+
   // 送出加工
   const handleSendProcess = (record: Sample) => {
     setProcessingSample(record)
@@ -274,9 +296,18 @@ export default function SampleReceiptPage() {
       render: (d: string) => d ? dayjs(d).format("YYYY-MM-DD HH:mm:ss") : "-",
     },
     {
-      title: '操作', fixed: 'right', width: 160,
+      title: '操作', fixed: 'right', width: 220,
       render: (_, record) => (
         <Space size="small" style={{ whiteSpace: 'nowrap' }}>
+          {record.status === 'pending' && (
+            <Button
+              type="link"
+              size="small"
+              onClick={() => handleReceive(record)}
+            >
+              确认收样
+            </Button>
+          )}
           <Button
             type="link"
             size="small"

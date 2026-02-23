@@ -155,6 +155,16 @@ export default function SampleInfoTable({ value = [], onChange, readonly = false
                 ),
         },
         {
+            title: '数量',
+            dataIndex: 'quantity',
+            width: 70,
+            render: (val: number, record: SampleInfoData) =>
+                readonly ? val : (
+                    <InputNumber size="small" min={1} value={val} style={{ width: '100%' }}
+                        onChange={v => updateItem(record.key, 'quantity', v || 1)} />
+                ),
+        },
+        {
             title: '备注',
             dataIndex: 'remark',
             width: 100,
