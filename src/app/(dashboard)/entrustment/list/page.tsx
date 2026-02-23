@@ -50,6 +50,20 @@ interface Sample {
   status: string
 }
 
+// 样品检测项（展开行数据源）
+interface SampleTestItem {
+  id: string
+  sampleName: string
+  batchNo?: string | null
+  material?: string | null
+  appearance?: string | null
+  quantity: number
+  testItemName: string
+  testStandard?: string | null
+  judgmentStandard?: string | null
+  testCategory?: string | null
+}
+
 interface Entrustment {
   id: string
   entrustmentNo: string
@@ -71,6 +85,7 @@ interface Entrustment {
   createdById?: string | null
   projects: EntrustmentProject[]
   samples: Sample[]
+  sampleTestItems?: SampleTestItem[]
   client?: {
     id?: string
     name?: string
@@ -560,39 +575,24 @@ export default function EntrustmentListPage() {
   }
 
 
-  // 检测项目子表格列
-  const projectColumns: ColumnsType<EntrustmentProject> = [
+  // 样品检测项子表格列（每个样品+检测项独立一行）
+  const sampleTestItemColumns: ColumnsType<SampleTestItem> = [
     { title: '样品名称', dataIndex: 'sampleName', width: 120 },
-    { title: '检测项目', dataIndex: 'name', width: 150 },
-    { title: '检测标准', dataIndex: 'method', width: 250 },
-    {
-      title: '状态',
-      dataIndex: 'status',
-      width: 100,
-      render: (s: string, record: EntrustmentProject) => {
-        if (s === 'assigned') {
-          // 兼容旧数据：assignTo 可能是手机号，需查找对应人名
-          let assignName = record.assignTo || ''
-          if (/^\d+$/.test(assignName)) {
-            const found = users.find(u => u.phone === assignName)
-            if (found) assignName = found.name
-          }
-          return <Tag color="processing">已分配: {assignName}</Tag>
-        }
-        if (s === 'subcontracted') {
-          return <Tag color="warning">已分包: {record.subcontractor}</Tag>
-        }
-        return <StatusTag type="project" status={s} />
-      }
-    },
+    { title: '检测项目', dataIndex: 'testItemName', width: 150 },
+    { title: '检测标准', dataIndex: 'testStandard', width: 200 },
+    { title: '评判标准', dataIndex: 'judgmentStandard', width: 150 },
+    { title: '数量', dataIndex: 'quantity', width: 70 },
     {
       title: '操作',
       key: 'action',
       fixed: 'right',
+      width: 200,
       render: (_, record) => {
-        // 从父级获取 entrustmentId
-        const entrustment = data.find(d => d.projects?.some(p => p.id === record.id))
+        // 通过 testItemName 查找对应的 project 来执行分配/分包
+        const entrustment = data.find(d => d.sampleTestItems?.some(s => s.id === record.id))
         if (!entrustment) return null
+        const project = entrustment.projects?.find(p => p.name === record.testItemName)
+        if (!project) return null
 
         return (
           <Space size="small" style={{ whiteSpace: 'nowrap' }}>
@@ -600,19 +600,19 @@ export default function EntrustmentListPage() {
               size="small"
               type="link"
               icon={<TeamOutlined />}
-              disabled={record.status === 'completed' || record.status === 'subcontracted'}
-              onClick={() => handleAssign(entrustment.id, record)}
+              disabled={project.status === 'completed' || project.status === 'subcontracted'}
+              onClick={() => handleAssign(entrustment.id, project)}
             >
-              {record.status === 'assigned' ? '重新分配' : '分配'}
+              {project.status === 'assigned' ? '重新分配' : '分配'}
             </Button>
             <Button
               size="small"
               type="link"
               icon={<ShareAltOutlined />}
-              disabled={record.status === 'completed' || record.status === 'assigned'}
-              onClick={() => handleSubcontract(entrustment.id, record)}
+              disabled={project.status === 'completed' || project.status === 'assigned'}
+              onClick={() => handleSubcontract(entrustment.id, project)}
             >
-              {record.status === 'subcontracted' ? '重新分包' : '分包'}
+              {project.status === 'subcontracted' ? '重新分包' : '分包'}
             </Button>
           </Space>
         )
@@ -620,8 +620,34 @@ export default function EntrustmentListPage() {
     }
   ]
 
-  // 展开行渲染
+  // 展开行渲染：优先展示 SampleTestItem，如果没有则回退到 projects
   const expandedRowRender = (record: Entrustment) => {
+    // 优先展示样品检测项（每个样品独立一行）
+    if (record.sampleTestItems && record.sampleTestItems.length > 0) {
+      return (
+        <Table
+          rowKey="id"
+          columns={sampleTestItemColumns}
+          dataSource={record.sampleTestItems}
+          pagination={false}
+          size="small"
+          style={{ margin: '0 -8px' }}
+        />
+      )
+    }
+
+    // 回退：旧数据仍用 projects 展示
+    const projectColumns: ColumnsType<EntrustmentProject> = [
+      { title: '样品名称', dataIndex: 'sampleName', width: 120 },
+      { title: '检测项目', dataIndex: 'name', width: 150 },
+      { title: '检测标准', dataIndex: 'method', width: 250 },
+      {
+        title: '状态',
+        dataIndex: 'status',
+        width: 100,
+        render: (s: string) => <StatusTag type="project" status={s} />
+      },
+    ]
     return (
       <Table
         rowKey="id"
@@ -965,10 +991,28 @@ export default function EntrustmentListPage() {
               {
                 key: 'projects',
                 label: '检测项目',
-                children: (
+                children: currentEntrustment.sampleTestItems && currentEntrustment.sampleTestItems.length > 0 ? (
                   <Table
                     rowKey="id"
-                    columns={projectColumns}
+                    columns={[
+                      { title: '样品名称', dataIndex: 'sampleName', width: 120 },
+                      { title: '检测项目', dataIndex: 'testItemName', width: 150 },
+                      { title: '检测标准', dataIndex: 'testStandard', width: 200 },
+                      { title: '评判标准', dataIndex: 'judgmentStandard', width: 150 },
+                      { title: '数量', dataIndex: 'quantity', width: 70 },
+                    ]}
+                    dataSource={currentEntrustment.sampleTestItems}
+                    pagination={false}
+                    size="small"
+                  />
+                ) : (
+                  <Table
+                    rowKey="id"
+                    columns={[
+                      { title: '检测项目', dataIndex: 'name', width: 150 },
+                      { title: '检测标准', dataIndex: 'method', width: 250 },
+                      { title: '状态', dataIndex: 'status', width: 100 },
+                    ]}
                     dataSource={currentEntrustment.projects || []}
                     pagination={false}
                     size="small"

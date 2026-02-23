@@ -165,7 +165,7 @@ export const POST = withAuth(async (request: NextRequest, user) => {
           // Derived fields
           sampleNo,
           name: sampleName,
-          specification: firstItem.material || null, // Best guess
+          specification: firstItem.specification || null, // 规格型号
           quantity: String(items[0].quantity || 1), // Usually item quantity implies sample quantity needed
           // Actually, if multiple items share the same sample, the sample quantity might be just 1 (one physical object tested for multiple things)
           // OR it might be the sum. The previous logic used 'totalQuantity'. 
@@ -177,7 +177,7 @@ export const POST = withAuth(async (request: NextRequest, user) => {
           // Let's keep previous logic: totalQuantity.
           totalQuantity: String(totalQuantity),
 
-          status: otherFields.status || 'received',
+          status: otherFields.status || 'pending', // 默认待收样，需手动确认收样
           createdById: user.id
         }
       })

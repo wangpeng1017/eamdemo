@@ -2,8 +2,8 @@
 
 import { useState, useEffect, useRef } from "react"
 import { showSuccess, showError } from '@/lib/confirm'
-import { Table, Button, Space, Tag, Modal, Form, Input, Select, DatePicker, InputNumber, message, Card, Row, Col, Descriptions } from "antd"
-import { PlusOutlined, BarcodeOutlined, DownloadOutlined, SearchOutlined, ToolOutlined } from "@ant-design/icons"
+import { Table, Button, Space, Tag, Modal, Form, Input, Select, DatePicker, InputNumber, Card, Row, Col, Descriptions, Drawer, Tabs, Popconfirm } from "antd"
+import { PlusOutlined, BarcodeOutlined, DownloadOutlined, SearchOutlined, ToolOutlined, EyeOutlined, EditOutlined, DeleteOutlined } from "@ant-design/icons"
 import { StatusTag } from '@/components/StatusTag'
 import SampleTestItemTable, { SampleTestItemData } from '@/components/SampleTestItemTable'
 import type { ColumnsType } from "antd/es/table"
@@ -11,6 +11,7 @@ import dayjs from 'dayjs'
 import Barcode from 'react-barcode'
 import { toPng } from 'html-to-image'
 import { fetcher } from '@/lib/fetcher'
+import { useRouter } from 'next/navigation'
 
 interface Sample {
   id: string
@@ -22,10 +23,18 @@ interface Sample {
   storageLocation: string | null
   status: string
   receiptDate: string | null
+  material?: string | null
+  totalQuantity?: string | null
+  remainingQuantity?: string | null
+  remark?: string | null
+  createdAt?: string
   entrustment?: {
+    id: string
     entrustmentNo: string
-    sampleName: string
+    client?: { id: string; name: string }
   }
+  testTasks?: { id: string; taskNo: string; status: string }[]
+  createdBy?: { id: string; name: string }
 }
 
 interface Entrustment {
@@ -46,6 +55,7 @@ const statusMap: Record<string, { text: string; color: string }> = {
 }
 
 export default function SampleReceiptPage() {
+  const router = useRouter()
   const [data, setData] = useState<Sample[]>([])
   const [loading, setLoading] = useState(false)
   const [total, setTotal] = useState(0)
@@ -73,6 +83,50 @@ export default function SampleReceiptPage() {
   const [processModalOpen, setProcessModalOpen] = useState(false)
   const [processingSample, setProcessingSample] = useState<Sample | null>(null)
   const [processForm] = Form.useForm()
+
+  // 查看 Drawer
+  const [viewDrawerOpen, setViewDrawerOpen] = useState(false)
+  const [currentSample, setCurrentSample] = useState<Sample | null>(null)
+  const [drawerTestItems, setDrawerTestItems] = useState<any[]>([])
+
+  // 查看样品详情
+  const handleView = async (record: Sample) => {
+    setCurrentSample(record)
+    setViewDrawerOpen(true)
+    // 加载检测项
+    try {
+      const res = await fetcher(`/api/sample-test-item?bizType=sample_receipt&bizId=${record.id}`)
+      const json = await res.json()
+      if (json.success && json.data) {
+        setDrawerTestItems(json.data)
+      } else {
+        setDrawerTestItems([])
+      }
+    } catch {
+      setDrawerTestItems([])
+    }
+  }
+
+  // 编辑样品
+  const handleEdit = (record: Sample) => {
+    router.push(`/sample/list/edit/${record.id}`)
+  }
+
+  // 删除样品
+  const handleDelete = async (id: string) => {
+    try {
+      const res = await fetcher(`/api/sample/${id}`, { method: 'DELETE' })
+      const json = await res.json()
+      if (res.ok && json.success) {
+        showSuccess('删除成功')
+        fetchData()
+      } else {
+        showError(json.error?.message || '删除失败')
+      }
+    } catch {
+      showError('删除失败')
+    }
+  }
 
   const fetchData = async (p = page) => {
     setLoading(true)
@@ -296,38 +350,38 @@ export default function SampleReceiptPage() {
       render: (d: string) => d ? dayjs(d).format("YYYY-MM-DD HH:mm:ss") : "-",
     },
     {
-      title: '操作', fixed: 'right', width: 220,
-      render: (_, record) => (
-        <Space size="small" style={{ whiteSpace: 'nowrap' }}>
-          {record.status === 'pending' && (
-            <Button
-              type="link"
-              size="small"
-              onClick={() => handleReceive(record)}
-            >
-              确认收样
+      title: '操作', fixed: 'right', width: 320,
+      render: (_, record) => {
+        const hasTask = (record.testTasks?.length || 0) > 0
+        return (
+          <Space size="small" style={{ whiteSpace: 'nowrap' }}>
+            {/* 业务按钮在左 */}
+            {record.status === 'pending' && (
+              <Button type="primary" ghost size="small" onClick={() => handleReceive(record)}>
+                确认收样
+              </Button>
+            )}
+            <Button size="small" icon={<BarcodeOutlined />} onClick={() => handleShowLabel(record)}>
+              标签
             </Button>
-          )}
-          <Button
-            type="link"
-            size="small"
-            icon={<BarcodeOutlined />}
-            onClick={() => handleShowLabel(record)}
-          >
-            标签
-          </Button>
-          {(record.status === 'received' || record.status === 'processed') && (
-            <Button
-              type="link"
-              size="small"
-              icon={<ToolOutlined />}
-              onClick={() => handleSendProcess(record)}
-            >
-              送出加工
-            </Button>
-          )}
-        </Space>
-      )
+            {(record.status === 'received' || record.status === 'processed') && (
+              <Button size="small" icon={<ToolOutlined />} onClick={() => handleSendProcess(record)}>
+                送出加工
+              </Button>
+            )}
+            {/* 查看/编辑/删除固定在右 */}
+            <Button size="small" icon={<EyeOutlined />} onClick={() => handleView(record)} />
+            {!hasTask && (
+              <Button size="small" icon={<EditOutlined />} onClick={() => handleEdit(record)} />
+            )}
+            {!hasTask && (
+              <Popconfirm title="确认删除该样品？" onConfirm={() => handleDelete(record.id)} okText="确定" cancelText="取消" okButtonProps={{ danger: true }}>
+                <Button size="small" danger icon={<DeleteOutlined />} />
+              </Popconfirm>
+            )}
+          </Space>
+        )
+      }
     }
   ]
 
@@ -350,13 +404,85 @@ export default function SampleReceiptPage() {
         dataSource={data}
         rowKey="id"
         loading={loading}
+        scroll={{ x: 1400 }}
         pagination={{
           current: page,
           pageSize: 10,
           total,
           onChange: (p) => setPage(p),
+          showTotal: (t) => `共 ${t} 条`,
         }}
       />
+
+      {/* 查看 Drawer */}
+      <Drawer
+        title="样品详情"
+        placement="right"
+        width={800}
+        open={viewDrawerOpen}
+        onClose={() => setViewDrawerOpen(false)}
+      >
+        {currentSample && (
+          <Tabs defaultActiveKey="info" items={[
+            {
+              key: 'info',
+              label: '样品详情',
+              children: (
+                <Descriptions column={2} bordered size="small">
+                  <Descriptions.Item label="样品编号">{currentSample.sampleNo}</Descriptions.Item>
+                  <Descriptions.Item label="样品名称">{currentSample.name}</Descriptions.Item>
+                  <Descriptions.Item label="规格型号">{currentSample.specification || '-'}</Descriptions.Item>
+                  <Descriptions.Item label="数量">{currentSample.quantity || '-'} {currentSample.unit || ''}</Descriptions.Item>
+                  <Descriptions.Item label="存放位置">{currentSample.storageLocation || '-'}</Descriptions.Item>
+                  <Descriptions.Item label="状态">
+                    <Tag color={statusMap[currentSample.status]?.color}>
+                      {statusMap[currentSample.status]?.text || currentSample.status}
+                    </Tag>
+                  </Descriptions.Item>
+                  <Descriptions.Item label="收样日期">
+                    {currentSample.receiptDate ? dayjs(currentSample.receiptDate).format('YYYY-MM-DD HH:mm') : '-'}
+                  </Descriptions.Item>
+                  <Descriptions.Item label="创建人">{currentSample.createdBy?.name || '-'}</Descriptions.Item>
+                  <Descriptions.Item label="总量">{currentSample.totalQuantity || '-'}</Descriptions.Item>
+                  <Descriptions.Item label="剩余量">{currentSample.remainingQuantity || '-'}</Descriptions.Item>
+                  <Descriptions.Item label="备注" span={2}>{currentSample.remark || '-'}</Descriptions.Item>
+                </Descriptions>
+              ),
+            },
+            {
+              key: 'testItems',
+              label: `检测项目 (${drawerTestItems.length})`,
+              children: (
+                <Table
+                  dataSource={drawerTestItems}
+                  rowKey="id"
+                  size="small"
+                  pagination={false}
+                  columns={[
+                    { title: '样品名称', dataIndex: 'sampleName', width: 150 },
+                    { title: '检测项目', dataIndex: 'testItemName', width: 180 },
+                    { title: '检测标准', dataIndex: 'testStandard', width: 150 },
+                    { title: '判定标准', dataIndex: 'judgmentStandard', width: 150 },
+                    { title: '数量', dataIndex: 'quantity', width: 80 },
+                  ]}
+                />
+              ),
+            },
+            {
+              key: 'entrustment',
+              label: '关联委托单',
+              children: currentSample.entrustment ? (
+                <Descriptions column={2} bordered size="small">
+                  <Descriptions.Item label="委托单号">{currentSample.entrustment.entrustmentNo}</Descriptions.Item>
+                  <Descriptions.Item label="客户名称">{currentSample.entrustment.client?.name || '-'}</Descriptions.Item>
+                </Descriptions>
+              ) : (
+                <div style={{ color: '#999', textAlign: 'center', padding: 40 }}>该样品未关联委托单</div>
+              ),
+            },
+          ]} />
+        )}
+      </Drawer>
 
       {/* 收样登记 Modal */}
       <Modal

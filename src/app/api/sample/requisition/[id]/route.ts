@@ -42,15 +42,51 @@ export async function PUT(
   return NextResponse.json(requisition)
 }
 
-// 删除领用记录
+// 删除领用记录 - 仅领用中状态可删，删除时回写样品库存
 export async function DELETE(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params
-  await prisma.sampleRequisition.delete({
-    where: { id }
-  })
 
-  return NextResponse.json({ success: true })
+  try {
+    await prisma.$transaction(async (tx) => {
+      // 1. 获取领用记录
+      const requisition = await tx.sampleRequisition.findUnique({
+        where: { id },
+        include: { sample: true }
+      })
+
+      if (!requisition) {
+        throw new Error('领用记录不存在')
+      }
+
+      // 2. 校验状态：仅领用中可删除
+      if (requisition.status !== 'requisitioned') {
+        throw new Error('仅"领用中"状态的记录可以删除')
+      }
+
+      // 3. 回写样品库存
+      const returnQty = parseFloat(requisition.quantity)
+      const currentRemaining = parseFloat(requisition.sample.remainingQuantity || '0')
+      const totalQty = parseFloat(requisition.sample.totalQuantity || requisition.sample.quantity || '0')
+      const newRemaining = Math.min(currentRemaining + returnQty, totalQty)
+
+      await tx.sample.update({
+        where: { id: requisition.sampleId },
+        data: {
+          remainingQuantity: String(newRemaining)
+        }
+      })
+
+      // 4. 删除领用记录
+      await tx.sampleRequisition.delete({
+        where: { id }
+      })
+    })
+
+    return NextResponse.json({ success: true })
+  } catch (e: any) {
+    return NextResponse.json({ error: e.message || '删除失败' }, { status: 400 })
+  }
 }

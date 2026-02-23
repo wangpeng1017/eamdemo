@@ -13,6 +13,7 @@ import dayjs from 'dayjs'
 export interface SampleInfoData {
     key: string
     name: string              // 样品名称
+    specification?: string    // 规格型号
     partNo?: string           // 零件号
     material?: string         // 材质
     color?: string            // 颜色
@@ -52,6 +53,7 @@ export default function SampleInfoTable({ value = [], onChange, readonly = false
         const newItem: SampleInfoData = {
             key: `sample_${Date.now()}`,
             name: '',
+            specification: '',
             quantity: 1,
         }
         updateItems([...items, newItem])
@@ -79,6 +81,16 @@ export default function SampleInfoTable({ value = [], onChange, readonly = false
                 readonly ? text : (
                     <Input size="small" value={text} placeholder="样品名称"
                         onChange={e => updateItem(record.key, 'name', e.target.value)} />
+                ),
+        },
+        {
+            title: '规格型号',
+            dataIndex: 'specification',
+            width: 120,
+            render: (text: string, record: SampleInfoData) =>
+                readonly ? text : (
+                    <Input size="small" value={text} placeholder="规格型号"
+                        onChange={e => updateItem(record.key, 'specification', e.target.value)} />
                 ),
         },
         {

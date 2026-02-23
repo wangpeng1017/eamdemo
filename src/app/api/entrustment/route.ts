@@ -179,60 +179,28 @@ export const GET = withAuth(async (request: NextRequest, user) => {
     return item
   })
 
-  // 3. 补充查询 SampleTestItem 数据并合并到 projects
+  // 3. 查询 SampleTestItem 数据，直接挂到委托单对象上
   const entrustmentIds = processedList.map((e: any) => e.id)
   const sampleTestItems = await prisma.sampleTestItem.findMany({
     where: {
       bizType: 'entrustment',
       bizId: { in: entrustmentIds }
-    }
+    },
+    orderBy: { sortOrder: 'asc' }
   })
 
-  // 将 sampleTestItems 按照 entrustmentId -> sampleName 分组
-  const testItemsMap: Record<string, Record<string, string[]>> = {}
-  // 同时构建 entrustmentId -> testItemName -> sampleName[] 反查映射
-  const sampleNameMap: Record<string, Record<string, string[]>> = {}
+  // 按 bizId 分组，直接挂到对应委托单
+  const stiByEntrustment: Record<string, any[]> = {}
   for (const item of sampleTestItems) {
-    if (!testItemsMap[item.bizId]) {
-      testItemsMap[item.bizId] = {}
-      sampleNameMap[item.bizId] = {}
+    if (!stiByEntrustment[item.bizId]) {
+      stiByEntrustment[item.bizId] = []
     }
-    if (!testItemsMap[item.bizId][item.sampleName]) {
-      testItemsMap[item.bizId][item.sampleName] = []
-    }
-    testItemsMap[item.bizId][item.sampleName].push(item.testItemName)
-
-    // 反查：检测项目名 -> 样品名称列表
-    const key = item.testItemName || item.sampleName
-    if (!sampleNameMap[item.bizId][key]) {
-      sampleNameMap[item.bizId][key] = []
-    }
-    if (!sampleNameMap[item.bizId][key].includes(item.sampleName)) {
-      sampleNameMap[item.bizId][key].push(item.sampleName)
-    }
+    stiByEntrustment[item.bizId].push(item)
   }
 
-  // 遍历 processedList，补充 project 的 sampleName 和 testItems
   for (const entrustment of processedList) {
-    if (entrustment.projects && Array.isArray(entrustment.projects)) {
-      for (const project of entrustment.projects) {
-        // 补充 sampleName：通过检测项目名反查
-        const names = sampleNameMap[entrustment.id]?.[project.name]
-        if (names && names.length > 0) {
-          project.sampleName = names.join(', ')
-        }
-
-        // 检查 testItems 是否看起来为空 (null, "", "[]")
-        const isTestItemsEmpty = !project.testItems || project.testItems === '[]' || project.testItems === ''
-
-        if (isTestItemsEmpty) {
-          const items = testItemsMap[entrustment.id]?.[project.name]
-          if (items && items.length > 0) {
-            project.testItems = items
-          }
-        }
-      }
-    }
+    // 将 SampleTestItem 数据挂到委托单上，供前端展开行使用
+    entrustment.sampleTestItems = stiByEntrustment[entrustment.id] || []
   }
 
 

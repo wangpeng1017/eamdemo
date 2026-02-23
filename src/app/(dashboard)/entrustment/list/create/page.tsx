@@ -103,6 +103,9 @@ function CreateEntrustmentContent() {
             const allTestItems = [
                 ...componentTests.map((t: any) => ({
                     sampleName: t.sampleName || '',
+                    batchNo: t.batchNo || '',
+                    material: t.material || '',
+                    appearance: t.appearance || '',
                     testItemName: t.testItemName,
                     testStandard: t.testStandard || '',
                     judgmentStandard: t.judgmentStandard || '',
@@ -111,10 +114,13 @@ function CreateEntrustmentContent() {
                     samplingLocation: t.samplingLocation || '',
                     specimenCount: t.specimenCount || '',
                     testRemark: t.testRemark || '',
-                    quantity: 1,
+                    quantity: t.quantity || 1,
                 })),
                 ...materialTests.map((t: any) => ({
                     sampleName: t.materialName || '',
+                    batchNo: t.batchNo || '',
+                    material: t.material || '',
+                    appearance: t.appearance || '',
                     testItemName: t.testItemName,
                     testStandard: t.testStandard || '',
                     judgmentStandard: t.judgmentStandard || '',
@@ -127,7 +133,7 @@ function CreateEntrustmentContent() {
                     materialSupplier: t.materialSupplier || '',
                     materialSpec: t.materialSpec || '',
                     materialSampleStatus: t.materialSampleStatus || '',
-                    quantity: 1,
+                    quantity: t.quantity || 1,
                 })),
             ]
 

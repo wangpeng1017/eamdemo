@@ -2,8 +2,8 @@
 
 import { useState, useEffect } from "react"
 import { showSuccess, showError } from '@/lib/confirm'
-import { Table, Button, Tag, Modal, Form, Input, DatePicker, Select, message, Card, Statistic, Space } from "antd"
-import { ArrowLeftOutlined, ClockCircleOutlined, ExclamationCircleOutlined, PlusOutlined } from "@ant-design/icons"
+import { Table, Button, Tag, Modal, Form, Input, DatePicker, Select, Card, Statistic, Space, Drawer, Descriptions, Popconfirm } from "antd"
+import { ClockCircleOutlined, ExclamationCircleOutlined, PlusOutlined, EyeOutlined, DeleteOutlined } from "@ant-design/icons"
 import type { ColumnsType } from "antd/es/table"
 import dayjs from "dayjs"
 
@@ -60,6 +60,32 @@ export default function MySamplesPage() {
   const [requisitionForm] = Form.useForm()
   const [samples, setSamples] = useState<Sample[]>([])
   const [selectedSample, setSelectedSample] = useState<Sample | null>(null)
+
+  // 查看 Drawer
+  const [viewDrawerOpen, setViewDrawerOpen] = useState(false)
+  const [currentRecord, setCurrentRecord] = useState<RequisitionRecord | null>(null)
+
+  // 查看领用详情
+  const handleView = (record: RequisitionRecord) => {
+    setCurrentRecord(record)
+    setViewDrawerOpen(true)
+  }
+
+  // 删除领用记录
+  const handleDeleteRequisition = async (id: string) => {
+    try {
+      const res = await fetch(`/api/sample/requisition/${id}`, { method: 'DELETE' })
+      const json = await res.json()
+      if (res.ok && json.success) {
+        showSuccess('删除成功，库存已恢复')
+        fetchData()
+      } else {
+        showError(json.error || '删除失败')
+      }
+    } catch {
+      showError('删除失败')
+    }
+  }
 
   const fetchData = async (p = page) => {
     setLoading(true)
@@ -221,17 +247,23 @@ export default function MySamplesPage() {
       render: (s: string) => <Tag color={statusMap[s]?.color}>{statusMap[s]?.text || s}</Tag>,
     },
     {
-      title: '操作', fixed: 'right',
-      
+      title: '操作', fixed: 'right', width: 180,
       render: (_, record) => (
-        record.status === "requisitioned" || record.status === "overdue" ? (
-          <Button
-            type="link"
-            onClick={() => handleReturn(record)}
-          >
-            归还
-          </Button>
-        ) : null
+        <Space size="small" style={{ whiteSpace: 'nowrap' }}>
+          {/* 业务按钮 */}
+          {(record.status === 'requisitioned' || record.status === 'overdue') && (
+            <Button type="primary" ghost size="small" onClick={() => handleReturn(record)}>
+              归还
+            </Button>
+          )}
+          {/* 查看/删除 */}
+          <Button size="small" icon={<EyeOutlined />} onClick={() => handleView(record)} />
+          {record.status === 'requisitioned' && (
+            <Popconfirm title="确认删除该领用记录？删除后库存将自动恢复。" onConfirm={() => handleDeleteRequisition(record.id)} okText="确定" cancelText="取消" okButtonProps={{ danger: true }}>
+              <Button size="small" danger icon={<DeleteOutlined />} />
+            </Popconfirm>
+          )}
+        </Space>
       ),
     },
   ]
@@ -290,13 +322,43 @@ export default function MySamplesPage() {
         dataSource={data}
         rowKey="id"
         loading={loading}
+        scroll={{ x: 1200 }}
         pagination={{
           current: page,
           pageSize: 10,
           total,
           onChange: (p) => setPage(p),
+          showTotal: (t) => `共 ${t} 条`,
         }}
       />
+
+      {/* 查看 Drawer */}
+      <Drawer
+        title="领用详情"
+        placement="right"
+        width={600}
+        open={viewDrawerOpen}
+        onClose={() => setViewDrawerOpen(false)}
+      >
+        {currentRecord && (
+          <Descriptions column={2} bordered size="small">
+            <Descriptions.Item label="领用单号" span={2}>{(currentRecord as any).requisitionNo || '-'}</Descriptions.Item>
+            <Descriptions.Item label="样品编号">{currentRecord.sampleNo}</Descriptions.Item>
+            <Descriptions.Item label="样品名称">{currentRecord.name}</Descriptions.Item>
+            <Descriptions.Item label="规格型号">{currentRecord.specification || '-'}</Descriptions.Item>
+            <Descriptions.Item label="领用数量">{currentRecord.quantity} {currentRecord.unit || ''}</Descriptions.Item>
+            <Descriptions.Item label="用途" span={2}>{currentRecord.purpose || '-'}</Descriptions.Item>
+            <Descriptions.Item label="领用日期">{dayjs(currentRecord.requisitionDate).format('YYYY-MM-DD')}</Descriptions.Item>
+            <Descriptions.Item label="预计归还">{currentRecord.expectedReturnDate ? dayjs(currentRecord.expectedReturnDate).format('YYYY-MM-DD') : '-'}</Descriptions.Item>
+            <Descriptions.Item label="实际归还">{currentRecord.actualReturnDate ? dayjs(currentRecord.actualReturnDate).format('YYYY-MM-DD') : '-'}</Descriptions.Item>
+            <Descriptions.Item label="状态">
+              <Tag color={statusMap[currentRecord.status]?.color}>
+                {statusMap[currentRecord.status]?.text || currentRecord.status}
+              </Tag>
+            </Descriptions.Item>
+          </Descriptions>
+        )}
+      </Drawer>
 
       {/* 归还 Modal */}
       <Modal

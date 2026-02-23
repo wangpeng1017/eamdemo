@@ -73,6 +73,7 @@ export default function EntrustmentForm({ initialValues, mode, onSubmit, loading
                 setSamples(initialValues.samples.map((s: any, idx: number) => ({
                     key: s.id || `sample_${idx}`,
                     name: s.name || '',
+                    specification: s.specification || '',
                     partNo: s.partNo || '',
                     material: s.material || '',
                     color: s.color || '',
