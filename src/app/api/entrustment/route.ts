@@ -403,9 +403,15 @@ export const POST = withAuth(async (request: NextRequest, user) => {
   // 创建样品 Sample records
   // 所有样品初始状态为 pending（待收样），需要在收样登记页面手动确认收样
   if (data.samples && Array.isArray(data.samples) && data.samples.length > 0) {
+    // 预先查出该委托单的所有检测项（bizType='entrustment'），用于同步到样品
+    const entrustmentTestItems = await prisma.sampleTestItem.findMany({
+      where: { bizType: 'entrustment', bizId: entrustment.id },
+      orderBy: { sortOrder: 'asc' },
+    })
+
     for (const sample of data.samples) {
       const sampleNo = await generateNo(NumberPrefixes.SAMPLE, 4)
-      await prisma.sample.create({
+      const createdSample = await prisma.sample.create({
         data: {
           sampleNo,
           entrustmentId: entrustment.id,
@@ -430,6 +436,34 @@ export const POST = withAuth(async (request: NextRequest, user) => {
           createdById: user.id,
         }
       })
+
+      // 同步检测项到 sample_receipt：按样品名匹配委托单检测项
+      const matchedItems = entrustmentTestItems.filter(
+        item => item.sampleName === sample.name
+      )
+      if (matchedItems.length > 0) {
+        await prisma.sampleTestItem.createMany({
+          data: matchedItems.map((item, index) => ({
+            bizType: 'sample_receipt',
+            bizId: createdSample.id,
+            sampleName: item.sampleName,
+            batchNo: item.batchNo,
+            material: item.material,
+            appearance: item.appearance,
+            quantity: item.quantity,
+            testTemplateId: item.testTemplateId,
+            testItemName: item.testItemName,
+            testStandard: item.testStandard,
+            judgmentStandard: item.judgmentStandard,
+            testCategory: item.testCategory,
+            testMethod: item.testMethod,
+            samplingLocation: item.samplingLocation,
+            specimenCount: item.specimenCount,
+            testRemark: item.testRemark,
+            sortOrder: index,
+          })),
+        })
+      }
     }
     console.log('[Entrustment Create] Created samples:', data.samples.length)
   }

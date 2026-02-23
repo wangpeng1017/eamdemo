@@ -263,7 +263,7 @@ export async function createEntrustmentFromQuotation(
     for (const sampleName of sampleNames) {
       const info = sampleInfoMap.get(sampleName)!
       const sampleNo = await generateNo(NumberPrefixes.SAMPLE, 4)
-      await prisma.sample.create({
+      const createdSample = await prisma.sample.create({
         data: {
           sampleNo,
           entrustmentId: entrustment.id,
@@ -274,13 +274,36 @@ export async function createEntrustmentFromQuotation(
           quantity: String(info.quantity || 1),
           status: 'pending', // 始终待收样，由收样人员手动确认
           createdById: createdBy,
-          // 将检测项和标准简要写入备注
-          remark: [
-            info.testItems.length > 0 ? `检测项目: ${[...new Set(info.testItems)].join(', ')}` : '',
-            info.testStandards.length > 0 ? `检测标准: ${[...new Set(info.testStandards)].join(', ')}` : '',
-          ].filter(Boolean).join('\n') || undefined,
         }
       })
+
+      // 同步检测项到 sample_receipt
+      const matchedItems = quotationSampleTestItems.filter(
+        item => item.sampleName === sampleName
+      )
+      if (matchedItems.length > 0) {
+        await prisma.sampleTestItem.createMany({
+          data: matchedItems.map((item, index) => ({
+            bizType: 'sample_receipt',
+            bizId: createdSample.id,
+            sampleName: item.sampleName,
+            batchNo: item.batchNo,
+            material: item.material,
+            appearance: item.appearance,
+            quantity: item.quantity,
+            testTemplateId: item.testTemplateId,
+            testItemName: item.testItemName,
+            testStandard: item.testStandard,
+            judgmentStandard: item.judgmentStandard,
+            testCategory: item.testCategory,
+            testMethod: item.testMethod,
+            samplingLocation: item.samplingLocation,
+            specimenCount: item.specimenCount,
+            testRemark: item.testRemark,
+            sortOrder: index,
+          })),
+        })
+      }
     }
   } else {
     // 兜底：如果 SampleTestItem 和 items 都没有 sampleName，用 items 创建
