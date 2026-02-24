@@ -3,7 +3,7 @@
 import { canModify, canOperate, type RecordPermissionContext } from '@/lib/record-permission'
 
 import React, { useState, useEffect } from 'react'
-import { showSuccess, showError } from '@/lib/confirm'
+import { showSuccess, showError, showWarning } from '@/lib/confirm'
 import { Table, Button, Space, Tag, Modal, Select, Card, Statistic, Row, Col, Drawer, Descriptions, Tabs, Timeline, Form, Input, Popconfirm } from 'antd'
 import { PlusOutlined, EyeOutlined, EditOutlined, PrinterOutlined, SendOutlined, FileTextOutlined, DeleteOutlined } from '@ant-design/icons'
 import type { ColumnsType } from 'antd/es/table'
@@ -135,7 +135,7 @@ export default function TestReportPage() {
 
   const handleGenerateSubmit = async () => {
     if (!selectedTaskId) {
-      showError('请选择任务')
+      showWarning('操作提示', '请先选择一个任务')
       return
     }
 
@@ -155,10 +155,10 @@ export default function TestReportPage() {
         setSelectedTaskId(null)
         fetchData()
       } else {
-        showError(json.error || '报告生成失败')
+        showWarning('操作提示', json.error || '报告生成失败')
       }
     } catch (error) {
-      showError('报告生成失败')
+      showWarning('操作提示', '报告生成失败，请稍后重试')
     } finally {
       setGenerating(false)
     }
