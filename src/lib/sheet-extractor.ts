@@ -267,6 +267,12 @@ function getCellText(cell: any, allRows?: any[][]): string {
             // 富文本格式
             return cell.ct.s.map((s: any) => s.v || '').join('')
         }
+        // Fortune-sheet 空值格式对象 {m: "", bl: 0, ...} — 用 m(显示文本) 的值
+        if ('m' in cell) {
+            return cell.m || ''
+        }
+        // 其他无法识别的对象，返回空字符串（避免 [object Object]）
+        return ''
     }
     return String(cell)
 }
@@ -345,7 +351,7 @@ export function extractForClientReport(
         sampleNo: row.sampleNo || sampleNo || '',
         sampleName: sampleName || '',
         testItem: row.testItem || '',
-        xrfResult: row.avgResult || row.test1 || row.value || '',
+        xrfResult: row.xrfResult || row.avgResult || row.test1 || row.value || '',
         chemResult: row.chemResult || '——',
         standardReq: row.standardReq || '',
         conclusion: row.conclusion || row.result || '',
