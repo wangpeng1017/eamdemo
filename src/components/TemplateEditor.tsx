@@ -17,11 +17,11 @@ interface TemplateEditorProps {
   onCancel: () => void
 }
 
-interface InspectionStandard {
+interface TestTemplate {
   id: string
-  standardNo: string
   name: string
-  validity: string
+  category: string
+  status: string
 }
 
 export default function TemplateEditor({ initialValue, onSave, onCancel }: TemplateEditorProps) {
@@ -39,17 +39,17 @@ export default function TemplateEditor({ initialValue, onSave, onCancel }: Templ
   })
   const [selectedColumn, setSelectedColumn] = useState<number | null>(null)
   const [showColumnModal, setShowColumnModal] = useState(false)
-  const [inspectionStandards, setInspectionStandards] = useState<InspectionStandard[]>([])
+  const [testTemplates, setTestTemplates] = useState<TestTemplate[]>([])
 
-  // 加载检测标准数据
+  // 加载检测项目模板数据
   useEffect(() => {
-    fetch('/api/inspection-standard?pageSize=1000')
+    fetch('/api/test-template?pageSize=1000&status=active')
       .then(res => res.json())
       .then(data => {
-        setInspectionStandards(data.list || [])
+        setTestTemplates(data.data?.list || data.list || [])
       })
       .catch(() => {
-        showError('加载检测标准失败')
+        showError('加载检测项目失败')
       })
   }, [])
 
@@ -81,7 +81,7 @@ export default function TemplateEditor({ initialValue, onSave, onCancel }: Templ
   }, [localSampleType])
 
   useEffect(() => {
-    form.setFieldsValue({
+    form.setFieldsValues({
       name: schema.title,
       sampleType: schema.header?.sampleType,
       defaultRows: schema.defaultRows
@@ -420,40 +420,21 @@ export default function TemplateEditor({ initialValue, onSave, onCancel }: Templ
               <Form.Item label="模版名称" rules={[{ required: true, message: '此项为必填' }]}>
                 <Select
                   showSearch
-                  placeholder="请选择检测标准作为模版"
+                  placeholder="请选择检测项目"
                   optionFilterProp="label"
                   filterOption={(input, option) =>
                     (option?.label ?? '').toLowerCase().includes(input.toLowerCase())
                   }
                   value={localTitle || undefined}
-                  options={inspectionStandards.map(std => ({
-                    value: std.name,
-                    label: `${std.name}（${std.standardNo}）`
+                  options={testTemplates.map(tmpl => ({
+                    value: tmpl.name,
+                    label: tmpl.category ? `${tmpl.name}（${tmpl.category}）` : tmpl.name
                   }))}
                   onChange={(value) => {
-                    // 选中标准后：名称设为标准名，自动带出标准号
                     setLocalTitle(value)
-                    // 收集该名称下所有标准号
-                    const matched = inspectionStandards.filter(s => s.name === value)
-                    const stdNos = matched.map(s => s.standardNo).join('、')
-                    updateSchema({
-                      title: value,
-                      header: { ...(schema.header || {}), methodBasis: stdNos }
-                    })
+                    updateSchema({ title: value })
                   }}
                 />
-              </Form.Item>
-
-              <Form.Item label="检测标准">
-                {schema.header?.methodBasis ? (
-                  <div className="flex flex-wrap gap-1">
-                    {schema.header.methodBasis.split('、').map((std, i) => (
-                      <Tag key={i} color="blue">{std}</Tag>
-                    ))}
-                  </div>
-                ) : (
-                  <span className="text-gray-400 text-sm">选择模版名称后自动带出</span>
-                )}
               </Form.Item>
 
               <Form.Item label="样品类型" name="sampleType">
