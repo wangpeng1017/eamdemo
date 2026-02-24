@@ -242,8 +242,11 @@ export function prepareClientReportData(
         standards: testStandards.map((s: string) => ({ name: s })),
         standardsText: testStandards.join('\n'),
 
-        // 表1: 检测结果行循环
+        // 表1: 检测结果行循环（flat 格式，兼容通用模板）
         results,
+
+        // 表1: QCT 专用 — 按样品分组（6个元素一组，保留合并结构）
+        samples: groupResultsBySample(results),
 
         // 表2: XRF 筛选表循环
         xrfTable,
@@ -310,4 +313,54 @@ function extractClientReportResults(task: any, sample: any): Array<{
         sample?.sampleNo,
         task?.sampleName || sample?.name
     )
+}
+
+/**
+ * 将 flat results 按样品分组为 QCT 模板格式
+ * QCT 固定6个元素: Pb, Hg, Cd, Cr6+, PBBs, PBDEs
+ * 每组映射为 per-element 变量名（如 pb_xrf, hg_chem 等）
+ */
+function groupResultsBySample(results: Array<{
+    seq: string
+    testItem: string
+    xrfResult: string
+    chemResult: string
+    standardReq: string
+    conclusion: string
+    [key: string]: string
+}>): Array<Record<string, string>> {
+    // QCT 元素映射: testItem → 变量前缀
+    const ELEMENT_MAP: Record<string, string> = {
+        'Pb': 'pb', 'pb': 'pb',
+        'Hg': 'hg', 'hg': 'hg',
+        'Cd': 'cd', 'cd': 'cd',
+        'Cr6+': 'cr', 'cr6+': 'cr', 'Cr': 'cr',
+        'PBBs': 'pbbs', 'pbbs': 'pbbs',
+        'PBDEs': 'pbdes', 'pbdes': 'pbdes',
+    }
+
+    // 按 seq 分组
+    const groups: Record<string, Record<string, string>> = {}
+    let currentSeq = '1'
+
+    for (const row of results) {
+        // 更新当前序号（合并行可能 seq 为空）
+        if (row.seq && row.seq !== '0') {
+            currentSeq = row.seq
+        }
+
+        if (!groups[currentSeq]) {
+            groups[currentSeq] = { seq: currentSeq }
+        }
+
+        const prefix = ELEMENT_MAP[row.testItem] || ''
+        if (prefix) {
+            groups[currentSeq][`${prefix}_xrf`] = row.xrfResult || ''
+            groups[currentSeq][`${prefix}_chem`] = row.chemResult || '——'
+            groups[currentSeq][`${prefix}_std`] = row.standardReq || ''
+            groups[currentSeq][`${prefix}_conc`] = row.conclusion || ''
+        }
+    }
+
+    return Object.values(groups)
 }

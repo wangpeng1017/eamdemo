@@ -247,13 +247,18 @@ function getCellText(cell: any, allRows?: any[][]): string {
     if (typeof cell === 'number') return String(cell)
     // Fortune-sheet 单元格对象格式
     if (typeof cell === 'object') {
-        // 合并单元格指针 {mc: {r: 行, c: 列}} — 引用主单元格的值
+        // 合并单元格处理
         if (cell.mc && allRows) {
-            const mainCell = allRows[cell.mc.r]?.[cell.mc.c]
-            if (mainCell && mainCell !== cell) {
-                return getCellText(mainCell) // 不再传 allRows 防止循环
+            // mc 有 rs/cs → 这是合并区域的主单元格，继续读 v 值（不跳过）
+            // mc 无 rs/cs → 这是子单元格，引用主单元格的值
+            if (!cell.mc.rs) {
+                const mainCell = allRows[cell.mc.r]?.[cell.mc.c]
+                if (mainCell && mainCell !== cell) {
+                    return getCellText(mainCell) // 不再传 allRows 防止循环
+                }
+                return ''
             }
-            return ''
+            // 主单元格继续向下读 v
         }
         // {v: "文本"} 或 {v: {v: "文本"}}
         if (cell.v !== undefined) {
