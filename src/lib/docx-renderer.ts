@@ -90,6 +90,16 @@ export function renderDocx(templatePath: string, data: Record<string, any>): Buf
     // 填充数据
     doc.render(data)
 
+    // 后处理：对 results 表格添加垂直合并（序号列）
+    if (data.results && data.results.length > 1) {
+        postProcessResultsMerge(doc.getZip(), data.results)
+    }
+
+    // 后处理：插入样品照片（替代 ImageModule 方式）
+    if (data.samplePhoto) {
+        insertSamplePhoto(doc.getZip(), data.samplePhoto)
+    }
+
     // 生成输出
     const buf = doc.getZip().generate({
         type: 'nodebuffer',
@@ -97,6 +107,167 @@ export function renderDocx(templatePath: string, data: Record<string, any>): Buf
     })
 
     return buf
+}
+
+/**
+ * 后处理：对 results 表格中序号列添加 vMerge（垂直合并）
+ * 找到渲染后的 results 行，对相同 seq 值的连续行合并序号列
+ */
+function postProcessResultsMerge(zip: any, results: Array<{ seq: string;[k: string]: string }>) {
+    try {
+        const docXml = zip.file('word/document.xml').asText()
+
+        // 找到包含第一个 result seq 值的表格行区域
+        // 策略：找到第一个 testItem 文本（如 "Pb"），定位其所在表格
+        const firstItem = results[0]?.testItem
+        if (!firstItem) return
+
+        const itemIdx = docXml.indexOf(`>${firstItem}<`)
+        if (itemIdx < 0) return
+
+        // 往前找表格开始 <w:tbl
+        const tblStart = docXml.lastIndexOf('<w:tbl', itemIdx)
+        const tblEnd = docXml.indexOf('</w:tbl>', itemIdx) + 8
+        if (tblStart < 0 || tblEnd < 8) return
+
+        let tableXml = docXml.substring(tblStart, tblEnd)
+
+        // 提取所有数据行（跳过表头行）
+        const trRegex = /<w:tr[\s>][\s\S]*?<\/w:tr>/g
+        const allRows: Array<{ match: string; index: number }> = []
+        let m: RegExpExecArray | null
+        while ((m = trRegex.exec(tableXml)) !== null) {
+            allRows.push({ match: m[0], index: m.index })
+        }
+
+        // 表头行是第一行，数据行从第二行开始
+        if (allRows.length < 2) return
+
+        // 从 results 数组获取 seq 分组信息
+        let prevSeq = ''
+        const dataRows = allRows.slice(1) // 跳过表头
+
+        for (let i = 0; i < Math.min(dataRows.length, results.length); i++) {
+            const currentSeq = results[i].seq || ''
+            let rowXml = dataRows[i].match
+
+            if (currentSeq && currentSeq === prevSeq) {
+                // 续行：添加 vMerge（无 val，表示继续合并）+ 清空序号文本
+                rowXml = addVMergeToFirstCell(rowXml, false)
+            } else if (currentSeq && i > 0) {
+                // 新组起始行：添加 vMerge restart
+                rowXml = addVMergeToFirstCell(rowXml, true)
+            } else if (i === 0 && results.filter(r => r.seq === currentSeq).length > 1) {
+                // 第一行且有后续相同 seq：添加 vMerge restart
+                rowXml = addVMergeToFirstCell(rowXml, true)
+            }
+
+            if (rowXml !== dataRows[i].match) {
+                tableXml = tableXml.replace(dataRows[i].match, rowXml)
+            }
+            prevSeq = currentSeq
+        }
+
+        // 写回
+        const newDocXml = docXml.substring(0, tblStart) + tableXml + docXml.substring(tblEnd)
+        zip.file('word/document.xml', newDocXml)
+    } catch (e) {
+        console.warn('[docx-renderer] 后处理合并失败:', e)
+    }
+}
+
+/**
+ * 在行的第一个单元格的 tcPr 中添加 vMerge 属性
+ */
+function addVMergeToFirstCell(rowXml: string, isRestart: boolean): string {
+    // 找第一个 <w:tc>
+    const tcStart = rowXml.indexOf('<w:tc>')
+    const tcStartAlt = rowXml.indexOf('<w:tc ')
+    const tcPos = tcStart >= 0 && tcStartAlt >= 0 ? Math.min(tcStart, tcStartAlt)
+        : tcStart >= 0 ? tcStart : tcStartAlt
+
+    if (tcPos < 0) return rowXml
+
+    const vMerge = isRestart
+        ? '<w:vMerge w:val="restart"/>'
+        : '<w:vMerge/>'
+
+    // 检查是否已有 <w:tcPr>
+    const tcPrStart = rowXml.indexOf('<w:tcPr>', tcPos)
+    const nextTcEnd = rowXml.indexOf('</w:tc>', tcPos)
+
+    if (tcPrStart >= 0 && tcPrStart < nextTcEnd) {
+        // 已有 tcPr，在其内部添加 vMerge
+        return rowXml.substring(0, tcPrStart + 8) + vMerge + rowXml.substring(tcPrStart + 8)
+    } else {
+        // 无 tcPr，在 <w:tc> 后添加
+        const tcEndTag = rowXml.indexOf('>', tcPos) + 1
+        return rowXml.substring(0, tcEndTag) + `<w:tcPr>${vMerge}</w:tcPr>` + rowXml.substring(tcEndTag)
+    }
+}
+
+/**
+ * 后处理：在 "样品照片" 区域插入实际图片
+ */
+function insertSamplePhoto(zip: any, photoPath: string) {
+    try {
+        // 解析图片路径
+        let fullPath = photoPath
+        if (photoPath.startsWith('/uploads/')) {
+            fullPath = path.join(process.cwd(), 'public', photoPath)
+        }
+        if (!fs.existsSync(fullPath)) {
+            console.warn('[docx-renderer] 样品照片不存在:', fullPath)
+            return
+        }
+
+        const imgBuffer = fs.readFileSync(fullPath)
+        const ext = path.extname(fullPath).toLowerCase().replace('.', '')
+        const contentType = ext === 'png' ? 'image/png' : 'image/jpeg'
+
+        // 添加图片到 docx 包
+        const rId = 'rIdSamplePhoto'
+        zip.file(`word/media/samplePhoto.${ext}`, imgBuffer)
+
+        // 在 word/_rels/document.xml.rels 中添加关系
+        const relsPath = 'word/_rels/document.xml.rels'
+        let relsXml = zip.file(relsPath).asText()
+        const relEntry = `<Relationship Id="${rId}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="media/samplePhoto.${ext}"/>`
+        relsXml = relsXml.replace('</Relationships>', relEntry + '</Relationships>')
+        zip.file(relsPath, relsXml)
+
+        // 在 [Content_Types].xml 中添加类型（如果不存在）
+        const ctPath = '[Content_Types].xml'
+        let ctXml = zip.file(ctPath).asText()
+        if (!ctXml.includes(`Extension="${ext}"`)) {
+            ctXml = ctXml.replace('</Types>', `<Default Extension="${ext}" ContentType="${contentType}"/></Types>`)
+            zip.file(ctPath, ctXml)
+        }
+
+        // 在 document.xml 的 "样品照片" 区域插入图片
+        let docXml = zip.file('word/document.xml').asText()
+        const photoAreaIdx = docXml.indexOf('样品照片')
+        if (photoAreaIdx < 0) return
+
+        // 找 "图1" 文本
+        const fig1Idx = docXml.indexOf('图', photoAreaIdx + 10)
+        if (fig1Idx < 0) return
+
+        // 在 "图1" 段落前插入图片段落
+        const paraStart = docXml.lastIndexOf('<w:p ', fig1Idx)
+        if (paraStart < 0) return
+
+        // 图片尺寸（英寸转 EMU，1英寸=914400 EMU）
+        const cx = 4 * 914400 // 4英寸宽
+        const cy = 3 * 914400 // 3英寸高
+
+        const imgPara = `<w:p><w:pPr><w:jc w:val="center"/></w:pPr><w:r><w:rPr/><w:drawing><wp:inline distT="0" distB="0" distL="0" distR="0"><wp:extent cx="${cx}" cy="${cy}"/><wp:docPr id="100" name="SamplePhoto"/><a:graphic xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"><a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/picture"><pic:pic xmlns:pic="http://schemas.openxmlformats.org/drawingml/2006/picture"><pic:nvPicPr><pic:cNvPr id="0" name="samplePhoto.${ext}"/><pic:cNvPicPr/></pic:nvPicPr><pic:blipFill><a:blip r:embed="${rId}" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"/><a:stretch><a:fillRect/></a:stretch></pic:blipFill><pic:spPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="${cx}" cy="${cy}"/></a:xfrm><a:prstGeom prst="rect"><a:avLst/></a:prstGeom></pic:spPr></pic:pic></a:graphicData></a:graphic></wp:inline></w:drawing></w:r></w:p>`
+
+        docXml = docXml.substring(0, paraStart) + imgPara + docXml.substring(paraStart)
+        zip.file('word/document.xml', docXml)
+    } catch (e) {
+        console.warn('[docx-renderer] 插入样品照片失败:', e)
+    }
 }
 
 /**
