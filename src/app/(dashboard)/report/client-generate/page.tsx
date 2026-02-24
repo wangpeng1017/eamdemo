@@ -37,15 +37,8 @@ interface ApprovalRecord {
 interface Entrustment {
     id: string
     entrustmentNo: string
-    clientName: string
+    client?: { id: string; name: string } | null
     projectName: string | null
-    testTasks: {
-        id: string
-        taskNo: string
-        sampleName: string | null
-        status: string
-        testReport?: { reportNo: string } | null
-    }[]
 }
 
 interface ReportTemplate {
@@ -154,15 +147,25 @@ export default function ClientReportGeneratePage() {
         setGenerateModalOpen(true)
     }
 
-    const handleEntrustmentChange = (entrustmentId: string) => {
+    const handleEntrustmentChange = async (entrustmentId: string) => {
         const entrustment = entrustments.find(e => e.id === entrustmentId)
         setSelectedEntrustment(entrustment || null)
         setSelectedTaskIds([])
+        setCompletedTasks([])
         if (entrustment) {
             form.setFieldsValue({
-                clientName: entrustment.clientName,
+                clientName: entrustment.client?.name,
                 projectName: entrustment.projectName,
             })
+            // 查询该委托单下已完成的任务报告
+            try {
+                const res = await fetch(`/api/test-report?entrustmentId=${entrustmentId}&pageSize=100`)
+                const json = await res.json()
+                const list = json.data?.list || json.list || []
+                setCompletedTasks(list)
+            } catch {
+                setCompletedTasks([])
+            }
         }
     }
 
@@ -376,8 +379,8 @@ export default function ClientReportGeneratePage() {
         }
     ]
 
-    // 获取已完成的任务
-    const completedTasks = selectedEntrustment?.testTasks?.filter(t => t.status === 'completed') || []
+    // 任务报告列表（已通过 handleEntrustmentChange 查询填充）
+    const [completedTasks, setCompletedTasks] = useState<any[]>([])
 
     return (
         <div className="p-6">
@@ -508,7 +511,7 @@ export default function ClientReportGeneratePage() {
                                 onChange={handleEntrustmentChange}
                                 options={entrustments.map(e => ({
                                     value: e.id,
-                                    label: `${e.entrustmentNo} - ${e.clientName}`
+                                    label: `${e.entrustmentNo} - ${e.client?.name || '未知客户'}`
                                 }))}
                                 showSearch
                                 filterOption={(input, option) =>
@@ -526,9 +529,9 @@ export default function ClientReportGeneratePage() {
                                         placeholder="选择要合并的任务报告"
                                         value={selectedTaskIds}
                                         onChange={setSelectedTaskIds}
-                                        options={completedTasks.map(t => ({
+                                        options={completedTasks.map((t: any) => ({
                                             value: t.id,
-                                            label: `${t.taskNo} - ${t.sampleName || '未命名'} ${t.testReport ? `(${t.testReport.reportNo})` : ''}`
+                                            label: `${t.reportNo} - ${t.sampleName || '未命名'}`
                                         }))}
                                     />
                                     {completedTasks.length === 0 && (

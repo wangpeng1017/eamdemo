@@ -9,6 +9,7 @@ export const GET = withAuth(async (request: NextRequest, user) => {
   const { searchParams } = new URL(request.url)
   const page = parseInt(searchParams.get('page') || '1')
   const pageSize = parseInt(searchParams.get('pageSize') || '10')
+  const entrustmentId = searchParams.get('entrustmentId')
 
   // 注入数据权限过滤（委托链路）
   const permissionFilter = await getEntrustmentBasedFilter(user.id)
@@ -26,6 +27,11 @@ export const GET = withAuth(async (request: NextRequest, user) => {
         { task: { assignedToId: user.id } },
       ]
     }
+  }
+
+  // 按委托单过滤
+  if (entrustmentId) {
+    where.entrustmentId = entrustmentId
   }
 
   const [list, total] = await Promise.all([
