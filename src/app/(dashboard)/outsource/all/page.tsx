@@ -1,9 +1,9 @@
 'use client'
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback } from "react"
 import { showSuccess, showError } from '@/lib/confirm'
 import { Table, Button, Space, Tag, Modal, Form, Select, Card, Statistic, DatePicker, Input, App } from "antd"
-import { PlayCircleOutlined, CheckCircleOutlined, ClockCircleOutlined, SwapOutlined, EditOutlined, FileTextOutlined } from "@ant-design/icons"
+import { PlayCircleOutlined, ClockCircleOutlined, SwapOutlined, EditOutlined, FileTextOutlined } from "@ant-design/icons"
 import type { ColumnsType } from "antd/es/table"
 import dayjs from "dayjs"
 import { useRouter } from "next/navigation"
@@ -27,10 +27,10 @@ interface Task {
   assignedTo?: { id: string; name: string } | null
 }
 
-interface User {
+interface UserOption {
   id: string
   name: string
-  dept?: { name: string }
+  department?: string
 }
 
 const statusMap: Record<string, { text: string; color: string }> = {
@@ -50,15 +50,39 @@ export default function OutsourceAllPage() {
   const [statusFilter, setStatusFilter] = useState<string | undefined>()
   const [keyword, setKeyword] = useState("")
   const [stats, setStats] = useState<Record<string, number>>({})
-  const [users, setUsers] = useState<User[]>([])
+  const [users, setUsers] = useState<UserOption[]>([])
   const [generating, setGenerating] = useState(false)
 
-  // 转交模态框状态
+  // 分配弹窗状态（与 task/all 一致）
+  const [assignModalOpen, setAssignModalOpen] = useState(false)
+  const [assignLoading, setAssignLoading] = useState(false)
+  const [selectedTask, setSelectedTask] = useState<Task | null>(null)
+  const [assignForm] = Form.useForm()
+
+  // 转交弹窗
   const [transferModalOpen, setTransferModalOpen] = useState(false)
-  const [startModalOpen, setStartModalOpen] = useState(false)
   const [currentTask, setCurrentTask] = useState<Task | null>(null)
   const [transferForm] = Form.useForm()
+
+  // 开始任务弹窗
+  const [startModalOpen, setStartModalOpen] = useState(false)
   const [startForm] = Form.useForm()
+
+  // 加载用户列表（按部门分组，与 task/all 一致）
+  const loadUsers = useCallback(async () => {
+    try {
+      const res = await fetch('/api/user?pageSize=200')
+      const json = await res.json()
+      const list = json.data?.list || json.list || []
+      setUsers(list.map((u: any) => ({
+        id: u.id,
+        name: u.name,
+        department: u.department?.name || '未分配部门',
+      })))
+    } catch {
+      // 用户列表加载失败不影响主功能
+    }
+  }, [])
 
   const fetchData = async (p = page) => {
     setLoading(true)
@@ -87,41 +111,68 @@ export default function OutsourceAllPage() {
     }
   }
 
-  const fetchUsers = async () => {
-    try {
-      const res = await fetch('/api/user?pageSize=1000')
-      const json = await res.json()
-      setUsers(json.data?.list || json.list || [])
-    } catch {
-      // 用户列表加载失败不影响主功能
-    }
-  }
-
   useEffect(() => {
     fetchData()
-    fetchUsers()
   }, [page, statusFilter])
+
+  useEffect(() => {
+    loadUsers()
+  }, [loadUsers])
 
   const handleSearch = () => {
     setPage(1)
     fetchData(1)
   }
 
-  // 打开转交模态框
-  const openTransferModal = (task: Task) => {
-    setCurrentTask(task)
-    transferForm.resetFields()
-    setTransferModalOpen(true)
+  // === 分配/重新分配（与 task/all 一致）===
+  const handleAssign = (record: Task) => {
+    setSelectedTask(record)
+    assignForm.setFieldsValue({
+      assignedToId: record.assignedTo?.id,
+      dueDate: record.dueDate ? dayjs(record.dueDate) : null,
+      remark: '',
+    })
+    setAssignModalOpen(true)
   }
 
-  // 打开开始任务模态框
+  const handleAssignSubmit = async () => {
+    const values = await assignForm.validateFields()
+    if (!selectedTask) return
+
+    setAssignLoading(true)
+    try {
+      const res = await fetch(`/api/task/${selectedTask.id}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'assign',
+          assignedToId: values.assignedToId,
+          dueDate: values.dueDate ? values.dueDate.toISOString() : undefined,
+          remark: values.remark,
+        }),
+      })
+      const json = await res.json()
+      if (json.success !== false) {
+        showSuccess('任务分配成功')
+        setAssignModalOpen(false)
+        fetchData()
+      } else {
+        showError(json.message || '分配失败')
+      }
+    } catch {
+      showError('网络错误，请重试')
+    } finally {
+      setAssignLoading(false)
+    }
+  }
+
+  // === 开始任务 ===
   const openStartModal = (task: Task) => {
     setCurrentTask(task)
     startForm.resetFields()
     setStartModalOpen(true)
   }
 
-  // 提交开始任务
   const handleStartSubmit = async () => {
     if (!currentTask) return
     try {
@@ -148,6 +199,13 @@ export default function OutsourceAllPage() {
     }
   }
 
+  // === 转交 ===
+  const openTransferModal = (task: Task) => {
+    setCurrentTask(task)
+    transferForm.resetFields()
+    setTransferModalOpen(true)
+  }
+
   const handleTransfer = async () => {
     if (!currentTask) return
     const values = await transferForm.validateFields()
@@ -170,12 +228,12 @@ export default function OutsourceAllPage() {
     }
   }
 
-  // 数据录入
+  // === 数据录入 ===
   const handleDataEntry = (task: Task) => {
     router.push(`/task/data/${task.id}`)
   }
 
-  // 生成报告
+  // === 生成报告 ===
   const handleGenerateReport = async (task: Task) => {
     setGenerating(true)
     try {
@@ -208,6 +266,14 @@ export default function OutsourceAllPage() {
     }
   }
 
+  // 按部门分组用户（与 task/all 一致）
+  const usersByDepartment = users.reduce((acc, user) => {
+    const dept = user.department || '未分配部门'
+    if (!acc[dept]) acc[dept] = []
+    acc[dept].push(user)
+    return acc
+  }, {} as Record<string, UserOption[]>)
+
   const columns: ColumnsType<Task> = [
     { title: "任务编号", dataIndex: "taskNo", width: 130 },
     {
@@ -225,64 +291,59 @@ export default function OutsourceAllPage() {
       width: 130,
     },
     {
-      title: "内部负责人",
-      render: (_, r) => r.entrustmentProject?.subcontractAssignee || "-",
-      width: 120,
-    },
-    {
       title: "状态",
       dataIndex: "status",
       width: 100,
       render: (s: string) => <Tag color={statusMap[s]?.color}>{statusMap[s]?.text}</Tag>
     },
+    { title: "执行人", render: (_: any, r: any) => r.assignedTo?.name || "-", width: 100 },
     {
       title: "截止日期",
       dataIndex: "dueDate",
-      width: 130,
-      render: (d) => d ? dayjs(d).format("YYYY-MM-DD") : "-",
+      width: 150,
+      render: (d) => d ? dayjs(d).format("YYYY-MM-DD HH:mm:ss") : "-",
     },
     {
-      title: "创建时间",
+      title: "任务分配时间",
       dataIndex: "createdAt",
-      width: 130,
-      render: (d) => d ? dayjs(d).format("YYYY-MM-DD") : "-",
+      width: 160,
+      render: (d) => d ? dayjs(d).format("YYYY-MM-DD HH:mm:ss") : "-",
     },
     {
       title: '操作', fixed: 'right',
       render: (_, record) => (
         <Space size="small" style={{ whiteSpace: 'nowrap' }}>
+          {/* 分包/重新分包 */}
+          <Button type="link" size="small" onClick={() => handleAssign(record)} disabled={record.status === "completed"}>
+            {record.assignedTo ? '重新分包' : '分包'}
+          </Button>
           {/* 待开始状态：显示"开始"按钮 */}
           {record.status === "pending" && (
-            <Button type="primary" size="small" icon={<PlayCircleOutlined />} onClick={() => openStartModal(record)}>
+            <Button type="link" size="small" onClick={() => openStartModal(record)}>
               开始
             </Button>
           )}
           {/* 进行中状态：显示"录入数据"按钮 */}
           {record.status === "in_progress" && (
-            <Button type="primary" size="small" icon={<EditOutlined />} onClick={() => handleDataEntry(record)}>
+            <Button type="link" size="small" onClick={() => handleDataEntry(record)}>
               录入数据
             </Button>
           )}
-          {/* 待审核状态：显示"查看数据"按钮 */}
-          {record.status === "pending_review" && (
-            <Button size="small" icon={<EditOutlined />} onClick={() => handleDataEntry(record)}>
+          {/* 待审核/已完成状态：显示"查看数据"按钮 */}
+          {(record.status === "pending_review" || record.status === "completed") && (
+            <Button type="link" size="small" onClick={() => handleDataEntry(record)}>
               查看数据
             </Button>
           )}
-          {/* 已完成状态：显示"查看数据"和"生成报告"按钮 */}
+          {/* 已完成状态：显示"生成报告"按钮 */}
           {record.status === "completed" && (
-            <>
-              <Button size="small" icon={<EditOutlined />} onClick={() => handleDataEntry(record)}>
-                查看数据
-              </Button>
-              <Button size="small" type="primary" icon={<FileTextOutlined />} loading={generating} onClick={() => handleGenerateReport(record)}>
-                生成报告
-              </Button>
-            </>
+            <Button type="link" size="small" loading={generating} onClick={() => handleGenerateReport(record)}>
+              生成报告
+            </Button>
           )}
-          {/* 非完成状态：显示"转交"按钮 */}
+          {/* 非完成/待审核状态：显示"转交"按钮 */}
           {record.status !== "completed" && record.status !== "pending_review" && (
-            <Button size="small" icon={<SwapOutlined />} onClick={() => openTransferModal(record)}>
+            <Button type="link" size="small" onClick={() => openTransferModal(record)}>
               转交
             </Button>
           )}
@@ -340,7 +401,7 @@ export default function OutsourceAllPage() {
         dataSource={data}
         rowKey="id"
         loading={loading}
-        scroll={{ x: 1300 }}
+        scroll={{ x: 1500 }}
         pagination={{
           current: page,
           pageSize: 10,
@@ -348,6 +409,43 @@ export default function OutsourceAllPage() {
           onChange: (p) => setPage(p),
         }}
       />
+
+      {/* 分配任务弹窗（与 task/all 完全一致） */}
+      <Modal
+        title="分包任务"
+        open={assignModalOpen}
+        onCancel={() => setAssignModalOpen(false)}
+        onOk={handleAssignSubmit}
+        confirmLoading={assignLoading}
+      >
+        <Form form={assignForm} layout="vertical">
+          <Form.Item label="分配给" name="assignedToId" rules={[{ required: true, message: '请选择执行人' }]}>
+            <Select
+              showSearch
+              placeholder="搜索或选择执行人"
+              filterOption={(input, option) =>
+                (option?.label as string)?.toLowerCase().includes(input.toLowerCase())
+              }
+            >
+              {Object.entries(usersByDepartment).map(([dept, deptUsers]) => (
+                <Select.OptGroup key={dept} label={dept}>
+                  {deptUsers.map(u => (
+                    <Select.Option key={u.id} value={u.id} label={u.name}>
+                      {u.name}
+                    </Select.Option>
+                  ))}
+                </Select.OptGroup>
+              ))}
+            </Select>
+          </Form.Item>
+          <Form.Item label="截止日期" name="dueDate">
+            <DatePicker style={{ width: "100%" }} />
+          </Form.Item>
+          <Form.Item label="备注" name="remark">
+            <Input.TextArea rows={3} />
+          </Form.Item>
+        </Form>
+      </Modal>
 
       {/* 转交任务弹窗 */}
       <Modal
@@ -361,10 +459,21 @@ export default function OutsourceAllPage() {
           <Form.Item name="assignedToId" label="转交给" rules={[{ required: true, message: '请选择接收人' }]}>
             <Select
               showSearch
-              placeholder="选择接收人"
-              optionFilterProp="label"
-              options={users.map(u => ({ value: u.id, label: `${u.name}${u.dept ? ` (${u.dept.name})` : ''}` }))}
-            />
+              placeholder="搜索或选择接收人"
+              filterOption={(input, option) =>
+                (option?.label as string)?.toLowerCase().includes(input.toLowerCase())
+              }
+            >
+              {Object.entries(usersByDepartment).map(([dept, deptUsers]) => (
+                <Select.OptGroup key={dept} label={dept}>
+                  {deptUsers.map(u => (
+                    <Select.Option key={u.id} value={u.id} label={u.name}>
+                      {u.name}
+                    </Select.Option>
+                  ))}
+                </Select.OptGroup>
+              ))}
+            </Select>
           </Form.Item>
           <Form.Item name="reason" label="转交原因">
             <Select placeholder="选择或输入原因" allowClear>

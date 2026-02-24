@@ -78,7 +78,7 @@ export async function GET(
     let filenamePrefix: string
 
     if (type === 'original') {
-        data = prepareOriginalRecordData(task, entrustment, task.sample)
+        data = prepareOriginalRecordData(task, entrustment, task.sample, (task as any).metadata)
         templateFile = templateConfig?.originalRecordTemplateUrl || 'qct-original-record.docx'
         filenamePrefix = `原始记录_${task.taskNo || id}`
     } else {
@@ -87,7 +87,8 @@ export async function GET(
             task,
             entrustment,
             task.sample,
-            clientReport
+            clientReport,
+            (task as any).metadata
         )
         templateFile = templateConfig?.clientReportTemplateUrl || 'qct-client-report.docx'
         filenamePrefix = `检测报告_${task.taskNo || id}`

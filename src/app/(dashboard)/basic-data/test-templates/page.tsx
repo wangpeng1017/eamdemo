@@ -4,12 +4,10 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { showSuccess, showError } from '@/lib/confirm'
-import { Table, Button, Space, Modal, Select, Tag, message, Popconfirm, Input } from 'antd'
-import { PlusOutlined, EditOutlined, DeleteOutlined, EyeOutlined } from '@ant-design/icons'
+import { Table, Button, Space, Tag, Popconfirm, Input } from 'antd'
+import { PlusOutlined, EditOutlined, DeleteOutlined } from '@ant-design/icons'
 import type { ColumnsType } from 'antd/es/table'
 import dayjs from 'dayjs'
-import TemplateEditor from '@/components/TemplateEditor'
-import type { TemplateSchema } from '@/lib/template-converter'
 
 interface TestTemplate {
   id: string
@@ -24,15 +22,6 @@ interface TestTemplate {
   schema?: string | null
 }
 
-const categoryOptions = [
-  { value: '复合材料', label: '复合材料' },
-  { value: '金属材料', label: '金属材料' },
-  { value: '金相分析', label: '金相分析' },
-  { value: '混凝土', label: '混凝土' },
-  { value: '水质检测', label: '水质检测' },
-  { value: '其他', label: '其他' },
-]
-
 const statusMap: Record<string, { text: string; color: string }> = {
   active: { text: '启用', color: 'success' },
   archived: { text: '归档', color: 'default' },
@@ -43,19 +32,14 @@ export default function TestTemplatesPage() {
   const [loading, setLoading] = useState(false)
   const [total, setTotal] = useState(0)
   const [page, setPage] = useState(1)
-  const [modalOpen, setModalOpen] = useState(false)
-  const [editingId, setEditingId] = useState<string | null>(null)
-  const [editingRecord, setEditingRecord] = useState<TestTemplate | null>(null)
-  const [selectedCategory, setSelectedCategory] = useState<string>()
   const [keyword, setKeyword] = useState('')
   const router = useRouter()
 
   const fetchData = async (p = page) => {
     setLoading(true)
     try {
-      const categoryParam = selectedCategory ? `&category=${selectedCategory}` : ''
       const keywordParam = keyword ? `&keyword=${encodeURIComponent(keyword)}` : ''
-      const res = await fetch(`/api/test-template?page=${p}&pageSize=10${categoryParam}${keywordParam}`)
+      const res = await fetch(`/api/test-template?page=${p}&pageSize=10${keywordParam}`)
       const json = await res.json()
       if (json.success && json.data) {
         setData(json.data.list || [])
@@ -70,19 +54,7 @@ export default function TestTemplatesPage() {
     setLoading(false)
   }
 
-  useEffect(() => { fetchData() }, [page, selectedCategory, keyword])
-
-  const handleAdd = () => {
-    setEditingId(null)
-    setEditingRecord(null)
-    setModalOpen(true)
-  }
-
-  const handleEdit = (record: TestTemplate) => {
-    setEditingId(record.id)
-    setEditingRecord(record)
-    setModalOpen(true)
-  }
+  useEffect(() => { fetchData() }, [page, keyword])
 
   const handleToggleStatus = async (id: string, currentStatus: string) => {
     try {
@@ -118,51 +90,6 @@ export default function TestTemplatesPage() {
     }
   }
 
-  const handleSave = async (schema: TemplateSchema) => {
-    try {
-      const data = {
-        name: schema.title,
-        category: selectedCategory || '其他',
-        method: schema.header.methodBasis || '',
-        schema: JSON.stringify(schema),
-        status: 'active',
-      }
-
-      const url = editingId ? `/api/test-template/${editingId}` : '/api/test-template'
-      const method = editingId ? 'PUT' : 'POST'
-
-      const res = await fetch(url, {
-        method,
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(data)
-      })
-
-      if (!res.ok) {
-        const json = await res.json()
-        throw new Error(json.message || '保存失败')
-      }
-
-      showSuccess(editingId ? '更新成功' : '创建成功')
-      setModalOpen(false)
-      fetchData()
-    } catch (e: any) {
-      showError(e.message || '保存失败')
-      throw e
-    }
-  }
-
-  const getInitialSchema = (): TemplateSchema | undefined => {
-    if (!editingRecord?.schema) return undefined
-
-    try {
-      return typeof editingRecord.schema === 'string'
-        ? JSON.parse(editingRecord.schema)
-        : editingRecord.schema
-    } catch {
-      return undefined
-    }
-  }
-
   const columns: ColumnsType<TestTemplate> = [
     { title: '项目编号', dataIndex: 'code', width: 140 },
     { title: '检测项目', dataIndex: 'name', width: 200 },
@@ -186,17 +113,10 @@ export default function TestTemplatesPage() {
         <Space size="small" style={{ whiteSpace: 'nowrap' }}>
           <Button
             size="small"
-            title="编辑基础信息"
             icon={<EditOutlined />}
-            onClick={() => handleEdit(record)}
-          />
-          <Button
-            size="small"
-            type="primary"
-            icon={<EyeOutlined />}
-            onClick={() => router.push(`/basic-data/test-templates/editor/${record.id}`)}
+            onClick={() => router.push(`/basic-data/test-templates/edit/${record.id}`)}
           >
-            编辑内容
+            编辑模版
           </Button>
           <Button
             size="small"
@@ -230,7 +150,13 @@ export default function TestTemplatesPage() {
             onSearch={(v) => { setPage(1); setKeyword(v) }}
             enterButton
           />
-          <Button type="primary" icon={<PlusOutlined />} onClick={handleAdd}>新增检测项目</Button>
+          <Button
+            type="primary"
+            icon={<PlusOutlined />}
+            onClick={() => router.push('/basic-data/test-templates/create')}
+          >
+            新增检测项目
+          </Button>
         </Space>
       </div>
       <Table
@@ -241,23 +167,6 @@ export default function TestTemplatesPage() {
         scroll={{ x: 1200 }}
         pagination={{ current: page, total, onChange: setPage }}
       />
-
-      {/* 可视化编辑器弹窗 */}
-      <Modal
-        title={editingId ? '编辑检测项目' : '新增检测项目'}
-        open={modalOpen}
-        onCancel={() => setModalOpen(false)}
-        width="95%"
-        style={{ top: 20 }}
-        footer={null}
-        destroyOnClose
-      >
-        <TemplateEditor
-          initialValue={getInitialSchema()}
-          onSave={handleSave}
-          onCancel={() => setModalOpen(false)}
-        />
-      </Modal>
     </div>
   )
 }

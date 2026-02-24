@@ -711,6 +711,7 @@ model TestTask {
   status        String    @default("pending") // 待开始/进行中/已完成/已转交
   
   sheetData     String?   @db.LongText // Fortune-sheet完整数据
+  metadata      String?   @db.Text // JSON: {temperature, humidity, reviewer, ...} 检测辅助信息
   submittedAt   DateTime? // 提交时间
   submittedBy   String?   @db.VarChar(50) // 提交人
   summary       String?   @db.Text // 检测摘要

@@ -1,103 +1,7 @@
 import { prisma } from '@/lib/prisma'
 import { NextRequest, NextResponse } from 'next/server'
 import { withAuth, badRequest, notFound } from '@/lib/api-handler'
-
-/**
- * 从 Fortune-sheet 数据提取检测数据
- * @param sheetData Fortune-sheet 格式的字符串数据
- * @returns 检测数据数组
- */
-function extractTestDataFromSheet(sheetData: string | null): any[] {
-  if (!sheetData) return []
-
-  try {
-    const parsed = typeof sheetData === 'string' ? JSON.parse(sheetData) : sheetData
-
-    // Fortune-sheet 数据格式：数组，每个元素是一个 sheet
-    if (!Array.isArray(parsed) || parsed.length === 0) return []
-
-    const sheet = parsed[0]
-
-    // 如果有 data 属性，使用 data
-    if (sheet.data && Array.isArray(sheet.data) && sheet.data.length > 0) {
-      const rows: any[] = sheet.data
-      const testData: any[] = []
-
-      // 跳过标题行，从第2行开始（索引1）
-      for (let i = 1; i < rows.length; i++) {
-        const row = rows[i]
-        if (!row || row.length === 0) continue
-
-        // Fortune-sheet 的 row 是数组，按列索引获取值
-        // 假设列顺序：检测项目、技术要求、实测值、单项判定、备注
-        const parameter = row[0]?.v || row[0]?.toString() || ''
-        const standard = row[1]?.v || row[1]?.toString() || null
-        const value = row[2]?.v || row[2]?.toString() || null
-        const result = row[3]?.v || row[3]?.toString() || null
-        const remark = row[4]?.v || row[4]?.toString() || null
-
-        // 只添加有检测项目的行
-        if (parameter && parameter.trim()) {
-          testData.push({
-            id: `test-${i}`,
-            parameter: parameter.toString().trim(),
-            standard,
-            value,
-            result,
-            remark
-          })
-        }
-      }
-
-      return testData
-    }
-
-    // 如果有 celldata 属性，解析 celldata 格式
-    if (sheet.celldata && Array.isArray(sheet.celldata) && sheet.celldata.length > 0) {
-      const celldata = sheet.celldata
-      const testData: any[] = []
-
-      // 找出最大行号
-      let maxRow = 0
-      celldata.forEach((cell: any) => {
-        if (cell.r > maxRow) maxRow = cell.r
-      })
-
-      // 辅助函数：从 celldata 中获取指定行列的值
-      const getCellValue = (row: number, col: number): string => {
-        const cell = celldata.find((c: any) => c.r === row && c.c === col)
-        return cell?.v?.v?.toString() || cell?.v?.toString() || ''
-      }
-
-      // 从第 1 行开始（第 0 行是表头）
-      for (let r = 1; r <= maxRow; r++) {
-        const parameter = getCellValue(r, 0) // A列：检测项目
-        if (!parameter || parameter.trim() === '') continue
-
-        const standard = getCellValue(r, 1) || null   // B列：检测方法/技术要求
-        const value = getCellValue(r, 2) || null       // C列：实测值
-        const result = getCellValue(r, 3) || null      // D列：单项判定
-        const remark = getCellValue(r, 4) || null      // E列：备注
-
-        testData.push({
-          id: `test-${r}`,
-          parameter: parameter.trim(),
-          standard,
-          value,
-          result,
-          remark
-        })
-      }
-
-      return testData
-    }
-
-    return []
-  } catch (error) {
-    console.error('[报告生成] 解析 sheetData 失败:', error)
-    return []
-  }
-}
+import { extractForTestReport } from '@/lib/sheet-extractor'
 
 /**
  * 生成检测报告 - 需要登录
@@ -188,8 +92,8 @@ export const POST = withAuth(async (request: NextRequest, user) => {
     }
   }
 
-  // 从 sheetData 提取检测数据
-  const extractedTestData = extractTestDataFromSheet(task.sheetData)
+  // 从 sheetData 提取检测数据（使用语义提取）
+  const extractedTestData = extractForTestReport(task.sheetData)
 
   // 生成报告编号并创建报告（带重试机制防止竞态条件）
   const maxRetries = 3

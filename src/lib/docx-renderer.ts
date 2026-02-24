@@ -1,12 +1,20 @@
 /**
  * docx 模板渲染服务
  * 使用 docxtemplater 加载 docx 模板，替换占位符生成最终文档
+ * 
+ * 重构说明：所有数据提取统一走 sheet-extractor 模块的语义提取逻辑，
+ * 不再在此文件中按固定列位置硬编码提取。
  */
 
 import Docxtemplater from 'docxtemplater'
 import PizZip from 'pizzip'
 import fs from 'fs'
 import path from 'path'
+import {
+    extractStructuredData,
+    extractForOriginalRecord,
+    extractForClientReport,
+} from '@/lib/sheet-extractor'
 
 /**
  * 渲染 docx 模板
@@ -48,10 +56,41 @@ export function renderDocx(templatePath: string, data: Record<string, any>): Buf
 }
 
 /**
- * 为 QCT 原始记录准备数据
+ * 解析 metadata JSON 字符串为对象
+ */
+function parseMetadata(metadata: any): Record<string, string> {
+    if (!metadata) return {}
+    try {
+        return typeof metadata === 'string' ? JSON.parse(metadata) : metadata
+    } catch {
+        return {}
+    }
+}
+
+/**
+ * 为原始记录准备数据
  * 从检测任务和关联信息中组装模板数据
  */
-export function prepareOriginalRecordData(task: any, entrustment: any, sample: any): Record<string, any> {
+export function prepareOriginalRecordData(
+    task: any,
+    entrustment: any,
+    sample: any,
+    metadata?: any
+): Record<string, any> {
+    const meta = parseMetadata(metadata || task?.metadata)
+
+    // 从 sheetData 提取结构化结果（使用语义提取）
+    const results = extractForOriginalRecord(
+        task?.sheetData,
+        sample?.sampleNo
+    )
+
+    // 从结果生成文本摘要
+    const testResultText = results
+        .map(r => `${r.testItem}: ${r.avgResult || r.test1 || ''}`)
+        .filter(s => s.length > 3)
+        .join('\n')
+
     return {
         // 委托信息
         entrustmentNo: entrustment?.entrustmentNo || '',
@@ -67,18 +106,18 @@ export function prepareOriginalRecordData(task: any, entrustment: any, sample: a
             ? new Date(task.completedAt).toLocaleDateString('zh-CN')
             : new Date().toLocaleDateString('zh-CN'),
         sampleDesc: sample?.sampleCondition || '',
-        temperature: '',  // 需要检测人员填写
-        humidity: '',     // 需要检测人员填写
 
-        // 检测结果（从 sheetData 或 testResults 提取）
-        testResultText: extractResultText(task),
+        // 检测条件（从 metadata 获取）
+        temperature: meta.temperature || '',
+        humidity: meta.humidity || '',
 
-        // 结构化检测结果（用于 docx 模板 {#results}...{/results} 循环）
-        results: extractOriginalRecordResults(task),
+        // 检测结果
+        testResultText,
+        results,
 
         // 人员
         tester: task?.assignedTo?.name || '',
-        reviewer: '',
+        reviewer: meta.reviewer || '',
         testDateSign: task?.completedAt
             ? new Date(task.completedAt).toLocaleDateString('zh-CN')
             : '',
@@ -87,22 +126,25 @@ export function prepareOriginalRecordData(task: any, entrustment: any, sample: a
 }
 
 /**
- * 为 QCT 客户报告准备数据
+ * 为客户报告准备数据
  */
 export function prepareClientReportData(
     task: any,
     entrustment: any,
     sample: any,
-    clientReport?: any
+    clientReport?: any,
+    metadata?: any
 ): Record<string, any> {
-    // 从 testResults 提取结果行
-    const results = extractTestResults(task)
+    const meta = parseMetadata(metadata || task?.metadata)
+
+    // 从 sheetData 或 testResults 提取结构化结果
+    const results = extractClientReportResults(task, sample)
 
     return {
         // 封面信息
         reportNo: clientReport?.reportNo || task?.testReports?.[0]?.reportNo || '',
         sampleName: task?.sampleName || sample?.name || '',
-        testProject: '禁限用物质分析',
+        testProject: task?.entrustmentProject?.name || '检测分析',
         clientName: entrustment?.clientName || entrustment?.client?.name || '',
         clientAddress: entrustment?.clientAddress || entrustment?.client?.address || '',
 
@@ -119,62 +161,25 @@ export function prepareClientReportData(
             ? new Date(task.completedAt).toLocaleDateString('zh-CN')
             : '',
 
+        // 检测条件
+        temperature: meta.temperature || '',
+        humidity: meta.humidity || '',
+
         // 表1: 检测结果行循环
         results,
 
         // 人员签名
         preparer: task?.assignedTo?.name || '',
-        reviewer: '',
+        reviewer: meta.reviewer || '',
         approver: '',
     }
 }
 
 /**
- * 从 task 中提取结果文本（用于原始记录）
+ * 从 task 提取客户报告结果
+ * 优先使用 testResults（已生成的报告数据），回退到 sheetData 语义提取
  */
-function extractResultText(task: any): string {
-    if (!task) return ''
-
-    try {
-        // 优先从 testResults 提取
-        const testResults = task.testReports?.[0]?.testResults || task.testResults
-        if (testResults) {
-            const parsed = typeof testResults === 'string' ? JSON.parse(testResults) : testResults
-            if (Array.isArray(parsed)) {
-                return parsed
-                    .map((r: any) => `${r.parameter || r.testItem || ''}: ${r.value || r.result || ''}`)
-                    .join('\n')
-            }
-        }
-
-        // 从 sheetData 提取
-        if (task.sheetData) {
-            const sheets = typeof task.sheetData === 'string' ? JSON.parse(task.sheetData) : task.sheetData
-            if (Array.isArray(sheets) && sheets[0]?.data) {
-                const rows = sheets[0].data
-                return rows
-                    .slice(1) // 跳过标题行
-                    .filter((row: any) => row && row[0]?.v)
-                    .map((row: any) => {
-                        const param = row[0]?.v || ''
-                        const value = row[2]?.v || ''
-                        const result = row[3]?.v || ''
-                        return `${param}: ${value} ${result}`
-                    })
-                    .join('\n')
-            }
-        }
-    } catch (e) {
-        console.error('[docx-renderer] 提取检测结果失败:', e)
-    }
-
-    return ''
-}
-
-/**
- * 从 task 中提取结构化结果（用于客户报告表格循环）
- */
-function extractTestResults(task: any): Array<{
+function extractClientReportResults(task: any, sample: any): Array<{
     seq: string
     sampleNo: string
     sampleName: string
@@ -184,6 +189,7 @@ function extractTestResults(task: any): Array<{
     standardReq: string
     conclusion: string
 }> {
+    // 优先从 testResults 提取（已有报告数据）
     try {
         const testResults = task?.testReports?.[0]?.testResults || task?.testResults
         if (testResults) {
@@ -191,10 +197,10 @@ function extractTestResults(task: any): Array<{
             if (Array.isArray(parsed) && parsed.length > 0) {
                 return parsed.map((r: any, i: number) => ({
                     seq: String(i + 1),
-                    sampleNo: task?.sample?.sampleNo || '',
-                    sampleName: task?.sampleName || '',
+                    sampleNo: task?.sample?.sampleNo || sample?.sampleNo || '',
+                    sampleName: task?.sampleName || sample?.name || '',
                     testItem: r.parameter || r.testItem || '',
-                    xrfResult: r.value || r.xrfResult || '',
+                    xrfResult: r.value || r.xrfResult || r.avgResult || '',
                     chemResult: r.chemResult || '——',
                     standardReq: r.standard || r.standardReq || '',
                     conclusion: r.result || r.conclusion || '',
@@ -202,67 +208,13 @@ function extractTestResults(task: any): Array<{
             }
         }
     } catch (e) {
-        console.error('[docx-renderer] 提取结构化结果失败:', e)
+        console.error('[docx-renderer] 解析 testResults 失败:', e)
     }
 
-    // 无数据时返回空数组（不再返回硬编码的 QCT 默认数据）
-    return []
-}
-
-/**
- * 从 task 中提取原始记录用的结构化结果
- * 用于原始记录模板的 {#results}...{/results} 循环
- * 包含 test1/test2/avgResult 字段（对应测试1/测试2/平均值）
- */
-function extractOriginalRecordResults(task: any): Array<{
-    seq: string
-    sampleNo: string
-    testItem: string
-    test1: string
-    test2: string
-    avgResult: string
-    remark: string
-}> {
-    try {
-        const testResults = task?.testReports?.[0]?.testResults || task?.testResults
-        if (testResults) {
-            const parsed = typeof testResults === 'string' ? JSON.parse(testResults) : testResults
-            if (Array.isArray(parsed) && parsed.length > 0) {
-                return parsed.map((r: any, i: number) => ({
-                    seq: String(i + 1),
-                    sampleNo: task?.sample?.sampleNo || '',
-                    testItem: r.parameter || r.testItem || '',
-                    test1: r.test1 || r.value || '',
-                    test2: r.test2 || '',
-                    avgResult: r.avgResult || r.value || '',
-                    remark: r.remark || '',
-                }))
-            }
-        }
-
-        // 从 sheetData 提取
-        if (task?.sheetData) {
-            const sheets = typeof task.sheetData === 'string' ? JSON.parse(task.sheetData) : task.sheetData
-            if (Array.isArray(sheets) && sheets[0]?.data) {
-                const rows = sheets[0].data
-                return rows
-                    .slice(1)
-                    .filter((row: any) => row && row[0]?.v)
-                    .map((row: any, i: number) => ({
-                        seq: String(i + 1),
-                        sampleNo: '',
-                        testItem: row[0]?.v || '',
-                        test1: row[1]?.v || '',
-                        test2: row[2]?.v || '',
-                        avgResult: row[3]?.v || '',
-                        remark: row[4]?.v || '',
-                    }))
-            }
-        }
-    } catch (e) {
-        console.error('[docx-renderer] 提取原始记录结构化结果失败:', e)
-    }
-
-    // 无数据时返回空数组（不再返回硬编码的 QCT 默认数据）
-    return []
+    // 回退：从 sheetData 语义提取
+    return extractForClientReport(
+        task?.sheetData,
+        sample?.sampleNo,
+        task?.sampleName || sample?.name
+    )
 }

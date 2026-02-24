@@ -87,8 +87,9 @@ const MENU_TREE = [
         label: '外包管理',
         code: 'menu:outsource',
         children: [
+            { key: '/outsource/all', label: '全部外包', code: 'menu:outsource:all' },
+            { key: '/outsource/my', label: '我的外包', code: 'menu:outsource:my' },
             { key: '/outsource/supplier', label: '供应商', code: 'menu:outsource:supplier' },
-            { key: '/outsource/order', label: '外包订单', code: 'menu:outsource:order' },
         ],
     },
     {

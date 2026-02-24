@@ -449,8 +449,6 @@ export const MENU_ITEMS = {
     label: '统计报表',
     icon: 'BarChartOutlined',
     children: [
-      { key: 'entrustment', label: '委托统计', path: '/statistics/entrustment' },
-      { key: 'sample', label: '样品统计', path: '/statistics/sample' },
       { key: 'task', label: '任务统计', path: '/statistics/task' },
     ],
   },

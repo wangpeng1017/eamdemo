@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react"
 import { showSuccess, showError } from '@/lib/confirm'
 import { useParams, useRouter } from "next/navigation"
-import { Card, Button, Form, Select, Input, message, Space, Modal, Descriptions, Tag, Spin } from "antd"
+import { Card, Button, Form, Input, Space, Modal, Descriptions, Tag, Spin } from "antd"
 import { SaveOutlined, CheckOutlined, ArrowLeftOutlined } from "@ant-design/icons"
 import dynamic from 'next/dynamic'
 
@@ -30,26 +30,24 @@ interface Task {
   status: string
   testData?: any
   sheetData?: string | any
+  metadata?: string | any
   entrustmentProject?: {
     name: string;
     testItems: string;
+    testTemplateId?: string;
     entrustment?: {
       id: string;
       entrustmentNo: string;
-      sampleName: string;
       samples?: { id: string; name: string; sampleNo: string }[]
     }
   }
 }
 
-interface TestRecord {
-  id: string
-  testItem: string
-  testMethod: string
-  requirement: string
-  actualValue: string
-  result: string
-  remark: string
+// 检测辅助信息
+interface TestMetadata {
+  temperature?: string
+  humidity?: string
+  reviewer?: string
 }
 
 export default function DataEntryPage() {
@@ -62,8 +60,8 @@ export default function DataEntryPage() {
   const [saving, setSaving] = useState(false)
 
   const [sheetData, setSheetData] = useState<any>(null)
+  const [metadata, setMetadata] = useState<TestMetadata>({})
   const [submitModalOpen, setSubmitModalOpen] = useState(false)
-  const [form] = Form.useForm()
 
   // 判断是否只读模式（只有已完成状态才只读）
   const isReadOnly = task?.status === 'completed'
@@ -76,9 +74,21 @@ export default function DataEntryPage() {
       if (!res.ok) throw new Error("获取任务失败")
       const json = await res.json()
 
-      // 处理 API 返回的数据结构：{success: true, data: {...}} 或直接返回数据
+      // 处理 API 返回的数据结构
       const taskData = json.data || json
       setTask(taskData)
+
+      // 加载 metadata
+      if (taskData.metadata) {
+        try {
+          const meta = typeof taskData.metadata === 'string'
+            ? JSON.parse(taskData.metadata)
+            : taskData.metadata
+          setMetadata(meta)
+        } catch (e) {
+          console.error("解析 metadata 失败", e)
+        }
+      }
 
       // 优先从 sheetData 加载数据（Fortune-sheet 格式）
       if (taskData.sheetData) {
@@ -88,32 +98,28 @@ export default function DataEntryPage() {
             : taskData.sheetData
 
           if (Array.isArray(parsed) && parsed.length > 0) {
-            // 检查数据格式：Fortune-sheet 可能使用 celldata 或 data 格式
             const sheet = parsed[0]
-
-            // 如果有 data 但没有 celldata，说明是编辑后保存的格式，需要转换
-            // Fortune-sheet 初始化时需要 celldata 格式才能正确渲染
             if (sheet.data && sheet.data.length > 0) {
               const converted = convertDataToCelldata(parsed)
               setSheetData(converted)
             } else if (sheet.celldata && sheet.celldata.length > 0) {
               setSheetData(parsed)
             } else {
-              setSheetData(getDefaultData())
+              await loadTemplateOrDefault(taskData)
             }
           } else {
-            setSheetData(getDefaultData())
+            await loadTemplateOrDefault(taskData)
           }
         } catch (e) {
           console.error("解析 sheetData 失败", e)
-          setSheetData(getDefaultData())
+          await loadTemplateOrDefault(taskData)
         }
       }
       // 兼容旧逻辑：如果 testData 是数组且非空
       else if (taskData.testData && Array.isArray(taskData.testData) && taskData.testData.length > 0) {
         setSheetData(taskData.testData)
       } else {
-        setSheetData(getDefaultData())
+        await loadTemplateOrDefault(taskData)
       }
     } catch (error) {
       console.error("获取任务失败", error)
@@ -121,6 +127,32 @@ export default function DataEntryPage() {
     } finally {
       setLoading(false)
     }
+  }
+
+  // 从模板加载列结构，或使用默认表格
+  const loadTemplateOrDefault = async (taskData: Task) => {
+    const templateId = taskData.entrustmentProject?.testTemplateId
+    if (templateId) {
+      try {
+        const templateRes = await fetch(`/api/test-template/${templateId}`)
+        if (templateRes.ok) {
+          const templateJson = await templateRes.json()
+          const templateData = templateJson.data || templateJson
+          if (templateData?.schema) {
+            const schema = typeof templateData.schema === 'string'
+              ? JSON.parse(templateData.schema)
+              : templateData.schema
+            if (schema?.columns?.length > 0) {
+              setSheetData(getDefaultData(schema))
+              return
+            }
+          }
+        }
+      } catch (e) {
+        console.error("加载模板失败，使用默认表格", e)
+      }
+    }
+    setSheetData(getDefaultData())
   }
 
   useEffect(() => {
@@ -131,7 +163,6 @@ export default function DataEntryPage() {
   const handleSave = async () => {
     setSaving(true)
     try {
-      // 确保不保存空数据，如果为空则保存默认结构
       const dataToSave = sheetData && sheetData.length > 0 ? sheetData : getDefaultData()
 
       const res = await fetch(`/api/task/${taskId}/data`, {
@@ -139,6 +170,7 @@ export default function DataEntryPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           sheetData: dataToSave,
+          metadata,
           status: 'in_progress',
         }),
       })
@@ -146,18 +178,14 @@ export default function DataEntryPage() {
       const responseJson = await res.json()
 
       if (res.ok) {
-        showSuccess({
-          content: '✅ 数据已保存',
-          duration: 2,
-          key: 'save-draft'
-        })
+        showSuccess('数据已保存')
       } else {
         console.error("保存失败:", responseJson)
-        showError({ content: '保存失败', key: 'save-draft' })
+        showError('保存失败')
       }
     } catch (error) {
       console.error("保存失败", error)
-      showError({ content: '保存失败', key: 'save-draft' })
+      showError('保存失败')
     } finally {
       setSaving(false)
     }
@@ -166,7 +194,6 @@ export default function DataEntryPage() {
   // 提交完成
   const handleSubmit = async () => {
     try {
-      // 确保不提交空数据
       const startData = sheetData && sheetData.length > 0 ? sheetData : getDefaultData()
 
       const res = await fetch(`/api/task/${taskId}/data`, {
@@ -174,6 +201,7 @@ export default function DataEntryPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           sheetData: startData,
+          metadata,
           action: 'submit',
         }),
       })
@@ -189,8 +217,6 @@ export default function DataEntryPage() {
       showError("提交失败")
     }
   }
-
-
 
   if (loading || !task) {
     return <div className="p-4 text-center">加载中...</div>
@@ -239,8 +265,7 @@ export default function DataEntryPage() {
           <Descriptions.Item label="任务编号">{task.taskNo}</Descriptions.Item>
           <Descriptions.Item label="样品编号">{task.sample?.sampleNo || "-"}</Descriptions.Item>
           <Descriptions.Item label="样品名称">
-            {/* 优先取 entrustment.sampleName (委托单通用样品名)，其次取 task.sample.name (具体样品名) */}
-            {task.entrustmentProject?.entrustment?.sampleName || task.sample?.name || task.sampleName || "-"}
+            {task.sample?.name || task.sampleName || "-"}
           </Descriptions.Item>
           <Descriptions.Item label="设备">{task.device?.name || "-"}</Descriptions.Item>
           <Descriptions.Item label="检测项目" span={2}>
@@ -254,6 +279,42 @@ export default function DataEntryPage() {
             </Tag>
           </Descriptions.Item>
         </Descriptions>
+      </Card>
+
+      {/* 检测条件（辅助信息） */}
+      <Card className="mb-4" title="检测条件" size="small">
+        <div className="flex gap-6 flex-wrap">
+          <div className="flex items-center gap-2">
+            <span className="text-gray-600 whitespace-nowrap">温度(℃)：</span>
+            <Input
+              style={{ width: 120 }}
+              placeholder="如 23"
+              value={metadata.temperature || ''}
+              onChange={e => setMetadata({ ...metadata, temperature: e.target.value })}
+              disabled={isReadOnly}
+            />
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="text-gray-600 whitespace-nowrap">湿度(%RH)：</span>
+            <Input
+              style={{ width: 120 }}
+              placeholder="如 50"
+              value={metadata.humidity || ''}
+              onChange={e => setMetadata({ ...metadata, humidity: e.target.value })}
+              disabled={isReadOnly}
+            />
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="text-gray-600 whitespace-nowrap">复核人：</span>
+            <Input
+              style={{ width: 150 }}
+              placeholder="复核人姓名"
+              value={metadata.reviewer || ''}
+              onChange={e => setMetadata({ ...metadata, reviewer: e.target.value })}
+              disabled={isReadOnly}
+            />
+          </div>
+        </div>
       </Card>
 
       {/* 数据录入表格 */}

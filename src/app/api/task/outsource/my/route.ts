@@ -19,9 +19,14 @@ export const GET = withAuth(async (request: NextRequest, user) => {
 
   if (status) where.status = status
   if (keyword) {
-    where.OR = [
-      { taskNo: { contains: keyword } },
-      { sampleName: { contains: keyword } },
+    where.AND = [
+      ...(where.AND || []),
+      {
+        OR: [
+          { taskNo: { contains: keyword } },
+          { sampleName: { contains: keyword } },
+        ]
+      }
     ]
   }
 

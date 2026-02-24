@@ -75,6 +75,17 @@ const allMenuItems: MenuItem[] = [
     ],
   },
   {
+    key: '/outsource',
+    icon: <BankOutlined />,
+    label: '外包管理',
+    permissionCode: 'menu:outsource',
+    children: [
+      { key: '/outsource/all', label: '全部外包', permissionCode: 'menu:outsource:all' },
+      { key: '/outsource/my', label: '我的外包', permissionCode: 'menu:outsource:my' },
+      { key: '/outsource/supplier', label: '供应商', permissionCode: 'menu:outsource:supplier' },
+    ],
+  },
+  {
     key: '/report',
     icon: <FileTextOutlined />,
     label: '报告管理',
@@ -109,17 +120,6 @@ const allMenuItems: MenuItem[] = [
     ],
   },
   {
-    key: '/outsource',
-    icon: <BankOutlined />,
-    label: '外包管理',
-    permissionCode: 'menu:outsource',
-    children: [
-      { key: '/outsource/all', label: '全部外包', permissionCode: 'menu:outsource:all' },
-      { key: '/outsource/my', label: '我的外包', permissionCode: 'menu:outsource:my' },
-      { key: '/outsource/supplier', label: '供应商', permissionCode: 'menu:outsource:supplier' },
-    ],
-  },
-  {
     key: '/finance',
     icon: <AuditOutlined />,
     label: '财务管理',
@@ -135,8 +135,6 @@ const allMenuItems: MenuItem[] = [
     label: '统计报表',
     permissionCode: 'menu:statistics',
     children: [
-      { key: '/statistics/entrustment', label: '委托统计', permissionCode: 'menu:statistics' },
-      { key: '/statistics/sample', label: '样品统计', permissionCode: 'menu:statistics' },
       { key: '/statistics/task', label: '任务统计', permissionCode: 'menu:statistics' },
     ],
   },

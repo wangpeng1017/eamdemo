@@ -1,7 +1,10 @@
 /**
  * @file docx-renderer.test.ts
- * @desc 禁限用物质分析 (QCT) 报告模板渲染 - 单元测试
+ * @desc 报告模板渲染 - 单元测试
  *       测试 prepareOriginalRecordData / prepareClientReportData / renderDocx
+ *
+ * 重构说明：所有数据提取改用 sheet-extractor 语义提取，
+ * 测试 fixtures 需要包含 sheetData 来模拟实际数据流。
  */
 
 import {
@@ -32,11 +35,42 @@ const mockSample = {
   quantity: '3',
 }
 
-/** 含 sheetData 的 QCT 任务 */
+/** 含 sheetData（带 columnSemantics 语义映射）的任务 */
 const mockTask = {
   sampleName: '汽车线束端子',
   completedAt: new Date('2026-02-14'),
   assignedTo: { name: '李四' },
+  metadata: JSON.stringify({
+    temperature: '23',
+    humidity: '50',
+    reviewer: '王五',
+  }),
+  sheetData: JSON.stringify([{
+    name: 'Sheet1',
+    config: {
+      columnSemantics: {
+        0: 'seq',
+        1: 'sampleNo',
+        2: 'testItem',
+        3: 'test1',
+        4: 'test2',
+        5: 'avgResult',
+        6: 'chemResult',
+        7: 'standardReq',
+        8: 'conclusion',
+        9: 'remark',
+      }
+    },
+    data: [
+      [{ v: '序号' }, { v: '样品编号' }, { v: '检测项目' }, { v: 'XRF测试1' }, { v: 'XRF测试2' }, { v: '平均值' }, { v: '化学验证结果' }, { v: '标准要求' }, { v: '结论' }, { v: '备注' }],
+      [{ v: '1' }, { v: 'YP-001' }, { v: 'Pb' }, { v: 'P' }, { v: 'P' }, { v: 'P' }, { v: '——' }, { v: '≤0.1%' }, { v: '合格' }, { v: '' }],
+      [{ v: '2' }, { v: 'YP-001' }, { v: 'Hg' }, { v: 'P' }, { v: 'P' }, { v: 'P' }, { v: '——' }, { v: '≤0.1%' }, { v: '合格' }, { v: '' }],
+      [{ v: '3' }, { v: 'YP-001' }, { v: 'Cd' }, { v: 'P' }, { v: 'P' }, { v: 'P' }, { v: '——' }, { v: '≤0.01%' }, { v: '合格' }, { v: '' }],
+      [{ v: '4' }, { v: 'YP-001' }, { v: 'Cr6+' }, { v: 'P' }, { v: 'P' }, { v: 'P' }, { v: '——' }, { v: '≤0.1%' }, { v: '合格' }, { v: '' }],
+      [{ v: '5' }, { v: 'YP-001' }, { v: 'PBBs' }, { v: 'P' }, { v: 'P' }, { v: 'P' }, { v: '——' }, { v: '≤0.1%' }, { v: '合格' }, { v: '' }],
+      [{ v: '6' }, { v: 'YP-001' }, { v: 'PBDEs' }, { v: 'P' }, { v: 'P' }, { v: 'P' }, { v: '——' }, { v: '≤0.1%' }, { v: '合格' }, { v: '' }],
+    ],
+  }]),
   testReports: [
     {
       reportNo: 'RPT-20260214-001',
@@ -53,22 +87,20 @@ const mockTask = {
   sample: { sampleNo: 'YP-20260214-001' },
 }
 
-/** 含 sheetData (Fortune-sheet 格式) 的任务 */
-const mockTaskWithSheetData = {
+/** 含列头文本（无 columnSemantics）的任务 —— 测试列头文本匹配策略 */
+const mockTaskWithHeaderText = {
   sampleName: '汽车线束端子',
   completedAt: new Date('2026-02-14'),
   assignedTo: { name: '李四' },
-  sheetData: JSON.stringify([
-    {
-      name: 'Sheet1',
-      data: [
-        [{ v: '检测项目' }, { v: '技术要求' }, { v: '实测值' }, { v: '单项判定' }],
-        [{ v: 'Pb' }, { v: '≤0.1%' }, { v: 'P' }, { v: '合格' }],
-        [{ v: 'Hg' }, { v: '≤0.1%' }, { v: 'P' }, { v: '合格' }],
-        [{ v: 'Cd' }, { v: '≤0.01%' }, { v: 'P' }, { v: '合格' }],
-      ],
-    },
-  ]),
+  sheetData: JSON.stringify([{
+    name: 'Sheet1',
+    data: [
+      [{ v: '检测项目' }, { v: '技术要求' }, { v: '实测值' }, { v: '单项判定' }],
+      [{ v: 'Pb' }, { v: '≤0.1%' }, { v: 'P' }, { v: '合格' }],
+      [{ v: 'Hg' }, { v: '≤0.1%' }, { v: 'P' }, { v: '合格' }],
+      [{ v: 'Cd' }, { v: '≤0.01%' }, { v: 'P' }, { v: '合格' }],
+    ],
+  }]),
 }
 
 const mockClientReport = {
@@ -102,20 +134,17 @@ describe('prepareOriginalRecordData', () => {
     expect(data.testDate).toContain('2026')
   })
 
-  it('应从 testResults 提取检测结果文本', () => {
+  it('应从 sheetData 提取检测结果摘要文本', () => {
     const data = prepareOriginalRecordData(mockTask, mockEntrustment, mockSample)
     expect(data.testResultText).toContain('Pb')
     expect(data.testResultText).toContain('Hg')
   })
 
-  it('应从 sheetData 提取检测结果文本', () => {
-    const data = prepareOriginalRecordData(
-      mockTaskWithSheetData,
-      mockEntrustment,
-      mockSample
-    )
-    expect(data.testResultText).toContain('Pb')
-    expect(data.testResultText).toContain('Cd')
+  it('应从 metadata 提取温湿度和复核人', () => {
+    const data = prepareOriginalRecordData(mockTask, mockEntrustment, mockSample)
+    expect(data.temperature).toBe('23')
+    expect(data.humidity).toBe('50')
+    expect(data.reviewer).toBe('王五')
   })
 
   it('传入空 task 应返回空字符串字段而非崩溃', () => {
@@ -145,7 +174,6 @@ describe('prepareClientReportData', () => {
     )
     expect(data.reportNo).toBe('CR-20260214-001')
     expect(data.sampleName).toBe('汽车线束端子')
-    expect(data.testProject).toBe('禁限用物质分析')
     expect(data.clientName).toBe('奇瑞汽车股份有限公司')
   })
 
@@ -214,11 +242,9 @@ describe('prepareClientReportData', () => {
     expect(data.reportNo).toBe('RPT-20260214-001')
   })
 
-  it('传入空 task 应返回默认 6 项检测结果', () => {
+  it('传入空 task 应返回空 results', () => {
     const data = prepareClientReportData(null, null, null)
-    expect(data.results.length).toBe(6)
-    expect(data.results[0].testItem).toBe('Pb')
-    expect(data.results[5].testItem).toBe('PBDEs')
+    expect(data.results.length).toBe(0)
   })
 
   it('应包含人员签名字段', () => {
@@ -231,12 +257,13 @@ describe('prepareClientReportData', () => {
     expect(data).toHaveProperty('reviewer')
     expect(data).toHaveProperty('approver')
     expect(data.preparer).toBe('李四')
+    expect(data.reviewer).toBe('王五')
   })
 })
 
-// ==================== 新功能: 原始记录结构化 results ====================
+// ==================== 原始记录结构化 results ====================
 
-describe('prepareOriginalRecordData - 结构化结果 (新功能)', () => {
+describe('prepareOriginalRecordData - 结构化结果', () => {
   it('应返回结构化的 results 数组用于 docx 循环', () => {
     const data = prepareOriginalRecordData(mockTask, mockEntrustment, mockSample)
     expect(Array.isArray(data.results)).toBe(true)
@@ -252,7 +279,7 @@ describe('prepareOriginalRecordData - 结构化结果 (新功能)', () => {
     expect(first).toHaveProperty('avgResult')
   })
 
-  it('QCT 默认应包含 Pb/Hg/Cd/Cr/Br/PBDEs 6项', () => {
+  it('应包含 Pb/Hg/Cd 等检测项目', () => {
     const data = prepareOriginalRecordData(mockTask, mockEntrustment, mockSample)
     const items = data.results.map((r: any) => r.testItem)
     expect(items).toContain('Pb')
@@ -261,7 +288,17 @@ describe('prepareOriginalRecordData - 结构化结果 (新功能)', () => {
   })
 })
 
-// ==================== 新功能: renderDocx 模板渲染 ====================
+// ==================== 列头文本匹配策略测试 ====================
+
+describe('prepareOriginalRecordData - 列头文本匹配', () => {
+  it('无 columnSemantics 时应通过列头文本推断列语义', () => {
+    const data = prepareOriginalRecordData(mockTaskWithHeaderText, mockEntrustment, mockSample)
+    expect(data.results.length).toBe(3)
+    expect(data.results[0].testItem).toBe('Pb')
+  })
+})
+
+// ==================== renderDocx 模板渲染 ====================
 
 describe('renderDocx', () => {
   it('应在模板文件不存在时抛出错误', () => {

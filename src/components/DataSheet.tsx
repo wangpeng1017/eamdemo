@@ -121,7 +121,92 @@ export default function DataSheet({ data, onChange, readonly = false, height = 5
   )
 }
 
-export function getDefaultData() {
+// 模板列定义类型（从 template-converter 简化引入）
+interface TemplateColumn {
+  title: string
+  dataIndex: string
+  width?: number
+}
+
+interface TemplateSchemaForInit {
+  columns: TemplateColumn[]
+  defaultData?: Record<string, string>[]  // 预填数据行（按 dataIndex 映射）
+  defaultRows?: number
+}
+
+/**
+ * 生成表格初始数据
+ * @param templateSchema 可选的模板列结构。提供时按模板列定义生成列头（列头锁定不可编辑）
+ */
+export function getDefaultData(templateSchema?: TemplateSchemaForInit) {
+  // 有模板时：按模板列定义生成（混合模式 —— 列头锁定，数据行可编辑）
+  if (templateSchema?.columns?.length) {
+    const cols = templateSchema.columns
+    const celldata: any[] = []
+
+    // 第0行：列头（锁定不可编辑）
+    cols.forEach((col, idx) => {
+      celldata.push({
+        r: 0,
+        c: idx,
+        v: {
+          v: col.title,
+          ct: { fa: "General", t: "g" },
+          bl: 1,                   // 加粗
+          bg: "#E7E6E6",           // 灰色背景标记列头
+          fc: "#000000",           // 黑色字体
+          lo: 0,                   // 🔒 锁定：列头不可编辑
+        }
+      })
+    })
+
+    // 预填数据行（从 defaultData 生成）
+    if (templateSchema.defaultData?.length) {
+      // 构建 dataIndex → 列索引映射
+      const idxMap: Record<string, number> = {}
+      cols.forEach((col, i) => { idxMap[col.dataIndex] = i })
+
+      templateSchema.defaultData.forEach((rowData, rowIdx) => {
+        Object.entries(rowData).forEach(([key, value]) => {
+          const colIdx = idxMap[key]
+          if (colIdx !== undefined && value) {
+            celldata.push({
+              r: rowIdx + 1,  // 从第1行开始（第0行是列头）
+              c: colIdx,
+              v: {
+                v: value,
+                ct: { fa: "General", t: "g" },
+              }
+            })
+          }
+        })
+      })
+    }
+
+    // 构建列语义映射（列号 → dataIndex），用于报告生成时按语义提取数据
+    const columnSemantics: Record<number, string> = {}
+    cols.forEach((col, idx) => {
+      columnSemantics[idx] = col.dataIndex
+    })
+
+    const totalRows = Math.max(
+      templateSchema.defaultRows || 30,
+      (templateSchema.defaultData?.length || 0) + 5
+    )
+
+    return [{
+      name: "Sheet1",
+      row: totalRows,
+      column: Math.max(cols.length, 15),
+      celldata,
+      config: {
+        columnlen: Object.fromEntries(cols.map((col, i) => [i, col.width || 120])),
+        columnSemantics,  // 自定义字段：列语义映射，报告生成时读取
+      }
+    }]
+  }
+
+  // 无模板时：保持原有默认列（向后兼容）
   const headers = ["检测项目", "检测方法", "技术要求", "实测值", "单项判定", "备注"]
   const celldata: any[] = []
 

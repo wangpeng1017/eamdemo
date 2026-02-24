@@ -383,20 +383,33 @@ export const POST = withAuth(async (request: NextRequest, user) => {
     })
   }
 
-  // 创建检测项目
+  // 创建检测项目（自动匹配检测模板）
   const projects = data.projects
   if (projects && Array.isArray(projects) && projects.length > 0) {
     const validProjects = projects.filter((p: { name?: string }) => p.name)
     if (validProjects.length > 0) {
+      // 查询所有活跃的检测模板，按名称自动匹配
+      const activeTemplates = await prisma.testTemplate.findMany({
+        where: { status: 'active' },
+        select: { id: true, name: true },
+      })
+
       await prisma.entrustmentProject.createMany({
-        data: validProjects.map((p: { name: string; testItems?: string | string[]; method?: string; standard?: string }) => ({
-          entrustmentId: entrustment.id,
-          name: p.name,
-          testItems: typeof p.testItems === 'string' ? p.testItems : JSON.stringify(p.testItems || []),
-          method: p.method || null,
-          standard: p.standard || null,
-          status: 'pending',
-        }))
+        data: validProjects.map((p: { name: string; testItems?: string | string[]; method?: string; standard?: string }) => {
+          // 按名称模糊匹配模板（检测项目名称包含模板名称，或模板名称包含检测项目名称）
+          const matchedTemplate = activeTemplates.find(t =>
+            p.name.includes(t.name) || t.name.includes(p.name)
+          )
+          return {
+            entrustmentId: entrustment.id,
+            name: p.name,
+            testItems: typeof p.testItems === 'string' ? p.testItems : JSON.stringify(p.testItems || []),
+            method: p.method || null,
+            standard: p.standard || null,
+            testTemplateId: matchedTemplate?.id || null,
+            status: 'pending',
+          }
+        })
       })
       console.log('[Entrustment Create] Created projects:', validProjects.length)
     }

@@ -1,6 +1,7 @@
 import { prisma } from '@/lib/prisma'
 import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@/lib/auth'
+import { extractForTestReport } from '@/lib/sheet-extractor'
 
 // 从 Fortune-sheet 数据中提取单元格值
 function getCellValue(celldata: any[], row: number, col: number): string {
@@ -66,7 +67,7 @@ export async function POST(
 
   const body = await request.json()
   const { id } = await params
-  const { sheetData, action = 'save', summary, conclusion } = body
+  const { sheetData, metadata, action = 'save', summary, conclusion } = body
 
   console.log('[Task Data POST] taskId:', id)
   console.log('[Task Data POST] action:', action)
@@ -96,8 +97,11 @@ export async function POST(
     sheetData: sheetDataString,
   }
 
-  if (summary) updateData.summary = summary // 注意：schema 中还没有 summary 和 conclusion 字段，需要确认
+  if (summary) updateData.summary = summary
   if (conclusion) updateData.conclusion = conclusion
+  if (metadata !== undefined) {
+    updateData.metadata = typeof metadata === 'object' ? JSON.stringify(metadata) : metadata
+  }
 
   // 根据 action 处理
   if (action === 'submit') {
@@ -153,15 +157,11 @@ export async function POST(
     }
   }
 
-  // 🔥 同步更新 TestData 表
+  // 🔥 同步更新 TestData 表（使用语义提取）
   if (sheetData) {
     try {
-      // 解析 sheetData
-      const parsedSheetData = typeof sheetData === 'string'
-        ? JSON.parse(sheetData)
-        : sheetData
-
-      const testDataRecords = parseSheetDataToTestData(parsedSheetData, id)
+      const sheetDataStr = typeof sheetData === 'string' ? sheetData : JSON.stringify(sheetData)
+      const testDataRecords = extractForTestReport(sheetDataStr)
 
       // 先删除旧数据
       await prisma.testData.deleteMany({
@@ -171,7 +171,14 @@ export async function POST(
       // 插入新数据
       if (testDataRecords.length > 0) {
         await prisma.testData.createMany({
-          data: testDataRecords
+          data: testDataRecords.map(r => ({
+            taskId: id,
+            parameter: r.parameter,
+            value: r.value,
+            standard: r.standard,
+            result: r.result,
+            remark: r.remark,
+          }))
         })
         console.log(`✅ 同步 TestData 成功：${testDataRecords.length} 条记录`)
       } else {

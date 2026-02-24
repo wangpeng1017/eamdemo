@@ -62,6 +62,7 @@ export const GET = withErrorHandler(async (
         select: {
           name: true,
           testItems: true,
+          testTemplateId: true,
           entrustment: {
             select: {
               id: true,

@@ -1,8 +1,7 @@
 import { useState, useEffect, useMemo, useRef } from 'react'
 import { showSuccess, showError, showWarningMessage } from '@/lib/confirm'
-import { Button, Card, Form, Input, Switch, InputNumber, Space, message, Modal, Dropdown, Menu, Select } from 'antd'
-import { PlusOutlined, DeleteOutlined, SettingOutlined } from '@ant-design/icons'
-// import DataSheet from './DataSheet' // 已移除：未使用，避免 SSR 问题
+import { Button, Card, Form, Input, Switch, InputNumber, Space, Modal, Dropdown, Menu, Select, Tag, Tooltip } from 'antd'
+import { PlusOutlined, DeleteOutlined, SettingOutlined, HolderOutlined, ArrowLeftOutlined, ArrowRightOutlined } from '@ant-design/icons'
 import ColumnPropertyForm from './ColumnPropertyForm'
 import {
   TemplateSchema,
@@ -27,14 +26,24 @@ interface InspectionStandard {
 
 export default function TemplateEditor({ initialValue, onSave, onCancel }: TemplateEditorProps) {
   const [form] = Form.useForm()
-  const [schema, setSchema] = useState<TemplateSchema>(initialValue || getDefaultSchema())
+  const defaultSchema = getDefaultSchema()
+  const [schema, setSchema] = useState<TemplateSchema>(() => {
+    if (!initialValue) return defaultSchema
+    return {
+      ...defaultSchema,
+      ...initialValue,
+      columns: initialValue.columns || defaultSchema.columns,
+      header: initialValue.header || {},
+      statistics: initialValue.statistics || [],
+    }
+  })
   const [selectedColumn, setSelectedColumn] = useState<number | null>(null)
   const [showColumnModal, setShowColumnModal] = useState(false)
   const [inspectionStandards, setInspectionStandards] = useState<InspectionStandard[]>([])
 
   // 加载检测标准数据
   useEffect(() => {
-    fetch('/api/inspection-standard?pageSize=1000&validity=valid')
+    fetch('/api/inspection-standard?pageSize=1000')
       .then(res => res.json())
       .then(data => {
         setInspectionStandards(data.list || [])
@@ -46,15 +55,13 @@ export default function TemplateEditor({ initialValue, onSave, onCancel }: Templ
 
   // 用于输入框的组件级防抖
   const [localTitle, setLocalTitle] = useState(schema.title);
-  const [localSampleType, setLocalSampleType] = useState(schema.header.sampleType || '');
+  const [localSampleType, setLocalSampleType] = useState(schema.header?.sampleType || '');
 
-  // 当外部 schema 变化时同步本地状态（仅当非活跃输入时）
   useEffect(() => {
     setLocalTitle(schema.title);
-    setLocalSampleType(schema.header.sampleType || '');
-  }, [schema.title, schema.header.sampleType])
+    setLocalSampleType(schema.header?.sampleType || '');
+  }, [schema.title, schema.header?.sampleType])
 
-  // 防抖更新 schema.title
   useEffect(() => {
     if (localTitle === schema.title) return;
     const timer = setTimeout(() => {
@@ -63,33 +70,26 @@ export default function TemplateEditor({ initialValue, onSave, onCancel }: Templ
     return () => clearTimeout(timer);
   }, [localTitle])
 
-  // 防抖更新 schema.header.sampleType
   useEffect(() => {
-    if (localSampleType === (schema.header.sampleType || '')) return;
+    if (localSampleType === (schema.header?.sampleType || '')) return;
     const timer = setTimeout(() => {
       updateSchema({
-        header: { ...schema.header, sampleType: localSampleType }
+        header: { ...(schema.header || {}), sampleType: localSampleType }
       });
     }, 500);
     return () => clearTimeout(timer);
   }, [localSampleType])
 
-  // 移除实时预览 DataSheet 的转换逻辑
-
-  // 初始化表单
   useEffect(() => {
     form.setFieldsValue({
       name: schema.title,
-      method: schema.header.methodBasis,
-      sampleType: schema.header.sampleType,
+      sampleType: schema.header?.sampleType,
       defaultRows: schema.defaultRows
     })
   }, [schema, form])
 
-  // 保存处理
   const handleSave = async () => {
     try {
-      // 验证
       if (!schema.title || schema.title.trim() === '') {
         showError('请输入模版名称')
         return
@@ -98,7 +98,6 @@ export default function TemplateEditor({ initialValue, onSave, onCancel }: Templ
         showError('请至少添加一列')
         return
       }
-
       await onSave(schema)
     } catch (e) {
       console.error("[TemplateEditor] Save Error:", e);
@@ -106,7 +105,6 @@ export default function TemplateEditor({ initialValue, onSave, onCancel }: Templ
     }
   }
 
-  // 预览处理
   const handlePreview = () => {
     Modal.info({
       title: 'JSON 预览',
@@ -125,212 +123,337 @@ export default function TemplateEditor({ initialValue, onSave, onCancel }: Templ
     })
   }
 
-  // 用于标记是否正在由于外部 schema 变化而触发的预览更新
-  // 防止 onChange 捕获到正在销毁中的旧 sheetData
   const isUpdatingSchemaRef = useRef(false);
 
-  // 更新 Schema
   const updateSchema = (updates: Partial<TemplateSchema>) => {
-    console.log("[TemplateEditor] updateSchema called with:", updates);
     isUpdatingSchemaRef.current = true;
     setSchema(prev => {
       const next = { ...prev, ...updates };
-      // 深度防御：确保关键字段类型正确
       if (typeof next.title !== 'string') next.title = String(next.title || '');
       return next;
     });
-    // 增加锁定延时：300ms 以覆盖 Fortune-sheet 彻底销毁与重绘的异步周期
     setTimeout(() => {
-      console.log("[TemplateEditor] Resetting isUpdatingSchemaRef");
       isUpdatingSchemaRef.current = false;
     }, 300);
   }
 
-  // 更新列
   const updateColumn = (index: number, column: ColumnConfig) => {
     const newColumns = [...schema.columns]
     newColumns[index] = column
     updateSchema({ columns: newColumns })
   }
 
-  // ===== 右键菜单操作 =====
-
-  // 插入列
-  const insertColumn = (position: 'left' | 'right') => {
+  // 添加列
+  const addColumn = () => {
     const newColumn: ColumnConfig = {
       title: '新列',
       dataIndex: `column${Date.now()}`,
       width: 120,
       dataType: 'string'
     }
-
-    const newColumns = [...schema.columns]
-    if (selectedColumn !== null) {
-      const idx = position === 'left' ? selectedColumn : selectedColumn + 1
-      newColumns.splice(idx, 0, newColumn)
-    } else {
-      newColumns.push(newColumn)
-    }
-
-    updateSchema({ columns: newColumns })
-    showSuccess('列已插入')
+    updateSchema({ columns: [...schema.columns, newColumn] })
+    setSelectedColumn(schema.columns.length)
+    showSuccess('列已添加')
   }
 
   // 删除列
-  const deleteColumn = () => {
-    if (selectedColumn === null) return
-
+  const deleteColumn = (index: number) => {
     if (schema.columns.length <= 1) {
       showWarningMessage('至少保留一列')
       return
     }
-
-    const newColumns = schema.columns.filter((_, idx) => idx !== selectedColumn)
+    const newColumns = schema.columns.filter((_, idx) => idx !== index)
     updateSchema({ columns: newColumns })
-    setSelectedColumn(null)
+    if (selectedColumn === index) setSelectedColumn(null)
+    else if (selectedColumn !== null && selectedColumn > index) setSelectedColumn(selectedColumn - 1)
     showSuccess('列已删除')
   }
 
-  // 添加统计列
+  // 移动列
+  const moveColumn = (index: number, direction: 'left' | 'right') => {
+    const targetIdx = direction === 'left' ? index - 1 : index + 1
+    if (targetIdx < 0 || targetIdx >= schema.columns.length) return
+    const newColumns = [...schema.columns]
+      ;[newColumns[index], newColumns[targetIdx]] = [newColumns[targetIdx], newColumns[index]]
+    updateSchema({ columns: newColumns })
+    setSelectedColumn(targetIdx)
+  }
+
+  // 统计相关
   const addStatistic = (type: 'avg' | 'std' | 'cv') => {
     if (selectedColumn === null) {
       showWarningMessage('请先选择一列')
       return
     }
-
     const column = schema.columns[selectedColumn]
-    const labels: Record<string, string> = {
-      avg: '平均值',
-      std: '标准差',
-      cv: '离散系数'
-    }
-
-    // 检查是否已存在
+    const labels: Record<string, string> = { avg: '平均值', std: '标准差', cv: '离散系数' }
     const existing = schema.statistics.findIndex(s => s.column === column.dataIndex)
     if (existing >= 0) {
       showWarningMessage('该列已添加统计')
       return
     }
-
     updateSchema({
-      statistics: [
-        ...schema.statistics,
-        {
-          type,
-          column: column.dataIndex,
-          label: `${labels[type]} (${column.title})`
-        }
-      ]
+      statistics: [...schema.statistics, { type, column: column.dataIndex, label: `${labels[type]} (${column.title})` }]
     })
     showSuccess(`已添加${labels[type]}统计`)
   }
 
-  // 删除统计
   const removeStatistic = (index: number) => {
     const newStatistics = schema.statistics.filter((_, idx) => idx !== index)
     updateSchema({ statistics: newStatistics })
     showSuccess('统计已删除')
   }
 
-  // 右键菜单
-  const contextMenu = useMemo(() => (
-    <Menu onClick={({ key }) => {
-      const [action, ...params] = key.split('-')
-      switch (action) {
-        case 'insertColumnLeft':
-          insertColumn('left')
-          break
-        case 'insertColumnRight':
-          insertColumn('right')
-          break
-        case 'deleteColumn':
-          deleteColumn()
-          break
-        case 'editColumn':
-          setShowColumnModal(true)
-          break
-        case 'addStatistic':
-          addStatistic(params[0] as any)
-          break
-        case 'removeStatistic':
-          if (selectedColumn !== null) {
-            const column = schema.columns[selectedColumn]
-            const idx = schema.statistics.findIndex(s => s.column === column.dataIndex)
-            if (idx >= 0) removeStatistic(idx)
-          }
-          break
-      }
-    }}>
-      <Menu.Item key="insertColumnLeft">插入列（左侧）</Menu.Item>
-      <Menu.Item key="insertColumnRight">插入列（右侧）</Menu.Item>
-      <Menu.Item key="deleteColumn" danger>删除此列</Menu.Item>
-      <Menu.Divider />
-      <Menu.Item key="editColumn" icon={<SettingOutlined />}>设置列属性...</Menu.Item>
-      <Menu.Divider />
-      <Menu.Item key="addStatistic-avg">设为统计列: 平均值</Menu.Item>
-      <Menu.Item key="addStatistic-std">设为统计列: 标准差</Menu.Item>
-      <Menu.Item key="addStatistic-cv">设为统计列: 离散系数</Menu.Item>
-      <Menu.Item key="removeStatistic">取消统计列</Menu.Item>
-    </Menu>
-  ), [selectedColumn, schema.columns, schema.statistics])
+  // 数据类型标签颜色
+  const typeColors: Record<string, string> = {
+    string: 'blue', number: 'green', formula: 'orange', select: 'purple'
+  }
+  const typeLabels: Record<string, string> = {
+    string: '文本', number: '数字', formula: '公式', select: '选择'
+  }
 
   return (
     <div className="flex flex-col h-[700px] gap-4">
       {/* 左右分栏布局 */}
       <div className="flex flex-1 gap-4 overflow-hidden">
-        {/* 左侧：示意图区域（原表格预览） */}
+        {/* 左侧：可视化表格列编辑器 */}
         <div className="flex-1 flex flex-col overflow-hidden">
-          <Card title="表格模式示意" className="flex-1 overflow-hidden">
-            <div className="h-full flex flex-col items-center justify-center bg-gray-50 border-2 border-dashed border-gray-200 rounded-lg p-8 text-center">
-              <div className="text-4xl mb-4 text-blue-500">📊</div>
-              <h3 className="text-lg font-medium text-gray-700 mb-2">已开启“稳定编辑模式”</h3>
-              <p className="text-gray-400 max-w-sm mb-6">
-                为了确保表格编辑的绝对稳定，我们已将基础配置（左侧）与内容编辑物理隔离。
-              </p>
-              <div className="bg-white p-4 rounded border text-left w-full max-w-md">
-                <div className="text-xs uppercase text-gray-400 font-bold mb-2">当前结构预览:</div>
-                <div className="mb-1 text-sm">✅ 标题行: {localTitle}</div>
-                <div className="mb-1 text-sm">✅ 检测列数: {schema.columns.length} 列</div>
-                <div className="mb-1 text-sm">✅ 包含环境: {schema.environment ? '是' : '否'}</div>
-                <div className="mb-1 text-sm">✅ 包含设备: {schema.equipment ? '是' : '否'}</div>
+          <Card
+            title={
+              <div className="flex items-center gap-3">
+                <span>📊 模板列结构</span>
+                <Tag color="blue">{schema.columns.length} 列</Tag>
               </div>
-              <div className="mt-8 text-blue-400 text-sm">
-                提示：保存基础设置后，在列表页点击“编辑内容”进入全屏编辑器。
+            }
+            extra={
+              <Button type="primary" size="small" icon={<PlusOutlined />} onClick={addColumn}>
+                添加列
+              </Button>
+            }
+            className="flex-1 overflow-hidden"
+            bodyStyle={{ padding: 0, height: '100%', overflow: 'auto' }}
+          >
+            {/* 可视化表格预览 */}
+            <div className="p-4">
+              {/* 表格表头预览 */}
+              <div className="border rounded-lg overflow-hidden mb-4">
+                <table className="w-full border-collapse">
+                  <thead>
+                    <tr className="bg-blue-50">
+                      {schema.columns.map((col, idx) => (
+                        <th
+                          key={col.dataIndex}
+                          className={`border border-blue-200 px-3 py-2 text-sm font-medium text-center cursor-pointer transition-colors ${selectedColumn === idx
+                            ? 'bg-blue-500 text-white'
+                            : 'text-blue-700 hover:bg-blue-100'
+                            }`}
+                          style={{ minWidth: Math.max(col.width || 100, 80) }}
+                          onClick={() => setSelectedColumn(idx)}
+                        >
+                          {col.title}
+                        </th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {/* 示例数据行 */}
+                    {[1, 2, 3].map(row => (
+                      <tr key={row} className="hover:bg-gray-50">
+                        {schema.columns.map((col, idx) => (
+                          <td
+                            key={col.dataIndex}
+                            className={`border border-gray-200 px-3 py-2 text-sm text-center text-gray-400 ${selectedColumn === idx ? 'bg-blue-50' : ''
+                              }`}
+                          >
+                            {col.dataType === 'number' ? '0.00' : col.dataType === 'formula' ? 'fx' : '—'}
+                          </td>
+                        ))}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+
+              {/* 选中列的详细编辑区域 */}
+              {selectedColumn !== null && schema.columns[selectedColumn] && (
+                <Card
+                  size="small"
+                  title={
+                    <span>
+                      编辑列：<Tag color="blue">{schema.columns[selectedColumn].title}</Tag>
+                    </span>
+                  }
+                  extra={
+                    <Space size="small">
+                      <Tooltip title="左移">
+                        <Button
+                          size="small"
+                          icon={<ArrowLeftOutlined />}
+                          disabled={selectedColumn === 0}
+                          onClick={() => moveColumn(selectedColumn, 'left')}
+                        />
+                      </Tooltip>
+                      <Tooltip title="右移">
+                        <Button
+                          size="small"
+                          icon={<ArrowRightOutlined />}
+                          disabled={selectedColumn === schema.columns.length - 1}
+                          onClick={() => moveColumn(selectedColumn, 'right')}
+                        />
+                      </Tooltip>
+                      <Tooltip title="列属性">
+                        <Button
+                          size="small"
+                          icon={<SettingOutlined />}
+                          onClick={() => setShowColumnModal(true)}
+                        />
+                      </Tooltip>
+                      <Tooltip title="删除列">
+                        <Button
+                          size="small"
+                          danger
+                          icon={<DeleteOutlined />}
+                          onClick={() => deleteColumn(selectedColumn)}
+                        />
+                      </Tooltip>
+                    </Space>
+                  }
+                  className="mb-4"
+                >
+                  <div className="grid grid-cols-3 gap-4">
+                    <div>
+                      <label className="text-xs text-gray-500 mb-1 block">列标题</label>
+                      <Input
+                        size="small"
+                        value={schema.columns[selectedColumn].title}
+                        onChange={e => {
+                          const col = { ...schema.columns[selectedColumn], title: e.target.value }
+                          updateColumn(selectedColumn, col)
+                        }}
+                      />
+                    </div>
+                    <div>
+                      <label className="text-xs text-gray-500 mb-1 block">数据标识</label>
+                      <Input
+                        size="small"
+                        value={schema.columns[selectedColumn].dataIndex}
+                        onChange={e => {
+                          const col = { ...schema.columns[selectedColumn], dataIndex: e.target.value }
+                          updateColumn(selectedColumn, col)
+                        }}
+                      />
+                    </div>
+                    <div>
+                      <label className="text-xs text-gray-500 mb-1 block">列宽度</label>
+                      <InputNumber
+                        size="small"
+                        min={60}
+                        max={500}
+                        value={schema.columns[selectedColumn].width}
+                        onChange={val => {
+                          const col = { ...schema.columns[selectedColumn], width: val || 120 }
+                          updateColumn(selectedColumn, col)
+                        }}
+                        style={{ width: '100%' }}
+                      />
+                    </div>
+                  </div>
+                  <div className="mt-3">
+                    <label className="text-xs text-gray-500 mb-1 block">数据类型</label>
+                    <Select
+                      size="small"
+                      value={schema.columns[selectedColumn].dataType}
+                      onChange={val => {
+                        const col = { ...schema.columns[selectedColumn], dataType: val }
+                        updateColumn(selectedColumn, col)
+                      }}
+                      style={{ width: 200 }}
+                      options={[
+                        { value: 'string', label: '文本' },
+                        { value: 'number', label: '数字' },
+                        { value: 'formula', label: '公式' },
+                        { value: 'select', label: '下拉选择' },
+                      ]}
+                    />
+                  </div>
+                </Card>
+              )}
+
+              {selectedColumn === null && (
+                <div className="text-center text-gray-400 py-8 border-2 border-dashed border-gray-200 rounded-lg">
+                  👆 点击上方表头列可选中并编辑
+                </div>
+              )}
+
+              {/* 列概览列表 */}
+              <div className="mt-4">
+                <div className="text-sm font-medium text-gray-600 mb-2">全部列 ({schema.columns.length})</div>
+                <div className="grid grid-cols-2 gap-2">
+                  {schema.columns.map((col, idx) => (
+                    <div
+                      key={col.dataIndex}
+                      className={`flex items-center justify-between px-3 py-2 rounded border cursor-pointer transition-all ${selectedColumn === idx
+                        ? 'border-blue-500 bg-blue-50 shadow-sm'
+                        : 'border-gray-200 hover:border-blue-300 hover:bg-gray-50'
+                        }`}
+                      onClick={() => setSelectedColumn(idx)}
+                    >
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs text-gray-400 w-5">{idx + 1}</span>
+                        <span className="text-sm font-medium">{col.title}</span>
+                      </div>
+                      <Tag color={typeColors[col.dataType || 'string']} className="text-xs">
+                        {typeLabels[col.dataType || 'string']}
+                      </Tag>
+                    </div>
+                  ))}
+                </div>
               </div>
             </div>
           </Card>
         </div>
 
-        {/* 右侧：属性配置面板 */}
-        <div className="w-96 overflow-y-auto">
-          <Card title="属性配置">
-            <Form form={form} layout="vertical">
-              {/* 基本信息 */}
-              <Form.Item label="模版名称" name="name" rules={[{ required: true, message: '此项为必填' }]}>
-                <Input
-                  placeholder="如: 拉伸性能测试"
-                  value={localTitle}
-                  onChange={(e) => setLocalTitle(e.target.value)}
-                />
-              </Form.Item>
-
-              <Form.Item label="检测标准" name="method">
+        {/* 右侧：基础配置面板 */}
+        <div className="w-80 overflow-y-auto">
+          <Card title="基础配置" size="small">
+            <Form form={form} layout="vertical" size="small">
+              <Form.Item label="模版名称" rules={[{ required: true, message: '此项为必填' }]}>
                 <Select
-                  placeholder="请选择检测标准"
                   showSearch
-                  allowClear
-                  optionFilterProp="children"
+                  placeholder="请选择检测标准作为模版"
+                  optionFilterProp="label"
                   filterOption={(input, option) =>
                     (option?.label ?? '').toLowerCase().includes(input.toLowerCase())
                   }
+                  value={localTitle || undefined}
                   options={inspectionStandards.map(std => ({
-                    value: std.standardNo,
-                    label: `${std.standardNo} - ${std.name}`
+                    value: std.name,
+                    label: `${std.name}（${std.standardNo}）`
                   }))}
-                  onChange={(value) => updateSchema({
-                    header: { ...schema.header, methodBasis: value || '' }
-                  })}
+                  onChange={(value) => {
+                    // 选中标准后：名称设为标准名，自动带出标准号
+                    setLocalTitle(value)
+                    // 收集该名称下所有标准号
+                    const matched = inspectionStandards.filter(s => s.name === value)
+                    const stdNos = matched.map(s => s.standardNo).join('、')
+                    updateSchema({
+                      title: value,
+                      header: { ...(schema.header || {}), methodBasis: stdNos }
+                    })
+                  }}
                 />
+              </Form.Item>
+
+              <Form.Item label="检测标准">
+                {schema.header?.methodBasis ? (
+                  <div className="flex flex-wrap gap-1">
+                    {schema.header.methodBasis.split('、').map((std, i) => (
+                      <Tag key={i} color="blue">{std}</Tag>
+                    ))}
+                  </div>
+                ) : (
+                  <span className="text-gray-400 text-sm">选择模版名称后自动带出</span>
+                )}
               </Form.Item>
 
               <Form.Item label="样品类型" name="sampleType">
@@ -342,33 +465,23 @@ export default function TemplateEditor({ initialValue, onSave, onCancel }: Templ
               </Form.Item>
 
               {/* 表格设置 */}
-              <Card size="small" title="表格设置" style={{ marginBottom: 16 }}>
-                <Space direction="vertical" style={{ width: '100%' }}>
+              <Card size="small" title="表格设置" style={{ marginBottom: 12 }}>
+                <Space direction="vertical" style={{ width: '100%' }} size="small">
                   <div className="flex items-center justify-between">
-                    <span>包含环境条件行</span>
-                    <Switch
-                      checked={schema.environment}
-                      onChange={(c) => updateSchema({ environment: c })}
-                    />
+                    <span>环境条件行</span>
+                    <Switch size="small" checked={schema.environment} onChange={(c) => updateSchema({ environment: c })} />
                   </div>
                   <div className="flex items-center justify-between">
-                    <span>包含设备信息行</span>
-                    <Switch
-                      checked={schema.equipment}
-                      onChange={(c) => updateSchema({ equipment: c })}
-                    />
+                    <span>设备信息行</span>
+                    <Switch size="small" checked={schema.equipment} onChange={(c) => updateSchema({ equipment: c })} />
                   </div>
                   <div className="flex items-center justify-between">
-                    <span>包含人员信息行</span>
-                    <Switch
-                      checked={schema.personnel}
-                      onChange={(c) => updateSchema({ personnel: c })}
-                    />
+                    <span>人员信息行</span>
+                    <Switch size="small" checked={schema.personnel} onChange={(c) => updateSchema({ personnel: c })} />
                   </div>
                   <Form.Item label="默认数据行数" style={{ marginBottom: 0 }}>
                     <InputNumber
-                      min={1}
-                      max={100}
+                      min={1} max={100}
                       value={schema.defaultRows}
                       onChange={(val) => updateSchema({ defaultRows: val || 5 })}
                       style={{ width: '100%' }}
@@ -381,81 +494,33 @@ export default function TemplateEditor({ initialValue, onSave, onCancel }: Templ
               <Card
                 size="small"
                 title="统计配置"
-                extra={(
+                extra={
                   <Dropdown
-                    overlay={(
-                      <Menu onClick={({ key }) => {
-                        addStatistic(key as any)
-                      }}>
+                    overlay={
+                      <Menu onClick={({ key }) => addStatistic(key as any)}>
                         <Menu.Item key="avg">平均值</Menu.Item>
                         <Menu.Item key="std">标准差</Menu.Item>
                         <Menu.Item key="cv">离散系数</Menu.Item>
                       </Menu>
-                    )}
+                    }
                     trigger={['click']}
                   >
                     <Button size="small" icon={<PlusOutlined />}>添加</Button>
                   </Dropdown>
-                )}
-                style={{ marginBottom: 16 }}
+                }
               >
                 {schema.statistics.length === 0 ? (
-                  <div className="text-gray-400 text-sm py-2">
-                    暂无统计配置
-                  </div>
+                  <div className="text-gray-400 text-xs py-1">暂无统计配置</div>
                 ) : (
-                  <Space direction="vertical" style={{ width: '100%' }} size="small">
+                  <Space direction="vertical" style={{ width: '100%' }} size={4}>
                     {schema.statistics.map((stat, idx) => (
-                      <div key={idx} className="flex items-center justify-between bg-gray-50 p-2 rounded">
-                        <span className="text-sm">{stat.label}</span>
-                        <Button
-                          size="small"
-                          danger
-                          icon={<DeleteOutlined />}
-                          onClick={() => removeStatistic(idx)}
-                        />
+                      <div key={idx} className="flex items-center justify-between bg-gray-50 px-2 py-1 rounded text-xs">
+                        <span>{stat.label}</span>
+                        <Button size="small" type="text" danger icon={<DeleteOutlined />} onClick={() => removeStatistic(idx)} />
                       </div>
                     ))}
                   </Space>
                 )}
-              </Card>
-
-              {/* 列管理 */}
-              <Card
-                size="small"
-                title="列管理"
-                extra={(
-                  <Button
-                    size="small"
-                    icon={<PlusOutlined />}
-                    onClick={() => insertColumn('right')}
-                  >
-                    添加列
-                  </Button>
-                )}
-              >
-                <Space direction="vertical" style={{ width: '100%' }} size="small">
-                  {schema.columns.map((col, idx) => (
-                    <div
-                      key={col.dataIndex}
-                      className={`flex items-center justify-between p-2 rounded cursor-pointer border ${selectedColumn === idx ? 'border-blue-500 bg-blue-50' : 'border-gray-200'
-                        }`}
-                      onClick={() => setSelectedColumn(idx)}
-                    >
-                      <span className="text-sm">{col.title}</span>
-                      <Button
-                        size="small"
-                        type="text"
-                        icon={<SettingOutlined />}
-                        onClick={(e) => {
-                          e.stopPropagation()
-                          setSelectedColumn(idx)
-                          setShowColumnModal(true)
-                        }}
-                      />
-                    </div>
-                  ))}
-                </Space>
               </Card>
             </Form>
           </Card>
