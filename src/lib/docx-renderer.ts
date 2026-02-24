@@ -116,18 +116,20 @@ export function renderDocx(templatePath: string, data: Record<string, any>): Buf
 function postProcessResultsMerge(zip: any, results: Array<{ seq: string;[k: string]: string }>) {
     try {
         const docXml = zip.file('word/document.xml').asText()
+        console.log('[merge] results count:', results.length, 'first seq:', results[0]?.seq, 'first testItem:', results[0]?.testItem)
 
-        // 找到包含第一个 result seq 值的表格行区域
-        // 策略：找到第一个 testItem 文本（如 "Pb"），定位其所在表格
+        // 找到包含第一个 result testItem 的表格行区域
         const firstItem = results[0]?.testItem
-        if (!firstItem) return
+        if (!firstItem) { console.log('[merge] no firstItem, skip'); return }
 
         const itemIdx = docXml.indexOf(`>${firstItem}<`)
-        if (itemIdx < 0) return
+        console.log('[merge] firstItem:', firstItem, 'found at:', itemIdx)
+        if (itemIdx < 0) { console.log('[merge] testItem not found in XML'); return }
 
         // 往前找表格开始 <w:tbl
         const tblStart = docXml.lastIndexOf('<w:tbl', itemIdx)
         const tblEnd = docXml.indexOf('</w:tbl>', itemIdx) + 8
+        console.log('[merge] tblStart:', tblStart, 'tblEnd:', tblEnd)
         if (tblStart < 0 || tblEnd < 8) return
 
         let tableXml = docXml.substring(tblStart, tblEnd)
@@ -140,8 +142,9 @@ function postProcessResultsMerge(zip: any, results: Array<{ seq: string;[k: stri
             allRows.push({ match: m[0], index: m.index })
         }
 
+        console.log('[merge] total rows in table:', allRows.length)
         // 表头行是第一行，数据行从第二行开始
-        if (allRows.length < 2) return
+        if (allRows.length < 2) { console.log('[merge] too few rows'); return }
 
         // 从 results 数组获取 seq 分组信息
         let prevSeq = ''
@@ -152,7 +155,8 @@ function postProcessResultsMerge(zip: any, results: Array<{ seq: string;[k: stri
             let rowXml = dataRows[i].match
 
             if (currentSeq && currentSeq === prevSeq) {
-                // 续行：添加 vMerge（无 val，表示继续合并）+ 清空序号文本
+                // 续行：添加 vMerge（无 val，表示继续合并）
+                console.log('[merge] row', i, 'continue merge seq:', currentSeq)
                 rowXml = addVMergeToFirstCell(rowXml, false)
             } else if (currentSeq && i > 0) {
                 // 新组起始行：添加 vMerge restart
@@ -188,21 +192,33 @@ function addVMergeToFirstCell(rowXml: string, isRestart: boolean): string {
 
     if (tcPos < 0) return rowXml
 
+    // 先移除第一个 tc 内已有的 vMerge（模板行可能自带）
+    const nextTcEnd = rowXml.indexOf('</w:tc>', tcPos)
+    const firstTcContent = rowXml.substring(tcPos, nextTcEnd)
+    const cleanedTc = firstTcContent
+        .replace(/<w:vMerge[^/]*\/>/g, '')  // <w:vMerge/> 或 <w:vMerge w:val="restart"/>
+        .replace(/<w:vMerge[^>]*>[^<]*<\/w:vMerge>/g, '') // <w:vMerge>...</w:vMerge>
+
+    // 重建行 XML（移除旧 vMerge）
+    let result = rowXml.substring(0, tcPos) + cleanedTc + rowXml.substring(nextTcEnd)
+
+    // 添加新的 vMerge
     const vMerge = isRestart
         ? '<w:vMerge w:val="restart"/>'
         : '<w:vMerge/>'
 
-    // 检查是否已有 <w:tcPr>
-    const tcPrStart = rowXml.indexOf('<w:tcPr>', tcPos)
-    const nextTcEnd = rowXml.indexOf('</w:tc>', tcPos)
+    // 找 tcPr 位置插入
+    const newTcPos = result.indexOf('<w:tc', tcPos)
+    const tcPrStart = result.indexOf('<w:tcPr>', newTcPos)
+    const newTcEnd = result.indexOf('</w:tc>', newTcPos)
 
-    if (tcPrStart >= 0 && tcPrStart < nextTcEnd) {
-        // 已有 tcPr，在其内部添加 vMerge
-        return rowXml.substring(0, tcPrStart + 8) + vMerge + rowXml.substring(tcPrStart + 8)
+    if (tcPrStart >= 0 && tcPrStart < newTcEnd) {
+        // 已有 tcPr，在其开头插入 vMerge
+        return result.substring(0, tcPrStart + 8) + vMerge + result.substring(tcPrStart + 8)
     } else {
         // 无 tcPr，在 <w:tc> 后添加
-        const tcEndTag = rowXml.indexOf('>', tcPos) + 1
-        return rowXml.substring(0, tcEndTag) + `<w:tcPr>${vMerge}</w:tcPr>` + rowXml.substring(tcEndTag)
+        const tcEndTag = result.indexOf('>', newTcPos) + 1
+        return result.substring(0, tcEndTag) + `<w:tcPr>${vMerge}</w:tcPr>` + result.substring(tcEndTag)
     }
 }
 
