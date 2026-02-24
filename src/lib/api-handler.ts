@@ -123,9 +123,9 @@ export function withErrorHandler<T>(
       const duration = Date.now() - startTime
       logger.apiResponse(method, path, 200, duration)
 
-      // 如果处理器返回的已经是 NextResponse，直接返回
-      if (result instanceof NextResponse) {
-        return result
+      // 如果处理器返回的已经是 Response/NextResponse，直接返回
+      if (result instanceof Response) {
+        return result as unknown as NextResponse
       }
 
       // 否则包装成标准响应
