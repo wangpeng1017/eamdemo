@@ -361,9 +361,7 @@ export default function ClientReportGeneratePage() {
                         <Button size="small" icon={<DownloadOutlined />} onClick={() => handleExportPdf(record)}>
                             PDF
                         </Button>
-                        <Button size="small" icon={<PrinterOutlined />} onClick={() => handlePrint(record)}>
-                            打印
-                        </Button>
+
                         <Button size="small" icon={<EyeOutlined />} onClick={() => handleView(record)} />
                         {record.status === 'draft' && canModify(record, permCtx) && (
                             <Button size="small" icon={<EditOutlined />} onClick={() => handleEdit(record)} />
