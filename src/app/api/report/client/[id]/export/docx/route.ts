@@ -22,6 +22,8 @@ export const GET = withErrorHandler(async (
         select: {
           name: true,
           fileUrl: true,
+          testStandards: true,
+          xrfScreeningConfig: true,
         }
       },
       // 获取关联的任务报告及其任务数据
@@ -63,7 +65,7 @@ export const GET = withErrorHandler(async (
   const sample = task?.sample || null
 
   // 使用 docx-renderer 准备数据
-  const data = prepareClientReportData(task, entrustment, sample, report)
+  const data = prepareClientReportData(task, entrustment, sample, report, undefined, report.template)
 
   // 用 ClientReport 自身字段覆盖/补充（比 task 级别更准确）
   data.reportNo = report.reportNo

@@ -81,7 +81,7 @@ export default function TemplateEditor({ initialValue, onSave, onCancel }: Templ
   }, [localSampleType])
 
   useEffect(() => {
-    form.setFieldsValues({
+    form.setFieldsValue({
       name: schema.title,
       sampleType: schema.header?.sampleType,
       defaultRows: schema.defaultRows

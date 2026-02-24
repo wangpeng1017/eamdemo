@@ -34,7 +34,8 @@ export async function POST(request: NextRequest) {
     const { name, code, category, fileUrl, remark, coverConfig, backCoverConfig,
         coverTitle, coverSubtitle, coverLogo, coverShowDate,
         backCoverStatement, backCoverCustomText,
-        stampImageUrl, stampPosition } = body
+        stampImageUrl, stampPosition,
+        testStandards, xrfScreeningConfig } = body
 
     if (!name || !code || !category) {
         return NextResponse.json({ error: '缺少必填字段' }, { status: 400 })
@@ -66,6 +67,8 @@ export async function POST(request: NextRequest) {
             backCoverCustomText,
             stampImageUrl,
             stampPosition,
+            testStandards: testStandards ? (typeof testStandards === 'string' ? testStandards : JSON.stringify(testStandards)) : null,
+            xrfScreeningConfig: xrfScreeningConfig ? (typeof xrfScreeningConfig === 'string' ? xrfScreeningConfig : JSON.stringify(xrfScreeningConfig)) : null,
         }
     })
 

@@ -10,9 +10,23 @@ export const GET = withAuth(async (request: NextRequest, user) => {
   const page = parseInt(searchParams.get('page') || '1')
   const pageSize = parseInt(searchParams.get('pageSize') || '10')
 
-  // 注入数据权限过滤
+  // 注入数据权限过滤（委托链路）
   const permissionFilter = await getEntrustmentBasedFilter(user.id)
-  const where = permissionFilter as Record<string, unknown>
+
+  // 组合过滤：委托链路 OR 任务分配给当前用户的报告
+  let where: Record<string, unknown>
+  if (Object.keys(permissionFilter).length === 0) {
+    // 全部权限，不过滤
+    where = {}
+  } else {
+    // 委托链路 + 任务链路（覆盖 entrustmentId 为 null 的场景）
+    where = {
+      OR: [
+        permissionFilter,
+        { task: { assignedToId: user.id } },
+      ]
+    }
+  }
 
   const [list, total] = await Promise.all([
     prisma.testReport.findMany({

@@ -1238,6 +1238,10 @@ model ReportTemplate {
   coverConfig     String? @db.Text // JSON 封面配置（旧）
   backCoverConfig String? @db.Text // JSON 封底配置（旧）
 
+  // 检测配置
+  testStandards       String? @db.Text  // JSON: 检测标准列表 [{no, name}]
+  xrfScreeningConfig  String? @db.Text  // JSON: XRF筛选表数据 [{element, polymer, metal, other}]
+
   clientReports   ClientReport[]
 
   @@map("biz_report_template")

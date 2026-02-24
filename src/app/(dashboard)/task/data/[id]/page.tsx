@@ -3,8 +3,8 @@
 import { useState, useEffect } from "react"
 import { showSuccess, showError } from '@/lib/confirm'
 import { useParams, useRouter } from "next/navigation"
-import { Card, Button, Form, Input, Space, Modal, Descriptions, Tag, Spin } from "antd"
-import { SaveOutlined, CheckOutlined, ArrowLeftOutlined } from "@ant-design/icons"
+import { Card, Button, Form, Input, Space, Modal, Descriptions, Tag, Spin, Upload, Image } from "antd"
+import { SaveOutlined, CheckOutlined, ArrowLeftOutlined, PlusOutlined, DeleteOutlined } from "@ant-design/icons"
 import dynamic from 'next/dynamic'
 
 // ⚠️ 关键修复：禁用 SSR，避免 Fortune-sheet 在服务端执行 DOM 操作
@@ -48,6 +48,7 @@ interface TestMetadata {
   temperature?: string
   humidity?: string
   reviewer?: string
+  samplePhotos?: string[]
 }
 
 export default function DataEntryPage() {
@@ -62,6 +63,7 @@ export default function DataEntryPage() {
   const [sheetData, setSheetData] = useState<any>(null)
   const [metadata, setMetadata] = useState<TestMetadata>({})
   const [submitModalOpen, setSubmitModalOpen] = useState(false)
+  const [photoUploading, setPhotoUploading] = useState(false)
 
   // 判断是否只读模式（只有已完成状态才只读）
   const isReadOnly = task?.status === 'completed'
@@ -315,6 +317,69 @@ export default function DataEntryPage() {
             />
           </div>
         </div>
+      </Card>
+
+      {/* 样品照片 */}
+      <Card className="mb-4" title="样品照片" size="small">
+        <div className="flex flex-wrap gap-4">
+          {(metadata.samplePhotos || []).map((url, i) => (
+            <div key={i} className="relative group">
+              <Image
+                src={url}
+                alt={`样品照片 ${i + 1}`}
+                width={120}
+                height={120}
+                style={{ objectFit: 'cover', borderRadius: 4, border: '1px solid #d9d9d9' }}
+              />
+              {!isReadOnly && (
+                <Button
+                  size="small"
+                  danger
+                  icon={<DeleteOutlined />}
+                  className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity"
+                  onClick={() => {
+                    const photos = [...(metadata.samplePhotos || [])]
+                    photos.splice(i, 1)
+                    setMetadata({ ...metadata, samplePhotos: photos })
+                  }}
+                />
+              )}
+            </div>
+          ))}
+          {!isReadOnly && (metadata.samplePhotos || []).length < 5 && (
+            <Upload
+              name="file"
+              action="/api/upload"
+              accept=".png,.jpg,.jpeg"
+              showUploadList={false}
+              onChange={(info) => {
+                if (info.file.status === 'uploading') setPhotoUploading(true)
+                if (info.file.status === 'done') {
+                  setPhotoUploading(false)
+                  const url = info.file.response?.url || info.file.response?.data?.url
+                  if (url) {
+                    const photos = [...(metadata.samplePhotos || []), url]
+                    setMetadata({ ...metadata, samplePhotos: photos })
+                    showSuccess('照片上传成功')
+                  }
+                } else if (info.file.status === 'error') {
+                  setPhotoUploading(false)
+                  showError('照片上传失败')
+                }
+              }}
+            >
+              <div style={{
+                width: 120, height: 120, border: '1px dashed #d9d9d9', borderRadius: 4,
+                display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+                cursor: 'pointer', color: '#999'
+              }}>
+                {photoUploading ? <Spin size="small" /> : <PlusOutlined />}
+                <span style={{ fontSize: 12, marginTop: 4 }}>上传照片</span>
+              </div>
+            </Upload>
+          )}
+        </div>
+        <p style={{ color: '#999', fontSize: 12, marginTop: 8 }}>最多上传 5 张，支持 PNG/JPG 格式。照片将用于客户报告中的「样品照片」区域。</p>
       </Card>
 
       {/* 数据录入表格 */}

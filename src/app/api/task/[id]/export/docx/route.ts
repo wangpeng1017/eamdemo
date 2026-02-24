@@ -88,7 +88,8 @@ export async function GET(
             entrustment,
             task.sample,
             clientReport,
-            (task as any).metadata
+            (task as any).metadata,
+            templateConfig  // 传入模板配置
         )
         templateFile = templateConfig?.clientReportTemplateUrl || 'qct-client-report.docx'
         filenamePrefix = `检测报告_${task.taskNo || id}`

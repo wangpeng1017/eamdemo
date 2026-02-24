@@ -10,11 +10,21 @@ import Docxtemplater from 'docxtemplater'
 import PizZip from 'pizzip'
 import fs from 'fs'
 import path from 'path'
+import https from 'https'
+import http from 'http'
 import {
     extractStructuredData,
     extractForOriginalRecord,
     extractForClientReport,
 } from '@/lib/sheet-extractor'
+
+// 图片模块（用于在 docx 模板中插入图片）
+let ImageModule: any = null
+try {
+    ImageModule = require('docxtemplater-image-module-free')
+} catch (e) {
+    console.warn('[docx-renderer] docxtemplater-image-module-free 未安装，图片功能不可用')
+}
 
 /**
  * 渲染 docx 模板
@@ -35,12 +45,38 @@ export function renderDocx(templatePath: string, data: Record<string, any>): Buf
     // 创建 PizZip 实例
     const zip = new PizZip(templateContent)
 
+    // 构建模块列表
+    const modules: any[] = []
+
+    // 如果有图片模块且数据中有图片，启用图片支持
+    if (ImageModule) {
+        const imageModule = new ImageModule({
+            centered: false,
+            getImage: (tagValue: string) => {
+                // tagValue 是图片的路径或 base64
+                if (tagValue.startsWith('data:')) {
+                    // base64 图片
+                    const base64 = tagValue.split(',')[1]
+                    return Buffer.from(base64, 'base64')
+                }
+                // 文件路径
+                if (fs.existsSync(tagValue)) {
+                    return fs.readFileSync(tagValue)
+                }
+                // URL（返回空 buffer）
+                return Buffer.alloc(0)
+            },
+            getSize: () => [400, 300], // 默认 400x300
+        })
+        modules.push(imageModule)
+    }
+
     // 创建 Docxtemplater 实例
     const doc = new Docxtemplater(zip, {
         paragraphLoop: true,
         linebreaks: true,
-        // 遇到未定义的标签不报错，直接留空
         nullGetter: () => '',
+        modules,
     })
 
     // 填充数据
@@ -133,12 +169,41 @@ export function prepareClientReportData(
     entrustment: any,
     sample: any,
     clientReport?: any,
-    metadata?: any
+    metadata?: any,
+    reportTemplate?: any,
 ): Record<string, any> {
     const meta = parseMetadata(metadata || task?.metadata)
 
     // 从 sheetData 或 testResults 提取结构化结果
     const results = extractClientReportResults(task, sample)
+
+    // 检测标准列表（从模板配置获取）
+    let testStandards: string[] = []
+    if (reportTemplate?.testStandards) {
+        try {
+            const parsed = typeof reportTemplate.testStandards === 'string'
+                ? reportTemplate.testStandards : JSON.stringify(reportTemplate.testStandards)
+            // 按行分割（每行一条标准）
+            testStandards = parsed.split('\n').filter((s: string) => s.trim())
+        } catch (e) {
+            testStandards = []
+        }
+    }
+
+    // XRF 筛选表（从模板配置获取）
+    let xrfTable: any[] = []
+    if (reportTemplate?.xrfScreeningConfig) {
+        try {
+            xrfTable = typeof reportTemplate.xrfScreeningConfig === 'string'
+                ? JSON.parse(reportTemplate.xrfScreeningConfig)
+                : reportTemplate.xrfScreeningConfig
+        } catch (e) {
+            xrfTable = []
+        }
+    }
+
+    // 样品照片（从 metadata 获取第一张）
+    const samplePhotoUrl = meta.samplePhotos?.[0] || ''
 
     return {
         // 封面信息
@@ -165,13 +230,26 @@ export function prepareClientReportData(
         temperature: meta.temperature || '',
         humidity: meta.humidity || '',
 
+        // 检测依据（动态标准列表）
+        standards: testStandards.map((s: string) => ({ name: s })),
+        standardsText: testStandards.join('\n'),
+
         // 表1: 检测结果行循环
         results,
+
+        // 表2: XRF 筛选表循环
+        xrfTable,
+
+        // 样品照片（如果有图片模块支持）
+        samplePhoto: samplePhotoUrl,
 
         // 人员签名
         preparer: task?.assignedTo?.name || '',
         reviewer: meta.reviewer || '',
         approver: '',
+
+        // 报告备注
+        reportRemark: '',
     }
 }
 

@@ -70,6 +70,8 @@ export default function TemplateEditPage() {
                     backCoverCustomText: d.backCoverCustomText || '',
                     stampImageUrl: d.stampImageUrl || '',
                     stampPosition: d.stampPosition || 'bottom-right',
+                    testStandards: d.testStandards || '',
+                    xrfScreeningConfig: d.xrfScreeningConfig || '',
                 })
                 if (d.stampImageUrl) setStampPreview(d.stampImageUrl)
                 if (d.coverLogo) setLogoPreview(d.coverLogo)
@@ -275,6 +277,42 @@ export default function TemplateEditPage() {
                             提示：印章图片建议使用透明背景的 PNG 格式，推荐尺寸 200×200 像素。生成报告 PDF 时会自动叠加到指定位置。
                         </p>
                     </div>
+                </div>
+            )
+        },
+        {
+            key: 'testConfig',
+            label: '检测配置',
+            children: (
+                <div className="mt-2">
+                    {/* 检测标准 */}
+                    <h4 style={{ marginBottom: 8 }}>检测依据（标准列表）</h4>
+                    <p style={{ color: '#999', fontSize: 12, marginBottom: 12 }}>
+                        生成报告时将按此列表填充「检测依据」。每行一条标准，格式：标准号 + 标准名称。
+                    </p>
+                    <Form.Item name="testStandards">
+                        <Input.TextArea
+                            rows={8}
+                            placeholder={`QC/T 941-2013《汽车材料中汞的检测方法》\nQC/T 942-2021《汽车材料中六价铬的检测方法》\nQC/T 943-2013《汽车材料中铅、镉的检测方法》\nQC/T 944-2013《汽车材料中多溴联苯(PBBs)和多溴二苯醚(PBDEs)的检测方法》\nGWT A A82-01:2025-12《汽车禁/限用物质要求-EN》`}
+                        />
+                    </Form.Item>
+
+                    <Divider />
+
+                    {/* XRF 筛选表 */}
+                    <h4 style={{ marginBottom: 8 }}>表2：XRF 初筛判定范围</h4>
+                    <p style={{ color: '#999', fontSize: 12, marginBottom: 12 }}>
+                        JSON 格式配置。生成报告时将按此数据填充「表2 XRF初筛判定范围说明」。
+                    </p>
+                    <Form.Item name="xrfScreeningConfig">
+                        <Input.TextArea
+                            rows={12}
+                            placeholder='[{"element":"铅/Pb","polymer":"P≤(700-3S)＜X＜(1300+3S)≤F","metal":"P≤(700-3S)＜X＜(1300+3S)≤F","other":"P≤(500-3S)＜X＜(1500+3S)≤F"},...]'
+                        />
+                    </Form.Item>
+                    <p style={{ color: '#999', fontSize: 12 }}>
+                        格式说明：JSON 数组，每个元素包含 element（元素）、polymer（聚合物材料）、metal（金属材料）、other（其他材料）。
+                    </p>
                 </div>
             )
         }

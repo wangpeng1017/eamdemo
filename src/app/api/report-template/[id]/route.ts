@@ -38,7 +38,8 @@ export async function PUT(
     const { name, category, fileUrl, status, remark, coverConfig, backCoverConfig,
         coverTitle, coverSubtitle, coverLogo, coverShowDate,
         backCoverStatement, backCoverCustomText,
-        stampImageUrl, stampPosition } = body
+        stampImageUrl, stampPosition,
+        testStandards, xrfScreeningConfig } = body
 
     const template = await prisma.reportTemplate.update({
         where: { id },
@@ -58,6 +59,8 @@ export async function PUT(
             ...(backCoverCustomText !== undefined && { backCoverCustomText }),
             ...(stampImageUrl !== undefined && { stampImageUrl }),
             ...(stampPosition !== undefined && { stampPosition }),
+            ...(testStandards !== undefined && { testStandards: typeof testStandards === 'string' ? testStandards : JSON.stringify(testStandards) }),
+            ...(xrfScreeningConfig !== undefined && { xrfScreeningConfig: typeof xrfScreeningConfig === 'string' ? xrfScreeningConfig : JSON.stringify(xrfScreeningConfig) }),
         }
     })
 
