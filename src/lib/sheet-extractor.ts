@@ -125,7 +125,7 @@ function extractWithSemantics(
         const row: ExtractedRow = {}
         let hasData = false
         for (const [dataIndex, colIdx] of Object.entries(columnMap)) {
-            const val = getCellText(raw[colIdx])
+            const val = getCellText(raw[colIdx], rawRows)
             if (val) hasData = true
             row[dataIndex] = val
         }
@@ -164,7 +164,7 @@ function extractWithHeaderText(sheet: any): ExtractionResult | null {
         const row: ExtractedRow = {}
         let hasData = false
         for (const [dataIndex, colIdx] of Object.entries(columnMap)) {
-            const val = getCellText(raw[colIdx])
+            const val = getCellText(raw[colIdx], rawRows)
             if (val) hasData = true
             row[dataIndex] = val
         }
@@ -193,7 +193,7 @@ function extractWithPositionFallback(sheet: any): ExtractionResult {
         const row: ExtractedRow = {}
         let hasData = false
         for (const [colStr, dataIndex] of Object.entries(columnMap)) {
-            const val = getCellText(raw[Number(colStr)])
+            const val = getCellText(raw[Number(colStr)], rawRows)
             if (val) hasData = true
             row[dataIndex] = val
         }
@@ -240,13 +240,21 @@ function getRawRows(sheet: any): { rows: any[][]; headerRow: string[] } {
     return { rows: [], headerRow: [] }
 }
 
-/** 从单元格值中提取纯文本 */
-function getCellText(cell: any): string {
+/** 从单元格值中提取纯文本（支持合并单元格引用） */
+function getCellText(cell: any, allRows?: any[][]): string {
     if (cell === null || cell === undefined) return ''
     if (typeof cell === 'string') return cell
     if (typeof cell === 'number') return String(cell)
     // Fortune-sheet 单元格对象格式
     if (typeof cell === 'object') {
+        // 合并单元格指针 {mc: {r: 行, c: 列}} — 引用主单元格的值
+        if (cell.mc && allRows) {
+            const mainCell = allRows[cell.mc.r]?.[cell.mc.c]
+            if (mainCell && mainCell !== cell) {
+                return getCellText(mainCell) // 不再传 allRows 防止循环
+            }
+            return ''
+        }
         // {v: "文本"} 或 {v: {v: "文本"}}
         if (cell.v !== undefined) {
             if (typeof cell.v === 'object' && cell.v !== null) {

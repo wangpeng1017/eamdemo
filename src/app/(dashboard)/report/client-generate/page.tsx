@@ -366,7 +366,7 @@ export default function ClientReportGeneratePage() {
                         {record.status === 'draft' && canModify(record, permCtx) && (
                             <Button size="small" icon={<EditOutlined />} onClick={() => handleEdit(record)} />
                         )}
-                        {record.status === 'draft' && canModify(record, permCtx) && (
+                        {record.status === 'draft' && (
                             <Popconfirm title="确认删除？" onConfirm={() => handleDelete(record.id)} okText="确定" cancelText="取消">
                                 <Button size="small" danger icon={<DeleteOutlined />} />
                             </Popconfirm>
