@@ -20,26 +20,37 @@ export async function POST(request: NextRequest) {
     const {
         entrustmentId,
         taskIds,
-        templateId, // 需求2：模板ID
-        coverData,  // 需求2：封面数据
-        backCoverData, // 需求2：封底数据
+        templateId,
+        coverData,
+        backCoverData,
         clientName,
         projectName,
         sampleName,
         overallConclusion
     } = body
 
-    if (!entrustmentId || !Array.isArray(taskIds) || taskIds.length === 0 || !clientName || !sampleName) {
-        return NextResponse.json({ error: '缺少必填字段（entrustmentId, taskIds, clientName, sampleName）' }, { status: 400 })
+    if (!entrustmentId || !Array.isArray(taskIds) || taskIds.length === 0) {
+        return NextResponse.json({ error: '缺少必填字段（entrustmentId, taskIds）' }, { status: 400 })
     }
 
-    // 获取相关任务和任务报告
-    // 需求2：需要建立 ClientReport -> TestReport 的关联
+    // taskIds 可能是报告 ID 或任务 ID，先尝试按报告 ID 查询
+    let taskReports = await prisma.testReport.findMany({
+        where: { id: { in: taskIds } },
+        select: { id: true, reportNo: true, taskId: true, sampleName: true }
+    })
+
+    // 如果按报告 ID 没找到，尝试按任务 ID 查询
+    if (taskReports.length === 0) {
+        taskReports = await prisma.testReport.findMany({
+            where: { taskId: { in: taskIds } },
+            select: { id: true, reportNo: true, taskId: true, sampleName: true }
+        })
+    }
+
+    // 获取关联的任务
+    const actualTaskIds = taskReports.map(r => r.taskId).filter(Boolean) as string[]
     const tasks = await prisma.testTask.findMany({
-        where: {
-            id: { in: taskIds },
-            status: 'completed'
-        },
+        where: { id: { in: actualTaskIds } },
         include: {
             testData: true,
             entrustmentProject: {
@@ -48,56 +59,46 @@ export async function POST(request: NextRequest) {
         }
     })
 
-    if (tasks.length === 0) {
-        return NextResponse.json({ error: '未找到已完成的任务' }, { status: 400 })
+    if (taskReports.length === 0) {
+        return NextResponse.json({ error: '未找到对应的任务报告' }, { status: 400 })
     }
-
-    // 获取任务报告 (用于关联和 JSON 存储兼容)
-    const taskReports = await prisma.testReport.findMany({
-        where: {
-            taskId: { in: taskIds }
-        },
-        select: {
-            id: true, // 获取 ID 用于 connect
-            reportNo: true,
-            taskId: true
-        }
-    })
 
     // 整合检测项目和检测依据
     const testItems: string[] = []
     const testStandards: string[] = []
 
     tasks.forEach(task => {
-        // 检测项目从 testData 提取
         task.testData?.forEach((data: any) => {
             if (data.parameter && !testItems.includes(data.parameter)) {
                 testItems.push(data.parameter)
             }
         })
-        // 检测标准/依据从 EntrustmentProject.method 获取（真正的标准名称）
         const method = (task as any).entrustmentProject?.method
         if (method && !testStandards.includes(method)) {
             testStandards.push(method)
         }
     })
 
-    // 获取委托单和样品信息，自动带出字段
+    // 获取委托单和样品信息
     const entrustment = await prisma.entrustment.findUnique({
         where: { id: entrustmentId },
         include: { client: true, samples: true }
     })
     const sample = entrustment?.samples?.[0]
 
+    // 自动获取：clientName 从委托单，sampleName 从报告汇总
+    const finalClientName = clientName || (entrustment?.client as any)?.name || ''
+    const finalSampleName = sampleName || taskReports.map(r => r.sampleName).filter(Boolean).join('、') || ''
+
     // 创建客户报告
     const report = await prisma.clientReport.create({
         data: {
             reportNo: await generateClientReportNo(),
             entrustmentId,
-            projectName,
-            clientName,
+            projectName: projectName || '',
+            clientName: finalClientName,
             clientAddress: (entrustment?.client as any)?.address || entrustment?.clientAddress || null,
-            sampleName,
+            sampleName: finalSampleName,
             sampleNo: sample?.sampleNo || null,
             specification: sample?.specification || null,
             sampleQuantity: sample?.quantity || null,
@@ -105,7 +106,7 @@ export async function POST(request: NextRequest) {
             taskReportNos: JSON.stringify(taskReports.map(r => r.reportNo)),
             testItems: JSON.stringify(testItems),
             testStandards: JSON.stringify(testStandards),
-            overallConclusion,
+            overallConclusion: overallConclusion || null,
             preparer: session.user.name || session.user.id || '系统',
             status: 'draft',
 
