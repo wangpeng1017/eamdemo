@@ -99,7 +99,7 @@ echo ""
 echo "[6/6] 重启服务..."
 sshpass -p "$SERVER_PASS" ssh -o StrictHostKeyChecking=no -o ServerAliveInterval=60 "$SERVER" "cd $REMOTE_DIR && \
  pm2 delete lims-next 2>/dev/null || true && \
- pm2 start ecosystem.config.js && \
+ PORT=3001 pm2 start server.js --name lims-next --update-env && \
  pm2 save"
 
 # 清理本地临时文件
