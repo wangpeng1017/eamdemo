@@ -51,9 +51,13 @@ export const GET = withAuth(async (request: NextRequest, user) => {
     if (endDate && endDate.trim()) (where.createdAt as Record<string, Date>).lte = new Date(endDate)
   }
 
-  // 注入数据权限过滤：创建人 OR 跟单人均可见
-  const permissionFilter = await getDataFilterWithParticipants(['followerId'])
-  Object.assign(where, permissionFilter)
+  const skipPermission = searchParams.get('skipPermission')
+
+  // 注入数据权限过滤（skipPermission=1 时跳过，用于客户报告生成等场景）
+  if (skipPermission !== '1') {
+    const permissionFilter = await getDataFilterWithParticipants(['followerId'])
+    Object.assign(where, permissionFilter)
+  }
 
   const [list, total] = await Promise.all([
     prisma.entrustment.findMany({

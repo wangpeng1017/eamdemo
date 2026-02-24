@@ -115,7 +115,7 @@ export default function ClientReportGeneratePage() {
 
     const fetchEntrustments = async () => {
         try {
-            const res = await fetch('/api/entrustment?pageSize=100')
+            const res = await fetch('/api/entrustment?pageSize=100&skipPermission=1')
             const json = await res.json()
             const list = json.data?.list || json.list || []
             // 只要委托单有任务就显示（不再限制 completed 状态）
