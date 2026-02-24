@@ -296,7 +296,7 @@ export default function ClientReportGeneratePage() {
     // 删除
     const handleDelete = async (id: string) => {
         try {
-            const res = await fetch(`/api/report/client/${id}`, { method: 'DELETE' })
+            const res = await fetch(`/api/client-report/${id}`, { method: 'DELETE' })
             const json = await res.json()
             if (json.success) {
                 showSuccess('删除成功')
