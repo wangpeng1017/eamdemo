@@ -235,11 +235,20 @@ export default function ClientReportGeneratePage() {
                 return
             }
             const blob = await res.blob()
+            // 从 Content-Disposition 提取文件名，备选用报告编号
+            let filename = `${record.reportNo}.docx`
+            const cd = res.headers.get('Content-Disposition')
+            if (cd) {
+                const match = cd.match(/filename\*?=(?:UTF-8'')?["']?([^"';\s]+)/)
+                if (match) filename = decodeURIComponent(match[1])
+            }
             const url = URL.createObjectURL(blob)
             const a = document.createElement('a')
             a.href = url
-            a.download = `${record.reportNo}.docx`
+            a.download = filename
+            document.body.appendChild(a)
             a.click()
+            document.body.removeChild(a)
             URL.revokeObjectURL(url)
         } catch {
             showError('导出 Word 失败')
