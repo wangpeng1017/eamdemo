@@ -3,7 +3,7 @@
 import { canModify, canOperate, type RecordPermissionContext } from '@/lib/record-permission'
 
 import React, { useState, useEffect } from 'react'
-import { showSuccess, showError, showWarning } from '@/lib/confirm'
+import { showSuccess, showError } from '@/lib/confirm'
 import { Table, Button, Space, Tag, Modal, Select, Card, Statistic, Row, Col, Drawer, Descriptions, Tabs, Timeline, Form, Input, Popconfirm } from 'antd'
 import { PlusOutlined, EyeOutlined, EditOutlined, PrinterOutlined, SendOutlined, FileTextOutlined, DeleteOutlined } from '@ant-design/icons'
 import type { ColumnsType } from 'antd/es/table'
@@ -87,6 +87,9 @@ export default function TestReportPage() {
   // 提交审批状态
   const [submitting, setSubmitting] = useState(false)
 
+  // 错误弹窗状态
+  const [errorMsg, setErrorMsg] = useState<string | null>(null)
+
   // 打印相关状态
   const [printData, setPrintData] = useState<ReportPrintData | null>(null)
   const [showPrint, setShowPrint] = useState(false)
@@ -135,7 +138,7 @@ export default function TestReportPage() {
 
   const handleGenerateSubmit = async () => {
     if (!selectedTaskId) {
-      showWarning('操作提示', '请先选择一个任务')
+      setErrorMsg('请先选择一个任务')
       return
     }
 
@@ -155,10 +158,10 @@ export default function TestReportPage() {
         setSelectedTaskId(null)
         fetchData()
       } else {
-        showWarning('操作提示', json.error || '报告生成失败')
+        setErrorMsg(json.error || '报告生成失败')
       }
     } catch (error) {
-      showWarning('操作提示', '报告生成失败，请稍后重试')
+      setErrorMsg('报告生成失败，请稍后重试')
     } finally {
       setGenerating(false)
     }
@@ -529,6 +532,19 @@ export default function TestReportPage() {
             <p className="mt-2 text-gray-500 text-sm">暂无已完成的任务</p>
           )}
         </div>
+      </Modal>
+
+      {/* 错误提示弹窗 */}
+      <Modal
+        title="操作提示"
+        open={!!errorMsg}
+        onOk={() => setErrorMsg(null)}
+        onCancel={() => setErrorMsg(null)}
+        okText="知道了"
+        cancelButtonProps={{ style: { display: 'none' } }}
+        centered
+      >
+        <p>{errorMsg}</p>
       </Modal>
 
       {/* 打印区域（隐藏，仅打印时可见） */}
