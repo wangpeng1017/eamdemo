@@ -62,9 +62,14 @@ export function renderDocx(templatePath: string, data: Record<string, any>): Buf
                     const base64 = tagValue.split(',')[1]
                     return Buffer.from(base64, 'base64')
                 }
+                // /uploads/ 开头的路径拼 public 前缀
+                let imgPath = tagValue
+                if (tagValue.startsWith('/uploads/')) {
+                    imgPath = path.join(process.cwd(), 'public', tagValue)
+                }
                 // 文件路径
-                if (fs.existsSync(tagValue)) {
-                    return fs.readFileSync(tagValue)
+                if (fs.existsSync(imgPath)) {
+                    return fs.readFileSync(imgPath)
                 }
                 // URL（返回空 buffer）
                 return Buffer.alloc(0)
@@ -276,16 +281,23 @@ function extractClientReportResults(task: any, sample: any): Array<{
         if (testResults) {
             const parsed = typeof testResults === 'string' ? JSON.parse(testResults) : testResults
             if (Array.isArray(parsed) && parsed.length > 0) {
-                return parsed.map((r: any, i: number) => ({
-                    seq: String(i + 1),
-                    sampleNo: task?.sample?.sampleNo || sample?.sampleNo || '',
-                    sampleName: task?.sampleName || sample?.name || '',
-                    testItem: r.parameter || r.testItem || '',
-                    xrfResult: r.value || r.xrfResult || r.avgResult || '',
-                    chemResult: r.chemResult || '——',
-                    standardReq: r.standard || r.standardReq || '',
-                    conclusion: r.result || r.conclusion || '',
-                }))
+                // 检测数据是否损坏（包含 [object Object]）
+                const hasCorruptData = parsed.some((r: any) =>
+                    r.parameter === '[object Object]' || r.remark === '[object Object]'
+                )
+                if (!hasCorruptData) {
+                    return parsed.map((r: any, i: number) => ({
+                        seq: String(i + 1),
+                        sampleNo: task?.sample?.sampleNo || sample?.sampleNo || '',
+                        sampleName: task?.sampleName || sample?.name || '',
+                        testItem: r.parameter || r.testItem || '',
+                        xrfResult: r.value || r.xrfResult || r.avgResult || '',
+                        chemResult: r.chemResult || '——',
+                        standardReq: r.standard || r.standardReq || '',
+                        conclusion: r.result || r.conclusion || '',
+                    }))
+                }
+                console.warn('[docx-renderer] testResults 数据损坏，回退到 sheetData 提取')
             }
         }
     } catch (e) {
