@@ -35,7 +35,10 @@ try {
 export function renderDocx(templatePath: string, data: Record<string, any>): Buffer {
     // 解析模板路径
     let fullPath = templatePath
-    if (!path.isAbsolute(templatePath)) {
+    if (templatePath.startsWith('/uploads/')) {
+        // 数据库存的 fileUrl 如 /uploads/templates/xxx.docx，实际文件在 public/uploads/...
+        fullPath = path.join(process.cwd(), 'public', templatePath)
+    } else if (!path.isAbsolute(templatePath)) {
         fullPath = path.join(process.cwd(), 'public', 'templates', templatePath)
     }
 
