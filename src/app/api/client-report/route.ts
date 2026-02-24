@@ -10,9 +10,8 @@ export const GET = withAuth(async (request: NextRequest, user) => {
     const pageSize = parseInt(searchParams.get('pageSize') || '10')
     const status = searchParams.get('status')
 
-    // 注入数据权限过滤
-    const permissionFilter = await getEntrustmentBasedFilter(user.id)
-    const where: any = { ...permissionFilter }
+    // 客户报告列表对所有用户可见
+    const where: any = {}
     if (status) where.status = status
 
     const [list, total] = await Promise.all([
