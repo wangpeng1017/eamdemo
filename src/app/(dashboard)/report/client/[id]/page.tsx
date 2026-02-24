@@ -5,21 +5,16 @@ import { useState, useEffect } from 'react'
 import { showError } from '@/lib/confirm'
 import { Descriptions, Table, Tag } from 'antd'
 import { ArrowLeftOutlined } from '@ant-design/icons'
-import { useParams, useRouter } from 'next/navigation'
+import { useParams } from 'next/navigation'
 import dayjs from 'dayjs'
+import { parseSheetData, type ParsedSheetData } from '@/lib/sheet-parser'
 
 interface TaskReport {
     reportNo: string
     task: {
         taskNo: string
         sampleName: string | null
-        testData: {
-            parameter: string
-            value: string | null
-            standard: string | null
-            result: string | null
-            remark: string | null
-        }[]
+        sheetData: string | null
     }
 }
 
@@ -33,7 +28,6 @@ interface ClientReport {
     testItems: string | null
     testStandards: string | null
     overallConclusion: string | null
-    backCoverData: string | null
     preparer: string | null
     reviewer: string | null
     approver: string | null
@@ -56,8 +50,7 @@ const statusMap: Record<string, { text: string; color: string }> = {
 
 export default function ClientReportDetailPage() {
     const params = useParams()
-    const router = useRouter()
-  const goBack = useGoBack('/report/client-generate')
+    const goBack = useGoBack('/report/client-generate')
     const reportId = params.id as string
 
     const [report, setReport] = useState<ClientReport | null>(null)
@@ -87,27 +80,9 @@ export default function ClientReportDetailPage() {
     if (loading) return <div className="p-6 text-center">加载中...</div>
     if (!report) return <div className="p-6 text-center">报告不存在</div>
 
-    // 解析封底数据
-    let backCoverContent = ''
-    try {
-        if (report.backCoverData) {
-            const data = JSON.parse(report.backCoverData)
-            backCoverContent = data.content || ''
-        }
-    } catch (e) { }
-
-    const columns = [
-        { title: '任务编号', dataIndex: 'taskNo', width: 120 },
-        { title: '检测项目', dataIndex: 'parameter', width: 150 },
-        { title: '技术要求', dataIndex: 'standard', width: 150 },
-        { title: '实测值', dataIndex: 'value', width: 120 },
-        { title: '单项判定', dataIndex: 'result', width: 100 },
-        { title: '备注', dataIndex: 'remark' },
-    ]
-
     return (
         <div className="p-6 max-w-5xl mx-auto">
-            {/* 左上角返回（打印时隐藏） */}
+            {/* 返回按钮 */}
             <div className="mb-4 flex items-center no-print">
                 <a onClick={() => goBack()} style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4, color: '#1677ff' }}>
                     <ArrowLeftOutlined /> 返回列表
@@ -117,11 +92,7 @@ export default function ClientReportDetailPage() {
             {/* 封面页 */}
             <div className="print-page cover-page flex flex-col items-center justify-center text-center p-12 bg-white mb-8 shadow-sm">
                 <div className="mb-16">
-                    {report.template?.fileUrl ? (
-                        <img src={report.template.fileUrl} alt="Logo" className="h-20" />
-                    ) : (
-                        <div className="text-3xl font-bold text-gray-300">LIMS LOGO</div>
-                    )}
+                    <div className="text-3xl font-bold text-gray-300">LIMS LOGO</div>
                 </div>
 
                 <h1 className="text-4xl font-bold mb-20 text-black">检测报告</h1>
@@ -168,19 +139,47 @@ export default function ClientReportDetailPage() {
                     </Descriptions.Item>
                 </Descriptions>
 
-                {report.taskReports?.map((tr, index) => (
-                    <div key={tr.reportNo} className="mb-8">
-                        <div className="font-bold mb-2 bg-gray-100 p-2">任务 #{index + 1}: {tr.task?.taskNo}</div>
-                        <Table
-                            rowKey={(r, i) => `${tr.reportNo}-${i}`}
-                            columns={columns}
-                            dataSource={tr.task.testData || []}
-                            pagination={false}
-                            size="small"
-                            bordered
-                        />
-                    </div>
-                ))}
+                {/* 渲染每个任务报告的检测数据（从 sheetData 正确解析） */}
+                {report.taskReports?.map((tr, index) => {
+                    const parsed: ParsedSheetData = tr.task?.sheetData
+                        ? parseSheetData(tr.task.sheetData)
+                        : { headers: [], rows: [] }
+
+                    const columns = parsed.headers.map((h, i) => ({
+                        title: h,
+                        dataIndex: `col_${i}`,
+                        key: `col_${i}`,
+                        ellipsis: true,
+                    }))
+
+                    const dataSource = parsed.rows.map((row, ri) => {
+                        const record: Record<string, string> = { key: `${tr.reportNo}-${ri}` }
+                        row.forEach((cell, ci) => {
+                            record[`col_${ci}`] = cell.text
+                        })
+                        return record
+                    })
+
+                    return (
+                        <div key={tr.reportNo} className="mb-8">
+                            <div className="font-bold mb-2 bg-gray-100 p-2">
+                                任务 #{index + 1}: {tr.task?.taskNo} {tr.task?.sampleName ? `- ${tr.task.sampleName}` : ''}
+                            </div>
+                            {columns.length > 0 ? (
+                                <Table
+                                    columns={columns}
+                                    dataSource={dataSource}
+                                    pagination={false}
+                                    size="small"
+                                    bordered
+                                    scroll={{ x: 'max-content' }}
+                                />
+                            ) : (
+                                <p className="text-gray-400 p-4">暂无检测数据</p>
+                            )}
+                        </div>
+                    )
+                })}
 
                 <div className="mt-6 border-t pt-4">
                     <h3 className="font-bold mb-2">总体结论：</h3>
@@ -199,16 +198,12 @@ export default function ClientReportDetailPage() {
                 <div>
                     <h2 className="text-xl font-bold mb-6 border-b pb-2">声明 / 注意事项</h2>
                     <div className="text-base leading-relaxed whitespace-pre-wrap">
-                        {backCoverContent || (
-                            <>
-                                1. 本报告无"检验检测专用章"无效。<br />
-                                2. 报告无编制、审核、批准人签字无效。<br />
-                                3. 报告涂改无效。<br />
-                                4. 对检测报告若有异议，请于收到报告之日起十五日内向本公司提出。<br />
-                                5. 未经本公司书面批准，不得复制本报告（全文复制除外）。<br />
-                                6. 本报告检测结果仅对来样负责。
-                            </>
-                        )}
+                        1. 本报告无"检验检测专用章"无效。<br />
+                        2. 报告无编制、审核、批准人签字无效。<br />
+                        3. 报告涂改无效。<br />
+                        4. 对检测报告若有异议，请于收到报告之日起十五日内向本公司提出。<br />
+                        5. 未经本公司书面批准，不得复制本报告（全文复制除外）。<br />
+                        6. 本报告检测结果仅对来样负责。
                     </div>
                 </div>
                 <div className="text-center mt-20">

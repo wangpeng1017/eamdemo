@@ -2,6 +2,7 @@ import { prisma } from '@/lib/prisma'
 import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@/lib/auth'
 import { generateClientReportNo } from '@/lib/generate-no'
+import { extractStructuredData } from '@/lib/sheet-extractor'
 
 // 生成客户报告（整合多个任务报告）
 export async function POST(request: NextRequest) {
@@ -33,6 +34,14 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ error: '缺少必填字段（entrustmentId, taskIds）' }, { status: 400 })
     }
 
+    // 检查是否已有客户报告
+    const existingReport = await prisma.clientReport.findFirst({
+        where: { entrustmentId, status: { not: 'voided' } }
+    })
+    if (existingReport) {
+        return NextResponse.json({ error: `该委托单已生成客户报告（${existingReport.reportNo}），不能重复生成` }, { status: 400 })
+    }
+
     // taskIds 可能是报告 ID 或任务 ID，先尝试按报告 ID 查询
     let taskReports = await prisma.testReport.findMany({
         where: { id: { in: taskIds } },
@@ -47,12 +56,13 @@ export async function POST(request: NextRequest) {
         })
     }
 
-    // 获取关联的任务
+    // 获取关联的任务（包含 sheetData 用于提取检测项目）
     const actualTaskIds = taskReports.map(r => r.taskId).filter(Boolean) as string[]
     const tasks = await prisma.testTask.findMany({
         where: { id: { in: actualTaskIds } },
-        include: {
-            testData: true,
+        select: {
+            id: true,
+            sheetData: true,
             entrustmentProject: {
                 select: { name: true, method: true }
             }
@@ -63,16 +73,20 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ error: '未找到对应的任务报告' }, { status: 400 })
     }
 
-    // 整合检测项目和检测依据
+    // 整合检测项目和检测依据（从 sheetData 正确提取）
     const testItems: string[] = []
     const testStandards: string[] = []
 
     tasks.forEach(task => {
-        task.testData?.forEach((data: any) => {
-            if (data.parameter && !testItems.includes(data.parameter)) {
-                testItems.push(data.parameter)
+        // 从 sheetData 提取检测项目
+        const { rows } = extractStructuredData(task.sheetData)
+        rows.forEach(row => {
+            const item = row.testItem || ''
+            if (item && !testItems.includes(item)) {
+                testItems.push(item)
             }
         })
+        // 检测标准从 EntrustmentProject.method 获取
         const method = (task as any).entrustmentProject?.method
         if (method && !testStandards.includes(method)) {
             testStandards.push(method)

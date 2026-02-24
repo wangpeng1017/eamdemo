@@ -32,8 +32,10 @@ export async function GET(
                     },
                     include: {
                         task: {
-                            include: {
-                                testData: true
+                            select: {
+                                taskNo: true,
+                                sampleName: true,
+                                sheetData: true,
                             }
                         }
                     }

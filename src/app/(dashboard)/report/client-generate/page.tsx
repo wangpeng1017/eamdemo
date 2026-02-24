@@ -87,6 +87,9 @@ export default function ClientReportGeneratePage() {
     // 提交审批状态
     const [submitting, setSubmitting] = useState(false)
 
+    // 错误弹窗状态
+    const [errorMsg, setErrorMsg] = useState<string | null>(null)
+
     const fetchData = async (p = page) => {
         setLoading(true)
         try {
@@ -171,7 +174,7 @@ export default function ClientReportGeneratePage() {
 
     const handleGenerateSubmit = async () => {
         if (!selectedEntrustment || selectedTaskIds.length === 0) {
-            showError('请选择委托单和至少一个任务报告')
+            setErrorMsg('请选择委托单和至少一个任务报告')
             return
         }
 
@@ -198,10 +201,10 @@ export default function ClientReportGeneratePage() {
                 setGenerateModalOpen(false)
                 fetchData()
             } else {
-                showError(json.error || '报告生成失败')
+                setErrorMsg(json.error || '报告生成失败')
             }
         } catch (error) {
-            showError('报告生成失败')
+            setErrorMsg('报告生成失败，请稍后重试')
         } finally {
             setGenerating(false)
         }
@@ -539,6 +542,19 @@ export default function ClientReportGeneratePage() {
                         )}
                     </Form>
                 </div>
+            </Modal>
+
+            {/* 错误提示弹窗 */}
+            <Modal
+                title="操作提示"
+                open={!!errorMsg}
+                onOk={() => setErrorMsg(null)}
+                onCancel={() => setErrorMsg(null)}
+                okText="知道了"
+                cancelButtonProps={{ style: { display: 'none' } }}
+                centered
+            >
+                <p>{errorMsg}</p>
             </Modal>
 
 
