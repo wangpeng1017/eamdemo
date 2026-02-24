@@ -171,7 +171,7 @@ export default function ClientReportGeneratePage() {
 
     const handleGenerateSubmit = async () => {
         if (!selectedEntrustment || selectedTaskIds.length === 0) {
-            showError('请选择委托单和至少一个任务')
+            showError('请选择委托单和至少一个任务报告')
             return
         }
 
@@ -186,11 +186,8 @@ export default function ClientReportGeneratePage() {
                     entrustmentId: selectedEntrustment.id,
                     taskIds: selectedTaskIds,
                     templateId: values.templateId,
-                    clientName: values.clientName,
-                    projectName: values.projectName,
-                    sampleName: values.sampleName,
-                    overallConclusion: values.overallConclusion,
-                    backCoverData: values.backCoverContent ? { content: values.backCoverContent } : null
+                    clientName: selectedEntrustment.client?.name || '',
+                    projectName: selectedEntrustment.projectName || '',
                 })
             })
 
@@ -537,27 +534,6 @@ export default function ClientReportGeneratePage() {
                                     {completedTasks.length === 0 && (
                                         <p className="mt-2 text-gray-500 text-sm">该委托单暂无已完成的任务</p>
                                     )}
-                                </Form.Item>
-
-                                <div className="grid grid-cols-2 gap-4">
-                                    <Form.Item name="clientName" label="客户名称" rules={[{ required: true, message: '请输入客户名称' }]}>
-                                        <Input />
-                                    </Form.Item>
-                                    <Form.Item name="projectName" label="项目名称">
-                                        <Input />
-                                    </Form.Item>
-                                </div>
-
-                                <Form.Item name="sampleName" label="样品名称" rules={[{ required: true, message: '请输入样品名称' }]}>
-                                    <Input />
-                                </Form.Item>
-
-                                <Form.Item name="overallConclusion" label="总体结论">
-                                    <Input.TextArea rows={2} placeholder="总结论" />
-                                </Form.Item>
-
-                                <Form.Item name="backCoverContent" label="封底自定义内容">
-                                    <Input.TextArea rows={3} placeholder="如有特殊声明或备注，请在此填写（将显示在报告封底）" />
                                 </Form.Item>
                             </>
                         )}
