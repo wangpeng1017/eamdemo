@@ -31,15 +31,19 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json()
-    const { name, code, category, fileUrl, remark, coverConfig, backCoverConfig,
+    const { name, fileUrl, remark, coverConfig, backCoverConfig,
         coverTitle, coverSubtitle, coverLogo, coverShowDate,
         backCoverStatement, backCoverCustomText,
         stampImageUrl, stampPosition,
         testStandards, xrfScreeningConfig } = body
 
-    if (!name || !code || !category) {
-        return NextResponse.json({ error: '缺少必填字段' }, { status: 400 })
+    if (!name) {
+        return NextResponse.json({ error: '缺少模板名称' }, { status: 400 })
     }
+
+    // 自动生成模板编码
+    const code = body.code || `CTPL-${Date.now()}`
+    const category = body.category || 'client_report'
 
     // 检查编码是否重复
     const existing = await prisma.reportTemplate.findUnique({
