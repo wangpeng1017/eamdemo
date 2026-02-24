@@ -11,6 +11,7 @@ import dayjs from 'dayjs'
 import { useRouter } from 'next/navigation'
 import TestReportPrint from '@/components/business/TestReportPrint'
 import type { ReportPrintData } from '@/components/business/TestReportPrint'
+import { parseSheetData, type ParsedSheetData } from '@/lib/sheet-parser'
 
 interface TestReport {
   id: string
@@ -28,7 +29,9 @@ interface TestReport {
   reviewer: string | null
   createdAt: string
   issuedDate: string | null
+  taskId: string | null
   task?: { taskNo: string } | null
+  taskNo: string
   createdById?: string | null
 }
 
@@ -79,7 +82,7 @@ export default function TestReportPage() {
   const [viewDrawerOpen, setViewDrawerOpen] = useState(false)
   const [currentReport, setCurrentReport] = useState<TestReport | null>(null)
   const [currentApprovals, setCurrentApprovals] = useState<Approval[]>([])
-  const [currentTestData, setCurrentTestData] = useState<any[]>([])
+  const [currentSheetParsed, setCurrentSheetParsed] = useState<ParsedSheetData>({ headers: [], rows: [] })
 
   // 提交审批状态
   const [submitting, setSubmitting] = useState(false)
@@ -161,22 +164,31 @@ export default function TestReportPage() {
     }
   }
 
+  // extractTestResultsFromSheet 已删除，改用 parseSheetData 直接渲染原始表格
+
   // 查看详情（打开抽屉）
   const handleView = async (record: TestReport) => {
     setCurrentReport(record)
 
-    // 解析检测数据
-    if (record.testResults) {
+    // 从任务 sheetData 提取检测数据
+    if (record.taskId) {
       try {
-        const parsed = typeof record.testResults === 'string'
-          ? JSON.parse(record.testResults)
-          : record.testResults
-        setCurrentTestData(Array.isArray(parsed) ? parsed : [])
+        const taskRes = await fetch(`/api/task/${record.taskId}`)
+        if (taskRes.ok) {
+          const taskJson = await taskRes.json()
+          const taskData = taskJson.data || taskJson
+          if (taskData?.sheetData) {
+            setCurrentSheetParsed(parseSheetData(taskData.sheetData))
+          } else {
+            setCurrentSheetParsed({ headers: [], rows: [] })
+          }
+        }
       } catch (e) {
-        setCurrentTestData([])
+        console.error('[handleView] 获取任务数据失败:', e)
+        setCurrentSheetParsed({ headers: [], rows: [] })
       }
     } else {
-      setCurrentTestData([])
+      setCurrentSheetParsed({ headers: [], rows: [] })
     }
 
     // 获取审批历史
@@ -203,16 +215,20 @@ export default function TestReportPage() {
   // 打印（使用专用打印组件，参考委托单打印模式）
   const handlePrint = async (record: TestReport) => {
     try {
-      // 解析检测数据
-      let testResults: any[] = []
-      if (record.testResults) {
+      // 从任务 sheetData 解析检测数据
+      let parsedSheet: ParsedSheetData = { headers: [], rows: [] }
+      if (record.taskId) {
         try {
-          const parsed = typeof record.testResults === 'string'
-            ? JSON.parse(record.testResults)
-            : record.testResults
-          testResults = Array.isArray(parsed) ? parsed : []
+          const taskRes = await fetch(`/api/task/${record.taskId}`)
+          if (taskRes.ok) {
+            const taskJson = await taskRes.json()
+            const taskData = taskJson.data || taskJson
+            if (taskData?.sheetData) {
+              parsedSheet = parseSheetData(taskData.sheetData)
+            }
+          }
         } catch (e) {
-          testResults = []
+          console.error('[handlePrint] 获取任务数据失败:', e)
         }
       }
 
@@ -230,7 +246,8 @@ export default function TestReportPage() {
         createdAt: record.createdAt,
         issuedDate: record.issuedDate || '',
         taskNo: record.task?.taskNo || '',
-        testResults,
+        testResults: [],
+        parsedSheet,
       }
 
       setPrintData(pd)
@@ -305,12 +322,7 @@ export default function TestReportPage() {
       dataIndex: 'overallConclusion',
       render: (val: string) => conclusionMap[val] || val || '-',
     },
-    {
-      title: '状态',
-      dataIndex: 'status',
-      width: 90,
-      render: (s: string) => <Tag color={statusMap[s]?.color}>{statusMap[s]?.text}</Tag>
-    },
+
     { title: '检测人', dataIndex: 'tester', width: 80 },
     {
       title: '创建时间',
@@ -327,17 +339,6 @@ export default function TestReportPage() {
         const permCtx: RecordPermissionContext = { userId: currentUser?.id || '', dataScope: currentUser?.dataScope || 'self' }
         return (
           <Space size="small" style={{ whiteSpace: 'nowrap' }}>
-            {record.status === 'draft' && canOperate(record, permCtx) && (
-              <Button
-                size="small"
-                type="primary"
-                ghost
-                icon={<SendOutlined />}
-                onClick={() => handleSubmitApproval(record)}
-              >
-                提交审批
-              </Button>
-            )}
             <Button
               size="small"
               icon={<PrinterOutlined />}
@@ -346,14 +347,10 @@ export default function TestReportPage() {
               打印
             </Button>
             <Button size="small" icon={<EyeOutlined />} onClick={() => handleView(record)} />
-            {canModify(record, permCtx) && (
-              <Button size="small" icon={<EditOutlined />} onClick={() => handleEdit(record)} />
-            )}
-            {record.status === 'draft' && canModify(record, permCtx) && (
-              <Popconfirm title="确认删除？" onConfirm={() => handleDelete(record.id)} okText="确定" cancelText="取消">
-                <Button size="small" danger icon={<DeleteOutlined />} />
-              </Popconfirm>
-            )}
+            <Button size="small" icon={<EditOutlined />} onClick={() => handleEdit(record)} />
+            <Popconfirm title="确认删除？" onConfirm={() => handleDelete(record.id)} okText="确定" cancelText="取消">
+              <Button size="small" danger icon={<DeleteOutlined />} />
+            </Popconfirm>
           </Space>
         )
       }
@@ -363,18 +360,19 @@ export default function TestReportPage() {
   // 抽屉中的检测数据表格列
   const testDataColumns = [
     { title: '序号', width: 60, render: (_: any, __: any, index: number) => index + 1 },
-    { title: '检测项目', dataIndex: 'parameter', width: 150 },
-    { title: '技术要求', dataIndex: 'standard', width: 120 },
-    { title: '实测值', dataIndex: 'value', width: 100 },
+    { title: '检测项目', dataIndex: 'parameter', width: 150, render: (v: any) => typeof v === 'object' ? (v?.name || v?.parameter || JSON.stringify(v)) : (v || '-') },
+    { title: '技术要求', dataIndex: 'standard', width: 120, render: (v: any) => typeof v === 'object' ? JSON.stringify(v) : (v || '-') },
+    { title: '实测值', dataIndex: 'value', width: 100, render: (v: any) => typeof v === 'object' ? JSON.stringify(v) : (v || '-') },
     {
       title: '单项判定', dataIndex: 'result', width: 90,
-      render: (result: string) => {
+      render: (result: any) => {
         if (!result) return '-'
-        const color = (result.includes('合格') || result.includes('符合')) ? 'success' : 'error'
-        return <Tag color={color}>{result}</Tag>
+        const text = typeof result === 'object' ? JSON.stringify(result) : String(result)
+        const color = (text.includes('合格') || text.includes('符合')) ? 'success' : 'error'
+        return <Tag color={color}>{text}</Tag>
       }
     },
-    { title: '备注', dataIndex: 'remark', ellipsis: true },
+    { title: '备注', dataIndex: 'remark', ellipsis: true, render: (v: any) => typeof v === 'object' ? JSON.stringify(v) : (v || '-') },
   ]
 
   return (
@@ -431,11 +429,7 @@ export default function TestReportPage() {
                   <div style={{ maxHeight: 'calc(100vh - 200px)', overflowY: 'auto', paddingRight: 8 }}>
                     <Descriptions column={2} bordered size="small">
                       <Descriptions.Item label="报告编号">{currentReport.reportNo}</Descriptions.Item>
-                      <Descriptions.Item label="报告状态">
-                        <Tag color={statusMap[currentReport.status]?.color}>
-                          {statusMap[currentReport.status]?.text}
-                        </Tag>
-                      </Descriptions.Item>
+
                       <Descriptions.Item label="客户名称">{currentReport.clientName || '-'}</Descriptions.Item>
                       <Descriptions.Item label="样品名称">{currentReport.sampleName || '-'}</Descriptions.Item>
                       <Descriptions.Item label="样品编号">{currentReport.sampleNo || '-'}</Descriptions.Item>
@@ -457,52 +451,42 @@ export default function TestReportPage() {
                       </Descriptions.Item>
                     </Descriptions>
 
-                    {/* 检测数据表格 */}
-                    {currentTestData.length > 0 && (
+                    {/* 检测数据表格 - 使用原始 sheetData 渲染（含合并单元格） */}
+                    {currentSheetParsed.headers.length > 0 && (
                       <>
                         <h4 style={{ margin: '16px 0 8px' }}>检测数据</h4>
-                        <Table
-                          rowKey={(_, i) => String(i)}
-                          columns={testDataColumns}
-                          dataSource={currentTestData}
-                          pagination={false}
-                          size="small"
-                          bordered
-                        />
+                        <div style={{ overflowX: 'auto' }}>
+                          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px' }}>
+                            <thead>
+                              <tr>
+                                {currentSheetParsed.headers.map((h, i) => (
+                                  <th key={i} style={{
+                                    border: '1px solid #d9d9d9', padding: '6px 8px',
+                                    backgroundColor: '#fafafa', fontWeight: 600,
+                                    textAlign: 'center', whiteSpace: 'nowrap',
+                                  }}>{h || `列${i + 1}`}</th>
+                                ))}
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {currentSheetParsed.rows.map((row, ri) => (
+                                <tr key={ri}>
+                                  {row.map((cell, ci) => {
+                                    if (cell.hidden) return null
+                                    return (
+                                      <td key={ci} rowSpan={cell.rowSpan} colSpan={cell.colSpan} style={{
+                                        border: '1px solid #d9d9d9', padding: '4px 8px',
+                                        textAlign: ci === 0 ? 'center' : 'left',
+                                        verticalAlign: cell.rowSpan && cell.rowSpan > 1 ? 'middle' : undefined,
+                                      }}>{cell.text}</td>
+                                    )
+                                  })}
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
                       </>
-                    )}
-                  </div>
-                )
-              },
-              {
-                key: 'approval',
-                label: '审批记录',
-                children: (
-                  <div>
-                    {currentApprovals.length > 0 ? (
-                      <Timeline
-                        items={currentApprovals.map(item => ({
-                          color: item.result === 'pass' ? 'green' : 'red',
-                          children: (
-                            <div>
-                              <div style={{ fontWeight: 500 }}>
-                                {reviewTypeMap[item.reviewType] || item.reviewType}
-                                <Tag color={item.result === 'pass' ? 'success' : 'error'} style={{ marginLeft: 8 }}>
-                                  {item.result === 'pass' ? '通过' : '驳回'}
-                                </Tag>
-                              </div>
-                              <div style={{ color: '#999', fontSize: 12 }}>
-                                {item.reviewer} · {dayjs(item.reviewDate).format('YYYY-MM-DD HH:mm')}
-                              </div>
-                              {item.comments && (
-                                <div style={{ color: '#666', marginTop: 4 }}>{item.comments}</div>
-                              )}
-                            </div>
-                          )
-                        }))}
-                      />
-                    ) : (
-                      <div style={{ textAlign: 'center', color: '#999', padding: 40 }}>暂无审批记录</div>
                     )}
                   </div>
                 )

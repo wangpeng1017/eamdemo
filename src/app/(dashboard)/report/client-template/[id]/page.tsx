@@ -34,6 +34,7 @@ export default function TemplateEditPage() {
     const [loading, setLoading] = useState(false)
     const [saving, setSaving] = useState(false)
     const [fileUrl, setFileUrl] = useState('')
+    const [fileName, setFileName] = useState('')
 
     // 左侧预览
     const previewRef = useRef<HTMLDivElement>(null)
@@ -156,6 +157,7 @@ export default function TemplateEditPage() {
                 const url = info.file.response?.url || info.file.response?.data?.url
                 if (url) {
                     setFileUrl(url)
+                    setFileName(info.file.name)
                     renderPreview(url)
                     extractFields(url)
                     showSuccess('模板文件上传成功')
@@ -270,10 +272,10 @@ export default function TemplateEditPage() {
             {/* 主体：左右分栏 */}
             <div style={{ flex: 1, display: 'flex', gap: 16, overflow: 'hidden' }}>
                 {/* 左侧：Word 预览 */}
-                <div style={{ flex: 3, display: 'flex', flexDirection: 'column', minWidth: 0 }}>
+                <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0 }}>
                     <Card
                         size="small"
-                        title={<span><FileWordOutlined /> Word 模板预览</span>}
+                        title={<span><FileWordOutlined /> {fileName ? `模板预览 - ${fileName}` : 'Word 模板预览'}</span>}
                         style={{ flex: 1, display: 'flex', flexDirection: 'column' }}
                         styles={{ body: { flex: 1, overflow: 'auto', padding: 0 } }}
                     >
@@ -325,74 +327,85 @@ export default function TemplateEditPage() {
                         </Form>
                     </Card>
 
-                    {/* 占位符字段 */}
-                    {extractedFields && (
-                        <Card size="small" title={`🏷️ 模板字段 (${extractedFields.autoFields.length + extractedFields.editableFields.length + extractedFields.loopFields.length}个)`} style={{ marginBottom: 12 }}>
-                            {extractedFields.autoFields.length > 0 && (
-                                <>
-                                    <div style={{ marginBottom: 6, fontWeight: 500, fontSize: 12, color: '#1677ff' }}>🔒 系统自动填充</div>
-                                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, marginBottom: 12 }}>
-                                        {extractedFields.autoFields.map(f => (
-                                            <Tag key={f.tag} color="blue">{f.label}</Tag>
-                                        ))}
-                                    </div>
-                                </>
+                    {/* 上传后才显示配置区域 */}
+                    {fileUrl ? (
+                        <>
+                            {/* 占位符字段 */}
+                            {extractedFields && (
+                                <Card size="small" title={`🏷️ 模板字段 (${extractedFields.autoFields.length + extractedFields.editableFields.length + extractedFields.loopFields.length}个)`} style={{ marginBottom: 12 }}>
+                                    {extractedFields.autoFields.length > 0 && (
+                                        <>
+                                            <div style={{ marginBottom: 6, fontWeight: 500, fontSize: 12, color: '#1677ff' }}>🔒 系统自动填充</div>
+                                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, marginBottom: 12 }}>
+                                                {extractedFields.autoFields.map(f => (
+                                                    <Tag key={f.tag} color="blue">{f.label}</Tag>
+                                                ))}
+                                            </div>
+                                        </>
+                                    )}
+                                    {extractedFields.loopFields.length > 0 && (
+                                        <>
+                                            <div style={{ marginBottom: 6, fontWeight: 500, fontSize: 12, color: '#52c41a' }}>📊 数据循环区域</div>
+                                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, marginBottom: 12 }}>
+                                                {extractedFields.loopFields.map(f => (
+                                                    <Tag key={f.tag} color="green">{f.label}</Tag>
+                                                ))}
+                                            </div>
+                                        </>
+                                    )}
+                                    {extractedFields.editableFields.length > 0 && (
+                                        <>
+                                            <div style={{ marginBottom: 6, fontWeight: 500, fontSize: 12, color: '#fa8c16' }}>✏️ 自定义字段</div>
+                                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
+                                                {extractedFields.editableFields.map(f => (
+                                                    <Tag key={f.tag} color="orange">{f.tag}</Tag>
+                                                ))}
+                                            </div>
+                                        </>
+                                    )}
+                                </Card>
                             )}
-                            {extractedFields.loopFields.length > 0 && (
-                                <>
-                                    <div style={{ marginBottom: 6, fontWeight: 500, fontSize: 12, color: '#52c41a' }}>📊 数据循环区域</div>
-                                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, marginBottom: 12 }}>
-                                        {extractedFields.loopFields.map(f => (
-                                            <Tag key={f.tag} color="green">{f.label}</Tag>
-                                        ))}
-                                    </div>
-                                </>
-                            )}
-                            {extractedFields.editableFields.length > 0 && (
-                                <>
-                                    <div style={{ marginBottom: 6, fontWeight: 500, fontSize: 12, color: '#fa8c16' }}>✏️ 自定义字段</div>
-                                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
-                                        {extractedFields.editableFields.map(f => (
-                                            <Tag key={f.tag} color="orange">{f.tag}</Tag>
-                                        ))}
-                                    </div>
-                                </>
-                            )}
+
+                            {/* 检测标准 */}
+                            <Card size="small" title="📄 检测依据" style={{ marginBottom: 12 }}>
+                                <p style={{ color: '#999', fontSize: 11, marginBottom: 8 }}>
+                                    每行一条标准，生成报告时自动填充到「检测依据」区域。
+                                </p>
+                                <Input.TextArea
+                                    rows={6}
+                                    value={testStandards}
+                                    onChange={e => setTestStandards(e.target.value)}
+                                    placeholder="QC/T 941-2013《汽车材料中汞的检测方法》"
+                                    style={{ fontSize: 12 }}
+                                />
+                            </Card>
+
+                            {/* XRF 表 */}
+                            <Card size="small" title="📊 XRF 初筛判定范围（mg/kg）" style={{ marginBottom: 12 }}>
+                                <Table
+                                    dataSource={xrfRows}
+                                    columns={xrfColumns}
+                                    pagination={false}
+                                    size="small"
+                                    bordered
+                                    scroll={{ x: true }}
+                                />
+                                <Button
+                                    type="dashed" block size="small" icon={<PlusOutlined />}
+                                    style={{ marginTop: 6 }}
+                                    onClick={() => setXrfRows([...xrfRows, { key: String(Date.now()), element: '', polymer: '', metal: '', other: '' }])}
+                                >
+                                    添加元素
+                                </Button>
+                            </Card>
+                        </>
+                    ) : (
+                        <Card size="small" style={{ marginBottom: 12, textAlign: 'center', color: '#999', padding: 24 }}>
+                            <FileWordOutlined style={{ fontSize: 32, marginBottom: 8 }} />
+                            <p>请先在左侧上传 Word 模板文件</p>
+                            <p style={{ fontSize: 11 }}>上传后将自动预览并提取可编辑字段</p>
                         </Card>
                     )}
-
-                    {/* 检测标准 */}
-                    <Card size="small" title="📄 检测依据" style={{ marginBottom: 12 }}>
-                        <p style={{ color: '#999', fontSize: 11, marginBottom: 8 }}>
-                            每行一条标准，生成报告时自动填充到「检测依据」区域。
-                        </p>
-                        <Input.TextArea
-                            rows={6}
-                            value={testStandards}
-                            onChange={e => setTestStandards(e.target.value)}
-                            placeholder="QC/T 941-2013《汽车材料中汞的检测方法》"
-                            style={{ fontSize: 12 }}
-                        />
-                    </Card>
-
-                    {/* XRF 表 */}
-                    <Card size="small" title="📊 XRF 初筛判定范围（mg/kg）" style={{ marginBottom: 12 }}>
-                        <Table
-                            dataSource={xrfRows}
-                            columns={xrfColumns}
-                            pagination={false}
-                            size="small"
-                            bordered
-                            scroll={{ x: true }}
-                        />
-                        <Button
-                            type="dashed" block size="small" icon={<PlusOutlined />}
-                            style={{ marginTop: 6 }}
-                            onClick={() => setXrfRows([...xrfRows, { key: String(Date.now()), element: '', polymer: '', metal: '', other: '' }])}
-                        >
-                            添加元素
-                        </Button>
-                    </Card>
                 </div>
             </div>
         </div>

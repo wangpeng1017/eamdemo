@@ -1,6 +1,7 @@
 
 'use client'
 
+import { useGoBack } from '@/hooks/useGoBack'
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { Button, Form, Input, Row, Col, message, Card, Tabs, AutoComplete } from 'antd'
@@ -17,6 +18,7 @@ interface TestReport {
 
 export default function CreateClientReportPageClient() {
     const router = useRouter()
+  const goBack = useGoBack('/report/client-generate')
     const [form] = Form.useForm()
     const [loading, setLoading] = useState(false)
     const [availableReports, setAvailableReports] = useState<TestReport[]>([])
@@ -89,7 +91,7 @@ export default function CreateClientReportPageClient() {
     }
 
     const handleCancel = () => {
-        router.back()
+        goBack()
     }
 
     const handleReportToggle = (report: TestReport) => {
@@ -107,7 +109,7 @@ export default function CreateClientReportPageClient() {
                 <Button
                     type="link"
                     icon={<ArrowLeftOutlined />}
-                    onClick={() => router.back()}
+                    onClick={() => goBack()}
                     style={{ paddingLeft: 0, fontSize: 16, color: '#000' }}
                 >
                     返回列表

@@ -1,5 +1,6 @@
 'use client'
 
+import { useGoBack } from '@/hooks/useGoBack'
 import { useState, useEffect, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { Button, Spin } from 'antd'
@@ -10,6 +11,7 @@ import dayjs from 'dayjs'
 
 function CreateContractContent() {
     const router = useRouter()
+  const goBack = useGoBack('/entrustment/contract')
     const searchParams = useSearchParams()
     const quotationId = searchParams.get('quotationId')
 
@@ -150,7 +152,7 @@ function CreateContractContent() {
                 <Button
                     type="link"
                     icon={<ArrowLeftOutlined />}
-                    onClick={() => router.back()}
+                    onClick={() => goBack()}
                     style={{ paddingLeft: 0, fontSize: 16, color: '#000' }}
                 >
                     返回列表

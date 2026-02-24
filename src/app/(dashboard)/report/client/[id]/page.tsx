@@ -1,5 +1,6 @@
 'use client'
 
+import { useGoBack } from '@/hooks/useGoBack'
 import { useState, useEffect } from 'react'
 import { showError } from '@/lib/confirm'
 import { Descriptions, Table, Tag } from 'antd'
@@ -56,6 +57,7 @@ const statusMap: Record<string, { text: string; color: string }> = {
 export default function ClientReportDetailPage() {
     const params = useParams()
     const router = useRouter()
+  const goBack = useGoBack('/report/client-generate')
     const reportId = params.id as string
 
     const [report, setReport] = useState<ClientReport | null>(null)
@@ -107,7 +109,7 @@ export default function ClientReportDetailPage() {
         <div className="p-6 max-w-5xl mx-auto">
             {/* 左上角返回（打印时隐藏） */}
             <div className="mb-4 flex items-center no-print">
-                <a onClick={() => router.back()} style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4, color: '#1677ff' }}>
+                <a onClick={() => goBack()} style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4, color: '#1677ff' }}>
                     <ArrowLeftOutlined /> 返回列表
                 </a>
             </div>

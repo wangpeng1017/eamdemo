@@ -1,5 +1,6 @@
 'use client'
 
+import { useGoBack } from '@/hooks/useGoBack'
 import { useRouter, useParams } from 'next/navigation'
 import { useState, useEffect } from 'react'
 import { Button, Spin } from 'antd'
@@ -10,6 +11,7 @@ import type { TemplateSchema } from '@/lib/template-converter'
 
 export default function EditTemplatePage() {
     const router = useRouter()
+  const goBack = useGoBack('/basic-data/test-templates')
     const params = useParams()
     const id = params.id as string
 
@@ -83,7 +85,7 @@ export default function EditTemplatePage() {
                 <Button
                     type="link"
                     icon={<ArrowLeftOutlined />}
-                    onClick={() => router.back()}
+                    onClick={() => goBack()}
                     style={{ paddingLeft: 0, fontSize: 16, color: '#000' }}
                 >
                     返回列表
@@ -96,7 +98,7 @@ export default function EditTemplatePage() {
             <TemplateEditor
                 initialValue={initialSchema}
                 onSave={handleSave}
-                onCancel={() => router.back()}
+                onCancel={() => goBack()}
             />
         </div>
     )

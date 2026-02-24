@@ -7,6 +7,7 @@
 
 import React, { forwardRef } from 'react'
 import dayjs from 'dayjs'
+import type { ParsedSheetData, CellInfo } from '@/lib/sheet-parser'
 
 export interface ReportPrintData {
     reportNo: string
@@ -22,8 +23,8 @@ export interface ReportPrintData {
     createdAt?: string
     issuedDate?: string
     testResults: TestResultItem[]
-    // 任务信息
     taskNo?: string
+    parsedSheet?: ParsedSheetData
 }
 
 export interface TestResultItem {
@@ -160,41 +161,50 @@ const TestReportPrint = forwardRef<HTMLDivElement, { data: ReportPrintData }>(({
 
                 {/* ========== 检测数据 ========== */}
                 <div style={{ fontSize: '14px', fontWeight: 'bold', margin: '16px 0 8px' }}>检测数据</div>
-                <table style={{ width: '100%', borderCollapse: 'collapse', marginBottom: '16px' }}>
-                    <thead>
-                        <tr>
-                            <th style={{ ...thCell, width: '50px' }}>序号</th>
-                            <th style={thCell}>检测项目</th>
-                            <th style={thCell}>技术要求</th>
-                            <th style={thCell}>实测值</th>
-                            <th style={{ ...thCell, width: '90px' }}>单项判定</th>
-                            <th style={thCell}>备注</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {testResults.length > 0 ? testResults.map((item, idx) => (
-                            <tr key={idx}>
-                                <td style={{ ...cell, textAlign: 'center' }}>{idx + 1}</td>
-                                <td style={cell}>{item.parameter || '-'}</td>
-                                <td style={cell}>{item.standard || '-'}</td>
-                                <td style={cell}>{item.value || '-'}</td>
-                                <td style={{
-                                    ...cell, textAlign: 'center', fontWeight: 'bold',
-                                    color: item.result?.includes('合格') || item.result?.includes('符合') ? '#52c41a' : '#f5222d'
-                                }}>
-                                    {item.result || '-'}
-                                </td>
-                                <td style={cell}>{item.remark || ''}</td>
-                            </tr>
-                        )) : (
+                {data.parsedSheet && data.parsedSheet.headers.length > 0 ? (
+                    <table style={{ width: '100%', borderCollapse: 'collapse', marginBottom: '16px' }}>
+                        <thead>
                             <tr>
-                                <td colSpan={6} style={{ ...cell, textAlign: 'center', color: '#999', padding: '20px' }}>
+                                {data.parsedSheet.headers.map((h, i) => (
+                                    <th key={i} style={thCell}>{h || `列${i + 1}`}</th>
+                                ))}
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {data.parsedSheet.rows.map((row, ri) => (
+                                <tr key={ri}>
+                                    {row.map((c: CellInfo, ci: number) => {
+                                        if (c.hidden) return null
+                                        return (
+                                            <td
+                                                key={ci}
+                                                rowSpan={c.rowSpan}
+                                                colSpan={c.colSpan}
+                                                style={{
+                                                    ...cell,
+                                                    textAlign: ci === 0 ? 'center' : 'left',
+                                                    verticalAlign: c.rowSpan && c.rowSpan > 1 ? 'middle' : undefined,
+                                                }}
+                                            >
+                                                {c.text}
+                                            </td>
+                                        )
+                                    })}
+                                </tr>
+                            ))}
+                        </tbody>
+                    </table>
+                ) : (
+                    <table style={{ width: '100%', borderCollapse: 'collapse', marginBottom: '16px' }}>
+                        <tbody>
+                            <tr>
+                                <td style={{ ...cell, textAlign: 'center', color: '#999', padding: '20px' }}>
                                     暂无检测数据
                                 </td>
                             </tr>
-                        )}
-                    </tbody>
-                </table>
+                        </tbody>
+                    </table>
+                )}
 
                 {/* ========== 检测结论 ========== */}
                 <table style={{ width: '100%', borderCollapse: 'collapse', marginBottom: '24px' }}>

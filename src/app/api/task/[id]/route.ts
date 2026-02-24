@@ -95,9 +95,28 @@ export const GET = withErrorHandler(async (
   console.log(`[GET /api/task/${id}] Retrieved task sheetData length:`, task.sheetData?.length)
   console.log(`[GET /api/task/${id}] Retrieved task sheetData (first 100 char):`, task.sheetData?.substring(0, 100))
 
+  // 如果 sample 为 null，尝试从委托单的 samples 中补充
+  let enrichedSample = task.sample
+  if (!task.sampleId && task.entrustmentProject?.entrustment?.id) {
+    try {
+      const samples = await prisma.sample.findMany({
+        where: { entrustmentId: task.entrustmentProject.entrustment.id },
+        select: { sampleNo: true, name: true, specification: true },
+      })
+      if (samples.length > 0) {
+        // 优先按名称匹配，否则取第一个
+        const matched = samples.find(s => s.name === task.sampleName) || samples[0]
+        enrichedSample = matched
+      }
+    } catch (e) {
+      // 不阻断主流程
+    }
+  }
+
   // 添加字段转换：将 parameters JSON 字符串解析为 testItems 数组
   const response = {
     ...task,
+    sample: enrichedSample,
     testItems: task.parameters ? JSON.parse(task.parameters) : [],
   }
 

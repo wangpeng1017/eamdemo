@@ -1,5 +1,6 @@
 'use client'
 
+import { useGoBack } from '@/hooks/useGoBack'
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Button, Form, Input, Select, DatePicker } from 'antd'
@@ -8,6 +9,7 @@ import { showSuccess, showError } from '@/lib/confirm'
 
 export default function CreateSamplePageClient() {
     const router = useRouter()
+  const goBack = useGoBack('/sample/list')
     const [form] = Form.useForm()
     const [loading, setLoading] = useState(false)
 
@@ -43,7 +45,7 @@ export default function CreateSamplePageClient() {
                 <Button
                     type="link"
                     icon={<ArrowLeftOutlined />}
-                    onClick={() => router.back()}
+                    onClick={() => goBack()}
                     style={{ paddingLeft: 0, fontSize: 16, color: '#000' }}
                 >
                     返回列表
@@ -86,7 +88,7 @@ export default function CreateSamplePageClient() {
                         <Button type="primary" htmlType="submit" loading={loading} style={{ marginRight: 8 }}>
                             提交
                         </Button>
-                        <Button onClick={() => router.back()}>
+                        <Button onClick={() => goBack()}>
                             取消
                         </Button>
                     </Form.Item>

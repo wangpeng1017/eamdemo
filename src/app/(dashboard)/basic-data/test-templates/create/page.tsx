@@ -1,5 +1,6 @@
 'use client'
 
+import { useGoBack } from '@/hooks/useGoBack'
 import { useRouter } from 'next/navigation'
 import { Button } from 'antd'
 import { ArrowLeftOutlined } from '@ant-design/icons'
@@ -9,6 +10,7 @@ import type { TemplateSchema } from '@/lib/template-converter'
 
 export default function CreateTemplatePage() {
     const router = useRouter()
+  const goBack = useGoBack('/basic-data/test-templates')
 
     const handleSave = async (schema: TemplateSchema) => {
         try {
@@ -45,7 +47,7 @@ export default function CreateTemplatePage() {
                 <Button
                     type="link"
                     icon={<ArrowLeftOutlined />}
-                    onClick={() => router.back()}
+                    onClick={() => goBack()}
                     style={{ paddingLeft: 0, fontSize: 16, color: '#000' }}
                 >
                     返回列表
@@ -55,7 +57,7 @@ export default function CreateTemplatePage() {
 
             <TemplateEditor
                 onSave={handleSave}
-                onCancel={() => router.back()}
+                onCancel={() => goBack()}
             />
         </div>
     )

@@ -1,21 +1,12 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { showSuccess, showError } from '@/lib/confirm'
 import { useParams, useRouter } from 'next/navigation'
-import { Card, Descriptions, Button, Table, Tag, Space, Form, Input, DatePicker } from 'antd'
+import { Card, Button, Tag, Space, Form, Input, DatePicker, App, Spin } from 'antd'
 import { ArrowLeftOutlined, SaveOutlined } from '@ant-design/icons'
-import type { ColumnsType } from 'antd/es/table'
+import { useGoBack } from '@/hooks/useGoBack'
 import dayjs from 'dayjs'
-
-interface TestData {
-    id: string
-    parameter: string
-    value: string | null
-    standard: string | null
-    result: string | null
-    remark: string | null
-}
 
 interface Report {
     id: string
@@ -34,25 +25,40 @@ interface Report {
     status: string
     createdAt: string
     issuedDate: string | null
+    taskId: string | null
+    task?: {
+        id: string
+        taskNo: string
+    }
 }
 
 const statusMap: Record<string, { text: string; color: string }> = {
     draft: { text: '草稿', color: 'default' },
     reviewing: { text: '审核中', color: 'processing' },
     approved: { text: '已批准', color: 'success' },
+    completed: { text: '已完成', color: 'success' },
     issued: { text: '已发布', color: 'cyan' },
 }
+
+import { parseSheetData, type CellInfo } from '@/lib/sheet-parser'
 
 export default function ReportEditPage() {
     const params = useParams()
     const router = useRouter()
+    const goBack = useGoBack('/report/task-generate')
+    const { message } = App.useApp()
     const reportId = params.id as string
 
     const [report, setReport] = useState<Report | null>(null)
-    const [testData, setTestData] = useState<TestData[]>([])
-    const [loading, setLoading] = useState(false)
+    const [rawSheetData, setRawSheetData] = useState<any>(null)
+    const [loading, setLoading] = useState(true)
     const [saving, setSaving] = useState(false)
     const [form] = Form.useForm()
+
+    const tableData = useMemo(() => {
+        if (!rawSheetData) return { headers: [], rows: [] }
+        return parseSheetData(rawSheetData)
+    }, [rawSheetData])
 
     useEffect(() => {
         fetchReport()
@@ -68,7 +74,6 @@ export default function ReportEditPage() {
             const reportData = json.data || json
             setReport(reportData)
 
-            // 填充表单
             form.setFieldsValue({
                 sampleName: reportData.sampleName,
                 sampleNo: reportData.sampleNo,
@@ -81,15 +86,19 @@ export default function ReportEditPage() {
                 overallConclusion: reportData.overallConclusion,
             })
 
-            // 解析 testResults
-            if (reportData.testResults) {
+            // 从关联的任务加载 sheetData
+            if (reportData.taskId) {
                 try {
-                    const parsed = typeof reportData.testResults === 'string'
-                        ? JSON.parse(reportData.testResults)
-                        : reportData.testResults
-                    setTestData(Array.isArray(parsed) ? parsed : [])
+                    const taskRes = await fetch(`/api/task/${reportData.taskId}`)
+                    if (taskRes.ok) {
+                        const taskJson = await taskRes.json()
+                        const taskData = taskJson.data || taskJson
+                        if (taskData?.sheetData) {
+                            setRawSheetData(taskData.sheetData)
+                        }
+                    }
                 } catch (e) {
-                    console.error('[Report] 解析检测结果失败:', e)
+                    console.error('[Report] 加载任务 sheetData 失败:', e)
                 }
             }
         } catch (error) {
@@ -122,7 +131,7 @@ export default function ReportEditPage() {
 
             const json = await res.json()
             if (res.ok && (json.success || json.data)) {
-                showSuccess('保存成功')
+                message.success({ content: '保存成功', duration: 3 })
                 fetchReport()
             } else {
                 showError(json.error?.message || json.error || '保存失败')
@@ -134,61 +143,42 @@ export default function ReportEditPage() {
         }
     }
 
-    const columns: ColumnsType<TestData> = [
-        { title: '序号', width: 60, render: (_, __, index) => index + 1 },
-        { title: '检测项目', dataIndex: 'parameter', width: 200 },
-        { title: '技术要求', dataIndex: 'standard', width: 150 },
-        { title: '实测值', dataIndex: 'value', width: 120 },
-        {
-            title: '单项判定',
-            dataIndex: 'result',
-            width: 100,
-            render: (result: string) => {
-                if (!result) return '-'
-                const color = result.includes('合格') || result.includes('符合') ? 'success' : 'error'
-                return <Tag color={color}>{result}</Tag>
-            }
-        },
-        { title: '备注', dataIndex: 'remark', ellipsis: true },
-    ]
-
-    const isEditable = report?.status === 'draft'
+    if (loading) {
+        return <div className="p-6 text-center"><Spin size="large" /></div>
+    }
 
     if (!report) {
-        return <div className="p-6">加载中...</div>
+        return <div className="p-6 text-center text-gray-500">报告不存在</div>
     }
 
     return (
-        <div className="p-6">
+        <div className="p-6 max-w-7xl mx-auto">
             {/* 顶部操作栏 */}
             <div className="mb-4 flex justify-between items-center">
-                <a onClick={() => router.back()} style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4, color: '#1677ff' }}>
-                    <ArrowLeftOutlined /> 返回
-                </a>
+                <div className="flex items-center gap-4">
+                    <Button
+                        icon={<ArrowLeftOutlined />}
+                        onClick={() => goBack()}
+                    >
+                        返回
+                    </Button>
+                    <h1 className="text-xl font-medium m-0">
+                        报告编辑 - {report.reportNo}
+                    </h1>
+                </div>
                 <Space>
                     <Tag color={statusMap[report.status]?.color} style={{ fontSize: 14, padding: '4px 12px' }}>
-                        {statusMap[report.status]?.text}
+                        {statusMap[report.status]?.text || report.status}
                     </Tag>
-                    {isEditable && (
-                        <Button type="primary" icon={<SaveOutlined />} onClick={handleSave} loading={saving}>
-                            保存
-                        </Button>
-                    )}
+                    <Button type="primary" icon={<SaveOutlined />} onClick={handleSave} loading={saving}>
+                        保存
+                    </Button>
                 </Space>
             </div>
 
-            {/* 状态信息 */}
-            <Card className="mb-4" size="small">
-                <Descriptions column={4}>
-                    <Descriptions.Item label="报告编号">{report.reportNo}</Descriptions.Item>
-                    <Descriptions.Item label="创建时间">{dayjs(report.createdAt).format('YYYY-MM-DD')}</Descriptions.Item>
-                    <Descriptions.Item label="发布日期">{report.issuedDate ? dayjs(report.issuedDate).format('YYYY-MM-DD') : '-'}</Descriptions.Item>
-                </Descriptions>
-            </Card>
-
-            {/* 报告表单 */}
-            <Card title="报告信息" className="mb-4">
-                <Form form={form} layout="vertical" disabled={!isEditable}>
+            {/* 报告基本信息 */}
+            <Card className="mb-4" title="报告信息">
+                <Form form={form} layout="vertical">
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0 24px' }}>
                         <Form.Item name="clientName" label="客户名称">
                             <Input />
@@ -216,21 +206,72 @@ export default function ReportEditPage() {
                         </Form.Item>
                     </div>
                     <Form.Item name="overallConclusion" label="检测结论">
-                        <Input.TextArea rows={4} />
+                        <Input.TextArea rows={3} />
                     </Form.Item>
                 </Form>
             </Card>
 
-            {/* 检测数据（只读） */}
+            {/* 检测数据 - 支持合并单元格 */}
             <Card title="检测数据" className="mb-4">
-                <Table
-                    columns={columns}
-                    dataSource={testData}
-                    rowKey="id"
-                    pagination={false}
-                    bordered
-                    size="middle"
-                />
+                {tableData.headers.length > 0 ? (
+                    <div style={{ overflowX: 'auto' }}>
+                        <table style={{
+                            width: '100%',
+                            borderCollapse: 'collapse',
+                            fontSize: '13px',
+                        }}>
+                            <thead>
+                                <tr>
+                                    {tableData.headers.map((h, i) => (
+                                        <th key={i} style={{
+                                            border: '1px solid #d9d9d9',
+                                            padding: '8px 12px',
+                                            backgroundColor: '#fafafa',
+                                            fontWeight: 600,
+                                            textAlign: 'center',
+                                            whiteSpace: 'nowrap',
+                                        }}>
+                                            {h || `列${i + 1}`}
+                                        </th>
+                                    ))}
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {tableData.rows.map((row, ri) => (
+                                    <tr key={ri}>
+                                        {row.map((cell, ci) => {
+                                            if (cell.hidden) return null
+                                            return (
+                                                <td
+                                                    key={ci}
+                                                    rowSpan={cell.rowSpan}
+                                                    colSpan={cell.colSpan}
+                                                    style={{
+                                                        border: '1px solid #d9d9d9',
+                                                        padding: '6px 12px',
+                                                        textAlign: ci === 0 ? 'center' : 'left',
+                                                        verticalAlign: cell.rowSpan && cell.rowSpan > 1 ? 'middle' : undefined,
+                                                        fontWeight: ci === 0 ? 500 : undefined,
+                                                    }}
+                                                >
+                                                    {cell.text}
+                                                </td>
+                                            )
+                                        })}
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
+                ) : (
+                    loading ? (
+                        <div className="p-8 text-center text-gray-400">加载检测数据中...</div>
+                    ) : (
+                        <div className="p-8 text-center text-gray-400">
+                            暂无检测数据
+                        </div>
+                    )
+                )}
             </Card>
         </div>
     )

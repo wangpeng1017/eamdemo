@@ -1,5 +1,6 @@
 'use client'
 
+import { useGoBack } from '@/hooks/useGoBack'
 import { useRouter } from 'next/navigation'
 import { Button } from 'antd'
 import { ArrowLeftOutlined } from '@ant-design/icons'
@@ -10,6 +11,7 @@ import { Card } from 'antd'
 
 export default function CreateConsultationPage() {
     const router = useRouter()
+  const goBack = useGoBack('/entrustment/consultation')
     const [loading, setLoading] = useState(false)
 
     const handleFinish = async (values: any) => {
@@ -37,7 +39,7 @@ export default function CreateConsultationPage() {
     }
 
     const handleCancel = () => {
-        router.back()
+        goBack()
     }
 
     return (
@@ -46,7 +48,7 @@ export default function CreateConsultationPage() {
                 <Button
                     type="link"
                     icon={<ArrowLeftOutlined />}
-                    onClick={() => router.back()}
+                    onClick={() => goBack()}
                     style={{ paddingLeft: 0, fontSize: 16, color: '#000' }}
                 >
                     返回列表

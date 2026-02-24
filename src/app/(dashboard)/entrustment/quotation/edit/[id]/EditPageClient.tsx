@@ -1,5 +1,6 @@
 'use client'
 
+import { useGoBack } from '@/hooks/useGoBack'
 import { useRouter } from 'next/navigation'
 import { Button, Spin, Result } from 'antd'
 import { ArrowLeftOutlined } from '@ant-design/icons'
@@ -9,6 +10,7 @@ import { useState, useEffect } from 'react'
 
 export default function EditQuotationPage({ id }: { id: string }) {
     const router = useRouter()
+  const goBack = useGoBack('/entrustment/quotation')
 
     const [loading, setLoading] = useState(false)
     const [fetching, setFetching] = useState(true)
@@ -106,7 +108,7 @@ export default function EditQuotationPage({ id }: { id: string }) {
     }
 
     const handleCancel = () => {
-        router.back()
+        goBack()
     }
 
     if (fetching) {
@@ -114,7 +116,7 @@ export default function EditQuotationPage({ id }: { id: string }) {
     }
 
     if (error) {
-        return <Result status="error" title="加载失败" subTitle={error} extra={<Button onClick={() => router.back()}>返回列表</Button>} />
+        return <Result status="error" title="加载失败" subTitle={error} extra={<Button onClick={() => goBack()}>返回列表</Button>} />
     }
 
     return (
@@ -123,7 +125,7 @@ export default function EditQuotationPage({ id }: { id: string }) {
                 <Button
                     type="link"
                     icon={<ArrowLeftOutlined />}
-                    onClick={() => router.back()}
+                    onClick={() => goBack()}
                     style={{ paddingLeft: 0, fontSize: 16, color: '#000' }}
                 >
                     返回列表

@@ -1,9 +1,10 @@
 'use client'
 
+import { useGoBack } from '@/hooks/useGoBack'
 import { useState, useEffect } from "react"
 import { showSuccess, showError } from '@/lib/confirm'
 import { useParams, useRouter } from "next/navigation"
-import { Card, Button, Form, Input, Space, Modal, Descriptions, Tag, Spin, Upload, Image } from "antd"
+import { Card, Button, Form, Input, Space, Modal, Descriptions, Tag, Spin, Upload, Image, App } from "antd"
 import { SaveOutlined, CheckOutlined, ArrowLeftOutlined, PlusOutlined, DeleteOutlined } from "@ant-design/icons"
 import dynamic from 'next/dynamic'
 
@@ -54,6 +55,8 @@ interface TestMetadata {
 export default function DataEntryPage() {
   const params = useParams()
   const router = useRouter()
+  const goBack = useGoBack('/task/my')
+  const { message } = App.useApp()
   const taskId = params.id as string
 
   const [task, setTask] = useState<Task | null>(null)
@@ -93,7 +96,7 @@ export default function DataEntryPage() {
       }
 
       // 优先从 sheetData 加载数据（Fortune-sheet 格式）
-      if (taskData.sheetData) {
+      if (taskData.sheetData && taskData.sheetData.length > 2) {
         try {
           const parsed = typeof taskData.sheetData === 'string'
             ? JSON.parse(taskData.sheetData)
@@ -107,21 +110,19 @@ export default function DataEntryPage() {
             } else if (sheet.celldata && sheet.celldata.length > 0) {
               setSheetData(parsed)
             } else {
-              await loadTemplateOrDefault(taskData)
+              await loadFromTestDataOrDefault(taskData)
             }
           } else {
-            await loadTemplateOrDefault(taskData)
+            await loadFromTestDataOrDefault(taskData)
           }
         } catch (e) {
           console.error("解析 sheetData 失败", e)
-          await loadTemplateOrDefault(taskData)
+          await loadFromTestDataOrDefault(taskData)
         }
       }
-      // 兼容旧逻辑：如果 testData 是数组且非空
-      else if (taskData.testData && Array.isArray(taskData.testData) && taskData.testData.length > 0) {
-        setSheetData(taskData.testData)
-      } else {
-        await loadTemplateOrDefault(taskData)
+      // 从 TestData 表重建（兜底方案）
+      else {
+        await loadFromTestDataOrDefault(taskData)
       }
     } catch (error) {
       console.error("获取任务失败", error)
@@ -133,7 +134,25 @@ export default function DataEntryPage() {
 
   // 从模板加载列结构，或使用默认表格
   const loadTemplateOrDefault = async (taskData: Task) => {
-    const templateId = taskData.entrustmentProject?.testTemplateId
+    // 优先用 testTemplateId
+    let templateId = taskData.entrustmentProject?.testTemplateId
+
+    // 如果没有 templateId，按项目名称搜索匹配的模板
+    if (!templateId && taskData.entrustmentProject?.name) {
+      try {
+        const searchRes = await fetch(`/api/test-template?keyword=${encodeURIComponent(taskData.entrustmentProject.name)}&pageSize=1`)
+        if (searchRes.ok) {
+          const searchJson = await searchRes.json()
+          const list = searchJson.data?.list || searchJson.list || []
+          if (list.length > 0) {
+            templateId = list[0].id
+          }
+        }
+      } catch (e) {
+        // 搜索失败不影响后续逻辑
+      }
+    }
+
     if (templateId) {
       try {
         const templateRes = await fetch(`/api/test-template/${templateId}`)
@@ -155,6 +174,50 @@ export default function DataEntryPage() {
       }
     }
     setSheetData(getDefaultData())
+  }
+
+  // 从 TestData 表重建表格，或使用模板/默认表格
+  const loadFromTestDataOrDefault = async (taskData: Task) => {
+    // 如果有 testData 记录，从中重建表格
+    if (taskData.testData && Array.isArray(taskData.testData) && taskData.testData.length > 0) {
+      const celldata: any[] = []
+      // 表头
+      const headers = ['检测项目', '检测方法', '技术要求', '实测值', '单项判定', '备注']
+      headers.forEach((h, c) => {
+        celldata.push({ r: 0, c, v: { v: h, ct: { fa: "General", t: "g" }, bl: 1 } })
+      })
+      // 数据行
+      taskData.testData.forEach((item: any, idx: number) => {
+        const r = idx + 1
+        const vals = [
+          item.parameter || '',
+          item.method || '',
+          item.standard || '',
+          item.value || '',
+          item.result || '',
+          item.remark || '',
+        ]
+        vals.forEach((v, c) => {
+          if (v) {
+            celldata.push({ r, c, v: { v, ct: { fa: "General", t: "g" } } })
+          }
+        })
+      })
+
+      setSheetData([{
+        name: "检测数据",
+        celldata,
+        row: Math.max(taskData.testData.length + 5, 20),
+        column: 8,
+        config: {},
+        index: "0",
+        status: 1,
+      }])
+      return
+    }
+
+    // 否则尝试从模板或默认数据加载
+    await loadTemplateOrDefault(taskData)
   }
 
   useEffect(() => {
@@ -180,7 +243,7 @@ export default function DataEntryPage() {
       const responseJson = await res.json()
 
       if (res.ok) {
-        showSuccess('数据已保存')
+        message.success({ content: '保存成功', duration: 3 })
       } else {
         console.error("保存失败:", responseJson)
         showError('保存失败')
@@ -230,7 +293,7 @@ export default function DataEntryPage() {
         <div className="flex items-center gap-4">
           <Button
             icon={<ArrowLeftOutlined />}
-            onClick={() => router.back()}
+            onClick={() => goBack()}
           >
             返回
           </Button>
@@ -269,7 +332,7 @@ export default function DataEntryPage() {
           <Descriptions.Item label="样品名称">
             {task.sample?.name || task.sampleName || "-"}
           </Descriptions.Item>
-          <Descriptions.Item label="设备">{task.device?.name || "-"}</Descriptions.Item>
+
           <Descriptions.Item label="检测项目" span={2}>
             {task.entrustmentProject?.name || task.testItems?.map((item, i) => (
               <Tag key={i}>{item}</Tag>
@@ -306,16 +369,7 @@ export default function DataEntryPage() {
               disabled={isReadOnly}
             />
           </div>
-          <div className="flex items-center gap-2">
-            <span className="text-gray-600 whitespace-nowrap">复核人：</span>
-            <Input
-              style={{ width: 150 }}
-              placeholder="复核人姓名"
-              value={metadata.reviewer || ''}
-              onChange={e => setMetadata({ ...metadata, reviewer: e.target.value })}
-              disabled={isReadOnly}
-            />
-          </div>
+
         </div>
       </Card>
 

@@ -224,9 +224,9 @@ export default function DashboardPage() {
         <Col xs={24} sm={12} lg={4}>
           <Card>
             <Statistic
-              title="待审核报告"
+              title="任务报告"
               value={loading ? 0 : stats.pendingReports}
-              prefix={<ClockCircleOutlined style={{ color: '#ff4d4f' }} />}
+              prefix={<FileTextOutlined style={{ color: '#52c41a' }} />}
               loading={loading}
             />
           </Card>

@@ -49,14 +49,28 @@ export async function POST(request: NextRequest) {
             return NextResponse.json({ error: '缺少 fileUrl' }, { status: 400 })
         }
 
-        // 读取 docx 文件
-        let fullPath = fileUrl
-        if (!path.isAbsolute(fileUrl)) {
-            fullPath = path.join(process.cwd(), 'public', fileUrl)
+        // 读取 docx 文件 - 兼容 standalone 模式
+        let fullPath = ''
+        if (path.isAbsolute(fileUrl) && fs.existsSync(fileUrl)) {
+            fullPath = fileUrl
+        } else {
+            // 去掉开头的 / 避免 path.join 忽略前面的路径
+            const relUrl = fileUrl.replace(/^\//, '')
+            const candidates = [
+                path.join(process.cwd(), 'public', relUrl),
+                path.join('/root/lims-next/public', relUrl),
+                path.join('/root/lims-next/standalone/public', relUrl),
+            ]
+            for (const p of candidates) {
+                if (fs.existsSync(p)) {
+                    fullPath = p
+                    break
+                }
+            }
         }
 
-        if (!fs.existsSync(fullPath)) {
-            return NextResponse.json({ error: '模板文件不存在' }, { status: 404 })
+        if (!fullPath) {
+            return NextResponse.json({ error: '模板文件不存在', fileUrl }, { status: 400 })
         }
 
         const content = fs.readFileSync(fullPath, 'binary')

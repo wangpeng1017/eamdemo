@@ -36,20 +36,17 @@ export const GET = withErrorHandler(async (request: NextRequest) => {
         testingSamplesCount = 0
     }
 
-    // 3. 待审核报告：admin 全局，普通用户按审核人或任务负责人过滤
-    let pendingReportsWhere: any = { status: { in: ['draft', 'reviewing'] } }
+    // 3. 任务报告总数：admin 全局，普通用户按任务负责人过滤
+    let reportsWhere: any = {}
     if (!isAdmin && userId) {
-        // 查找当前用户负责任务关联的报告，或审核人为当前用户的报告
         const myTaskIds = await prisma.testTask.findMany({
             where: { assignedToId: userId },
             select: { id: true },
         })
         const taskIds = myTaskIds.map(t => t.id)
-        pendingReportsWhere = {
-            status: { in: ['draft', 'reviewing'] },
+        reportsWhere = {
             OR: [
                 { taskId: { in: taskIds } },
-                { reviewer: userName },
                 { tester: userName },
             ],
         }
@@ -85,7 +82,7 @@ export const GET = withErrorHandler(async (request: NextRequest) => {
         completedThisMonth,
     ] = await Promise.all([
         prisma.entrustment.count({ where: entrustmentWhere }),
-        prisma.testReport.count({ where: pendingReportsWhere }),
+        prisma.testReport.count({ where: reportsWhere }),
         prisma.testReport.count({ where: completedWhere }),
     ])
 

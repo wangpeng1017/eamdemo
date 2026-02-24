@@ -1,6 +1,7 @@
 
 'use client'
 
+import { useGoBack } from '@/hooks/useGoBack'
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { Button, Form, Input, Row, Col, Spin, Tabs, AutoComplete } from 'antd'
@@ -21,6 +22,7 @@ interface TestReport {
 
 export default function EditClientReportPageClient({ id }: EditPageClientProps) {
     const router = useRouter()
+  const goBack = useGoBack('/report/client-generate')
     const [form] = Form.useForm()
     const [loading, setLoading] = useState(false)
     const [initializing, setInitializing] = useState(true)
@@ -165,7 +167,7 @@ export default function EditClientReportPageClient({ id }: EditPageClientProps) 
     }
 
     const handleCancel = () => {
-        router.back()
+        goBack()
     }
 
     const handleReportToggle = (report: TestReport) => {
@@ -349,7 +351,7 @@ export default function EditClientReportPageClient({ id }: EditPageClientProps) 
                 <Button
                     type="link"
                     icon={<ArrowLeftOutlined />}
-                    onClick={() => router.back()}
+                    onClick={() => goBack()}
                     style={{ paddingLeft: 0, fontSize: 16, color: '#000' }}
                 >
                     返回列表

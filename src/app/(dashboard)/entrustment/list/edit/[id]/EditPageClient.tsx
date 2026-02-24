@@ -1,5 +1,6 @@
 'use client'
 
+import { useGoBack } from '@/hooks/useGoBack'
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { Spin, Button } from 'antd'
@@ -14,6 +15,7 @@ interface EditPageClientProps {
 
 export default function EditEntrustmentPageClient({ id }: EditPageClientProps) {
     const router = useRouter()
+  const goBack = useGoBack('/entrustment/list')
     const [initialValues, setInitialValues] = useState<any>(null)
     const [loading, setLoading] = useState(false)
 
@@ -98,7 +100,7 @@ export default function EditEntrustmentPageClient({ id }: EditPageClientProps) {
     }
 
     const handleCancel = () => {
-        router.back()
+        goBack()
     }
 
     if (!initialValues) {
@@ -115,7 +117,7 @@ export default function EditEntrustmentPageClient({ id }: EditPageClientProps) {
                 <Button
                     type="link"
                     icon={<ArrowLeftOutlined />}
-                    onClick={() => router.back()}
+                    onClick={() => goBack()}
                     style={{ paddingLeft: 0, fontSize: 16, color: '#000' }}
                 >
                     返回列表

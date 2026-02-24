@@ -1,5 +1,6 @@
 'use client'
 
+import { useGoBack } from '@/hooks/useGoBack'
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { Button, Form, Input, Select, DatePicker, Spin } from 'antd'
@@ -13,6 +14,7 @@ interface EditPageClientProps {
 
 export default function EditDevicePageClient({ id }: EditPageClientProps) {
     const router = useRouter()
+  const goBack = useGoBack('/device/list')
     const [form] = Form.useForm()
     const [loading, setLoading] = useState(false)
     const [initializing, setInitializing] = useState(true)
@@ -83,7 +85,7 @@ export default function EditDevicePageClient({ id }: EditPageClientProps) {
                 <Button
                     type="link"
                     icon={<ArrowLeftOutlined />}
-                    onClick={() => router.back()}
+                    onClick={() => goBack()}
                     style={{ paddingLeft: 0, fontSize: 16, color: '#000' }}
                 >
                     返回列表
@@ -128,7 +130,7 @@ export default function EditDevicePageClient({ id }: EditPageClientProps) {
                         <Button type="primary" htmlType="submit" loading={loading} style={{ marginRight: 8 }}>
                             提交
                         </Button>
-                        <Button onClick={() => router.back()}>
+                        <Button onClick={() => goBack()}>
                             取消
                         </Button>
                     </Form.Item>

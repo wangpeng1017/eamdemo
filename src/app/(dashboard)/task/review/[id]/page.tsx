@@ -1,5 +1,6 @@
 'use client'
 
+import { useGoBack } from '@/hooks/useGoBack'
 import { useState, useEffect } from 'react'
 import { showSuccess, showError } from '@/lib/confirm'
 import { useParams, useRouter } from 'next/navigation'
@@ -35,6 +36,7 @@ interface Task {
 export default function TaskReviewPage() {
     const params = useParams()
     const router = useRouter()
+  const goBack = useGoBack('/task/my')
     const taskId = params.id as string
 
     const [task, setTask] = useState<Task | null>(null)
@@ -176,7 +178,7 @@ export default function TaskReviewPage() {
             {/* 审核按钮 */}
             {task.status === 'pending_review' && (
                 <div className="flex justify-end gap-2">
-                    <Button icon={<ArrowLeftOutlined />} onClick={() => router.back()}>
+                    <Button icon={<ArrowLeftOutlined />} onClick={() => goBack()}>
                         返回
                     </Button>
                     <Button
@@ -200,7 +202,7 @@ export default function TaskReviewPage() {
 
             {task.status !== 'pending_review' && (
                 <div className="flex justify-end">
-                    <Button icon={<ArrowLeftOutlined />} onClick={() => router.back()}>
+                    <Button icon={<ArrowLeftOutlined />} onClick={() => goBack()}>
                         返回
                     </Button>
                 </div>

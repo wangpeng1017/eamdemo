@@ -1,6 +1,7 @@
 
 'use client'
 
+import { useGoBack } from '@/hooks/useGoBack'
 import { useState, useEffect } from 'react'
 import { showSuccess, showError } from '@/lib/confirm'
 import { useParams, useRouter } from 'next/navigation'
@@ -48,6 +49,7 @@ const statusMap: Record<string, { text: string; color: string }> = {
 export default function ReportEditPage() {
     const params = useParams()
     const router = useRouter()
+  const goBack = useGoBack('/report/task-generate')
     const reportId = params.id as string
 
     const [report, setReport] = useState<Report | null>(null)
@@ -164,7 +166,7 @@ export default function ReportEditPage() {
         <div className="p-6">
             {/* 顶部操作栏 */}
             <div className="mb-4 flex justify-between items-center">
-                <a onClick={() => router.back()} style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4, color: '#1677ff' }}>
+                <a onClick={() => goBack()} style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4, color: '#1677ff' }}>
                     <ArrowLeftOutlined /> 返回
                 </a>
                 <h2 style={{ margin: 0 }}>编辑检测报告</h2>

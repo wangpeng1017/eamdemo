@@ -1,5 +1,6 @@
 'use client'
 
+import { useGoBack } from '@/hooks/useGoBack'
 import { useState, useEffect, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { Card, Spin, Button } from 'antd'
@@ -10,6 +11,7 @@ import dayjs from 'dayjs'
 
 function CreateEntrustmentContent() {
     const router = useRouter()
+  const goBack = useGoBack('/entrustment/list')
     const searchParams = useSearchParams()
     const [initialValues, setInitialValues] = useState<any>(null)
     const [loading, setLoading] = useState(false)
@@ -217,7 +219,7 @@ function CreateEntrustmentContent() {
                 <Button
                     type="link"
                     icon={<ArrowLeftOutlined />}
-                    onClick={() => router.back()}
+                    onClick={() => goBack()}
                     style={{ paddingLeft: 0, fontSize: 16, color: '#000' }}
                 >
                     返回列表

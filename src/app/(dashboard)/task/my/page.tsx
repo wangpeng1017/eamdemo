@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react"
 import { showSuccess, showError, showWarning } from '@/lib/confirm'
 import { Table, Button, Space, Tag, Modal, Form, Select, message, Card, Statistic, DatePicker, App } from "antd"
-import { PlayCircleOutlined, CheckCircleOutlined, ClockCircleOutlined, SwapOutlined, EditOutlined, FileTextOutlined } from "@ant-design/icons"
+import { PlayCircleOutlined, CheckCircleOutlined, ClockCircleOutlined, EditOutlined, FileTextOutlined } from "@ant-design/icons"
 import type { ColumnsType } from "antd/es/table"
 import dayjs from "dayjs"
 import { useRouter } from "next/navigation"
@@ -21,11 +21,6 @@ interface Task {
   entrustmentProject?: { name: string }
 }
 
-interface User {
-  id: string
-  name: string
-  dept?: { name: string }
-}
 
 const statusMap: Record<string, { text: string; color: string }> = {
   pending: { text: "待开始", color: "default" },
@@ -43,15 +38,11 @@ export default function MyTasksPage() {
   const [page, setPage] = useState(1)
   const [statusFilter, setStatusFilter] = useState<string | undefined>()
   const [stats, setStats] = useState<Record<string, number>>({})
-  const [users, setUsers] = useState<User[]>([])
 
   // 模态框状态
-  const [transferModalOpen, setTransferModalOpen] = useState(false)
-  const [startModalOpen, setStartModalOpen] = useState(false) // 新增：开始任务模态框
-
+  const [startModalOpen, setStartModalOpen] = useState(false)
   const [currentTask, setCurrentTask] = useState<Task | null>(null)
-  const [transferForm] = Form.useForm()
-  const [startForm] = Form.useForm() // 新增：开始任务表单
+  const [startForm] = Form.useForm()
   const [generating, setGenerating] = useState(false)
 
   const fetchData = async (p = page) => {
@@ -79,27 +70,11 @@ export default function MyTasksPage() {
     }
   }
 
-  const fetchUsers = async () => {
-    try {
-      const res = await fetch('/api/user?pageSize=1000')
-      const json = await res.json()
-      setUsers(json.data?.list || json.list || [])
-    } catch (e) {
-      console.error('获取用户列表失败:', e)
-    }
-  }
-
   useEffect(() => {
     fetchData()
-    fetchUsers()
   }, [page, statusFilter])
 
-  // 打开转交模态框
-  const openTransferModal = (task: Task) => {
-    setCurrentTask(task)
-    transferForm.resetFields()
-    setTransferModalOpen(true)
-  }
+
 
   // 打开开始任务模态框
   const openStartModal = (task: Task) => {
@@ -114,12 +89,19 @@ export default function MyTasksPage() {
     try {
       const values = await startForm.validateFields()
 
+      // 校验：完成时间必须晚于开始时间
+      if (values.plannedEndDate && values.plannedStartDate &&
+        values.plannedEndDate.isBefore(values.plannedStartDate)) {
+        showWarning('时间校验', '预计完成时间不能早于预计开始时间，请重新选择')
+        return
+      }
+
       const res = await fetch(`/api/task/${currentTask.id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           action: 'start',
-          plannedStartDate: values.plannedStartDate, // 提交时间字段
+          plannedStartDate: values.plannedStartDate,
           plannedEndDate: values.plannedEndDate,
         })
       })
@@ -152,27 +134,7 @@ export default function MyTasksPage() {
     }
   }
 
-  const handleTransfer = async () => {
-    if (!currentTask) return
-    const values = await transferForm.validateFields()
-    const res = await fetch(`/api/task/${currentTask.id}`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        action: 'transfer',
-        assignedToId: values.assignedToId,
-        transferReason: values.reason || ''
-      })
-    })
-    if (res.ok) {
-      showSuccess("任务已转交")
-      setTransferModalOpen(false)
-      fetchData()
-    } else {
-      const data = await res.json()
-      showError(data.error || "转交失败")
-    }
-  }
+
 
   const handleDataEntry = (task: Task) => {
     router.push(`/task/data/${task.id}`)
@@ -189,10 +151,21 @@ export default function MyTasksPage() {
       })
       const json = await res.json()
       if (res.ok && json.success) {
-        showSuccess('报告生成成功')
-        router.push('/report/task-generate')
+        modal.success({
+          title: '已生成任务报告',
+          content: (
+            <div>
+              <p>任务 <strong>{task.taskNo}</strong> 的报告已成功生成。</p>
+              <p style={{ color: '#999', marginTop: 8 }}>报告编号：<strong>{json.data?.reportNo || '-'}</strong></p>
+              <p style={{ color: '#999' }}>可前往「任务报告生成」模块查看和编辑报告内容。</p>
+            </div>
+          ),
+          okText: '查看报告',
+          onOk: () => router.push('/report/task-generate'),
+          centered: true,
+        })
+        fetchData()
       } else {
-        // 使用上下文化的 modal 实例，确保弹窗正确渲染
         modal.warning({
           title: '操作提示',
           content: json.error || '报告生成失败',
@@ -270,12 +243,7 @@ export default function MyTasksPage() {
               </Button>
             </>
           )}
-          {/* 非完成状态：显示"转交"按钮 */}
-          {record.status !== "completed" && record.status !== "pending_review" && (
-            <Button size="small" icon={<SwapOutlined />} onClick={() => openTransferModal(record)}>
-              转交
-            </Button>
-          )}
+
         </Space>
       ),
     },
@@ -326,33 +294,7 @@ export default function MyTasksPage() {
         }}
       />
 
-      {/* 转交任务弹窗 */}
-      <Modal
-        title="转交任务"
-        open={transferModalOpen}
-        onOk={handleTransfer}
-        onCancel={() => setTransferModalOpen(false)}
-        width={400}
-      >
-        <Form form={transferForm} layout="vertical">
-          <Form.Item name="assignedToId" label="转交给" rules={[{ required: true, message: '请选择接收人' }]}>
-            <Select
-              showSearch
-              placeholder="选择接收人"
-              optionFilterProp="label"
-              options={users.map(u => ({ value: u.id, label: `${u.name}${u.dept ? ` (${u.dept.name})` : ''}` }))}
-            />
-          </Form.Item>
-          <Form.Item name="reason" label="转交原因">
-            <Select placeholder="选择或输入原因" allowClear>
-              <Select.Option value="工作调整">工作调整</Select.Option>
-              <Select.Option value="设备故障">设备故障</Select.Option>
-              <Select.Option value="技术支援">技术支援</Select.Option>
-              <Select.Option value="其他">其他</Select.Option>
-            </Select>
-          </Form.Item>
-        </Form>
-      </Modal>
+
 
       {/* 需求6：开始任务弹窗 */}
       <Modal

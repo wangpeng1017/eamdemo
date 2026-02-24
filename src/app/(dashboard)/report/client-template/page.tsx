@@ -100,10 +100,6 @@ export default function ClientTemplatePage() {
         { title: '模板编码', dataIndex: 'code', width: 120 },
         { title: '模板名称', dataIndex: 'name', width: 200 },
         {
-            title: '分类', dataIndex: 'category', width: 100,
-            render: (v: string) => categoryMap[v] || v
-        },
-        {
             title: '状态', dataIndex: 'status', width: 80,
             render: (s: string) => <Tag color={statusMap[s]?.color}>{statusMap[s]?.text}</Tag>
         },
@@ -112,7 +108,6 @@ export default function ClientTemplatePage() {
             title: '创建日期', dataIndex: 'createdAt', width: 120,
             render: (d: string) => dayjs(d).format('YYYY-MM-DD')
         },
-        { title: '备注', dataIndex: 'remark', ellipsis: true },
         {
             title: '操作',
             fixed: 'right',
@@ -163,7 +158,6 @@ export default function ClientTemplatePage() {
                         <Descriptions column={2} bordered size="small">
                             <Descriptions.Item label="模板编码">{current.code}</Descriptions.Item>
                             <Descriptions.Item label="模板名称">{current.name}</Descriptions.Item>
-                            <Descriptions.Item label="分类">{categoryMap[current.category] || current.category}</Descriptions.Item>
                             <Descriptions.Item label="状态">
                                 <Tag color={statusMap[current.status]?.color}>{statusMap[current.status]?.text}</Tag>
                             </Descriptions.Item>
@@ -172,7 +166,6 @@ export default function ClientTemplatePage() {
                             <Descriptions.Item label="模板文件" span={2}>
                                 {current.fileUrl ? <a href={current.fileUrl} target="_blank" rel="noopener">{current.fileUrl}</a> : '-'}
                             </Descriptions.Item>
-                            <Descriptions.Item label="备注" span={2}>{current.remark || '-'}</Descriptions.Item>
                         </Descriptions>
 
                         <h4 style={{ margin: '20px 0 12px' }}>封面配置</h4>

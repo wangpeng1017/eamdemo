@@ -23,12 +23,8 @@ export const GET = withAuth(async (request: NextRequest, user) => {
   const endDate = searchParams.get('endDate')
   const type = searchParams.get('type')
 
-  // 构建筛选条件
+  // 构建筛选条件（样品数据所有人可见）
   const where: Record<string, unknown> = {}
-
-  // 注入数据权限过滤
-  const permissionFilter = await getDataFilter()
-  Object.assign(where, permissionFilter)
 
   if (status) {
     where.status = status

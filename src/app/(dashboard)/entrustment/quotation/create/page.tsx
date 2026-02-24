@@ -1,5 +1,6 @@
 'use client'
 
+import { useGoBack } from '@/hooks/useGoBack'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { Button, Spin } from 'antd'
 import { ArrowLeftOutlined } from '@ant-design/icons'
@@ -10,6 +11,7 @@ import dayjs from 'dayjs'
 
 function CreateQuotationContent() {
     const router = useRouter()
+  const goBack = useGoBack('/entrustment/quotation')
     const searchParams = useSearchParams()
     const consultationId = searchParams.get('consultationId')
 
@@ -102,7 +104,7 @@ function CreateQuotationContent() {
     }
 
     const handleCancel = () => {
-        router.back()
+        goBack()
     }
 
     if (fetching) {
@@ -115,7 +117,7 @@ function CreateQuotationContent() {
                 <Button
                     type="link"
                     icon={<ArrowLeftOutlined />}
-                    onClick={() => router.back()}
+                    onClick={() => goBack()}
                     style={{ paddingLeft: 0, fontSize: 16, color: '#000' }}
                 >
                     返回列表
