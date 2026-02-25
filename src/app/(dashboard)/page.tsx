@@ -180,7 +180,7 @@ export default function DashboardPage() {
 
       {/* 关键指标 */}
       <Row gutter={[16, 16]}>
-        <Col xs={24} sm={12} lg={4}>
+        <Col xs={24} sm={12} lg={6}>
           <Card>
             <Statistic
               title="待处理委托"
@@ -190,7 +190,7 @@ export default function DashboardPage() {
             />
           </Card>
         </Col>
-        <Col xs={24} sm={12} lg={4}>
+        <Col xs={24} sm={12} lg={6}>
           <Card>
             <Statistic
               title="待审批"
@@ -201,7 +201,7 @@ export default function DashboardPage() {
             />
           </Card>
         </Col>
-        <Col xs={24} sm={12} lg={4}>
+        <Col xs={24} sm={12} lg={6}>
           <Card>
             <Statistic
               title="我的任务"
@@ -211,27 +211,7 @@ export default function DashboardPage() {
             />
           </Card>
         </Col>
-        <Col xs={24} sm={12} lg={4}>
-          <Card>
-            <Statistic
-              title="检测中样品"
-              value={loading ? 0 : stats.testingSamples}
-              prefix={<ExperimentOutlined style={{ color: '#13c2c2' }} />}
-              loading={loading}
-            />
-          </Card>
-        </Col>
-        <Col xs={24} sm={12} lg={4}>
-          <Card>
-            <Statistic
-              title="任务报告"
-              value={loading ? 0 : stats.pendingReports}
-              prefix={<FileTextOutlined style={{ color: '#52c41a' }} />}
-              loading={loading}
-            />
-          </Card>
-        </Col>
-        <Col xs={24} sm={12} lg={4}>
+        <Col xs={24} sm={12} lg={6}>
           <Card>
             <Statistic
               title="本月完成"
