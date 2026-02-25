@@ -178,6 +178,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const [isAdmin, setIsAdmin] = useState(false)
   const [permissionsLoaded, setPermissionsLoaded] = useState(false)
   const pathname = usePathname()
+  const [openKeys, setOpenKeys] = useState<string[]>([])
   const { token: { colorBgContainer, borderRadiusLG } } = theme.useToken()
 
   // 加载用户权限
@@ -221,6 +222,20 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       })
       .filter(Boolean) as MenuItem[]
   }, [userPermissions, isAdmin, permissionsLoaded])
+
+  // 将 menuItems 转换为 Antd Menu 格式，仅叶子菜单项用 Link 包裹实现路由预加载
+  // 父级分组项（有 children）不用 Link，因为其 key 没有对应页面，prefetch 会 404
+  const antdMenuItems = useMemo(() => {
+    return menuItems.map(({ permissionCode, children, ...item }) => ({
+      ...item,
+      // 有子菜单的父级项不用 Link，无子菜单的顶级项（如"工作台"）用 Link
+      label: children ? item.label : <Link href={item.key} prefetch={true}>{item.label}</Link>,
+      children: children?.map(({ permissionCode: _, ...child }) => ({
+        ...child,
+        label: <Link href={child.key} prefetch={true}>{child.label}</Link>,
+      })),
+    }))
+  }, [menuItems])
 
   const [passwordModalOpen, setPasswordModalOpen] = useState(false)
   const [passwordLoading, setPasswordLoading] = useState(false)
@@ -268,8 +283,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     },
   ]
 
-  // 获取当前选中的菜单项
-  const getSelectedKeys = useCallback(() => {
+  // 当前选中的菜单项（useMemo 缓存，避免每次渲染重复计算）
+  const selectedKeys = useMemo(() => {
     for (const item of allMenuItems) {
       if (item.key === pathname) return [item.key]
       if (item.children) {
@@ -281,16 +296,21 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     return ['/']
   }, [pathname])
 
-  // 获取展开的子菜单
-  const getOpenKeys = useCallback(() => {
+  // 路由变化时自动展开对应的子菜单（受控模式）
+  useEffect(() => {
     for (const item of allMenuItems) {
       if (item.children) {
         for (const child of item.children) {
-          if (child.key === pathname) return [item.key]
+          if (child.key === pathname) {
+            setOpenKeys(prev => {
+              if (prev.includes(item.key)) return prev
+              return [...prev, item.key]
+            })
+            return
+          }
         }
       }
     }
-    return []
   }, [pathname])
 
   return (
@@ -320,12 +340,10 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         </div>
         <Menu
           mode="inline"
-          selectedKeys={getSelectedKeys()}
-          defaultOpenKeys={getOpenKeys()}
-          items={menuItems.map(({ permissionCode, children, ...item }) => ({
-            ...item,
-            children: children?.map(({ permissionCode: _, ...child }) => child),
-          }))}
+          selectedKeys={selectedKeys}
+          openKeys={openKeys}
+          onOpenChange={setOpenKeys}
+          items={antdMenuItems}
           style={{ borderRight: 0 }}
           onClick={({ key }) => {
             router.push(key)
