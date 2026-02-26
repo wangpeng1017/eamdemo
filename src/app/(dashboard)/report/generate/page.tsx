@@ -39,7 +39,8 @@ interface ReportTemplate {
 }
 
 const statusMap: Record<string, { text: string; color: string }> = {
-  pending: { text: '待开始', color: 'default' },
+  pending: { text: '待接收样品', color: 'default' },
+  sample_received: { text: '已接收样品', color: 'cyan' },
   in_progress: { text: '进行中', color: 'processing' },
   completed: { text: '已完成', color: 'success' },
 }

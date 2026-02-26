@@ -112,8 +112,8 @@ export async function POST(
     updateData.submittedAt = new Date()
     updateData.submittedBy = session.user.name || session.user.id
   } else if (action === 'save') {
-    // 保存时自动设置进行中状态
-    if (task.status === 'pending') {
+    // 保存时自动设置进行中状态（仅在已接收样品状态下）
+    if (task.status === 'sample_received') {
       updateData.status = 'in_progress'
     }
   }

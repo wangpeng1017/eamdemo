@@ -340,7 +340,7 @@ export default function DataEntryPage() {
           </Descriptions.Item>
           <Descriptions.Item label="状态">
             <Tag color={task.status === "completed" ? "success" : "processing"}>
-              {task.status === "pending" ? "待开始" : task.status === "in_progress" ? "进行中" : "已完成"}
+              {task.status === "pending" ? "待接收样品" : task.status === "sample_received" ? "已接收样品" : task.status === "in_progress" ? "进行中" : "已完成"}
             </Tag>
           </Descriptions.Item>
         </Descriptions>

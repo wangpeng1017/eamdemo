@@ -157,22 +157,31 @@ export const SAMPLE_UNITS = [
 // ==================== 任务状态 ====================
 export const TASK_STATUS = {
   PENDING: 'pending',
-  IN_PROGRESS: '进行中',
-  COMPLETED: '已完成',
-  TRANSFERRED: '已转交',
+  SAMPLE_RECEIVED: 'sample_received',
+  IN_PROGRESS: 'in_progress',
+  COMPLETED: 'completed',
+  TRANSFERRED: 'transferred',
 } as const
 
 export const TASK_STATUS_TEXT: Record<string, string> = {
-  pending: '待开始',
+  pending: '待接收样品',
+  sample_received: '已接收样品',
+  in_progress: '进行中',
   '进行中': '进行中',
+  completed: '已完成',
   '已完成': '已完成',
+  transferred: '已转交',
   '已转交': '已转交',
 }
 
 export const TASK_STATUS_COLOR: Record<string, string> = {
   pending: 'default',
+  sample_received: 'cyan',
+  in_progress: 'processing',
   '进行中': 'processing',
+  completed: 'success',
   '已完成': 'success',
+  transferred: 'warning',
   '已转交': 'warning',
 }
 

@@ -5,7 +5,8 @@ import { Card, Row, Col, Table, Progress } from 'antd'
 import type { ColumnsType } from 'antd/es/table'
 
 const taskStatusText: Record<string, string> = {
-    pending: '待开始',
+    pending: '待接收样品',
+    sample_received: '已接收样品',
     in_progress: '进行中',
     completed: '已完成',
     transferred: '已转交',
@@ -56,6 +57,7 @@ export default function TaskStatisticsPage() {
                             const percent = Math.round((item.count / total) * 100)
                             const colors: Record<string, string> = {
                                 pending: '#faad14',
+                                sample_received: '#13c2c2',
                                 in_progress: '#1890ff',
                                 completed: '#52c41a',
                                 transferred: '#722ed1',

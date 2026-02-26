@@ -26,7 +26,8 @@ interface UserOption {
 }
 
 const statusMap: Record<string, { text: string; color: string }> = {
-  pending: { text: "待开始", color: "default" },
+  pending: { text: "待接收样品", color: "default" },
+  sample_received: { text: "已接收样品", color: "cyan" },
   in_progress: { text: "进行中", color: "processing" },
   pending_review: { text: "待审核", color: "warning" },
   completed: { text: "已完成", color: "success" },
@@ -191,7 +192,8 @@ export default function AllTasksPage() {
           onChange={(v) => setStatusFilter(v)}
           value={statusFilter}
         >
-          <Select.Option value="pending">待开始</Select.Option>
+          <Select.Option value="pending">待接收样品</Select.Option>
+          <Select.Option value="sample_received">已接收样品</Select.Option>
           <Select.Option value="in_progress">进行中</Select.Option>
           <Select.Option value="completed">已完成</Select.Option>
         </Select>

@@ -161,7 +161,10 @@ export default function DashboardPage() {
   const getTaskStatusColor = (status: string) => {
     const colorMap: Record<string, string> = {
       pending: 'default',
+      sample_received: 'cyan',
+      in_progress: 'processing',
       '进行中': 'processing',
+      completed: 'success',
       '已完成': 'success',
     }
     return colorMap[status] || 'default'
@@ -169,7 +172,10 @@ export default function DashboardPage() {
 
   const getTaskStatusText = (status: string) => {
     const textMap: Record<string, string> = {
-      pending: '待开始',
+      pending: '待接收样品',
+      sample_received: '已接收样品',
+      in_progress: '进行中',
+      completed: '已完成',
     }
     return textMap[status] || status
   }

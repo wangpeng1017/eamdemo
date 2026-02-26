@@ -69,7 +69,8 @@ const STATUS_TEXT_MAP: Record<string, Record<string, string>> = {
     '已销毁': '已销毁',
   },
   task: {
-    pending: '待开始',
+    pending: '待接收样品',
+    sample_received: '已接收样品',
     in_progress: '进行中',
     '进行中': '进行中',
     pending_review: '待审核',
@@ -245,6 +246,7 @@ const STATUS_COLOR_MAP: Record<string, Record<string, string>> = {
   },
   task: {
     pending: 'default',
+    sample_received: 'cyan',
     in_progress: 'processing',
     '进行中': 'processing',
     pending_review: 'warning',

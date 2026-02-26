@@ -2,8 +2,8 @@
 
 import { useState, useEffect } from "react"
 import { showSuccess, showError } from '@/lib/confirm'
-import { Table, Button, Tag, Modal, Form, Input, DatePicker, Select, Card, Statistic, Space, Drawer, Descriptions, Popconfirm } from "antd"
-import { ClockCircleOutlined, ExclamationCircleOutlined, PlusOutlined, EyeOutlined, DeleteOutlined } from "@ant-design/icons"
+import { Table, Button, Tag, Modal, Form, Input, DatePicker, Select, Card, Statistic, Space, Drawer, Descriptions, Popconfirm, InputNumber, Row, Col, Divider } from "antd"
+import { ClockCircleOutlined, ExclamationCircleOutlined, EyeOutlined, DeleteOutlined, ToolOutlined, CheckCircleOutlined, CloseCircleOutlined } from "@ant-design/icons"
 import type { ColumnsType } from "antd/es/table"
 import dayjs from "dayjs"
 
@@ -21,6 +21,7 @@ interface RequisitionRecord {
   actualReturnDate: string | null
   status: string
   sample?: {
+    id: string
     sampleNo: string
     name: string
     specification: string | null
@@ -36,10 +37,49 @@ interface Sample {
   quantity: string | null
 }
 
+interface ProcessingRecord {
+  id: string
+  processNo: string
+  sampleId: string
+  processorName: string
+  processType: string
+  description: string | null
+  sentDate: string
+  expectedReturnDate: string | null
+  actualReturnDate: string | null
+  result: string | null
+  quantity: string | null
+  cost: number | null
+  remark: string | null
+  status: string
+  createdAt: string
+  sample: {
+    id: string
+    sampleNo: string
+    name: string
+    specification: string | null
+    entrustment?: { entrustmentNo: string }
+  }
+  createdBy?: { name: string }
+}
+
 const statusMap: Record<string, { text: string; color: string }> = {
-  requisitioned: { text: "领用中", color: "processing" },
+  requisitioned: { text: "使用中", color: "processing" },
   returned: { text: "已归还", color: "success" },
   overdue: { text: "逾期未还", color: "error" },
+}
+
+const processStatusMap: Record<string, { text: string; color: string }> = {
+  pending: { text: '待加工', color: 'default' },
+  processing: { text: '加工中', color: 'processing' },
+  completed: { text: '已完成', color: 'success' },
+  cancelled: { text: '已取消', color: 'error' },
+}
+
+const resultMap: Record<string, { text: string; color: string }> = {
+  qualified: { text: '合格', color: 'success' },
+  unqualified: { text: '不合格', color: 'error' },
+  partial: { text: '部分合格', color: 'warning' },
 }
 
 export default function MySamplesPage() {
@@ -50,28 +90,39 @@ export default function MySamplesPage() {
   const [statusFilter, setStatusFilter] = useState<string | undefined>()
   const [stats, setStats] = useState({ requisitioned: 0, returned: 0, overdue: 0 })
 
-  // Return Modal
+  // 归还弹窗
   const [returnModalOpen, setReturnModalOpen] = useState(false)
   const [selectedRecord, setSelectedRecord] = useState<RequisitionRecord | null>(null)
   const [returnForm] = Form.useForm()
-
-  // New Requisition Modal
-  const [requisitionModalOpen, setRequisitionModalOpen] = useState(false)
-  const [requisitionForm] = Form.useForm()
-  const [samples, setSamples] = useState<Sample[]>([])
-  const [selectedSample, setSelectedSample] = useState<Sample | null>(null)
 
   // 查看 Drawer
   const [viewDrawerOpen, setViewDrawerOpen] = useState(false)
   const [currentRecord, setCurrentRecord] = useState<RequisitionRecord | null>(null)
 
-  // 查看领用详情
+  // 送出加工弹窗
+  const [processModalOpen, setProcessModalOpen] = useState(false)
+  const [processingSample, setProcessingSample] = useState<RequisitionRecord | null>(null)
+  const [processForm] = Form.useForm()
+
+  // 加工记录
+  const [processingData, setProcessingData] = useState<ProcessingRecord[]>([])
+  const [processingLoading, setProcessingLoading] = useState(false)
+  const [processingTotal, setProcessingTotal] = useState(0)
+  const [processingPage, setProcessingPage] = useState(1)
+
+  // 加工记录操作
+  const [completeModalOpen, setCompleteModalOpen] = useState(false)
+  const [currentProcessing, setCurrentProcessing] = useState<ProcessingRecord | null>(null)
+  const [completeForm] = Form.useForm()
+  const [detailModalOpen, setDetailModalOpen] = useState(false)
+
+  // 查看分配详情
   const handleView = (record: RequisitionRecord) => {
     setCurrentRecord(record)
     setViewDrawerOpen(true)
   }
 
-  // 删除领用记录
+  // 删除分配记录
   const handleDeleteRequisition = async (id: string) => {
     try {
       const res = await fetch(`/api/sample/requisition/${id}`, { method: 'DELETE' })
@@ -97,9 +148,9 @@ export default function MySamplesPage() {
     try {
       const res = await fetch(`/api/sample/requisition?${params}`)
       const json = await res.json()
-      // Transform data to include sample info
       const list = (json.list || []).map((item: any) => ({
         ...item,
+        sampleId: item.sampleId || item.sample?.id || '',
         sampleNo: item.sample?.sampleNo || '',
         name: item.sample?.name || '',
         specification: item.sample?.specification || '',
@@ -107,7 +158,7 @@ export default function MySamplesPage() {
       }))
       setData(list)
       setTotal(json.total || 0)
-      // Compute stats
+      // 统计
       const allRes = await fetch('/api/sample/requisition?pageSize=1000')
       const allJson = await allRes.json()
       const allList = allJson.list || []
@@ -123,29 +174,29 @@ export default function MySamplesPage() {
     }
   }
 
-  const fetchSamples = async () => {
+  // 加载加工记录
+  const fetchProcessingData = async (p = processingPage) => {
+    setProcessingLoading(true)
     try {
-      const res = await fetch('/api/sample?pageSize=100&status=received')
+      const res = await fetch(`/api/sample-processing?page=${p}&pageSize=10`)
       const json = await res.json()
       if (json.success && json.data) {
-        setSamples(json.data.list || [])
-      } else {
-        setSamples(json.list || [])
+        setProcessingData(json.data.list || [])
+        setProcessingTotal(json.data.total || 0)
       }
-    } catch (e) {
-      console.error(e)
+    } catch {
+      // 静默失败
     }
+    setProcessingLoading(false)
   }
 
   useEffect(() => { fetchData() }, [page, statusFilter])
-  useEffect(() => { fetchSamples() }, [])
+  useEffect(() => { fetchProcessingData() }, [processingPage])
 
-  // -- Return Handlers --
+  // -- 归还 --
   const handleReturn = (record: RequisitionRecord) => {
     setSelectedRecord(record)
-    returnForm.setFieldsValue({
-      returnDate: dayjs(),
-    })
+    returnForm.setFieldsValue({ returnDate: dayjs() })
     setReturnModalOpen(true)
   }
 
@@ -173,57 +224,118 @@ export default function MySamplesPage() {
     }
   }
 
-  // -- New Requisition Handlers --
-  const handleNewRequisition = () => {
-    requisitionForm.resetFields()
-    setSelectedSample(null)
-    setRequisitionModalOpen(true)
+  // -- 送出加工 --
+  const handleSendProcess = (record: RequisitionRecord) => {
+    setProcessingSample(record)
+    processForm.resetFields()
+    processForm.setFieldsValue({ sentDate: dayjs() })
+    setProcessModalOpen(true)
   }
 
-  const handleSampleChange = (sampleId: string) => {
-    const sample = samples.find(s => s.id === sampleId)
-    setSelectedSample(sample || null)
-    if (sample) {
-      requisitionForm.setFieldsValue({
-        quantity: sample.quantity,
-      })
-    }
-  }
-
-  const handleRequisitionSubmit = async () => {
-    const values = await requisitionForm.validateFields()
+  const handleProcessSubmit = async () => {
+    if (!processingSample) return
     try {
-      const res = await fetch('/api/sample/requisition', {
+      const values = await processForm.validateFields()
+      const sampleId = processingSample.sampleId || processingSample.sample?.id
+      if (!sampleId) {
+        showError('样品信息异常')
+        return
+      }
+      const res = await fetch('/api/sample-processing', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          sampleId: values.sampleId,
+          sampleId,
+          processorName: values.processorName,
+          processType: values.processType,
+          description: values.description,
+          sentDate: values.sentDate?.format('YYYY-MM-DD'),
+          expectedReturnDate: values.expectedReturnDate?.format('YYYY-MM-DD'),
           quantity: values.quantity,
-          purpose: values.purpose,
-          expectedReturnDate: values.expectedReturnDate?.toISOString(),
-          requisitionBy: values.requisitionBy || '当前用户',
-        }),
+          cost: values.cost,
+          remark: values.remark,
+        })
       })
-      if (res.ok) {
-        showSuccess("领用成功")
-        setRequisitionModalOpen(false)
-        fetchData()
+      const json = await res.json()
+      if (res.ok && json.success) {
+        showSuccess('已送出加工')
+        setProcessModalOpen(false)
+        fetchProcessingData() // 刷新加工记录
       } else {
-        const err = await res.json()
-        showError(err.error || "领用失败")
+        showError(json.error?.message || '操作失败')
       }
-    } catch (error) {
-      showError("领用失败")
+    } catch (e) {
+      console.error(e)
     }
   }
+
+  // -- 加工记录操作 --
+  const handleProcessComplete = (record: ProcessingRecord) => {
+    setCurrentProcessing(record)
+    completeForm.resetFields()
+    completeForm.setFieldsValue({ actualReturnDate: dayjs(), result: 'qualified' })
+    setCompleteModalOpen(true)
+  }
+
+  const handleCompleteSubmit = async () => {
+    if (!currentProcessing) return
+    try {
+      const values = await completeForm.validateFields()
+      const res = await fetch(`/api/sample-processing/${currentProcessing.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'complete',
+          actualReturnDate: values.actualReturnDate?.format('YYYY-MM-DD'),
+          result: values.result,
+        })
+      })
+      const json = await res.json()
+      if (res.ok && json.success) {
+        showSuccess('加工完成')
+        setCompleteModalOpen(false)
+        fetchProcessingData()
+      } else {
+        showError(json.error?.message || '操作失败')
+      }
+    } catch (e) {
+      console.error(e)
+    }
+  }
+
+  const handleProcessCancel = async (id: string) => {
+    try {
+      const res = await fetch(`/api/sample-processing/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'cancel' })
+      })
+      const json = await res.json()
+      if (res.ok && json.success) {
+        showSuccess('已取消')
+        fetchProcessingData()
+      } else {
+        showError(json.error?.message || '操作失败')
+      }
+    } catch {
+      showError('操作失败')
+    }
+  }
+
+  const handleProcessView = (record: ProcessingRecord) => {
+    setCurrentProcessing(record)
+    setDetailModalOpen(true)
+  }
+
+  // ============ 列定义 ============
 
   const columns: ColumnsType<RequisitionRecord> = [
     { title: "样品编号", dataIndex: "sampleNo", width: 150 },
     { title: "样品名称", dataIndex: "name", width: 150 },
-    { title: "领用数量", dataIndex: "quantity", width: 100 },
+    { title: "分配数量", dataIndex: "quantity", width: 100 },
     { title: "用途", dataIndex: "purpose", width: 150, ellipsis: true },
     {
-      title: "领用日期",
+      title: "分配日期",
       dataIndex: "requisitionDate",
       width: 120,
       render: (d) => dayjs(d).format("YYYY-MM-DD"),
@@ -247,19 +359,25 @@ export default function MySamplesPage() {
       render: (s: string) => <Tag color={statusMap[s]?.color}>{statusMap[s]?.text || s}</Tag>,
     },
     {
-      title: '操作', fixed: 'right', width: 180,
+      title: '操作', fixed: 'right', width: 220,
       render: (_, record) => (
         <Space size="small" style={{ whiteSpace: 'nowrap' }}>
-          {/* 业务按钮 */}
+          {/* 归还 */}
           {(record.status === 'requisitioned' || record.status === 'overdue') && (
             <Button type="primary" ghost size="small" onClick={() => handleReturn(record)}>
               归还
             </Button>
           )}
+          {/* 送出加工 */}
+          {record.status === 'requisitioned' && (
+            <Button size="small" icon={<ToolOutlined />} onClick={() => handleSendProcess(record)}>
+              送出加工
+            </Button>
+          )}
           {/* 查看/删除 */}
           <Button size="small" icon={<EyeOutlined />} onClick={() => handleView(record)} />
           {record.status === 'requisitioned' && (
-            <Popconfirm title="确认删除该领用记录？删除后库存将自动恢复。" onConfirm={() => handleDeleteRequisition(record.id)} okText="确定" cancelText="取消" okButtonProps={{ danger: true }}>
+            <Popconfirm title="确认删除该记录？删除后库存将自动恢复。" onConfirm={() => handleDeleteRequisition(record.id)} okText="确定" cancelText="取消" okButtonProps={{ danger: true }}>
               <Button size="small" danger icon={<DeleteOutlined />} />
             </Popconfirm>
           )}
@@ -268,19 +386,75 @@ export default function MySamplesPage() {
     },
   ]
 
+  const processingColumns: ColumnsType<ProcessingRecord> = [
+    { title: '加工单号', dataIndex: 'processNo', width: 160 },
+    {
+      title: '样品', width: 150,
+      render: (_, r) => (
+        <div>
+          <div>{r.sample?.name || '-'}</div>
+          <div style={{ fontSize: 12, color: '#999' }}>{r.sample?.sampleNo}</div>
+        </div>
+      )
+    },
+    { title: '加工商', dataIndex: 'processorName', width: 150, ellipsis: true },
+    { title: '加工类型', dataIndex: 'processType', width: 90 },
+    {
+      title: '送出日期', dataIndex: 'sentDate', width: 110,
+      render: (d: string) => d ? dayjs(d).format('YYYY-MM-DD') : '-'
+    },
+    {
+      title: '预计回样', dataIndex: 'expectedReturnDate', width: 110,
+      render: (d: string) => {
+        if (!d) return '-'
+        const date = dayjs(d)
+        const isOverdue = date.isBefore(dayjs(), 'day')
+        return <span style={{ color: isOverdue ? '#f5222d' : undefined, fontWeight: isOverdue ? 'bold' : 'normal' }}>{date.format('YYYY-MM-DD')}</span>
+      }
+    },
+    {
+      title: '实际回样', dataIndex: 'actualReturnDate', width: 110,
+      render: (d: string) => d ? dayjs(d).format('YYYY-MM-DD') : '-'
+    },
+    {
+      title: '加工结果', dataIndex: 'result', width: 90,
+      render: (r: string) => r ? <Tag color={resultMap[r]?.color}>{resultMap[r]?.text || r}</Tag> : '-'
+    },
+    {
+      title: '状态', dataIndex: 'status', width: 90,
+      render: (s: string) => <Tag color={processStatusMap[s]?.color}>{processStatusMap[s]?.text || s}</Tag>
+    },
+    {
+      title: '操作', fixed: 'right', width: 180,
+      render: (_, record) => (
+        <Space size="small" style={{ whiteSpace: 'nowrap' }}>
+          <Button size="small" icon={<EyeOutlined />} onClick={() => handleProcessView(record)} />
+          {record.status === 'processing' && (
+            <>
+              <Button size="small" type="primary" icon={<CheckCircleOutlined />} onClick={() => handleProcessComplete(record)}>
+                记录回样
+              </Button>
+              <Popconfirm title="确认取消加工？" onConfirm={() => handleProcessCancel(record.id)} okText="确定" cancelText="取消">
+                <Button size="small" danger icon={<CloseCircleOutlined />} />
+              </Popconfirm>
+            </>
+          )}
+        </Space>
+      )
+    }
+  ]
+
   return (
     <div className="p-4">
       <div className="flex justify-between items-center mb-4">
         <h2 className="text-lg font-semibold m-0">我的样品</h2>
-        <Button type="primary" icon={<PlusOutlined />} onClick={handleNewRequisition}>
-          新建领用
-        </Button>
+        <div />
       </div>
 
       <div className="grid grid-cols-3 gap-4 mb-4">
         <Card>
           <Statistic
-            title="领用中"
+            title="使用中"
             value={stats.requisitioned}
             prefix={<ClockCircleOutlined />}
             valueStyle={{ color: "#1890ff" }}
@@ -311,7 +485,7 @@ export default function MySamplesPage() {
           value={statusFilter}
           onChange={(v) => setStatusFilter(v)}
         >
-          <Select.Option value="requisitioned">领用中</Select.Option>
+          <Select.Option value="requisitioned">使用中</Select.Option>
           <Select.Option value="returned">已归还</Select.Option>
           <Select.Option value="overdue">逾期未还</Select.Option>
         </Select>
@@ -332,9 +506,32 @@ export default function MySamplesPage() {
         }}
       />
 
-      {/* 查看 Drawer */}
+      {/* ============ 我的加工记录 ============ */}
+      <Divider />
+      <div className="flex justify-between items-center mb-4">
+        <h2 className="text-lg font-semibold m-0">我的加工记录</h2>
+      </div>
+
+      <Table
+        columns={processingColumns}
+        dataSource={processingData}
+        rowKey="id"
+        loading={processingLoading}
+        scroll={{ x: 1400 }}
+        pagination={{
+          current: processingPage,
+          pageSize: 10,
+          total: processingTotal,
+          onChange: (p) => setProcessingPage(p),
+          showTotal: (t) => `共 ${t} 条`,
+        }}
+      />
+
+      {/* ============ 弹窗区 ============ */}
+
+      {/* 查看分配详情 */}
       <Drawer
-        title="领用详情"
+        title="分配详情"
         placement="right"
         width={600}
         open={viewDrawerOpen}
@@ -342,13 +539,13 @@ export default function MySamplesPage() {
       >
         {currentRecord && (
           <Descriptions column={2} bordered size="small">
-            <Descriptions.Item label="领用单号" span={2}>{(currentRecord as any).requisitionNo || '-'}</Descriptions.Item>
+            <Descriptions.Item label="分配单号" span={2}>{(currentRecord as any).requisitionNo || '-'}</Descriptions.Item>
             <Descriptions.Item label="样品编号">{currentRecord.sampleNo}</Descriptions.Item>
             <Descriptions.Item label="样品名称">{currentRecord.name}</Descriptions.Item>
             <Descriptions.Item label="规格型号">{currentRecord.specification || '-'}</Descriptions.Item>
-            <Descriptions.Item label="领用数量">{currentRecord.quantity} {currentRecord.unit || ''}</Descriptions.Item>
+            <Descriptions.Item label="分配数量">{currentRecord.quantity} {currentRecord.unit || ''}</Descriptions.Item>
             <Descriptions.Item label="用途" span={2}>{currentRecord.purpose || '-'}</Descriptions.Item>
-            <Descriptions.Item label="领用日期">{dayjs(currentRecord.requisitionDate).format('YYYY-MM-DD')}</Descriptions.Item>
+            <Descriptions.Item label="分配日期">{dayjs(currentRecord.requisitionDate).format('YYYY-MM-DD')}</Descriptions.Item>
             <Descriptions.Item label="预计归还">{currentRecord.expectedReturnDate ? dayjs(currentRecord.expectedReturnDate).format('YYYY-MM-DD') : '-'}</Descriptions.Item>
             <Descriptions.Item label="实际归还">{currentRecord.actualReturnDate ? dayjs(currentRecord.actualReturnDate).format('YYYY-MM-DD') : '-'}</Descriptions.Item>
             <Descriptions.Item label="状态">
@@ -360,7 +557,7 @@ export default function MySamplesPage() {
         )}
       </Drawer>
 
-      {/* 归还 Modal */}
+      {/* 归还弹窗 */}
       <Modal
         title="归还样品"
         open={returnModalOpen}
@@ -383,49 +580,127 @@ export default function MySamplesPage() {
         </Form>
       </Modal>
 
-      {/* 新建领用 Modal */}
+      {/* 送出加工弹窗 */}
       <Modal
-        title="新建领用"
-        open={requisitionModalOpen}
-        onCancel={() => setRequisitionModalOpen(false)}
-        onOk={handleRequisitionSubmit}
-        width={500}
+        title="送出加工"
+        open={processModalOpen}
+        onOk={handleProcessSubmit}
+        onCancel={() => setProcessModalOpen(false)}
+        width={550}
       >
-        <Form form={requisitionForm} layout="vertical">
-          <Form.Item label="选择样品" name="sampleId" rules={[{ required: true, message: '请选择样品' }]}>
-            <Select
-              showSearch
-              placeholder="搜索样品编号或名称"
-              optionFilterProp="label"
-              onChange={handleSampleChange}
-              options={samples.map(s => ({
-                value: s.id,
-                label: `${s.sampleNo} - ${s.name}`,
-              }))}
-            />
+        {processingSample && (
+          <div style={{ marginBottom: 16, padding: 12, background: '#e6f7ff', borderRadius: 6 }}>
+            <div><strong>样品编号：</strong>{processingSample.sampleNo}</div>
+            <div><strong>样品名称：</strong>{processingSample.name}</div>
+          </div>
+        )}
+        <Form form={processForm} layout="vertical">
+          <Row gutter={16}>
+            <Col span={12}>
+              <Form.Item name="processorName" label="加工商" rules={[{ required: true, message: '请输入加工商' }]}>
+                <Input placeholder="加工商名称" />
+              </Form.Item>
+            </Col>
+            <Col span={12}>
+              <Form.Item name="processType" label="加工类型" rules={[{ required: true, message: '请输入加工类型' }]}>
+                <Input placeholder="如：切割、研磨、镶嵌等" />
+              </Form.Item>
+            </Col>
+          </Row>
+          <Form.Item name="description" label="加工描述">
+            <Input.TextArea rows={2} placeholder="加工内容描述" />
           </Form.Item>
-
-          {selectedSample && (
-            <Card size="small" style={{ marginBottom: 16, background: '#fafafa' }}>
-              <div><strong>样品编号:</strong> {selectedSample.sampleNo}</div>
-              <div><strong>样品名称:</strong> {selectedSample.name}</div>
-              <div><strong>规格型号:</strong> {selectedSample.specification || '-'}</div>
-            </Card>
-          )}
-
-          <Form.Item label="领用数量" name="quantity" rules={[{ required: true, message: '请输入领用数量' }]}>
-            <Input placeholder="如：3" />
-          </Form.Item>
-          <Form.Item label="用途" name="purpose" rules={[{ required: true, message: '请输入用途' }]}>
-            <Input placeholder="如：抗压强度检测" />
-          </Form.Item>
-          <Form.Item label="预计归还日期" name="expectedReturnDate">
-            <DatePicker style={{ width: "100%" }} />
-          </Form.Item>
-          <Form.Item label="领用人" name="requisitionBy">
-            <Input placeholder="如未填写，将使用当前用户" />
+          <Row gutter={16}>
+            <Col span={12}>
+              <Form.Item name="sentDate" label="送出日期" rules={[{ required: true, message: '请选择日期' }]}>
+                <DatePicker style={{ width: '100%' }} />
+              </Form.Item>
+            </Col>
+            <Col span={12}>
+              <Form.Item name="expectedReturnDate" label="预计回样日期">
+                <DatePicker style={{ width: '100%' }} />
+              </Form.Item>
+            </Col>
+          </Row>
+          <Row gutter={16}>
+            <Col span={12}>
+              <Form.Item name="quantity" label="加工数量" rules={[{ required: true, message: '请输入加工数量' }]}>
+                <Input placeholder="如：5件" />
+              </Form.Item>
+            </Col>
+            <Col span={12}>
+              <Form.Item name="cost" label="加工费用（元）">
+                <InputNumber min={0} precision={2} style={{ width: '100%' }} placeholder="0.00" />
+              </Form.Item>
+            </Col>
+          </Row>
+          <Form.Item name="remark" label="备注">
+            <Input placeholder="备注信息" />
           </Form.Item>
         </Form>
+      </Modal>
+
+      {/* 记录回样弹窗 */}
+      <Modal
+        title="记录加工回样"
+        open={completeModalOpen}
+        onOk={handleCompleteSubmit}
+        onCancel={() => setCompleteModalOpen(false)}
+        width={500}
+      >
+        {currentProcessing && (
+          <div style={{ marginBottom: 16, padding: 12, background: '#f6ffed', borderRadius: 6 }}>
+            <div><strong>加工单号：</strong>{currentProcessing.processNo}</div>
+            <div><strong>样品：</strong>{currentProcessing.sample?.name}（{currentProcessing.sample?.sampleNo}）</div>
+            <div><strong>加工商：</strong>{currentProcessing.processorName}</div>
+          </div>
+        )}
+        <Form form={completeForm} layout="vertical">
+          <Form.Item name="actualReturnDate" label="实际回样日期" rules={[{ required: true, message: '请选择日期' }]}>
+            <DatePicker style={{ width: '100%' }} />
+          </Form.Item>
+          <Form.Item name="result" label="加工结果" rules={[{ required: true, message: '请选择结果' }]}>
+            <Select options={[
+              { value: 'qualified', label: '合格' },
+              { value: 'unqualified', label: '不合格' },
+              { value: 'partial', label: '部分合格' },
+            ]} />
+          </Form.Item>
+        </Form>
+      </Modal>
+
+      {/* 加工记录详情 */}
+      <Modal
+        title="加工记录详情"
+        open={detailModalOpen}
+        onCancel={() => setDetailModalOpen(false)}
+        footer={null}
+        width={600}
+      >
+        {currentProcessing && (
+          <Descriptions column={2} bordered size="small">
+            <Descriptions.Item label="加工单号">{currentProcessing.processNo}</Descriptions.Item>
+            <Descriptions.Item label="状态">
+              <Tag color={processStatusMap[currentProcessing.status]?.color}>{processStatusMap[currentProcessing.status]?.text}</Tag>
+            </Descriptions.Item>
+            <Descriptions.Item label="样品名称">{currentProcessing.sample?.name}</Descriptions.Item>
+            <Descriptions.Item label="样品编号">{currentProcessing.sample?.sampleNo}</Descriptions.Item>
+            <Descriptions.Item label="加工商">{currentProcessing.processorName}</Descriptions.Item>
+            <Descriptions.Item label="加工类型">{currentProcessing.processType}</Descriptions.Item>
+            <Descriptions.Item label="加工描述" span={2}>{currentProcessing.description || '-'}</Descriptions.Item>
+            <Descriptions.Item label="送出日期">{dayjs(currentProcessing.sentDate).format('YYYY-MM-DD')}</Descriptions.Item>
+            <Descriptions.Item label="预计回样">{currentProcessing.expectedReturnDate ? dayjs(currentProcessing.expectedReturnDate).format('YYYY-MM-DD') : '-'}</Descriptions.Item>
+            <Descriptions.Item label="实际回样">{currentProcessing.actualReturnDate ? dayjs(currentProcessing.actualReturnDate).format('YYYY-MM-DD') : '-'}</Descriptions.Item>
+            <Descriptions.Item label="加工结果">
+              {currentProcessing.result ? <Tag color={resultMap[currentProcessing.result]?.color}>{resultMap[currentProcessing.result]?.text}</Tag> : '-'}
+            </Descriptions.Item>
+            <Descriptions.Item label="加工数量">{currentProcessing.quantity || '-'}</Descriptions.Item>
+            <Descriptions.Item label="加工费用">{currentProcessing.cost ? `¥${currentProcessing.cost}` : '-'}</Descriptions.Item>
+            <Descriptions.Item label="备注" span={2}>{currentProcessing.remark || '-'}</Descriptions.Item>
+            <Descriptions.Item label="操作人">{currentProcessing.createdBy?.name || '-'}</Descriptions.Item>
+            <Descriptions.Item label="创建时间">{dayjs(currentProcessing.createdAt).format('YYYY-MM-DD HH:mm')}</Descriptions.Item>
+          </Descriptions>
+        )}
       </Modal>
     </div>
   )

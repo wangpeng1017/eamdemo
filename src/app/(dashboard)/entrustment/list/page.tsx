@@ -39,6 +39,14 @@ interface EntrustmentProject {
   deviceId: string | null
   deadline: string | null
   assignDate: string | null
+  testTasks?: {
+    id: string
+    taskNo: string
+    plannedStartDate: string | null
+    plannedEndDate: string | null
+    status: string
+    assignedTo: { id: string; name: string } | null
+  }[]
 }
 
 interface Sample {
@@ -584,6 +592,52 @@ export default function EntrustmentListPage() {
     { title: '检测标准', dataIndex: 'testStandard', width: 200 },
     { title: '评判标准', dataIndex: 'judgmentStandard', width: 150 },
     { title: '数量', dataIndex: 'quantity', width: 70 },
+    {
+      title: '预计开始',
+      key: 'plannedStartDate',
+      width: 110,
+      render: (_: unknown, record: SampleTestItem) => {
+        const entrustment = data.find(d => d.sampleTestItems?.some(s => s.id === record.id))
+        if (!entrustment) return '-'
+        const sameNameItems = entrustment.sampleTestItems?.filter(s => s.testItemName === record.testItemName) || []
+        const indexInSameName = sameNameItems.findIndex(s => s.id === record.id)
+        const sameNameProjects = entrustment.projects?.filter(p => p.name === record.testItemName) || []
+        const project = sameNameProjects[indexInSameName] || sameNameProjects[0]
+        const task = project?.testTasks?.[0]
+        return task?.plannedStartDate ? dayjs(task.plannedStartDate).format('YYYY-MM-DD') : '-'
+      }
+    },
+    {
+      title: '预计结束',
+      key: 'plannedEndDate',
+      width: 110,
+      render: (_: unknown, record: SampleTestItem) => {
+        const entrustment = data.find(d => d.sampleTestItems?.some(s => s.id === record.id))
+        if (!entrustment) return '-'
+        const sameNameItems = entrustment.sampleTestItems?.filter(s => s.testItemName === record.testItemName) || []
+        const indexInSameName = sameNameItems.findIndex(s => s.id === record.id)
+        const sameNameProjects = entrustment.projects?.filter(p => p.name === record.testItemName) || []
+        const project = sameNameProjects[indexInSameName] || sameNameProjects[0]
+        const task = project?.testTasks?.[0]
+        return task?.plannedEndDate ? dayjs(task.plannedEndDate).format('YYYY-MM-DD') : '-'
+      }
+    },
+    {
+      title: '任务状态',
+      key: 'taskStatus',
+      width: 90,
+      render: (_: unknown, record: SampleTestItem) => {
+        const entrustment = data.find(d => d.sampleTestItems?.some(s => s.id === record.id))
+        if (!entrustment) return '-'
+        const sameNameItems = entrustment.sampleTestItems?.filter(s => s.testItemName === record.testItemName) || []
+        const indexInSameName = sameNameItems.findIndex(s => s.id === record.id)
+        const sameNameProjects = entrustment.projects?.filter(p => p.name === record.testItemName) || []
+        const project = sameNameProjects[indexInSameName] || sameNameProjects[0]
+        const task = project?.testTasks?.[0]
+        if (!task) return '-'
+        return <StatusTag type="task" status={task.status} />
+      }
+    },
     {
       title: '操作',
       key: 'action',

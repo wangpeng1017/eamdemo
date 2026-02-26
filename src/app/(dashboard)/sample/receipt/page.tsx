@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from "react"
 import { showSuccess, showError } from '@/lib/confirm'
 import { Table, Button, Space, Tag, Modal, Form, Input, Select, DatePicker, InputNumber, Card, Row, Col, Descriptions, Drawer, Tabs, Popconfirm } from "antd"
-import { PlusOutlined, BarcodeOutlined, DownloadOutlined, SearchOutlined, ToolOutlined, EyeOutlined, EditOutlined, DeleteOutlined } from "@ant-design/icons"
+import { PlusOutlined, BarcodeOutlined, DownloadOutlined, SearchOutlined, EyeOutlined, EditOutlined, DeleteOutlined } from "@ant-design/icons"
 import { StatusTag } from '@/components/StatusTag'
 import SampleTestItemTable, { SampleTestItemData } from '@/components/SampleTestItemTable'
 import type { ColumnsType } from "antd/es/table"
@@ -80,10 +80,7 @@ export default function SampleReceiptPage() {
   const [labelTestItems, setLabelTestItems] = useState<string[]>([])
   const labelRef = useRef<HTMLDivElement>(null)
 
-  // 加工弹窗
-  const [processModalOpen, setProcessModalOpen] = useState(false)
-  const [processingSample, setProcessingSample] = useState<Sample | null>(null)
-  const [processForm] = Form.useForm()
+
 
   // 查看 Drawer
   const [viewDrawerOpen, setViewDrawerOpen] = useState(false)
@@ -302,45 +299,7 @@ export default function SampleReceiptPage() {
     }
   }
 
-  // 送出加工
-  const handleSendProcess = (record: Sample) => {
-    setProcessingSample(record)
-    processForm.resetFields()
-    processForm.setFieldsValue({ sentDate: dayjs() })
-    setProcessModalOpen(true)
-  }
 
-  const handleProcessSubmit = async () => {
-    if (!processingSample) return
-    try {
-      const values = await processForm.validateFields()
-      const res = await fetch('/api/sample-processing', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          sampleId: processingSample.id,
-          processorName: values.processorName,
-          processType: values.processType,
-          description: values.description,
-          sentDate: values.sentDate?.format('YYYY-MM-DD'),
-          expectedReturnDate: values.expectedReturnDate?.format('YYYY-MM-DD'),
-          quantity: values.quantity,
-          cost: values.cost,
-          remark: values.remark,
-        })
-      })
-      const json = await res.json()
-      if (res.ok && json.success) {
-        showSuccess('已送出加工')
-        setProcessModalOpen(false)
-        fetchData()
-      } else {
-        showError(json.error?.message || '操作失败')
-      }
-    } catch (e) {
-      console.error(e)
-    }
-  }
 
   const columns: ColumnsType<Sample> = [
     { title: "样品编号", dataIndex: "sampleNo", width: 150 },
@@ -381,11 +340,7 @@ export default function SampleReceiptPage() {
             <Button size="small" icon={<BarcodeOutlined />} onClick={() => handleShowLabel(record)}>
               标签
             </Button>
-            {(record.status === 'received' || record.status === 'processed') && (
-              <Button size="small" icon={<ToolOutlined />} onClick={() => handleSendProcess(record)}>
-                送出加工
-              </Button>
-            )}
+
             {/* 查看/编辑/删除固定在右 */}
             <Button size="small" icon={<EyeOutlined />} onClick={() => handleView(record)} />
             {!hasTask && (
@@ -608,65 +563,7 @@ export default function SampleReceiptPage() {
         </div>
       </Modal>
 
-      {/* 送出加工弹窗 */}
-      <Modal
-        title="送出加工"
-        open={processModalOpen}
-        onOk={handleProcessSubmit}
-        onCancel={() => setProcessModalOpen(false)}
-        width={550}
-      >
-        {processingSample && (
-          <div style={{ marginBottom: 16, padding: 12, background: '#e6f7ff', borderRadius: 6 }}>
-            <div><strong>样品编号：</strong>{processingSample.sampleNo}</div>
-            <div><strong>样品名称：</strong>{processingSample.name}</div>
-          </div>
-        )}
-        <Form form={processForm} layout="vertical">
-          <Row gutter={16}>
-            <Col span={12}>
-              <Form.Item name="processorName" label="加工商" rules={[{ required: true, message: '请输入加工商' }]}>
-                <Input placeholder="加工商名称" />
-              </Form.Item>
-            </Col>
-            <Col span={12}>
-              <Form.Item name="processType" label="加工类型" rules={[{ required: true, message: '请输入加工类型' }]}>
-                <Input placeholder="如：切割、研磨、镶嵌等" />
-              </Form.Item>
-            </Col>
-          </Row>
-          <Form.Item name="description" label="加工描述">
-            <Input.TextArea rows={2} placeholder="加工内容描述" />
-          </Form.Item>
-          <Row gutter={16}>
-            <Col span={12}>
-              <Form.Item name="sentDate" label="送出日期" rules={[{ required: true, message: '请选择日期' }]}>
-                <DatePicker style={{ width: '100%' }} />
-              </Form.Item>
-            </Col>
-            <Col span={12}>
-              <Form.Item name="expectedReturnDate" label="预计回样日期">
-                <DatePicker style={{ width: '100%' }} />
-              </Form.Item>
-            </Col>
-          </Row>
-          <Row gutter={16}>
-            <Col span={12}>
-              <Form.Item name="quantity" label="加工数量" rules={[{ required: true, message: '请输入加工数量' }]}>
-                <Input placeholder="如：5件" />
-              </Form.Item>
-            </Col>
-            <Col span={12}>
-              <Form.Item name="cost" label="加工费用（元）">
-                <InputNumber min={0} precision={2} style={{ width: '100%' }} placeholder="0.00" />
-              </Form.Item>
-            </Col>
-          </Row>
-          <Form.Item name="remark" label="备注">
-            <Input placeholder="备注信息" />
-          </Form.Item>
-        </Form>
-      </Modal>
+
     </div>
   )
 }

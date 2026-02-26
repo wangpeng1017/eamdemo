@@ -125,8 +125,8 @@ const allMenuItems: MenuItem[] = [
     label: '财务管理',
     permissionCode: 'menu:finance',
     children: [
-      { key: '/finance/receivable', label: '应收款', permissionCode: 'menu:finance:receivable' },
       { key: '/finance/invoice', label: '发票管理', permissionCode: 'menu:finance:invoice' },
+      { key: '/finance/receivable', label: '应收款', permissionCode: 'menu:finance:receivable' },
     ],
   },
   {

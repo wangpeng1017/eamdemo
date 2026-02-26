@@ -119,6 +119,18 @@ export const GET = withAuth(async (request: NextRequest, user) => {
             deviceId: true,
             deadline: true,
             assignDate: true,
+            // 关联检测任务，获取预计时间和状态
+            testTasks: {
+              select: {
+                id: true,
+                taskNo: true,
+                plannedStartDate: true,
+                plannedEndDate: true,
+                status: true,
+                assignedTo: { select: { id: true, name: true } },
+              },
+              take: 1,
+            },
           },
         },
         samples: {

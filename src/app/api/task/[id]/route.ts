@@ -106,7 +106,7 @@ export const GET = withErrorHandler(async (
       if (samples.length > 0) {
         // 优先按名称匹配，否则取第一个
         const matched = samples.find(s => s.name === task.sampleName) || samples[0]
-        enrichedSample = matched
+        enrichedSample = { id: '', status: '', ...matched }
       }
     } catch (e) {
       // 不阻断主流程
@@ -178,9 +178,9 @@ export const DELETE = withErrorHandler(async (
     notFound('任务不存在')
   }
 
-  // 只有待开始状态才能删除
-  if (existing.status !== 'pending') {
-    badRequest('只有待开始状态的任务可以删除')
+  // 只有待接收样品或已接收样品状态才能删除
+  if (existing.status !== 'pending' && existing.status !== 'sample_received') {
+    badRequest('只有待接收样品或已接收样品状态的任务可以删除')
   }
 
   await prisma.testTask.delete({ where: { id } })
@@ -194,9 +194,10 @@ export const DELETE = withErrorHandler(async (
  * 支持的操作：
  * 1. assign - 分配任务给检测人员
  * 2. transfer - 转交任务给其他人员
- * 3. start - 开始任务（pending -> in_progress）
- * 4. complete - 完成任务（in_progress -> completed）
- * 5. updateProgress - 更新进度
+ * 3. receiveSample - 接收样品（pending -> sample_received）
+ * 4. start - 开始任务（sample_received -> in_progress）
+ * 5. complete - 完成任务（in_progress -> completed）
+ * 6. updateProgress - 更新进度
  */
 export const PATCH = withErrorHandler(async (
   request: NextRequest,
@@ -210,7 +211,7 @@ export const PATCH = withErrorHandler(async (
 
   const action = validateEnum(
     data.action,
-    ['assign', 'transfer', 'start', 'complete', 'updateProgress'] as const,
+    ['assign', 'transfer', 'receiveSample', 'start', 'complete', 'updateProgress'] as const,
     'action'
   )
 
@@ -283,10 +284,21 @@ export const PATCH = withErrorHandler(async (
       }
       break
 
-    case 'start':
-      // 开始任务
+    case 'receiveSample':
+      // 接收样品
       if (task.status !== 'pending') {
-        badRequest(`当前状态 ${task.status} 不能执行开始操作`)
+        badRequest(`当前状态 ${task.status} 不能执行接收样品操作`)
+      }
+
+      updateData = {
+        status: 'sample_received',
+      }
+      break
+
+    case 'start':
+      // 开始任务（前置状态改为 sample_received）
+      if (task.status !== 'sample_received') {
+        badRequest(`当前状态 ${task.status} 不能执行开始操作，请先接收样品`)
       }
 
       if (!task.assignedToId) {
@@ -296,7 +308,7 @@ export const PATCH = withErrorHandler(async (
       updateData = {
         status: 'in_progress',
         progress: 10,
-        // 需求6：开始任务时记录时间
+        // 开始任务时记录时间
         plannedStartDate: data.plannedStartDate ? new Date(data.plannedStartDate) : undefined,
         plannedEndDate: data.plannedEndDate ? new Date(data.plannedEndDate) : undefined,
       }

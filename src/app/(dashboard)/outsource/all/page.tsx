@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from "react"
 import { showSuccess, showError } from '@/lib/confirm'
 import { Table, Button, Space, Tag, Modal, Form, Select, Card, Statistic, DatePicker, Input, App } from "antd"
-import { PlayCircleOutlined, ClockCircleOutlined, SwapOutlined, EditOutlined, FileTextOutlined } from "@ant-design/icons"
+import { InboxOutlined, PlayCircleOutlined, ClockCircleOutlined, EditOutlined, FileTextOutlined } from "@ant-design/icons"
 import type { ColumnsType } from "antd/es/table"
 import dayjs from "dayjs"
 import { useRouter } from "next/navigation"
@@ -34,7 +34,8 @@ interface UserOption {
 }
 
 const statusMap: Record<string, { text: string; color: string }> = {
-  pending: { text: "待开始", color: "default" },
+  pending: { text: "待接收样品", color: "default" },
+  sample_received: { text: "已接收样品", color: "cyan" },
   in_progress: { text: "进行中", color: "processing" },
   pending_review: { text: "待审核", color: "warning" },
   completed: { text: "已完成", color: "success" },
@@ -59,10 +60,26 @@ export default function OutsourceAllPage() {
   const [selectedTask, setSelectedTask] = useState<Task | null>(null)
   const [assignForm] = Form.useForm()
 
-  // 转交弹窗
-  const [transferModalOpen, setTransferModalOpen] = useState(false)
-  const [currentTask, setCurrentTask] = useState<Task | null>(null)
-  const [transferForm] = Form.useForm()
+
+  const [currentTask, setCurrentTask] = useState<Task | null>(null)  // 接收样品
+  const handleReceiveSample = async (task: Task) => {
+    try {
+      const res = await fetch(`/api/task/${task.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'receiveSample' })
+      })
+      if (res.ok) {
+        showSuccess("样品已接收")
+        fetchData()
+      } else {
+        const data = await res.json()
+        showError(data.error || "操作失败")
+      }
+    } catch {
+      showError("操作失败")
+    }
+  }
 
   // 开始任务弹窗
   const [startModalOpen, setStartModalOpen] = useState(false)
@@ -199,34 +216,6 @@ export default function OutsourceAllPage() {
     }
   }
 
-  // === 转交 ===
-  const openTransferModal = (task: Task) => {
-    setCurrentTask(task)
-    transferForm.resetFields()
-    setTransferModalOpen(true)
-  }
-
-  const handleTransfer = async () => {
-    if (!currentTask) return
-    const values = await transferForm.validateFields()
-    const res = await fetch(`/api/task/${currentTask.id}`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        action: 'transfer',
-        assignedToId: values.assignedToId,
-        transferReason: values.reason || ''
-      })
-    })
-    if (res.ok) {
-      showSuccess("任务已转交")
-      setTransferModalOpen(false)
-      fetchData()
-    } else {
-      const data = await res.json()
-      showError(data.error || "转交失败")
-    }
-  }
 
   // === 数据录入 ===
   const handleDataEntry = (task: Task) => {
@@ -317,8 +306,14 @@ export default function OutsourceAllPage() {
           <Button type="link" size="small" onClick={() => handleAssign(record)} disabled={record.status === "completed"}>
             {record.assignedTo ? '重新分包' : '分包'}
           </Button>
-          {/* 待开始状态：显示"开始"按钮 */}
+          {/* 待接收样品状态：显示"接收样品"按钮 */}
           {record.status === "pending" && (
+            <Button type="link" size="small" icon={<InboxOutlined />} onClick={() => handleReceiveSample(record)}>
+              接收样品
+            </Button>
+          )}
+          {/* 已接收样品状态：显示"开始"按钮 */}
+          {record.status === "sample_received" && (
             <Button type="link" size="small" onClick={() => openStartModal(record)}>
               开始
             </Button>
@@ -341,12 +336,7 @@ export default function OutsourceAllPage() {
               生成报告
             </Button>
           )}
-          {/* 非完成/待审核状态：显示"转交"按钮 */}
-          {record.status !== "completed" && record.status !== "pending_review" && (
-            <Button type="link" size="small" onClick={() => openTransferModal(record)}>
-              转交
-            </Button>
-          )}
+
         </Space>
       ),
     },
@@ -363,7 +353,7 @@ export default function OutsourceAllPage() {
           <Statistic title="全部任务" value={(stats.pending || 0) + (stats.in_progress || 0) + (stats.pending_review || 0) + (stats.completed || 0)} prefix={<ClockCircleOutlined />} />
         </Card>
         <Card>
-          <Statistic title="待开始" value={stats.pending || 0} valueStyle={{ color: "#cf1322" }} />
+          <Statistic title="待接收" value={stats.pending || 0} valueStyle={{ color: "#cf1322" }} />
         </Card>
         <Card>
           <Statistic title="进行中" value={stats.in_progress || 0} valueStyle={{ color: "#1890ff" }} />
@@ -389,7 +379,8 @@ export default function OutsourceAllPage() {
           onChange={(v) => setStatusFilter(v)}
           value={statusFilter}
         >
-          <Select.Option value="pending">待开始</Select.Option>
+          <Select.Option value="pending">待接收样品</Select.Option>
+          <Select.Option value="sample_received">已接收样品</Select.Option>
           <Select.Option value="in_progress">进行中</Select.Option>
           <Select.Option value="pending_review">待审核</Select.Option>
           <Select.Option value="completed">已完成</Select.Option>
@@ -447,44 +438,7 @@ export default function OutsourceAllPage() {
         </Form>
       </Modal>
 
-      {/* 转交任务弹窗 */}
-      <Modal
-        title="转交任务"
-        open={transferModalOpen}
-        onOk={handleTransfer}
-        onCancel={() => setTransferModalOpen(false)}
-        width={400}
-      >
-        <Form form={transferForm} layout="vertical">
-          <Form.Item name="assignedToId" label="转交给" rules={[{ required: true, message: '请选择接收人' }]}>
-            <Select
-              showSearch
-              placeholder="搜索或选择接收人"
-              filterOption={(input, option) =>
-                (option?.label as string)?.toLowerCase().includes(input.toLowerCase())
-              }
-            >
-              {Object.entries(usersByDepartment).map(([dept, deptUsers]) => (
-                <Select.OptGroup key={dept} label={dept}>
-                  {deptUsers.map(u => (
-                    <Select.Option key={u.id} value={u.id} label={u.name}>
-                      {u.name}
-                    </Select.Option>
-                  ))}
-                </Select.OptGroup>
-              ))}
-            </Select>
-          </Form.Item>
-          <Form.Item name="reason" label="转交原因">
-            <Select placeholder="选择或输入原因" allowClear>
-              <Select.Option value="工作调整">工作调整</Select.Option>
-              <Select.Option value="设备故障">设备故障</Select.Option>
-              <Select.Option value="技术支援">技术支援</Select.Option>
-              <Select.Option value="其他">其他</Select.Option>
-            </Select>
-          </Form.Item>
-        </Form>
-      </Modal>
+
 
       {/* 开始任务弹窗 */}
       <Modal

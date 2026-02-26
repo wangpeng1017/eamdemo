@@ -2,8 +2,8 @@
 
 import { useState, useEffect } from "react"
 import { showSuccess, showError } from '@/lib/confirm'
-import { Table, Button, Tag, Modal, Form, Input, InputNumber, Select, DatePicker, message, Space, Card } from "antd"
-import { UserOutlined, SendOutlined, HistoryOutlined, SearchOutlined } from "@ant-design/icons"
+import { Table, Button, Tag, Modal, Form, Input, InputNumber, Select, DatePicker, Space, Card } from "antd"
+import { TeamOutlined, HistoryOutlined, SearchOutlined } from "@ant-design/icons"
 import type { ColumnsType } from "antd/es/table"
 import dayjs from "dayjs"
 
@@ -20,6 +20,7 @@ interface Sample {
   status: string
   receiptDate: string | null
   receiptPerson: string | null
+  entrustmentId: string | null
   requisitions?: Requisition[]
 }
 
@@ -33,17 +34,20 @@ interface Requisition {
   status: string
   quantity: string
   purpose: string | null
-  type?: string // internal / outsource
 }
 
-interface Supplier {
+interface Assignee {
   id: string
   name: string
+  source: string
 }
 
 const statusMap: Record<string, { text: string; color: string }> = {
+  pending: { text: "待处理", color: "default" },
   received: { text: "已收样", color: "success" },
   allocated: { text: "已分配", color: "processing" },
+  processing: { text: "处理中", color: "blue" },
+  processed: { text: "已处理", color: "cyan" },
   testing: { text: "检测中", color: "blue" },
   completed: { text: "已完成", color: "default" },
   returned: { text: "已归还", color: "magenta" },
@@ -63,19 +67,15 @@ export default function SampleDetailsPage() {
   const [keyword, setKeyword] = useState("")
   const [statusFilter, setStatusFilter] = useState<string | undefined>()
 
-  // Selected sample for modals
+  // 分配弹窗
   const [selectedSample, setSelectedSample] = useState<Sample | null>(null)
+  const [assignModalOpen, setAssignModalOpen] = useState(false)
+  const [assignForm] = Form.useForm()
+  const [assignees, setAssignees] = useState<Assignee[]>([])
+  const [assignLoading, setAssignLoading] = useState(false)
+  const [entrustmentInfo, setEntrustmentInfo] = useState<{ entrustmentNo: string | null; clientName: string | null }>({ entrustmentNo: null, clientName: null })
 
-  // Internal Requisition Modal
-  const [internalModalOpen, setInternalModalOpen] = useState(false)
-  const [internalForm] = Form.useForm()
-
-  // External Outsource Modal
-  const [externalModalOpen, setExternalModalOpen] = useState(false)
-  const [externalForm] = Form.useForm()
-  const [suppliers, setSuppliers] = useState<Supplier[]>([])
-
-  // Records Modal
+  // 分配记录弹窗
   const [recordsModalOpen, setRecordsModalOpen] = useState(false)
   const [requisitionRecords, setRequisitionRecords] = useState<Requisition[]>([])
 
@@ -104,39 +104,42 @@ export default function SampleDetailsPage() {
     }
   }
 
-  const fetchSuppliers = async () => {
-    try {
-      const res = await fetch('/api/supplier?pageSize=100')
-      const json = await res.json()
-      setSuppliers(json.list || [])
-    } catch (e) {
-      console.error(e)
-    }
-  }
-
   useEffect(() => { fetchData() }, [page, keyword, statusFilter])
-  useEffect(() => { fetchSuppliers() }, [])
 
-  // Calculate available quantity
+  // 计算可用量
   const getAvailableQty = (sample: Sample): string => {
     const total = parseInt(sample.totalQuantity || sample.quantity || '0') || 0
     const remaining = parseInt(sample.remainingQuantity || sample.quantity || '0') || total
     return String(remaining)
   }
 
-  // -- Internal Requisition --
-  const handleInternalRequisition = (record: Sample) => {
+  // 打开分配弹窗
+  const handleAssign = async (record: Sample) => {
     setSelectedSample(record)
-    internalForm.resetFields()
-    internalForm.setFieldsValue({
-      requisitionDate: dayjs(),
-      expectedReturnDate: dayjs().add(7, 'day'),
-    })
-    setInternalModalOpen(true)
+    assignForm.resetFields()
+    setAssignLoading(true)
+    setAssignModalOpen(true)
+
+    try {
+      const res = await fetch(`/api/sample/${record.id}/assignees`)
+      const json = await res.json()
+      setAssignees(json.assignees || [])
+      setEntrustmentInfo({
+        entrustmentNo: json.entrustmentNo,
+        clientName: json.clientName,
+      })
+    } catch (e) {
+      console.error(e)
+      setAssignees([])
+      setEntrustmentInfo({ entrustmentNo: null, clientName: null })
+    } finally {
+      setAssignLoading(false)
+    }
   }
 
-  const handleInternalSubmit = async () => {
-    const values = await internalForm.validateFields()
+  // 提交分配
+  const handleAssignSubmit = async () => {
+    const values = await assignForm.validateFields()
 
     if (!selectedSample) return
 
@@ -150,71 +153,36 @@ export default function SampleDetailsPage() {
       return
     }
 
+    // 获取被分配人姓名
+    const assignee = assignees.find(a => a.id === values.assigneeId)
+    const assigneeName = assignee?.name || values.assigneeId
+
     try {
       const res = await fetch('/api/sample/requisition', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          sampleId: selectedSample?.id,
+          sampleId: selectedSample.id,
           quantity: String(values.quantity),
-          purpose: values.purpose,
-          requisitionBy: values.requisitionBy || values.lab,
+          purpose: values.purpose || `样品分配 - ${entrustmentInfo.entrustmentNo || ''}`,
+          requisitionBy: assigneeName,
           expectedReturnDate: values.expectedReturnDate?.toISOString(),
         }),
       })
       if (res.ok) {
-        showSuccess("内部领用成功")
-        setInternalModalOpen(false)
+        showSuccess("分配成功")
+        setAssignModalOpen(false)
         fetchData()
       } else {
         const err = await res.json()
-        showError(err.error || "领用失败")
+        showError(err.error || "分配失败")
       }
     } catch (error) {
-      showError("领用失败")
+      showError("分配失败")
     }
   }
 
-  // -- External Outsource --
-  const handleExternalOutsource = (record: Sample) => {
-    setSelectedSample(record)
-    externalForm.resetFields()
-    externalForm.setFieldsValue({
-      allocationDate: dayjs(),
-      deadline: dayjs().add(14, 'day'),
-    })
-    setExternalModalOpen(true)
-  }
-
-  const handleExternalSubmit = async () => {
-    const values = await externalForm.validateFields()
-    try {
-      const res = await fetch('/api/sample/requisition', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          sampleId: selectedSample?.id,
-          quantity: String(values.quantity),
-          purpose: `外包委外 - ${values.testItem || '检测'}`,
-          requisitionBy: `供应商: ${suppliers.find(s => s.id === values.supplierId)?.name || values.supplierId}`,
-          expectedReturnDate: values.deadline?.toISOString(),
-          remark: values.remark,
-        }),
-      })
-      if (res.ok) {
-        showSuccess("外部委外成功")
-        setExternalModalOpen(false)
-        fetchData()
-      } else {
-        const err = await res.json()
-        showError(err.error || "委外失败")
-      }
-    } catch (error) {
-      showError("委外失败")
-    }
-  }
-
-  // -- Records --
+  // 查看分配记录
   const handleViewRecords = async (record: Sample) => {
     setSelectedSample(record)
     try {
@@ -225,6 +193,35 @@ export default function SampleDetailsPage() {
     } catch (e) {
       showError("获取记录失败")
     }
+  }
+
+  // 归还
+  const handleReturn = async (record: Requisition) => {
+    Modal.confirm({
+      title: '确认归还',
+      content: '确认归还该样品吗？',
+      onOk: async () => {
+        try {
+          const res = await fetch('/api/sample/requisition', {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ id: record.id }),
+          })
+          if (res.ok) {
+            showSuccess('归还成功')
+            const recordsRes = await fetch(`/api/sample/requisition?sampleId=${selectedSample?.id}&pageSize=100`)
+            const json = await recordsRes.json()
+            setRequisitionRecords(json.list || [])
+            fetchData()
+          } else {
+            const err = await res.json()
+            showError(err.error || '归还失败')
+          }
+        } catch (e) {
+          showError('归还失败')
+        }
+      }
+    })
   }
 
   const columns: ColumnsType<Sample> = [
@@ -249,6 +246,12 @@ export default function SampleDetailsPage() {
       }
     },
     {
+      title: "状态",
+      dataIndex: "status",
+      width: 90,
+      render: (s: string) => <Tag color={statusMap[s]?.color}>{statusMap[s]?.text || s}</Tag>
+    },
+    {
       title: "收样日期",
       dataIndex: "receiptDate",
       width: 120,
@@ -265,19 +268,10 @@ export default function SampleDetailsPage() {
           <Button
             type="link"
             size="small"
-            icon={<UserOutlined />}
-            onClick={() => handleInternalRequisition(record)}
+            icon={<TeamOutlined />}
+            onClick={() => handleAssign(record)}
           >
-            内部领用
-          </Button>
-          <Button
-            type="link"
-            size="small"
-            icon={<SendOutlined />}
-            style={{ color: '#52c41a' }}
-            onClick={() => handleExternalOutsource(record)}
-          >
-            外部委外
+            分配
           </Button>
           <Button
             type="link"
@@ -293,9 +287,9 @@ export default function SampleDetailsPage() {
   ]
 
   const recordColumns: ColumnsType<Requisition> = [
-    { title: "实验室/领用人", dataIndex: "requisitionBy", width: 120, ellipsis: true },
-    { title: "领用数量", dataIndex: "quantity", width: 80 },
-    { title: "领用日期", dataIndex: "requisitionDate", width: 100, render: (d) => dayjs(d).format("YYYY-MM-DD") },
+    { title: "分配人员", dataIndex: "requisitionBy", width: 120, ellipsis: true },
+    { title: "分配数量", dataIndex: "quantity", width: 80 },
+    { title: "分配日期", dataIndex: "requisitionDate", width: 100, render: (d) => dayjs(d).format("YYYY-MM-DD") },
     { title: "预计归还", dataIndex: "expectedReturnDate", width: 100, render: (d) => d ? dayjs(d).format("YYYY-MM-DD") : "-" },
     {
       title: "状态",
@@ -319,36 +313,6 @@ export default function SampleDetailsPage() {
       )
     }
   ]
-
-  const handleReturn = async (record: Requisition) => {
-    Modal.confirm({
-      title: '确认归还',
-      content: '确认归还该样品吗？',
-      onOk: async () => {
-        try {
-          const res = await fetch('/api/sample/requisition', {
-            method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ id: record.id }),
-          })
-          if (res.ok) {
-            showSuccess('归还成功')
-            // Refresh records
-            const recordsRes = await fetch(`/api/sample/requisition?sampleId=${selectedSample?.id}&pageSize=100`)
-            const json = await recordsRes.json()
-            setRequisitionRecords(json.list || [])
-            // Refresh main list to update available quantity
-            fetchData()
-          } else {
-            const err = await res.json()
-            showError(err.error || '归还失败')
-          }
-        } catch (e) {
-          showError('归还失败')
-        }
-      }
-    })
-  }
 
   return (
     <div className="p-4">
@@ -396,105 +360,76 @@ export default function SampleDetailsPage() {
         />
       </Card>
 
-      {/* 内部领用 Modal */}
+      {/* 分配弹窗 */}
       <Modal
         title={
           <div>
-            <div>内部领用</div>
+            <div>样品分配</div>
             <div className="text-sm font-normal text-gray-500 mt-1">
-              样品名称: <strong className="text-black">{selectedSample?.name}</strong>
-              <span className="ml-4">可用数量: <strong className="text-blue-500">{selectedSample ? getAvailableQty(selectedSample) : 0}</strong></span>
+              样品: <strong className="text-black">{selectedSample?.sampleNo} - {selectedSample?.name}</strong>
+              <span className="ml-4">可用量: <strong className="text-blue-500">{selectedSample ? getAvailableQty(selectedSample) : 0}</strong></span>
             </div>
           </div>
         }
-        open={internalModalOpen}
-        onCancel={() => setInternalModalOpen(false)}
-        onOk={handleInternalSubmit}
+        open={assignModalOpen}
+        onCancel={() => setAssignModalOpen(false)}
+        onOk={handleAssignSubmit}
+        okText="确认分配"
         width={500}
       >
-        <Form form={internalForm} layout="vertical" style={{ marginTop: 16 }}>
-          <Form.Item label="领用实验室" name="lab" rules={[{ required: true, message: '请选择实验室' }]}>
-            <Select placeholder="选择实验室">
-              <Select.Option value="物理实验室">物理实验室</Select.Option>
-              <Select.Option value="化学实验室">化学实验室</Select.Option>
-              <Select.Option value="力学实验室">力学实验室</Select.Option>
-              <Select.Option value="材料实验室">材料实验室</Select.Option>
-            </Select>
-          </Form.Item>
-          <Form.Item label="领用数量" name="quantity" rules={[{ required: true, message: '请输入领用数量' }]}>
-            <InputNumber min={1} style={{ width: '100%' }} />
-          </Form.Item>
-          <Form.Item label="检测项目" name="testItem">
-            <Select placeholder="输入检测项目" allowClear>
-              <Select.Option value="抗压强度检测">抗压强度检测</Select.Option>
-              <Select.Option value="抗拉强度检测">抗拉强度检测</Select.Option>
-              <Select.Option value="成分分析">成分分析</Select.Option>
-              <Select.Option value="其他">其他</Select.Option>
-            </Select>
-          </Form.Item>
-          <Form.Item label="用途说明" name="purpose" rules={[{ required: true, message: '请输入用途说明' }]}>
-            <Input.TextArea rows={2} placeholder="请详细描述用途" />
-          </Form.Item>
-          <Form.Item label="领用日期" name="requisitionDate" rules={[{ required: true, message: '此项为必填' }]}>
-            <DatePicker style={{ width: '100%' }} />
-          </Form.Item>
-          <Form.Item label="预计归还日期" name="expectedReturnDate" rules={[{ required: true, message: '此项为必填' }]}>
-            <DatePicker style={{ width: '100%' }} />
-          </Form.Item>
-        </Form>
-      </Modal>
+        {/* 委托单信息 */}
+        {entrustmentInfo.entrustmentNo && (
+          <div style={{ background: '#f6ffed', border: '1px solid #b7eb8f', borderRadius: 6, padding: '8px 12px', marginBottom: 16, marginTop: 8 }}>
+            <span style={{ color: '#52c41a', fontWeight: 500 }}>关联委托单: </span>
+            <span>{entrustmentInfo.entrustmentNo}</span>
+            {entrustmentInfo.clientName && (
+              <span style={{ marginLeft: 12, color: '#666' }}>({entrustmentInfo.clientName})</span>
+            )}
+          </div>
+        )}
+        {!entrustmentInfo.entrustmentNo && !assignLoading && (
+          <div style={{ background: '#fff7e6', border: '1px solid #ffd591', borderRadius: 6, padding: '8px 12px', marginBottom: 16, marginTop: 8 }}>
+            <span style={{ color: '#fa8c16' }}>该样品未关联委托单，请手动输入分配人员</span>
+          </div>
+        )}
 
-      {/* 外部委外 Modal */}
-      <Modal
-        title={
-          <div>
-            <div>外部委外</div>
-            <div className="text-sm font-normal text-gray-500 mt-1">
-              样品名称: <strong className="text-black">{selectedSample?.name}</strong>
-              <span className="ml-4">可用数量: <strong className="text-blue-500">{selectedSample ? getAvailableQty(selectedSample) : 0}</strong></span>
-            </div>
-          </div>
-        }
-        open={externalModalOpen}
-        onCancel={() => setExternalModalOpen(false)}
-        onOk={handleExternalSubmit}
-        width={500}
-      >
-        <Form form={externalForm} layout="vertical" style={{ marginTop: 16 }}>
-          <Form.Item label="选择供应商" name="supplierId" rules={[{ required: true, message: '请选择委外供应商' }]}>
+        <Form form={assignForm} layout="vertical" style={{ marginTop: 8 }}>
+          <Form.Item
+            label="分配给"
+            name="assigneeId"
+            rules={[{ required: true, message: '请选择或输入分配人员' }]}
+          >
             <Select
-              placeholder="选择委外供应商"
               showSearch
+              placeholder={assignLoading ? "加载中..." : "选择检测人员"}
+              loading={assignLoading}
               optionFilterProp="label"
-              options={suppliers.map(s => ({ value: s.id, label: s.name }))}
+              options={assignees.map(a => ({
+                value: a.id,
+                label: `${a.name}（${a.source}）`
+              }))}
+              notFoundContent={assignLoading ? "加载中..." : "该委托单暂无已分配人员"}
             />
           </Form.Item>
-          <Form.Item label="委外数量" name="quantity" rules={[{ required: true, message: '请输入委外数量' }]}>
-            <InputNumber min={1} style={{ width: '100%' }} />
+          <Form.Item
+            label="分配数量"
+            name="quantity"
+            rules={[{ required: true, message: '请输入分配数量' }]}
+          >
+            <InputNumber min={1} style={{ width: '100%' }} placeholder="请输入分配数量" />
           </Form.Item>
-          <Form.Item label="检测项目" name="testItem" rules={[{ required: true, message: '请选择检测项目' }]}>
-            <Select placeholder="输入检测项目">
-              <Select.Option value="抗压强度检测">抗压强度检测</Select.Option>
-              <Select.Option value="抗拉强度检测">抗拉强度检测</Select.Option>
-              <Select.Option value="成分分析">成分分析</Select.Option>
-              <Select.Option value="其他">其他</Select.Option>
-            </Select>
-          </Form.Item>
-          <Form.Item label="分配日期" name="allocationDate" rules={[{ required: true, message: '此项为必填' }]}>
+          <Form.Item label="预计归还日期" name="expectedReturnDate">
             <DatePicker style={{ width: '100%' }} />
           </Form.Item>
-          <Form.Item label="截止日期" name="deadline" rules={[{ required: true, message: '此项为必填' }]}>
-            <DatePicker style={{ width: '100%' }} />
-          </Form.Item>
-          <Form.Item label="备注" name="remark">
+          <Form.Item label="备注" name="purpose">
             <Input.TextArea rows={2} placeholder="备注信息（可选）" />
           </Form.Item>
         </Form>
       </Modal>
 
-      {/* 领用记录 Modal */}
+      {/* 分配记录 Modal */}
       <Modal
-        title={`领用记录 - ${selectedSample?.sampleNo || ''}`}
+        title={`分配记录 - ${selectedSample?.sampleNo || ''}`}
         open={recordsModalOpen}
         onCancel={() => setRecordsModalOpen(false)}
         footer={null}
@@ -506,7 +441,7 @@ export default function SampleDetailsPage() {
           rowKey="id"
           pagination={false}
           size="small"
-          locale={{ emptyText: '暂无领用记录' }}
+          locale={{ emptyText: '暂无分配记录' }}
         />
       </Modal>
     </div>

@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react"
 import { showSuccess, showError } from '@/lib/confirm'
 import { Table, Button, Space, Tag, Modal, Form, Select, Card, Statistic, DatePicker, Input, App } from "antd"
-import { PlayCircleOutlined, ClockCircleOutlined, SwapOutlined, EditOutlined, FileTextOutlined } from "@ant-design/icons"
+import { InboxOutlined, PlayCircleOutlined, ClockCircleOutlined, SwapOutlined, EditOutlined, FileTextOutlined } from "@ant-design/icons"
 import type { ColumnsType } from "antd/es/table"
 import dayjs from "dayjs"
 import { useRouter } from "next/navigation"
@@ -34,7 +34,8 @@ interface User {
 }
 
 const statusMap: Record<string, { text: string; color: string }> = {
-  pending: { text: "待开始", color: "default" },
+  pending: { text: "待接收样品", color: "default" },
+  sample_received: { text: "已接收样品", color: "cyan" },
   in_progress: { text: "进行中", color: "processing" },
   pending_review: { text: "待审核", color: "warning" },
   completed: { text: "已完成", color: "success" },
@@ -111,6 +112,26 @@ export default function MyOutsourcePage() {
     setCurrentTask(task)
     transferForm.resetFields()
     setTransferModalOpen(true)
+  }
+
+  // 接收样品
+  const handleReceiveSample = async (task: Task) => {
+    try {
+      const res = await fetch(`/api/task/${task.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'receiveSample' })
+      })
+      if (res.ok) {
+        showSuccess("样品已接收")
+        fetchData()
+      } else {
+        const data = await res.json()
+        showError(data.error || "操作失败")
+      }
+    } catch {
+      showError("操作失败")
+    }
   }
 
   const openStartModal = (task: Task) => {
@@ -242,6 +263,11 @@ export default function MyOutsourcePage() {
       render: (_, record) => (
         <Space size="small" style={{ whiteSpace: 'nowrap' }}>
           {record.status === "pending" && (
+            <Button type="primary" size="small" icon={<InboxOutlined />} onClick={() => handleReceiveSample(record)}>
+              接收样品
+            </Button>
+          )}
+          {record.status === "sample_received" && (
             <Button type="primary" size="small" icon={<PlayCircleOutlined />} onClick={() => openStartModal(record)}>
               开始
             </Button>
@@ -287,7 +313,7 @@ export default function MyOutsourcePage() {
           <Statistic title="全部任务" value={(stats.pending || 0) + (stats.in_progress || 0) + (stats.pending_review || 0) + (stats.completed || 0)} prefix={<ClockCircleOutlined />} />
         </Card>
         <Card>
-          <Statistic title="待开始" value={stats.pending || 0} valueStyle={{ color: "#cf1322" }} />
+          <Statistic title="待接收" value={stats.pending || 0} valueStyle={{ color: "#cf1322" }} />
         </Card>
         <Card>
           <Statistic title="进行中" value={stats.in_progress || 0} valueStyle={{ color: "#1890ff" }} />
@@ -313,7 +339,8 @@ export default function MyOutsourcePage() {
           onChange={(v) => setStatusFilter(v)}
           value={statusFilter}
         >
-          <Select.Option value="pending">待开始</Select.Option>
+          <Select.Option value="pending">待接收样品</Select.Option>
+          <Select.Option value="sample_received">已接收样品</Select.Option>
           <Select.Option value="in_progress">进行中</Select.Option>
           <Select.Option value="pending_review">待审核</Select.Option>
           <Select.Option value="completed">已完成</Select.Option>
