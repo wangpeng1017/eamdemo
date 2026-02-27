@@ -47,41 +47,45 @@ if command -v rsync &> /dev/null; then
   rsync -avz --progress -e "sshpass -p '$SERVER_PASS' ssh -o StrictHostKeyChecking=no" .next/standalone.tar.gz "$SERVER:$REMOTE_DIR/"
  rsync -avz --progress -e "sshpass -p '$SERVER_PASS' ssh -o StrictHostKeyChecking=no" public.tar.gz "$SERVER:$REMOTE_DIR/"
   rsync -avz --progress -e "sshpass -p '$SERVER_PASS' ssh -o StrictHostKeyChecking=no" update-db-schema.js "$SERVER:$REMOTE_DIR/"
- rsync -avz --progress -e "sshpass -p '$SERVER_PASS' ssh -o StrictHostKeyChecking=no" prisma/schema.prisma "$SERVER:$REMOTE_DIR/prisma/"
- rsync -avz --progress -e "sshpass -p '$SERVER_PASS' ssh -o StrictHostKeyChecking=no" scripts/ "$SERVER:$REMOTE_DIR/scripts/"
+  rsync -avz --progress -e "sshpass -p '$SERVER_PASS' ssh -o StrictHostKeyChecking=no" prisma/ "$SERVER:$REMOTE_DIR/prisma/"
+  rsync -avz --progress -e "sshpass -p '$SERVER_PASS' ssh -o StrictHostKeyChecking=no" scripts/ "$SERVER:$REMOTE_DIR/scripts/"
 else
  # 回退到 scp
  echo "警告: 未找到 rsync，回退到 scp..."
   sshpass -p "$SERVER_PASS" scp -o StrictHostKeyChecking=no -o ServerAliveInterval=60 .next/standalone.tar.gz "$SERVER:$REMOTE_DIR/"
   sshpass -p "$SERVER_PASS" scp -o StrictHostKeyChecking=no -o ServerAliveInterval=60 public.tar.gz "$SERVER:$REMOTE_DIR/"
- sshpass -p "$SERVER_PASS" scp -o StrictHostKeyChecking=no -o ServerAliveInterval=60 update-db-schema.js "$SERVER:$REMOTE_DIR/"
- sshpass -p "$SERVER_PASS" scp -o StrictHostKeyChecking=no -o ServerAliveInterval=60 prisma/schema.prisma "$SERVER:$REMOTE_DIR/prisma/"
- sshpass -p "$SERVER_PASS" scp -r -o StrictHostKeyChecking=no -o ServerAliveInterval=60 scripts/ "$SERVER:$REMOTE_DIR/scripts/"
+  sshpass -p "$SERVER_PASS" scp -o StrictHostKeyChecking=no -o ServerAliveInterval=60 update-db-schema.js "$SERVER:$REMOTE_DIR/"
+  sshpass -p "$SERVER_PASS" scp -o StrictHostKeyChecking=no -o ServerAliveInterval=60 prisma/schema.prisma "$SERVER:$REMOTE_DIR/prisma/"
+  sshpass -p "$SERVER_PASS" scp -r -o StrictHostKeyChecking=no -o ServerAliveInterval=60 prisma/seed-*.ts "$SERVER:$REMOTE_DIR/prisma/" 2>/dev/null || true
+  sshpass -p "$SERVER_PASS" scp -r -o StrictHostKeyChecking=no -o ServerAliveInterval=60 scripts/ "$SERVER:$REMOTE_DIR/scripts/"
 fi
 
 # 4. 服务器解压并配置
 echo ""
 echo "[4/6] 服务器解压并配置..."
 sshpass -p "$SERVER_PASS" ssh -o StrictHostKeyChecking=no -o ServerAliveInterval=60 "$SERVER" "cd $REMOTE_DIR && \
- tar -xzf standalone.tar.gz && \
- tar -xzf public.tar.gz && \
- rm -rf .next && \
- mv standalone/.next . && \
- mkdir -p .next/static && \
- cp -r static/* .next/static/ && \
+  tar -xzf standalone.tar.gz && \
+  tar -xzf public.tar.gz && \
+  rm -rf .next && \
+  mv standalone/.next . && \
+  mkdir -p .next/static && \
+  cp -r static/* .next/static/ && \
   echo '✅ static 目录已复制到 .next/static/' && \
- cp standalone/server.js . && \
- cp standalone/package.json . 2>/dev/null || true && \
- cp .env standalone/ 2>/dev/null || true && \
- echo '🔧 修复 outputFileTracingRoot 路径...' && \
- sed -i 's|/Users/wangpeng/Downloads/limsnext|$REMOTE_DIR|g' server.js && \
- sed -i 's|/Users/wangpeng/Downloads/limsnext|$REMOTE_DIR|g' .next/required-server-files.json && \
- echo '✅ 路径已替换为 $REMOTE_DIR' && \
- rm -rf standalone static standalone.tar.gz public.tar.gz && \
- npx prisma generate && \
- node update-db-schema.js && \
- node scripts/sync-permissions.js && \
- node scripts/sync-data-permissions.js"
+  cp standalone/server.js . && \
+  cp standalone/package.json . 2>/dev/null || true && \
+  cp .env standalone/ 2>/dev/null || true && \
+  echo '🔧 修复 outputFileTracingRoot 路径...' && \
+  sed -i 's|/Users/wangpeng/Downloads/limsnext|$REMOTE_DIR|g' server.js && \
+  sed -i 's|/Users/wangpeng/Downloads/limsnext|$REMOTE_DIR|g' .next/required-server-files.json && \
+  echo '✅ 路径已替换为 $REMOTE_DIR' && \
+  rm -rf standalone static standalone.tar.gz public.tar.gz && \
+  npx prisma generate && \
+  npx prisma db push --accept-data-loss 2>&1 && \
+  node update-db-schema.js && \
+  node scripts/sync-permissions.js && \
+  node scripts/sync-data-permissions.js && \
+  echo '🌱 同步审批流配置...' && \
+  node -e \"const{PrismaClient}=require('@prisma/client');const p=new PrismaClient();p.approvalFlow.upsert({where:{code:'INVOICE_APPROVAL'},update:{name:'发票开票审批',businessType:'invoice',nodes:JSON.stringify([{step:1,name:'开票审批',type:'role',targetId:'TEST_DIRECTOR',targetName:'检测部主任（秦兴国）'}]),status:true},create:{code:'INVOICE_APPROVAL',name:'发票开票审批',businessType:'invoice',nodes:JSON.stringify([{step:1,name:'开票审批',type:'role',targetId:'TEST_DIRECTOR',targetName:'检测部主任（秦兴国）'}]),status:true}}).then(f=>console.log('✅ 审批流:',f.code)).catch(e=>console.error(e)).finally(()=>p.\\\$disconnect())\" "
 
 # 5. 验证 static 目录
 echo ""
