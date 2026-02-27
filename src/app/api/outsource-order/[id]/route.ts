@@ -81,6 +81,12 @@ export const DELETE = withAuth(async (
     notFound('委外订单不存在')
   }
 
+  // 只有待处理状态的订单可以删除
+  if (existing.status !== 'pending') {
+    const { badRequest } = await import('@/lib/api-handler')
+    badRequest(`只有待处理状态的委外订单可以删除，当前状态: ${existing.status}`)
+  }
+
   await prisma.outsourceOrder.delete({ where: { orderNo: id } })
 
   return success({ message: '删除成功' })

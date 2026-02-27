@@ -44,22 +44,7 @@ export const GET = withAuth(async (request: NextRequest, user) => {
         })
     })
 
-    // 3. 待审核的报告
-    const pendingReports = await prisma.testReport.findMany({
-        where: { status: 'reviewing' },
-        take: 5,
-        orderBy: { createdAt: 'desc' },
-    })
-    pendingReports.forEach(r => {
-        todos.push({
-            id: `report-${r.id}`,
-            type: 'approval',
-            title: `报告 ${r.reportNo} 待审核`,
-            description: r.sampleName || '未知样品',
-            priority: 'high',
-            link: '/report/approval',
-        })
-    })
+    // 3. 待审核的报告（任务报告已移除审批流程，此处不再查询）
 
     // 4. 应收款到期提醒（7天内到期 + 已逾期，筛选当前用户跟进的委托单）
     const reminderDate = new Date()

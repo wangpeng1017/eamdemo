@@ -11,7 +11,7 @@ import dayjs from 'dayjs'
 
 function CreateQuotationContent() {
     const router = useRouter()
-  const goBack = useGoBack('/entrustment/quotation')
+    const goBack = useGoBack('/entrustment/quotation')
     const searchParams = useSearchParams()
     const consultationId = searchParams.get('consultationId')
 
@@ -48,7 +48,7 @@ function CreateQuotationContent() {
                     clientReportDeadline: data.clientReportDeadline ? dayjs(data.clientReportDeadline) : undefined,
                     followerId: data.followerId || undefined,
                     // 服务方安排人默认=跟单人
-                    serviceContact: undefined,
+                    serviceContact: data.followerId || undefined,
                 }
 
                 // 从咨询检测项直接生成报价明细

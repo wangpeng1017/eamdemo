@@ -64,7 +64,7 @@ export const GET = withAuth(async (request: NextRequest, user) => {
     // 查询未完成的应收款
     const receivables = await prisma.financeReceivable.findMany({
         where: whereClause,
-        orderBy: { dueDate: 'asc' },
+        orderBy: { createdAt: 'desc' },
         take: 20,
     })
 

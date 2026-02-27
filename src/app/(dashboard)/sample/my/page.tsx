@@ -64,6 +64,7 @@ interface ProcessingRecord {
 }
 
 const statusMap: Record<string, { text: string; color: string }> = {
+  pending: { text: "待接收", color: "warning" },
   requisitioned: { text: "使用中", color: "processing" },
   returned: { text: "已归还", color: "success" },
   overdue: { text: "逾期未还", color: "error" },
@@ -88,7 +89,7 @@ export default function MySamplesPage() {
   const [total, setTotal] = useState(0)
   const [page, setPage] = useState(1)
   const [statusFilter, setStatusFilter] = useState<string | undefined>()
-  const [stats, setStats] = useState({ requisitioned: 0, returned: 0, overdue: 0 })
+  const [stats, setStats] = useState({ pending: 0, requisitioned: 0, returned: 0, overdue: 0 })
 
   // 归还弹窗
   const [returnModalOpen, setReturnModalOpen] = useState(false)
@@ -138,6 +139,33 @@ export default function MySamplesPage() {
     }
   }
 
+  // 接收样品（互斥检查：同一样品同时只能一人持有）
+  const handleAccept = async (record: RequisitionRecord) => {
+    Modal.confirm({
+      title: '确认接收',
+      content: `确认接收样品 ${record.sampleNo} - ${record.name}？接收后其他被分配人将无法接收，直到您归还。`,
+      okText: '确认接收',
+      onOk: async () => {
+        try {
+          const res = await fetch('/api/sample/requisition', {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ id: record.id }),
+          })
+          if (res.ok) {
+            showSuccess('接收成功')
+            fetchData()
+          } else {
+            const err = await res.json()
+            showError(err.error || '接收失败')
+          }
+        } catch {
+          showError('接收失败')
+        }
+      }
+    })
+  }
+
   const fetchData = async (p = page) => {
     setLoading(true)
     const params = new URLSearchParams({
@@ -163,6 +191,7 @@ export default function MySamplesPage() {
       const allJson = await allRes.json()
       const allList = allJson.list || []
       setStats({
+        pending: allList.filter((r: any) => r.status === 'pending').length,
         requisitioned: allList.filter((r: any) => r.status === 'requisitioned').length,
         returned: allList.filter((r: any) => r.status === 'returned').length,
         overdue: allList.filter((r: any) => r.status === 'overdue').length,
@@ -359,9 +388,15 @@ export default function MySamplesPage() {
       render: (s: string) => <Tag color={statusMap[s]?.color}>{statusMap[s]?.text || s}</Tag>,
     },
     {
-      title: '操作', fixed: 'right', width: 220,
+      title: '操作', fixed: 'right', width: 260,
       render: (_, record) => (
         <Space size="small" style={{ whiteSpace: 'nowrap' }}>
+          {/* 接收 */}
+          {record.status === 'pending' && (
+            <Button type="primary" size="small" onClick={() => handleAccept(record)}>
+              接收
+            </Button>
+          )}
           {/* 归还 */}
           {(record.status === 'requisitioned' || record.status === 'overdue') && (
             <Button type="primary" ghost size="small" onClick={() => handleReturn(record)}>
@@ -376,7 +411,7 @@ export default function MySamplesPage() {
           )}
           {/* 查看/删除 */}
           <Button size="small" icon={<EyeOutlined />} onClick={() => handleView(record)} />
-          {record.status === 'requisitioned' && (
+          {(record.status === 'requisitioned' || record.status === 'pending') && (
             <Popconfirm title="确认删除该记录？删除后库存将自动恢复。" onConfirm={() => handleDeleteRequisition(record.id)} okText="确定" cancelText="取消" okButtonProps={{ danger: true }}>
               <Button size="small" danger icon={<DeleteOutlined />} />
             </Popconfirm>
@@ -451,7 +486,15 @@ export default function MySamplesPage() {
         <div />
       </div>
 
-      <div className="grid grid-cols-3 gap-4 mb-4">
+      <div className="grid grid-cols-4 gap-4 mb-4">
+        <Card>
+          <Statistic
+            title="待接收"
+            value={stats.pending}
+            prefix={<ClockCircleOutlined />}
+            valueStyle={{ color: "#faad14" }}
+          />
+        </Card>
         <Card>
           <Statistic
             title="使用中"
@@ -485,6 +528,7 @@ export default function MySamplesPage() {
           value={statusFilter}
           onChange={(v) => setStatusFilter(v)}
         >
+          <Select.Option value="pending">待接收</Select.Option>
           <Select.Option value="requisitioned">使用中</Select.Option>
           <Select.Option value="returned">已归还</Select.Option>
           <Select.Option value="overdue">逾期未还</Select.Option>

@@ -68,7 +68,7 @@ export const GET = withErrorHandler(async (request: NextRequest) => {
                 ...(currentUser?.name ? [{ tester: currentUser.name }] : []),
             ]
         }
-        if (status) where.status = status
+        if (status && false) where.status = status // 任务报告已移除状态管理
         if (keyword) {
             where.AND = [
                 ...(where.AND || []),

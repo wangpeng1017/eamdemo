@@ -6,7 +6,7 @@
 set -e
 
 SERVER="root@8.130.182.148"
-SERVER_PASS="xx198910170014Z"
+SERVER_PASS="xxx198910170014Z"
 REMOTE_DIR="/root/lims-next"
 LOCAL_DIR="$(cd "$(dirname "$0")" && pwd)"
 

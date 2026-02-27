@@ -1,14 +1,12 @@
 /**
  * @file route.ts
  * @desc 发票详情API（GET/PUT/DELETE）
- *       PUT: 更新发票信息，状态变为 issued 时自动创建应收款
+ *       PUT: 更新发票信息，支持提交审批
  */
 
 import { prisma } from '@/lib/prisma'
 import { NextRequest } from 'next/server'
 import { withAuth, success, notFound, badRequest } from '@/lib/api-handler'
-import { generateReceivableNo } from '@/lib/generate-no'
-import { Prisma } from '@prisma/client'
 
 // 获取发票详情 - 需要登录
 export const GET = withAuth(async (
@@ -44,6 +42,64 @@ export const PUT = withAuth(async (
   const { id } = await context!.params
   const body = await request.json()
 
+  // 查询当前发票状态
+  const current = await prisma.financeInvoice.findUnique({ where: { id } })
+  if (!current) {
+    notFound('发票不存在')
+  }
+
+  // ========== 提交审批 ==========
+  if (body.action === 'submit') {
+    if (current.status !== 'pending') {
+      badRequest('只有待开票状态才能提交审批')
+    }
+
+    // 更新发票的附件和开票日期
+    const updateData: Record<string, unknown> = {}
+    if (body.issuedDate) updateData.issuedDate = new Date(body.issuedDate)
+    if (body.attachments && Array.isArray(body.attachments)) {
+      // 合并已有附件
+      let existingFiles: any[] = []
+      if (current.attachments) {
+        try { existingFiles = JSON.parse(current.attachments) } catch { existingFiles = [] }
+      }
+      updateData.attachments = JSON.stringify([...existingFiles, ...body.attachments])
+    }
+
+    if (Object.keys(updateData).length > 0) {
+      await prisma.financeInvoice.update({ where: { id }, data: updateData })
+    }
+
+    // 调用审批引擎
+    const { approvalEngine } = await import('@/lib/approval/engine')
+    try {
+      await approvalEngine.submit({
+        bizType: 'invoice',
+        bizId: id,
+        flowCode: 'INVOICE_APPROVAL',
+        submitterId: user.id,
+        submitterName: user.name || '未知用户',
+      })
+    } catch (err: any) {
+      return badRequest(err.message || '提交审批失败')
+    }
+
+    const updated = await prisma.financeInvoice.findUnique({ where: { id } })
+    return success({
+      ...updated,
+      invoiceAmount: Number(updated!.invoiceAmount),
+      taxRate: Number(updated!.taxRate),
+      taxAmount: Number(updated!.taxAmount),
+      totalAmount: Number(updated!.totalAmount),
+    })
+  }
+
+  // ========== 普通编辑更新 ==========
+  // 审批中不允许编辑
+  if (current.status === 'pending_approval') {
+    badRequest('审批中的发票不允许编辑')
+  }
+
   // 过滤掉不允许直接更新的字段
   const {
     id: _id,
@@ -54,14 +110,9 @@ export const PUT = withAuth(async (
     receivable: _receivable,
     clientId: _clientId,
     receivableId: _receivableId,
+    action: _action,
     ...rest
   } = body
-
-  // 查询当前发票状态
-  const current = await prisma.financeInvoice.findUnique({ where: { id } })
-  if (!current) {
-    notFound('发票不存在')
-  }
 
   // 根据 invoiceAmount 和 taxRate 自动计算税额和价税合计
   const invoiceAmount = rest.invoiceAmount != null ? Number(rest.invoiceAmount) : undefined
@@ -81,62 +132,12 @@ export const PUT = withAuth(async (
     data.attachments = JSON.stringify(data.attachments)
   }
 
-  const isBecomingIssued = current.status !== 'issued' && rest.status === 'issued'
-
-  if (isBecomingIssued) {
-    // 使用事务：更新发票 + 自动创建应收款
-    const result = await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
-      const updatedInvoice = await tx.financeInvoice.update({ where: { id }, data })
-
-      // 检查是否已有关联应收款
-      if (current.receivableId) {
-        return updatedInvoice
-      }
-
-      // 查找委托单获取 followerId
-      let followerId: string | null = null
-      if (current.entrustmentId) {
-        const entrustment = await tx.entrustment.findUnique({
-          where: { id: current.entrustmentId },
-          select: { followerId: true },
-        })
-        followerId = entrustment?.followerId || null
-      }
-
-      // 自动创建应收款
-      const receivableNo = await generateReceivableNo()
-      const dueDate = current.paymentDate
-        ? new Date(current.paymentDate)
-        : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000) // 默认30天后
-
-      const receivable = await tx.financeReceivable.create({
-        data: {
-          receivableNo,
-          entrustmentId: current.entrustmentId || null,
-          clientName: current.clientName,
-          amount: updatedInvoice.totalAmount,
-          receivedAmount: 0,
-          status: 'pending',
-          dueDate,
-          remark: followerId
-            ? JSON.stringify({ followerId, invoiceNo: current.invoiceNo })
-            : JSON.stringify({ invoiceNo: current.invoiceNo }),
-        },
-      })
-
-      // 反向关联：将应收款ID写回发票
-      await tx.financeInvoice.update({
-        where: { id },
-        data: { receivableId: receivable.id },
-      })
-
-      return { ...updatedInvoice, receivableId: receivable.id, receivable }
-    })
-
-    return success(result)
+  // 不允许直接修改 status 为 issued（必须走审批）
+  if (rest.status === 'issued' && current.status !== 'issued') {
+    badRequest('开票必须通过审批流程')
   }
 
-  // 普通更新（非开票）
+  // 普通更新
   const invoice = await prisma.financeInvoice.update({ where: { id }, data })
   return success({
     ...invoice,
@@ -158,19 +159,29 @@ export const DELETE = withAuth(async (
   const invoice = await prisma.financeInvoice.findUnique({ where: { id } })
   if (!invoice) notFound('发票不存在')
 
-  // 已开票状态不允许删除
+  // 已开票或审批中不允许删除
   if (invoice.status === 'issued') {
     badRequest('已开票的发票不允许删除')
   }
+  if (invoice.status === 'pending_approval') {
+    badRequest('审批中的发票不允许删除，请先撤回审批')
+  }
 
-  // 事务：删除发票 + 处理关联应收款
-  await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
+  // 事务：删除发票 + 处理关联应收款 + 清理审批实例
+  await prisma.$transaction(async (tx) => {
+    // 如果有关联审批实例，先删除
+    if (invoice.approvalInstanceId) {
+      await tx.approvalRecord.deleteMany({ where: { instanceId: invoice.approvalInstanceId } })
+      await tx.financeInvoice.update({ where: { id }, data: { approvalInstanceId: null } })
+      await tx.approvalInstance.delete({ where: { id: invoice.approvalInstanceId } })
+    }
     // 如果有关联应收款且无收款记录，一并删除
     if (invoice.receivableId) {
       const paymentCount = await tx.financePayment.count({
         where: { receivableId: invoice.receivableId }
       })
       if (paymentCount === 0) {
+        await tx.financeInvoice.update({ where: { id }, data: { receivableId: null } })
         await tx.financeReceivable.delete({ where: { id: invoice.receivableId } })
       }
     }

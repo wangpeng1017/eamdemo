@@ -12,6 +12,7 @@ import Barcode from 'react-barcode'
 import { toPng } from 'html-to-image'
 import { fetcher } from '@/lib/fetcher'
 import { useRouter } from 'next/navigation'
+import { useSession } from 'next-auth/react'
 
 interface Sample {
   id: string
@@ -56,6 +57,7 @@ const statusMap: Record<string, { text: string; color: string }> = {
 
 export default function SampleReceiptPage() {
   const router = useRouter()
+  const { data: session } = useSession()
   const [data, setData] = useState<Sample[]>([])
   const [loading, setLoading] = useState(false)
   const [total, setTotal] = useState(0)
@@ -285,6 +287,7 @@ export default function SampleReceiptPage() {
         body: JSON.stringify({
           status: 'received',
           receiptDate: new Date().toISOString(),
+          receiptPerson: session?.user?.name || '未知',
         }),
       })
       const json = await res.json()
@@ -395,28 +398,7 @@ export default function SampleReceiptPage() {
         onClose={() => setViewDrawerOpen(false)}
       >
         {currentSample && (
-          <Tabs defaultActiveKey="info" items={[
-            {
-              key: 'info',
-              label: '样品详情',
-              children: (
-                <Descriptions column={2} bordered size="small">
-                  <Descriptions.Item label="样品编号">{currentSample.sampleNo}</Descriptions.Item>
-                  <Descriptions.Item label="样品名称">{currentSample.name}</Descriptions.Item>
-                  <Descriptions.Item label="数量">{currentSample.quantity || '-'} {currentSample.unit || ''}</Descriptions.Item>
-                  <Descriptions.Item label="存放位置">{currentSample.storageLocation || '-'}</Descriptions.Item>
-                  <Descriptions.Item label="状态">
-                    <Tag color={statusMap[currentSample.status]?.color}>
-                      {statusMap[currentSample.status]?.text || currentSample.status}
-                    </Tag>
-                  </Descriptions.Item>
-                  <Descriptions.Item label="收样日期">
-                    {currentSample.receiptDate ? dayjs(currentSample.receiptDate).format('YYYY-MM-DD HH:mm') : '-'}
-                  </Descriptions.Item>
-                  <Descriptions.Item label="创建人">{currentSample.createdBy?.name || '-'}</Descriptions.Item>
-                </Descriptions>
-              ),
-            },
+          <Tabs defaultActiveKey="testItems" items={[
             {
               key: 'testItems',
               label: `检测项目 (${drawerTestItems.length})`,

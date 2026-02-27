@@ -63,6 +63,15 @@ export async function generateClientReportsForEntrustment(
     },
   })
 
+  // 查询委托单关联的检测项目信息
+  const sampleTestItems = await prisma.sampleTestItem.findMany({
+    where: { bizType: 'entrustment', bizId: entrustmentId },
+    select: { sampleName: true, testItemName: true, testStandard: true },
+  })
+  // 汇总检测项目和标准
+  const allTestItems = [...new Set(sampleTestItems.map(i => i.testItemName).filter(Boolean))]
+  const allTestStandards = [...new Set(sampleTestItems.map(i => i.testStandard).filter(Boolean))]
+
   // 查询样品详细信息（编号、规格等）
   const sampleIds = samples.map(s => s.id)
   const sampleDetails = sampleIds.length > 0
@@ -84,6 +93,11 @@ export async function generateClientReportsForEntrustment(
       subIndex++
       const reportNo = generateClientReportSubNo(baseNo, subIndex)
       const detail = sampleDetailMap.get(sample.id)
+      // 查找该样品对应的检测项目
+      const sampleItems = sampleTestItems.filter(i => i.sampleName === sample.name)
+      const itemNames = sampleItems.map(i => i.testItemName).filter(Boolean)
+      const itemStandards = [...new Set(sampleItems.map(i => i.testStandard).filter(Boolean))]
+
       const record = await prisma.clientReport.create({
         data: {
           reportNo,
@@ -95,6 +109,8 @@ export async function generateClientReportsForEntrustment(
           specification: detail?.specification || null,
           sampleQuantity: detail?.quantity || null,
           receivedDate: entrustment?.sampleDate || null,
+          testItems: itemNames.length > 0 ? JSON.stringify(itemNames) : null,
+          testStandards: itemStandards.length > 0 ? JSON.stringify(itemStandards) : null,
           sampleId: sample.id,
           entrustmentProjectId: null,
           groupingType: 'by_sample',
@@ -116,6 +132,8 @@ export async function generateClientReportsForEntrustment(
           clientAddress: entrustment?.clientAddress || null,
           sampleName: project.name,
           projectName: project.name,
+          testItems: allTestItems.length > 0 ? JSON.stringify(allTestItems) : null,
+          testStandards: allTestStandards.length > 0 ? JSON.stringify(allTestStandards) : null,
           sampleId: null,
           entrustmentProjectId: project.id,
           groupingType: 'by_project',

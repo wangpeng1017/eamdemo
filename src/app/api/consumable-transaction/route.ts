@@ -125,10 +125,11 @@ export const POST = withAuth(async (request: NextRequest, user) => {
       ? currentStock + validated.quantity
       : currentStock - validated.quantity
 
-    // 计算新状态
+    // 计算新状态（统一含义: 0=缺货, 1=正常, 2=低库存）
+    // 注意：耗材创建时 status 由前端传入，可能为 0=禁用，此处出入库仅覆盖库存相关状态
     let status = 1 // 正常
     if (newStock === 0) {
-      status = 0 // 缺货
+      status = 0 // 缺货（库存归零）
     } else if (consumable!.minStock && newStock < Number(consumable!.minStock)) {
       status = 2 // 低库存
     }

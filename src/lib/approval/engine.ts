@@ -442,6 +442,53 @@ export class ApprovalEngine {
           },
         })
         break
+      case 'invoice':
+        // 发票审批
+        if (approvalStatus === 'approved') {
+          updateData.status = 'issued'
+          // 审批通过后自动创建应收款
+          const invoice = await prisma.financeInvoice.findUnique({ where: { id: bizId } })
+          if (invoice && !invoice.receivableId) {
+            const { generateReceivableNo } = await import('@/lib/generate-no')
+            // 查找委托单获取 followerId
+            let followerId: string | null = null
+            if (invoice.entrustmentId) {
+              const entrustment = await prisma.entrustment.findUnique({
+                where: { id: invoice.entrustmentId },
+                select: { followerId: true },
+              })
+              followerId = entrustment?.followerId || null
+            }
+            const receivableNo = await generateReceivableNo()
+            const dueDate = invoice.paymentDate
+              ? new Date(invoice.paymentDate)
+              : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
+            const receivable = await prisma.financeReceivable.create({
+              data: {
+                receivableNo,
+                entrustmentId: invoice.entrustmentId || null,
+                clientName: invoice.clientName,
+                amount: invoice.totalAmount,
+                receivedAmount: 0,
+                status: 'pending',
+                dueDate,
+                remark: `来源发票：${invoice.invoiceNo}`,
+              },
+            })
+            updateData.receivableId = receivable.id
+            updateData.issuedDate = updateData.issuedDate || new Date()
+          }
+        } else if (approvalStatus === 'rejected' || approvalStatus === 'cancelled') {
+          updateData.status = 'pending'
+        } else if (approvalStatus === 'pending') {
+          updateData.status = 'pending_approval'
+        }
+
+        await prisma.financeInvoice.update({
+          where: { id: bizId },
+          data: updateData,
+        })
+        break
       case 'inspection_item':
         // 检测标准审批
         if (approvalStatus === 'approved') {

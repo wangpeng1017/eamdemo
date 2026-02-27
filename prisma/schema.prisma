@@ -953,6 +953,7 @@ model Supplier {
 }
 
 model OutsourceOrder {
+  id            String    @id @default(cuid())
   orderNo       String    @unique @db.VarChar(50)
   supplierId    String?
   supplier      Supplier? @relation(fields: [supplierId], references: [id])
@@ -1038,11 +1039,18 @@ model FinanceInvoice {
   taxRate       Decimal   @default(0.06) @db.Decimal(5, 4) // 税率
   taxAmount     Decimal   @db.Decimal(12, 2) // 税额
   totalAmount   Decimal   @db.Decimal(12, 2) // 价税合计
-  status        String    @default("pending") // pending/issued
+  status        String    @default("pending") // pending/pending_approval/issued
   issuedDate    DateTime? // 开票日期
   paymentDate   DateTime? // 回款日期
   attachments   String?   @db.Text // JSON 附件列表
   remark        String?   @db.Text
+
+  // 审批相关字段
+  approvalStatus     String?   @default("pending") // pending/approved/rejected/cancelled
+  approvalStep       Int?      @default(0)
+  approvalInstanceId String?   @unique
+  approvalInstance   ApprovalInstance? @relation(fields: [approvalInstanceId], references: [id])
+
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
 
@@ -1112,11 +1120,12 @@ model ApprovalInstance {
   records       ApprovalRecord[]
 
   // 反向关系 - 业务对象
-  quotation     Quotation?
-  contract      Contract?
-  client        Client?
-  testReport    TestReport?
+  quotation      Quotation?
+  contract       Contract?
+  client         Client?
+  testReport     TestReport?
   inspectionItem InspectionItem?
+  financeInvoice FinanceInvoice?
 
 
   @@unique([bizType, bizId])

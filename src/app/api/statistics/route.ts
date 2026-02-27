@@ -24,11 +24,10 @@ export const GET = withErrorHandler(async (request: NextRequest) => {
     prisma.testReport.count(),
     prisma.entrustment.count({ where: { status: 'pending' } }),
     prisma.sample.count({ where: { status: 'testing' } }),
-    prisma.testReport.count({ where: { status: { in: ['draft', 'reviewing'] } } }),
+    prisma.testReport.count(), // 任务报告已无状态区分，直接统计总数
     prisma.testReport.count({
       where: {
-        status: 'issued',
-        issuedDate: {
+        createdAt: {
           gte: new Date(new Date().getFullYear(), new Date().getMonth(), 1),
         },
       },

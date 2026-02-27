@@ -32,11 +32,18 @@ export const GET = withAuth(async (request: NextRequest, user) => {
   }
 
   // filter=my: 只显示当前用户作为内部负责人的订单
+  // 使用合并逻辑，不覆盖已有的权限过滤
   if (filter === 'my') {
-    where.task = {
+    const myFilter = {
       project: {
         subcontractAssignee: user.id
       }
+    }
+    if (where.task) {
+      // 合并权限过滤和 my 过滤
+      where.task = { ...(where.task as object), ...myFilter }
+    } else {
+      where.task = myFilter
     }
   }
 

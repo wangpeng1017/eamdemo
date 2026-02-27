@@ -120,21 +120,8 @@ export function canChangeProjectStatus(from: string, to: string): boolean {
   return flow ? (flow as readonly string[]).includes(to) : false
 }
 
-// ==================== 报告状态流转 ====================
-export const reportStatusFlow = {
-  draft: ['reviewing'],
-  reviewing: ['approved', 'draft'], // approved means both reviewed and approved
-  approved: ['issued'],
-  issued: [],
-} as const
-
-/**
- * 检查报告状态是否可以转换
- */
-export function canChangeReportStatus(from: string, to: string): boolean {
-  const flow = reportStatusFlow[from as keyof typeof reportStatusFlow]
-  return flow ? (flow as readonly string[]).includes(to) : false
-}
+// ==================== 报告状态流转（已移除审批流程） ====================
+// 任务报告不再使用状态管理，reportStatusFlow 已废弃
 
 // ==================== 设备状态流转 ====================
 export const deviceStatusFlow = {

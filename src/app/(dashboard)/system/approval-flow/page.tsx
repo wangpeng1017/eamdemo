@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import { showSuccess, showError } from '@/lib/confirm'
-import { Card, Table, Button, Modal, Form, Input, Select, message, Space, Tag, Popconfirm } from 'antd'
+import { Card, Table, Button, Modal, Form, Input, InputNumber, Select, message, Space, Tag, Popconfirm } from 'antd'
 import { PlusOutlined, EditOutlined, DeleteOutlined, ArrowRightOutlined, ReloadOutlined, StopOutlined, CheckCircleOutlined } from '@ant-design/icons'
 import type { ColumnsType } from 'antd/es/table'
 
@@ -30,6 +30,8 @@ const businessTypes = [
   { value: 'quotation', label: '报价审批' },
   { value: 'contract', label: '合同审批' },
   { value: 'report', label: '报告审批' },
+  { value: 'test_report', label: '检测报告审批' },
+  { value: 'inspection_item', label: '检测标准审批' },
   { value: 'payment', label: '付款审批' },
   { value: 'purchase', label: '采购审批' },
   { value: 'leave', label: '请假审批' },
@@ -198,7 +200,9 @@ export default function ApprovalFlowPage() {
   const handleAddNode = (flowId: string) => {
     setCurrentFlowId(flowId)
     setEditingNode(null)
+    const flow = flows.find(f => f.id === flowId)
     nodeForm.resetFields()
+    nodeForm.setFieldsValue({ order: (flow?.nodes?.length || 0) + 1 })
     setSelectedNodeType('role') // 重置为默认类型
     setNodeModalOpen(true)
   }
@@ -251,10 +255,13 @@ export default function ApprovalFlowPage() {
         const newNode: ApprovalNode = {
           ...values,
           id: `node-${Date.now()}`,
-          order: flow.nodes.length + 1,
+          order: values.order || flow.nodes.length + 1,
         }
         newNodes = [...flow.nodes, newNode]
       }
+
+      // 按 order 排序
+      newNodes.sort((a, b) => (a.order || 0) - (b.order || 0))
 
       const res = await fetch(`/api/approval-flow/${currentFlowId}`, {
         method: 'PUT',
@@ -461,6 +468,9 @@ export default function ApprovalFlowPage() {
         width={500}
       >
         <Form form={nodeForm} layout="vertical">
+          <Form.Item name="order" label="顺序" rules={[{ required: true, message: '请输入顺序' }]} tooltip="数字越小优先级越高，如 1, 2, 3">
+            <InputNumber min={1} style={{ width: '100%' }} placeholder="输入顺序编号" />
+          </Form.Item>
           <Form.Item name="name" label="节点名称" rules={[{ required: true, message: '请输入节点名称' }]}>
             <Input placeholder="如: 销售经理审批" />
           </Form.Item>

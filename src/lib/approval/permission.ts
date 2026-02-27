@@ -5,6 +5,7 @@
  */
 
 import { prisma } from '@/lib/prisma'
+import { logger } from '@/lib/logger'
 
 /**
  * 审批节点配置
@@ -60,12 +61,9 @@ export function canViewApproval(
   user: User,
   flowNodes?: ApprovalNode[]
 ): boolean {
-  console.log(`[DEBUG] canViewApproval - user: ${user.username || 'undefined'}, flowCode: ${instance.flowCode}, step: ${instance.currentStep}, flowNodes: ${flowNodes?.length || 0} 个节点`)
-
   // 管理员可以看到所有审批
   const userRoleCodes = user.roles.map(r => r.role.code)
-  if (user.username === 'admin' || userRoleCodes.includes('admin')) {
-    console.log(`[DEBUG] ${user.username} 是管理员，通过权限检查`)
+  if (userRoleCodes.includes('admin')) {
     return true
   }
 
@@ -76,19 +74,15 @@ export function canViewApproval(
   if (instance.status === 'pending' && flowNodes) {
     const currentNode = flowNodes.find(n => n.step === instance.currentStep)
     if (!currentNode) {
-      console.log(`[DEBUG] ${user.username} 找不到当前节点 (step=${instance.currentStep})，拒绝访问`)
       return false
     }
 
-    const hasPermission = hasApprovalPermission(currentNode, user)
-    console.log(`[DEBUG] ${user.username} 检查节点权限: step=${instance.currentStep}, node.type=${currentNode.type}, node.targetId=${currentNode.targetId}, 结果=${hasPermission}`)
-    return hasPermission
+    return hasApprovalPermission(currentNode, user)
   }
 
   // 已完成/已驳回/已撤回的审批
   // 1. 提交人可以看到自己提交的审批
   if ((instance as any).submitterId === user.id) {
-    console.log(`[DEBUG] ${user.username} 是提交人，允许查看已完成审批`)
     return true
   }
 
@@ -96,12 +90,10 @@ export function canViewApproval(
   if (flowNodes && flowNodes.length > 0) {
     const isApprover = flowNodes.some(node => hasApprovalPermission(node, user))
     if (isApprover) {
-      console.log(`[DEBUG] ${user.username} 匹配审批流节点角色，允许查看已完成审批`)
       return true
     }
   }
 
-  console.log(`[DEBUG] ${user.username} 无权查看已完成审批 ${instance.id}`)
   return false
 }
 
@@ -115,9 +107,12 @@ export function canViewApproval(
 export function hasApprovalPermission(node: ApprovalNode, user: User): boolean {
   const userRoleCodes = user.roles.map(r => r.role.code)
 
-  // 管理员豁免
-  if (user.username === 'admin' || userRoleCodes.includes('admin')) {
-    console.log(`[DEBUG] ${user.username} 管理员豁免`)
+  // 管理员角色豁免（基于角色而非用户名，并记录审计日志）
+  if (userRoleCodes.includes('admin')) {
+    logger.info('审批权限: 管理员角色覆盖', {
+      userId: user.id,
+      data: { step: node.step, nodeType: node.type, targetId: node.targetId }
+    })
     return true
   }
 
@@ -125,29 +120,21 @@ export function hasApprovalPermission(node: ApprovalNode, user: User): boolean {
   switch (node.type) {
     case 'role':
       // 角色审批：用户必须拥有指定角色
-      const hasRole = userRoleCodes.includes(node.targetId)
-      console.log(`[DEBUG] 角色检查 - 用户角色: [${userRoleCodes.join(', ')}], 需要角色: ${node.targetId}, 结果: ${hasRole}`)
-      return hasRole
+      return userRoleCodes.includes(node.targetId)
 
     case 'user':
       // 指定用户审批：用户必须是指定用户
-      const isUser = user.id === node.targetId
-      console.log(`[DEBUG] 用户检查 - 用户ID: ${user.id}, 需要ID: ${node.targetId}, 结果: ${isUser}`)
-      return isUser
+      return user.id === node.targetId
 
     case 'department':
       // 部门负责人审批：用户必须在指定部门且有管理角色
       if (user.deptId !== node.targetId) {
-        console.log(`[DEBUG] 部门检查 - 用户部门: ${user.deptId}, 需要部门: ${node.targetId}, 不匹配`)
         return false
       }
       const managerRoles = ['admin', 'manager', 'dept_manager', 'sales_manager', 'lab_director']
-      const hasManagerRole = userRoleCodes.some(code => managerRoles.includes(code))
-      console.log(`[DEBUG] 部门管理角色检查 - 用户角色: [${userRoleCodes.join(', ')}], 管理角色: ${hasManagerRole}`)
-      return hasManagerRole
+      return userRoleCodes.some(code => managerRoles.includes(code))
 
     default:
-      console.log(`[DEBUG] 未知节点类型: ${node.type}`)
       return false
   }
 }
@@ -168,14 +155,11 @@ export async function filterViewableApprovals(
   // 如果没有提供流程节点映射，查询所有相关的流程
   if (!flowNodesMap) {
     const flowCodes = [...new Set(instances.map(i => i.flowCode))]
-    console.log(`[DEBUG] 查询审批流程，flowCodes:`, flowCodes)
 
     const flows = await prisma.approvalFlow.findMany({
       where: { code: { in: flowCodes } },
       select: { code: true, nodes: true }
     })
-
-    console.log(`[DEBUG] 查询到 ${flows.length} 个审批流程`)
 
     const map: Record<string, ApprovalNode[]> = {}
     flows.forEach(flow => {
@@ -185,9 +169,8 @@ export async function filterViewableApprovals(
           ...n,
           step: n.step || n.order || 0
         }))
-        console.log(`[DEBUG] 流程 ${flow.code} 有 ${nodes.length} 个节点`)
       } catch (e) {
-        console.error(`解析审批流节点失败: ${flow.code}`, e)
+        logger.error('解析审批流节点失败', { data: { flowCode: flow.code, error: String(e) } })
         map[flow.code] = []
       }
     })
@@ -196,14 +179,12 @@ export async function filterViewableApprovals(
 
   // 过滤用户可以查看的审批
   return instances.filter(instance => {
-    // Try to find flow nodes using exact match, or case-insensitive match
+    // 查找流程节点，支持大小写匹配
     let nodes = flowNodesMap![instance.flowCode];
     if (!nodes) {
-      // Try finding by uppercase (common convention in DB)
       nodes = flowNodesMap![instance.flowCode.toUpperCase()];
     }
     if (!nodes) {
-      // Try finding by lowercase
       nodes = flowNodesMap![instance.flowCode.toLowerCase()];
     }
 

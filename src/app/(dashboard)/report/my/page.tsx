@@ -8,12 +8,7 @@ import type { ColumnsType } from 'antd/es/table'
 import dayjs from 'dayjs'
 import { useRouter } from 'next/navigation'
 
-const taskStatusMap: Record<string, { text: string; color: string }> = {
-    draft: { text: '草稿', color: 'default' },
-    reviewing: { text: '审核中', color: 'processing' },
-    approved: { text: '已批准', color: 'success' },
-    issued: { text: '已发布', color: 'cyan' },
-}
+// 任务报告已去掉审批流程，不再需要状态管理
 
 const clientStatusMap: Record<string, { text: string; color: string }> = {
     draft: { text: '草稿', color: 'default' },
@@ -82,7 +77,7 @@ export default function MyReportPage() {
         }
     }
 
-    const statusMap = reportType === 'task' ? taskStatusMap : clientStatusMap
+    const statusMap = clientStatusMap
 
     // 任务报告列
     const taskColumns: ColumnsType<any> = [
@@ -94,10 +89,7 @@ export default function MyReportPage() {
             title: '检测结论', dataIndex: 'overallConclusion', width: 90,
             render: (v: string) => conclusionMap[v] || v || '-',
         },
-        {
-            title: '状态', dataIndex: 'status', width: 90,
-            render: (s: string) => <Tag color={statusMap[s]?.color}>{statusMap[s]?.text || s}</Tag>
-        },
+
         {
             title: '创建时间', dataIndex: 'createdAt', width: 160,
             render: (t: string) => dayjs(t).format('YYYY-MM-DD HH:mm')
@@ -176,14 +168,16 @@ export default function MyReportPage() {
                         style={{ width: 250 }}
                         allowClear
                     />
-                    <Select
-                        placeholder="报告状态"
-                        value={statusFilter}
-                        onChange={setStatusFilter}
-                        allowClear
-                        style={{ width: 130 }}
-                        options={Object.entries(statusMap).map(([k, v]) => ({ value: k, label: v.text }))}
-                    />
+                    {reportType === 'client' && (
+                        <Select
+                            placeholder="报告状态"
+                            value={statusFilter}
+                            onChange={setStatusFilter}
+                            allowClear
+                            style={{ width: 130 }}
+                            options={Object.entries(statusMap).map(([k, v]) => ({ value: k, label: v.text }))}
+                        />
+                    )}
                     <Button type="primary" onClick={handleSearch}>搜索</Button>
                     <Button icon={<ReloadOutlined />} onClick={() => { setKeyword(''); setStatusFilter(null); setPage(1); fetchData(1) }}>重置</Button>
                 </div>
@@ -216,9 +210,11 @@ export default function MyReportPage() {
                 {current && (
                     <Descriptions column={2} bordered size="small">
                         <Descriptions.Item label="报告编号">{current.reportNo}</Descriptions.Item>
-                        <Descriptions.Item label="状态">
-                            <Tag color={statusMap[current.status]?.color}>{statusMap[current.status]?.text}</Tag>
-                        </Descriptions.Item>
+                        {reportType === 'client' && (
+                            <Descriptions.Item label="状态">
+                                <Tag color={statusMap[current.status]?.color}>{statusMap[current.status]?.text}</Tag>
+                            </Descriptions.Item>
+                        )}
                         <Descriptions.Item label="客户名称">{current.clientName || '-'}</Descriptions.Item>
                         <Descriptions.Item label="样品名称">{current.sampleName || '-'}</Descriptions.Item>
                         <Descriptions.Item label="样品编号">{current.sampleNo || '-'}</Descriptions.Item>

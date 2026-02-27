@@ -35,9 +35,17 @@ export const PUT = withAuth(async (request: NextRequest, user, context) => {
     return success(doc)
 })
 
-// DELETE: 删除体系文件
+// DELETE: 删除体系文件 - 需要管理员权限，且已发布文件不可删除
 export const DELETE = withAuth(async (request: NextRequest, user, context) => {
     const { id } = await context!.params as { id: string }
+
+    const doc = await prisma.systemDocument.findUnique({ where: { id } })
+    if (!doc) return error('NOT_FOUND', '文件不存在', 404)
+
+    // 已发布的体系文件不允许删除（status=2 表示已发布）
+    if (doc.status === 2) {
+        return error('FORBIDDEN', '已发布的体系文件不允许删除，请先下架', 400)
+    }
 
     await prisma.systemDocument.delete({ where: { id } })
 

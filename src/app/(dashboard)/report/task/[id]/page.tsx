@@ -22,7 +22,7 @@ interface Report {
     overallConclusion: string | null
     tester: string | null
     reviewer: string | null
-    status: string
+
     createdAt: string
     issuedDate: string | null
     taskId: string | null
@@ -32,13 +32,7 @@ interface Report {
     }
 }
 
-const statusMap: Record<string, { text: string; color: string }> = {
-    draft: { text: '草稿', color: 'default' },
-    reviewing: { text: '审核中', color: 'processing' },
-    approved: { text: '已批准', color: 'success' },
-    completed: { text: '已完成', color: 'success' },
-    issued: { text: '已发布', color: 'cyan' },
-}
+
 
 import { parseSheetData, type CellInfo } from '@/lib/sheet-parser'
 
@@ -166,14 +160,9 @@ export default function ReportEditPage() {
                         报告编辑 - {report.reportNo}
                     </h1>
                 </div>
-                <Space>
-                    <Tag color={statusMap[report.status]?.color} style={{ fontSize: 14, padding: '4px 12px' }}>
-                        {statusMap[report.status]?.text || report.status}
-                    </Tag>
-                    <Button type="primary" icon={<SaveOutlined />} onClick={handleSave} loading={saving}>
-                        保存
-                    </Button>
-                </Space>
+                <Button type="primary" icon={<SaveOutlined />} onClick={handleSave} loading={saving}>
+                    保存
+                </Button>
             </div>
 
             {/* 报告基本信息 */}

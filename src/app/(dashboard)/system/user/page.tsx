@@ -62,6 +62,7 @@ export default function UserPage() {
 
   const [userForm] = Form.useForm()
   const [deptForm] = Form.useForm()
+  const [modal, contextHolder] = Modal.useModal()
 
   // --- Initial Load ---
   useEffect(() => {
@@ -106,22 +107,25 @@ export default function UserPage() {
 
   const handleDeleteDept = async (id: string) => {
     try {
-      await fetch(`/api/dept/${id}`, { method: 'DELETE' })
-      showSuccess('部门删除成功')
-      fetchDeptTree()
-      if (selectedDeptId === id) setSelectedDeptId(null)
+      const res = await fetch(`/api/dept/${id}`, { method: 'DELETE' })
+      const json = await res.json()
+      if (res.ok && json.success) {
+        showSuccess('部门删除成功')
+        fetchDeptTree()
+        if (selectedDeptId === id) setSelectedDeptId(null)
+      } else {
+        showError(json.error || '删除失败，可能包含子部门或用户')
+      }
     } catch (e) {
-      showError('删除失败，可能包含子部门或用户')
+      showError('删除失败，网络异常')
     }
   }
 
   const handleDeptSubmit = async () => {
     const values = await deptForm.validateFields()
-    const url = editingDeptId ? `/api/dept` : '/api/dept'
-
-    // Note: PUT needs id in body based on my api impl
+    const url = editingDeptId ? `/api/dept/${editingDeptId}` : '/api/dept'
     const body = editingDeptId
-      ? { ...values, id: editingDeptId }
+      ? values
       : { ...values, parentId: parentDeptId }
 
     const res = await fetch(url, {
@@ -129,13 +133,14 @@ export default function UserPage() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(body)
     })
+    const json = await res.json()
 
-    if (res.ok) {
+    if (res.ok && json.success) {
       showSuccess(editingDeptId ? '更新成功' : '创建成功')
       setDeptModalOpen(false)
       fetchDeptTree()
     } else {
-      showError('操作失败')
+      showError(json.error || '操作失败')
     }
   }
 
@@ -201,14 +206,20 @@ export default function UserPage() {
 
     const url = editingUserId ? `/api/user/${editingUserId}` : '/api/user'
     const method = editingUserId ? 'PUT' : 'POST'
-    await fetch(url, {
+    const res = await fetch(url, {
       method,
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(values)
     })
-    showSuccess(editingUserId ? '更新成功' : '创建成功')
-    setUserModalOpen(false)
-    fetchUsers()
+    const json = await res.json()
+
+    if (res.ok && json.success) {
+      showSuccess(editingUserId ? '更新成功' : '创建成功')
+      setUserModalOpen(false)
+      fetchUsers()
+    } else {
+      showError(json.error || '操作失败')
+    }
   }
 
   const handleToggleStatus = async (record: User) => {
@@ -254,11 +265,14 @@ export default function UserPage() {
                   icon: <DeleteOutlined />,
                   danger: true,
                   onClick: () => {
-                    showConfirm(
-                      '确认删除?',
-                      '删除部门将同时删除其子部门，请谨慎操作。',
-                      () => handleDeleteDept(node.key)
-                    )
+                    modal.confirm({
+                      title: '确认删除?',
+                      content: '删除部门将同时删除其子部门，请谨慎操作。',
+                      okText: '确认',
+                      cancelText: '取消',
+                      centered: true,
+                      onOk: () => handleDeleteDept(node.key),
+                    })
                   }
                 },
               ]
@@ -318,6 +332,7 @@ export default function UserPage() {
 
   return (
     <div style={{ padding: 24, background: '#f0f2f5', minHeight: '100vh' }}>
+      {contextHolder}
       <Row gutter={16} style={{ height: '100%' }}>
         {/* Left Tree */}
         <Col span={6}>

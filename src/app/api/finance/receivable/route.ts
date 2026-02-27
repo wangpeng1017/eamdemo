@@ -13,7 +13,20 @@ export const GET = withAuth(async (request: NextRequest, user) => {
   const status = searchParams.get('status')
 
   // 注入数据权限过滤
-  const permissionFilter = await getEntrustmentBasedFilter(user.id)
+  // 财务角色需要查看所有应收款，不受委托单链路限制
+  const { prisma: db } = await import('@/lib/prisma')
+  const userWithRoles = await db.user.findUnique({
+    where: { id: user.id },
+    select: { roles: { select: { role: { select: { code: true, dataScope: true } } } } }
+  })
+  const roleCodes = userWithRoles?.roles.map(r => r.role.code) || []
+  const hasFinanceRole = roleCodes.some(c => ['admin', 'finance', 'finance_manager', 'cashier'].includes(c))
+  const hasAllScope = userWithRoles?.roles.some(r => r.role.dataScope === 'all')
+
+  let permissionFilter: Record<string, unknown> = {}
+  if (!hasFinanceRole && !hasAllScope) {
+    permissionFilter = await getEntrustmentBasedFilter(user.id)
+  }
   const where: Record<string, unknown> = { ...permissionFilter }
   if (keyword) {
     where.OR = [

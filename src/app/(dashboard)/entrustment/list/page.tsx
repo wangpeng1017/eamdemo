@@ -501,33 +501,65 @@ export default function EntrustmentListPage() {
     }
   }
 
-  // 打开分配弹窗
+  // 打开分配弹窗（增加任务进行中的二次确认）
   const handleAssign = (entrustmentId: string, project: EntrustmentProject) => {
-    setCurrentProject({ entrustmentId, project })
-    assignForm.resetFields()
-    // 回显已有数据
-    if (project.status === 'assigned') {
-      assignForm.setFieldsValue({
-        assignTo: project.assignTo,
-        deviceId: project.deviceId,
-        deadline: project.deadline ? dayjs(project.deadline) : undefined
-      })
+    const task = project.testTasks?.[0]
+    const openAssignModal = () => {
+      setCurrentProject({ entrustmentId, project })
+      assignForm.resetFields()
+      // 回显已有数据
+      if (project.status === 'assigned') {
+        assignForm.setFieldsValue({
+          assignTo: project.assignTo,
+          deviceId: project.deviceId,
+          deadline: project.deadline ? dayjs(project.deadline) : undefined
+        })
+      }
+      setAssignModalOpen(true)
     }
-    setAssignModalOpen(true)
+
+    // 任务已在执行中，需二次确认
+    if (task && task.status === 'in_progress') {
+      modal.confirm({
+        title: '确认重新分配',
+        content: '该检测任务正在进行中，重新分配后检测人员将变更，但已有的检测数据会保留。确定要重新分配吗？',
+        okText: '确认分配',
+        cancelText: '取消',
+        onOk: openAssignModal
+      })
+    } else {
+      openAssignModal()
+    }
   }
 
-  // 打开分包弹窗
+  // 打开分包弹窗（增加任务进行中的二次确认）
   const handleSubcontract = (entrustmentId: string, project: EntrustmentProject) => {
-    setCurrentProject({ entrustmentId, project })
-    subcontractForm.resetFields()
-    if (project.status === 'subcontracted') {
-      subcontractForm.setFieldsValue({
-        subcontractor: project.subcontractor,
-        subcontractAssignee: project.subcontractAssignee,
-        deadline: project.deadline ? dayjs(project.deadline) : undefined
-      })
+    const task = project.testTasks?.[0]
+    const openSubcontractModal = () => {
+      setCurrentProject({ entrustmentId, project })
+      subcontractForm.resetFields()
+      if (project.status === 'subcontracted') {
+        subcontractForm.setFieldsValue({
+          subcontractor: project.subcontractor,
+          subcontractAssignee: project.subcontractAssignee,
+          deadline: project.deadline ? dayjs(project.deadline) : undefined
+        })
+      }
+      setSubcontractModalOpen(true)
     }
-    setSubcontractModalOpen(true)
+
+    // 任务已在执行中，需二次确认
+    if (task && task.status === 'in_progress') {
+      modal.confirm({
+        title: '确认重新分包',
+        content: '该检测任务正在进行中，重新分包后检测人员将变更，但已有的检测数据会保留。确定要重新分包吗？',
+        okText: '确认分包',
+        cancelText: '取消',
+        onOk: openSubcontractModal
+      })
+    } else {
+      openSubcontractModal()
+    }
   }
 
   // 提交分配
@@ -690,7 +722,7 @@ export default function EntrustmentListPage() {
               size="small"
               type="link"
               icon={<TeamOutlined />}
-              disabled={project.status === 'completed' || project.status === 'subcontracted'}
+              disabled={project.status === 'completed' || project.status === 'subcontracted' || project.testTasks?.[0]?.status === 'completed'}
               onClick={() => handleAssign(entrustment.id, project)}
             >
               {project.status === 'assigned' ? '重新分配' : '分配'}
@@ -699,7 +731,7 @@ export default function EntrustmentListPage() {
               size="small"
               type="link"
               icon={<ShareAltOutlined />}
-              disabled={project.status === 'completed' || project.status === 'assigned'}
+              disabled={project.status === 'completed' || project.status === 'assigned' || project.testTasks?.[0]?.status === 'completed'}
               onClick={() => handleSubcontract(entrustment.id, project)}
             >
               {project.status === 'subcontracted' ? '重新分包' : '分包'}

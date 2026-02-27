@@ -49,8 +49,6 @@ export const GET = withErrorHandler(async (request: NextRequest) => {
             },
         },
         orderBy: [
-            { status: 'asc' },
-            { dueDate: 'asc' },
             { createdAt: 'desc' },
         ],
         take: 10,

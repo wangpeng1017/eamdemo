@@ -55,8 +55,7 @@ export const GET = withErrorHandler(async (request: NextRequest) => {
     // 4. 本月完成：admin 全局，普通用户按自己的任务过滤
     const monthStart = new Date(new Date().getFullYear(), new Date().getMonth(), 1)
     let completedWhere: any = {
-        status: 'issued',
-        issuedDate: { gte: monthStart },
+        createdAt: { gte: monthStart },
     }
     if (!isAdmin && userId) {
         const myTaskIds = await prisma.testTask.findMany({
@@ -65,8 +64,7 @@ export const GET = withErrorHandler(async (request: NextRequest) => {
         })
         const taskIds = myTaskIds.map(t => t.id)
         completedWhere = {
-            status: 'issued',
-            issuedDate: { gte: monthStart },
+            createdAt: { gte: monthStart },
             OR: [
                 { taskId: { in: taskIds } },
                 { reviewer: userName },

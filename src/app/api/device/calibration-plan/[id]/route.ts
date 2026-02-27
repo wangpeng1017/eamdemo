@@ -1,12 +1,14 @@
 import { prisma } from '@/lib/prisma'
-import { NextRequest, NextResponse } from 'next/server'
+import { NextRequest } from 'next/server'
+import { withAuth, success } from '@/lib/api-handler'
 
-// 获取单个定检计划
-export async function GET(
+// 获取单个定检计划 - 需要登录
+export const GET = withAuth(async (
   request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
-  const { id } = await params
+  user,
+  context?: { params: Promise<Record<string, string>> }
+) => {
+  const { id } = await context!.params
 
   const calibration = await prisma.deviceCalibration.findUnique({
     where: { id },
@@ -16,7 +18,7 @@ export async function GET(
   })
 
   if (!calibration) {
-    return NextResponse.json({ error: '定检计划不存在' }, { status: 404 })
+    return new Response(JSON.stringify({ success: false, error: '定检计划不存在' }), { status: 404 })
   }
 
   const formatted = {
@@ -31,15 +33,16 @@ export async function GET(
     result: calibration.result,
   }
 
-  return NextResponse.json(formatted)
-}
+  return success(formatted)
+})
 
-// 更新定检计划
-export async function PUT(
+// 更新定检计划 - 需要登录
+export const PUT = withAuth(async (
   request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
-  const { id } = await params
+  user,
+  context?: { params: Promise<Record<string, string>> }
+) => {
+  const { id } = await context!.params
   const data = await request.json()
 
   const updateData: Record<string, unknown> = {}
@@ -55,19 +58,20 @@ export async function PUT(
     data: updateData,
   })
 
-  return NextResponse.json(calibration)
-}
+  return success(calibration)
+})
 
-// 删除定检计划
-export async function DELETE(
+// 删除定检计划 - 需要登录
+export const DELETE = withAuth(async (
   request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
-  const { id } = await params
+  user,
+  context?: { params: Promise<Record<string, string>> }
+) => {
+  const { id } = await context!.params
 
   await prisma.deviceCalibration.delete({
     where: { id },
   })
 
-  return NextResponse.json({ success: true })
-}
+  return success({ success: true })
+})

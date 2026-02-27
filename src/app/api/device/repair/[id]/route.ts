@@ -1,15 +1,16 @@
 import { prisma } from '@/lib/prisma'
 import { NextRequest } from 'next/server'
 import {
-  withErrorHandler,
+  withAuth,
   success,
   notFound,
   validateEnum,
 } from '@/lib/api-handler'
 
-// 获取维修记录详情
-export const GET = withErrorHandler(async (
+// 获取维修记录详情 - 需要登录
+export const GET = withAuth(async (
   request: NextRequest,
+  user,
   context?: { params: Promise<Record<string, string>> }
 ) => {
   const { id } = await context!.params
@@ -40,9 +41,10 @@ export const GET = withErrorHandler(async (
   return success(repair)
 })
 
-// 更新维修记录
-export const PUT = withErrorHandler(async (
+// 更新维修记录 - 需要登录
+export const PUT = withAuth(async (
   request: NextRequest,
+  user,
   context?: { params: Promise<Record<string, string>> }
 ) => {
   const { id } = await context!.params
@@ -73,9 +75,10 @@ export const PUT = withErrorHandler(async (
   return success(updated)
 })
 
-// 删除维修记录
-export const DELETE = withErrorHandler(async (
+// 删除维修记录 - 需要登录，使用事务确保数据一致性
+export const DELETE = withAuth(async (
   request: NextRequest,
+  user,
   context?: { params: Promise<Record<string, string>> }
 ) => {
   const { id } = await context!.params
@@ -89,30 +92,34 @@ export const DELETE = withErrorHandler(async (
     notFound('维修记录不存在')
   }
 
-  await prisma.deviceRepair.delete({ where: { id } })
+  // 使用事务确保删除和状态恢复的原子性
+  await prisma.$transaction(async (tx) => {
+    await tx.deviceRepair.delete({ where: { id } })
 
-  // 检查设备是否还有其他未完成的维修记录
-  const pendingRepairs = await prisma.deviceRepair.count({
-    where: {
-      deviceId: repair.deviceId,
-      status: { not: 'completed' },
-    },
-  })
-
-  // 如果没有其他未完成的维修，恢复设备状态
-  if (pendingRepairs === 0) {
-    await prisma.device.update({
-      where: { id: repair.deviceId },
-      data: { status: 'Running' },
+    // 检查设备是否还有其他未完成的维修记录
+    const pendingRepairs = await tx.deviceRepair.count({
+      where: {
+        deviceId: repair.deviceId,
+        status: { not: 'completed' },
+      },
     })
-  }
+
+    // 如果没有其他未完成的维修，恢复设备状态
+    if (pendingRepairs === 0) {
+      await tx.device.update({
+        where: { id: repair.deviceId },
+        data: { status: 'Running' },
+      })
+    }
+  })
 
   return success({ success: true })
 })
 
-// 更新维修状态
-export const PATCH = withErrorHandler(async (
+// 更新维修状态 - 需要登录
+export const PATCH = withAuth(async (
   request: NextRequest,
+  user,
   context?: { params: Promise<Record<string, string>> }
 ) => {
   const { id } = await context!.params

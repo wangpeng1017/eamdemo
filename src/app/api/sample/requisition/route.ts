@@ -38,60 +38,37 @@ export async function GET(request: NextRequest) {
   return NextResponse.json({ list, total, page, pageSize })
 }
 
-// 创建样品领用记录
+// 创建样品分配记录（预约模式：不扣减库存，状态为 pending）
 export async function POST(request: NextRequest) {
   const data = await request.json()
   const { sampleId, quantity, purpose, remark, expectedReturnDate, requisitionBy } = data
 
-  console.log(`[POST /api/sample/requisition] Request: sampleId=${sampleId}, quantity=${quantity}, purpose=${purpose}`)
-
   const reqQty = parseFloat(quantity)
   if (isNaN(reqQty) || reqQty <= 0) {
-    return NextResponse.json({ error: '领用数量必须大于0' }, { status: 400 })
+    return NextResponse.json({ error: '分配数量必须大于0' }, { status: 400 })
   }
 
-  // 使用事务确保数据一致性
   try {
     const result = await prisma.$transaction(async (tx) => {
-      // 1. 验证样品是否存在并锁定
-      const sample = await tx.sample.findUnique({
-        where: { id: sampleId }
-      })
-
+      // 验证样品是否存在
+      const sample = await tx.sample.findUnique({ where: { id: sampleId } })
       if (!sample) {
         throw new Error('样品不存在')
       }
 
-      // 计算当前可用库存
-      // 如果 remainingQuantity 为空，默认等于 totalQuantity，如果 totalQuantity 也为空，则默认为 quantity
-      const totalQtyStr = sample.totalQuantity || sample.quantity || '0'
-      const totalQty = parseFloat(totalQtyStr)
-
-      console.log(`[POST /api/sample/requisition] Sample info: total=${totalQty}, remaining=${sample.remainingQuantity}`)
-
-      let currentRemaining = parseFloat(sample.remainingQuantity ?? String(totalQty))
-
-      // 如果是第一次领用且 remainingQuantity 为 null (checking strict null because 0 is falsy)
-      if (sample.remainingQuantity === null) {
-        currentRemaining = totalQty
+      // 校验：只有已收样及之后的状态才允许分配
+      if (sample.status === 'pending') {
+        throw new Error('该样品尚未完成收样，请先在「样品收样」中确认收样后再分配')
       }
 
-      if (isNaN(currentRemaining)) {
-        currentRemaining = 0
-      }
-
-      if (reqQty > currentRemaining) {
-        throw new Error(`库存不足，当前可用: ${currentRemaining}, 请求: ${reqQty}`)
-      }
-
-      // 2. 生成领用单号
+      // 生成领用单号
       const today = new Date().toISOString().slice(0, 10).replace(/-/g, '')
       const count = await tx.sampleRequisition.count({
         where: { requisitionNo: { startsWith: `LY${today}` } }
       })
       const requisitionNo = `LY${today}${String(count + 1).padStart(4, '0')}`
 
-      // 3. 创建领用记录
+      // 创建分配记录，状态为 pending（待接收），不扣减库存
       const requisition = await tx.sampleRequisition.create({
         data: {
           sampleId,
@@ -101,18 +78,7 @@ export async function POST(request: NextRequest) {
           remark,
           expectedReturnDate: expectedReturnDate ? new Date(expectedReturnDate) : null,
           requisitionBy,
-          status: 'requisitioned', // 默认状态
-        }
-      })
-
-      console.log(`[POST /api/sample/requisition] Created requisition: ${requisitionNo}`)
-
-      // 4. 更新样品剩余数量
-      const newRemaining = currentRemaining - reqQty
-      await tx.sample.update({
-        where: { id: sampleId },
-        data: {
-          remainingQuantity: String(newRemaining)
+          status: 'pending', // 待接收
         }
       })
 
@@ -121,8 +87,84 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json(result)
   } catch (e: any) {
-    console.error(`[POST /api/sample/requisition] Error:`, e)
-    return NextResponse.json({ error: e.message || '领用失败' }, { status: 400 })
+    return NextResponse.json({ error: e.message || '分配失败' }, { status: 400 })
+  }
+}
+
+// 接收样品（互斥检查：同一样品同时只能一人持有）
+export async function PATCH(request: NextRequest) {
+  const data = await request.json()
+  const { id } = data // requisition ID
+
+  if (!id) {
+    return NextResponse.json({ error: '缺少记录ID' }, { status: 400 })
+  }
+
+  try {
+    const result = await prisma.$transaction(async (tx) => {
+      // 1. 获取分配记录
+      const requisition = await tx.sampleRequisition.findUnique({
+        where: { id },
+        include: { sample: true }
+      })
+
+      if (!requisition) {
+        throw new Error('分配记录不存在')
+      }
+
+      if (requisition.status !== 'pending') {
+        throw new Error('只有待接收状态的记录才能接收')
+      }
+
+      // 2. 互斥检查：同一样品是否有人正在使用
+      const activeUser = await tx.sampleRequisition.findFirst({
+        where: {
+          sampleId: requisition.sampleId,
+          status: 'requisitioned', // 使用中
+          id: { not: id },
+        },
+        select: { requisitionBy: true }
+      })
+
+      if (activeUser) {
+        throw new Error(`${activeUser.requisitionBy} 正在使用该样品，请等待归还后再接收`)
+      }
+
+      // 3. 扣减库存
+      const sample = requisition.sample
+      const totalQtyStr = sample.totalQuantity || sample.quantity || '0'
+      const totalQty = parseFloat(totalQtyStr)
+      let currentRemaining = parseFloat(sample.remainingQuantity ?? String(totalQty))
+      if (sample.remainingQuantity === null) {
+        currentRemaining = totalQty
+      }
+      if (isNaN(currentRemaining)) {
+        currentRemaining = 0
+      }
+
+      const reqQty = parseFloat(requisition.quantity)
+      if (reqQty > currentRemaining) {
+        throw new Error(`库存不足，当前可用: ${currentRemaining}`)
+      }
+
+      const newRemaining = currentRemaining - reqQty
+      await tx.sample.update({
+        where: { id: requisition.sampleId },
+        data: { remainingQuantity: String(newRemaining) }
+      })
+
+      // 4. 更新状态为使用中
+      const updated = await tx.sampleRequisition.update({
+        where: { id },
+        data: { status: 'requisitioned' }
+      })
+
+      return updated
+    })
+
+    return NextResponse.json(result)
+  } catch (e: any) {
+    return NextResponse.json({ error: e.message || '接收失败' }, { status: 400 })
   }
 }
 

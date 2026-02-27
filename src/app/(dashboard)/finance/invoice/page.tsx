@@ -6,7 +6,7 @@ import { canModify, type RecordPermissionContext } from '@/lib/record-permission
 import { useState, useEffect } from 'react'
 import { showSuccess, showError } from '@/lib/confirm'
 import { Table, Button, Space, Tag, Modal, Form, Input, InputNumber, DatePicker, Select, message, Popconfirm, Upload, Card } from 'antd'
-import { PlusOutlined, EditOutlined, DeleteOutlined, UploadOutlined, PaperClipOutlined, DeleteOutlined as DeleteFileOutlined } from '@ant-design/icons'
+import { PlusOutlined, EditOutlined, DeleteOutlined, UploadOutlined, PaperClipOutlined, SendOutlined } from '@ant-design/icons'
 import type { ColumnsType } from 'antd/es/table'
 import dayjs from 'dayjs'
 
@@ -78,6 +78,7 @@ interface AvailableEntrustment {
 
 const statusMap: Record<string, { text: string; color: string }> = {
   pending: { text: '待开票', color: 'default' },
+  pending_approval: { text: '审批中', color: 'processing' },
   issued: { text: '已开票', color: 'success' },
 }
 
@@ -96,6 +97,13 @@ export default function InvoicePage() {
   const [loadingEntrustments, setLoadingEntrustments] = useState(false)
   const [uploadedFiles, setUploadedFiles] = useState<AttachmentInfo[]>([])
   const [uploading, setUploading] = useState(false)
+  // 确认开票弹窗
+  const [issueModalOpen, setIssueModalOpen] = useState(false)
+  const [issuingRecord, setIssuingRecord] = useState<Invoice | null>(null)
+  const [issueFiles, setIssueFiles] = useState<AttachmentInfo[]>([])
+  const [issueUploading, setIssueUploading] = useState(false)
+  const [issueSubmitting, setIssueSubmitting] = useState(false)
+  const [issueForm] = Form.useForm()
   const [form] = Form.useForm()
 
   // 上传附件到服务端
@@ -121,6 +129,69 @@ export default function InvoicePage() {
   // 删除已上传附件
   const handleRemoveFile = (fileId: string) => {
     setUploadedFiles(prev => prev.filter(f => f.id !== fileId))
+  }
+
+  // 上传开票附件
+  const handleIssueUploadFile = async (file: File) => {
+    setIssueUploading(true)
+    try {
+      const formData = new FormData()
+      formData.append('file', file)
+      const res = await fetch('/api/upload/finance?module=invoice', { method: 'POST', body: formData })
+      const json = await res.json()
+      if (json.success && json.data) {
+        setIssueFiles(prev => [...prev, json.data])
+        showSuccess('附件上传成功')
+      } else {
+        showError(json.error?.message || '附件上传失败')
+      }
+    } catch {
+      showError('附件上传失败')
+    }
+    setIssueUploading(false)
+  }
+
+  // 打开确认开票弹窗
+  const handleOpenIssue = (record: Invoice) => {
+    setIssuingRecord(record)
+    setIssueFiles([])
+    issueForm.setFieldsValue({ issuedDate: dayjs() })
+    setIssueModalOpen(true)
+  }
+
+  // 提交开票审批
+  const handleConfirmIssue = async () => {
+    if (!issuingRecord) return
+    if (issueFiles.length === 0) {
+      showError('请上传发票电子版附件')
+      return
+    }
+    try {
+      const values = await issueForm.validateFields()
+      setIssueSubmitting(true)
+
+      const res = await fetch(`/api/finance/invoice/${issuingRecord.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'submit',
+          issuedDate: values.issuedDate?.toISOString?.() || new Date().toISOString(),
+          attachments: issueFiles,
+        })
+      })
+      const json = await res.json()
+      if (res.ok && json.success) {
+        showSuccess('已提交开票审批')
+        setIssueModalOpen(false)
+        fetchData()
+      } else {
+        showError(json.error?.message || json.error || '提交审批失败')
+      }
+    } catch (err: any) {
+      showError(err.message || '提交审批失败')
+    } finally {
+      setIssueSubmitting(false)
+    }
   }
 
   const fetchData = async (p = page) => {
@@ -320,15 +391,23 @@ export default function InvoicePage() {
       render: (t: string) => dayjs(t).format('YYYY-MM-DD HH:mm')
     },
     {
-      title: '操作', fixed: 'right', width: 150,
+      title: '操作', fixed: 'right', width: 200,
       render: (_, record) => {
         const permCtx: RecordPermissionContext = { userId: currentUser?.id || '', dataScope: currentUser?.dataScope || 'self' }
         return (
           <Space style={{ whiteSpace: 'nowrap' }}>
-            {canModify(record, permCtx) && (
-              <Button size="small" icon={<EditOutlined />} onClick={() => handleEdit(record)}>编辑</Button>
+            {/* 业务按钮在左 */}
+            {record.status === 'pending' && canModify(record, permCtx) && (
+              <Button size="small" type="primary" ghost icon={<SendOutlined />} onClick={() => handleOpenIssue(record)}>
+                提交开票审批
+              </Button>
             )}
-            {canModify(record, permCtx) && (
+            {/* 编辑 */}
+            {record.status === 'pending' && canModify(record, permCtx) && (
+              <Button size="small" icon={<EditOutlined />} onClick={() => handleEdit(record)} />
+            )}
+            {/* 删除 */}
+            {record.status === 'pending' && canModify(record, permCtx) && (
               <Popconfirm title="确认删除？" onConfirm={() => handleDelete(record.id)} okText="确定" cancelText="取消" okButtonProps={{ danger: true }}>
                 <Button size="small" danger icon={<DeleteOutlined />} />
               </Popconfirm>
@@ -362,6 +441,7 @@ export default function InvoicePage() {
             onChange={(v) => { setStatusFilter(v); setPage(1) }}
             options={[
               { value: 'pending', label: '待开票' },
+              { value: 'pending_approval', label: '审批中' },
               { value: 'issued', label: '已开票' },
             ]}
             style={{ width: 120 }}
@@ -444,12 +524,7 @@ export default function InvoicePage() {
           <Form.Item name="issuedDate" label="开票日期">
             <DatePicker style={{ width: '100%' }} placeholder="请选择开票日期" />
           </Form.Item>
-          <Form.Item name="status" label="状态" initialValue="pending">
-            <Select>
-              <Select.Option value="pending">待开票</Select.Option>
-              <Select.Option value="issued">已开票</Select.Option>
-            </Select>
-          </Form.Item>
+
           <Form.Item label="附件">
             <Upload
               beforeUpload={(file) => { handleUploadFile(file); return false }}
@@ -473,6 +548,54 @@ export default function InvoicePage() {
             )}
           </Form.Item>
         </Form>
+      </Modal>
+
+      {/* 确认开票弹窗 */}
+      <Modal
+        title="提交开票审批"
+        open={issueModalOpen}
+        onOk={handleConfirmIssue}
+        onCancel={() => setIssueModalOpen(false)}
+        okText="提交审批"
+        cancelText="取消"
+        confirmLoading={issueSubmitting}
+        width={500}
+      >
+        <Form form={issueForm} layout="vertical">
+          <Form.Item name="issuedDate" label="开票日期" rules={[{ required: true, message: '请选择开票日期' }]}>
+            <DatePicker style={{ width: '100%' }} placeholder="请选择开票日期" />
+          </Form.Item>
+          <Form.Item
+            label="发票电子版"
+            required
+            help={issueFiles.length === 0 ? '请上传发票扫描件或电子版（必填）' : undefined}
+            validateStatus={issueFiles.length === 0 ? 'error' : 'success'}
+          >
+            <Upload
+              beforeUpload={(file) => { handleIssueUploadFile(file); return false }}
+              showUploadList={false}
+              accept=".pdf,.jpg,.jpeg,.png,.doc,.docx,.xls,.xlsx"
+            >
+              <Button icon={<UploadOutlined />} loading={issueUploading}>上传附件</Button>
+            </Upload>
+            {issueFiles.length > 0 && (
+              <div style={{ marginTop: 8 }}>
+                {issueFiles.map(f => (
+                  <div key={f.id} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '4px 0' }}>
+                    <PaperClipOutlined />
+                    <a href={f.fileUrl} target="_blank" rel="noreferrer" style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      {f.originalName}
+                    </a>
+                    <Button type="text" size="small" danger icon={<DeleteOutlined />} onClick={() => setIssueFiles(prev => prev.filter(x => x.id !== f.id))} />
+                  </div>
+                ))}
+              </div>
+            )}
+          </Form.Item>
+        </Form>
+        <div style={{ color: '#999', fontSize: 12 }}>
+          提示：提交后将进入审批流程，审批通过后自动完成开票并生成应收款记录
+        </div>
       </Modal>
     </div>
   )

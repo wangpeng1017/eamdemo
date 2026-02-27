@@ -4,6 +4,7 @@ import { useState, useEffect } from "react"
 import { showSuccess, showError } from '@/lib/confirm'
 import { Table, Button, Tag, Modal, Form, Input, InputNumber, Select, DatePicker, Space, Card } from "antd"
 import { TeamOutlined, HistoryOutlined, SearchOutlined } from "@ant-design/icons"
+import { Tooltip } from "antd"
 import type { ColumnsType } from "antd/es/table"
 import dayjs from "dayjs"
 
@@ -54,6 +55,7 @@ const statusMap: Record<string, { text: string; color: string }> = {
 }
 
 const requisitionStatusMap: Record<string, { text: string; color: string }> = {
+  pending: { text: "待接收", color: "default" },
   requisitioned: { text: "使用中", color: "processing" },
   returned: { text: "已归还", color: "success" },
   overdue: { text: "逾期", color: "error" },
@@ -137,21 +139,11 @@ export default function SampleDetailsPage() {
     }
   }
 
-  // 提交分配
+  // 提交分配（预约模式：不校验数量，接收时再检查）
   const handleAssignSubmit = async () => {
     const values = await assignForm.validateFields()
 
     if (!selectedSample) return
-
-    // 前端库存校验
-    const availStr = getAvailableQty(selectedSample)
-    const available = parseFloat(availStr)
-    const requestQty = parseFloat(values.quantity)
-
-    if (requestQty > available) {
-      showError(`库存不足，当前可用: ${available}`)
-      return
-    }
 
     // 获取被分配人姓名
     const assignee = assignees.find(a => a.id === values.assigneeId)
@@ -265,14 +257,17 @@ export default function SampleDetailsPage() {
       onHeaderCell: () => ({ style: { whiteSpace: 'nowrap' as const } }),
       render: (_, record) => (
         <Space size="small" style={{ whiteSpace: 'nowrap' }}>
-          <Button
-            type="link"
-            size="small"
-            icon={<TeamOutlined />}
-            onClick={() => handleAssign(record)}
-          >
-            分配
-          </Button>
+          <Tooltip title={record.status === 'pending' ? '请先在「样品收样」中完成收样' : undefined}>
+            <Button
+              type="link"
+              size="small"
+              icon={<TeamOutlined />}
+              disabled={record.status === 'pending'}
+              onClick={() => handleAssign(record)}
+            >
+              分配
+            </Button>
+          </Tooltip>
           <Button
             type="link"
             size="small"

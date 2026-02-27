@@ -42,6 +42,24 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ error: `该委托单已生成客户报告（${existingReport.reportNo}），不能重复生成` }, { status: 400 })
     }
 
+    // 校验：所有检测项目必须已完成
+    const allProjects = await prisma.entrustmentProject.findMany({
+        where: { entrustmentId },
+        select: { id: true, name: true, status: true }
+    })
+
+    if (allProjects.length > 0) {
+        const incompleteProjects = allProjects.filter(p => p.status !== 'completed')
+        if (incompleteProjects.length > 0) {
+            const names = incompleteProjects.map(p => p.name).join('、')
+            return NextResponse.json({
+                error: `还有 ${incompleteProjects.length} 个检测项目未完成（${names}），请等待所有项目完成后再生成报告`,
+                incompleteCount: incompleteProjects.length,
+                incompleteProjects: incompleteProjects.map(p => ({ id: p.id, name: p.name, status: p.status }))
+            }, { status: 400 })
+        }
+    }
+
     // taskIds 可能是报告 ID 或任务 ID，先尝试按报告 ID 查询
     let taskReports = await prisma.testReport.findMany({
         where: { id: { in: taskIds } },
