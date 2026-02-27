@@ -144,10 +144,6 @@ export const authOptions: NextAuthOptions = {
   debug: isDev
 }
 
-const handler = NextAuth(authOptions)
-
-export { handler as GET, handler as POST }
-
 // Helper function to get session (NextAuth v4 compatible)
 export async function auth() {
   const { getServerSession } = await import("next-auth/next")
